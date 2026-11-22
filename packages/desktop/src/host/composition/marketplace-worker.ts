@@ -1,3 +1,6 @@
+import { seedDefaults } from "../../main/seed-defaults.js";
+import { bootstrapCorePlugins } from "../../main/bootstrap-core-plugins.js";
+import { applyGitPathFromSettings } from "../../main/git-path-settings.js";
 import { parentPort } from "node:worker_threads";
 import * as market from "../../main/marketplace-service.js";
 import { uninstallPluginEntry, updatePluginEntry } from "../../main/plugins-service.js";
@@ -10,6 +13,10 @@ type Handlers = {
   ) => MarketplaceOperations[K]["result"] | Promise<MarketplaceOperations[K]["result"]>;
 };
 const handlers: Handlers = {
+  async "marketplace/bootstrap"({ resourcesDir }) {
+    await seedDefaults(resourcesDir);
+    await bootstrapCorePlugins();
+  },
   "marketplace/list": () => market.listMarketplacesForUi(),
   "marketplace/load": ({ name }) => market.loadMarketplaceForUi(name),
   "marketplace/jobs": () => market.listPluginInstallJobsForUi(),
@@ -66,6 +73,18 @@ port.on(
     try {
       if (!Object.hasOwn(handlers, method)) throw Error("Unknown marketplace operation");
       if (permit && Atomics.load(permit, 0) < 0) throw Error("Document write was revoked");
+      if (
+        [
+          "marketplace/bootstrap",
+          "marketplace/add",
+          "marketplace/addRecommended",
+          "marketplace/refresh",
+          "marketplace/install",
+          "marketplace/retry",
+          "marketplace/updatePlugin",
+        ].includes(method)
+      )
+        await applyGitPathFromSettings();
       const value = await handlers[method](input, () => {
         if (!permit) throw Error("Missing marketplace write permit");
         claimBusinessCommit(permit);

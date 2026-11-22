@@ -81,6 +81,7 @@ export function hostedMarketplace(
     };
   }
   const operations = {
+    "marketplace/bootstrap": route("marketplace/bootstrap"),
     "marketplace/list": route("marketplace/list"),
     "marketplace/load": route("marketplace/load"),
     "marketplace/jobs": route("marketplace/jobs"),

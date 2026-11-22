@@ -117,6 +117,7 @@ export async function addMarketplace(
   const staging = mkdtempSync(join(marketplacesRoot(), ".publish-"));
   const checkout = join(staging, "next"),
     backup = join(staging, "old");
+  let committed = false;
   try {
     const cloned = await gitClone(sourceToCloneUrl(source), checkout);
     // Offline refresh of the same origin historically retains the last usable checkout.
@@ -148,6 +149,7 @@ export async function addMarketplace(
           published = true;
         }
         upsertKnownMarketplace(name, entry);
+        committed = true;
       } catch (error) {
         if (published) renameSync(dir, checkout);
         if (replace) renameSync(backup, dir);
@@ -159,7 +161,7 @@ export async function addMarketplace(
     return { ok: true, name, marketplace: manifest.value, replaced: !!previous };
   } finally {
     // Keep an intact last-known checkout if a filesystem fault prevented rollback.
-    if (!existsSync(backup) || existsSync(dir)) rmSync(staging, { recursive: true, force: true });
+    if (committed || !existsSync(backup)) rmSync(staging, { recursive: true, force: true });
   }
 }
 

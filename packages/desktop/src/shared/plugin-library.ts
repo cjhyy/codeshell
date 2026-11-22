@@ -27,6 +27,7 @@ export interface MarketplaceReads {
   "marketplace/jobs": { params: Empty; result: Result<Market["listPluginInstallJobsForUi"]> };
 }
 export interface MarketplaceChanges {
+  "marketplace/bootstrap": { input: { resourcesDir: string }; result: void };
   "marketplace/recommended": {
     input: Empty;
     result: Result<Market["listRecommendedMarketplacesForUi"]>;

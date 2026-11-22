@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const { seedAgents, seedMarketplacesWith } = await import("./seed-defaults.js");
+const { seedAgents, seedMarketplacesWith, seedDefaults } = await import("./seed-defaults.js");
 
 let home: string;
 let agentSrc: string;
@@ -91,4 +91,15 @@ describe("seedMarketplaces", () => {
     expect(status.skipped).toEqual(["existing"]);
     expect(status.failed).toEqual([{ name: "broken", error: "clone failed" }]);
   });
+});
+
+
+it("bootstraps the bundled resources supplied by native startup on a fresh offline home", async () => {
+  mkdirSync(join(agentSrc, "agents"));
+  writeFileSync(join(agentSrc, "agents", "bundled.md"), "bundled agent");
+  writeFileSync(join(agentSrc, "known-marketplaces-seed.json"), "{}");
+  await seedDefaults(agentSrc, home);
+  expect(readFileSync(join(home, ".code-shell", "agents", "bundled.md"), "utf8")).toBe("bundled agent");
+  const status = join(home, ".code-shell", "plugins", "seed_marketplaces_status.json");
+  expect(JSON.parse(readFileSync(status, "utf8"))).toMatchObject({ attempted: [], failed: [] });
 });

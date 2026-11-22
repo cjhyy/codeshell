@@ -302,7 +302,7 @@ export class DesktopHostSupervisor {
     // GitHub downloads have per-request deadlines and may stage a whole bundle.
     // Local copies can wait for a Skill worker and the cross-process directory lock.
     const longRunning = waitsForRun || method === "im/wechatLogin" || method === "memory/dream" ||
-      method === "marketplace/add" || method === "marketplace/addRecommended" || method === "marketplace/refresh" || method === "marketplace/updatePlugin" || method === "marketplace/uninstall" || method === "marketplace/recommended" ||
+      method === "marketplace/bootstrap" || method === "marketplace/add" || method === "marketplace/addRecommended" || method === "marketplace/refresh" || method === "marketplace/updatePlugin" || method === "marketplace/uninstall" || method === "marketplace/recommended" ||
       method === "plugins/previewLocal" || method === "plugins/installLocal" || method === "plugins/uninstallLocal" || method === "plugins/checkUpdate" ||
       method === "profiles/addRepo" || method === "profiles/previewRequirements" || method === "profiles/installRequirements" ||
       method === "sources/uploadPicked" || method === "skills/inspectGithub" ||

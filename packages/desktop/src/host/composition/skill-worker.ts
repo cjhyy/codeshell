@@ -1,3 +1,4 @@
+import { applyGitPathFromSettings } from "../../main/git-path-settings.js";
 import { realpathSync, statSync } from "node:fs";
 import { userHome } from "@cjhyy/code-shell-core";
 import type { RendererConfigurationTarget } from "../../shared/renderer-configuration.js";
@@ -95,6 +96,7 @@ async function run<K extends keyof ExtensionOperations>(
 
 if (!parentPort) throw new Error("Skill operations require a Host worker");
 try {
+  await applyGitPathFromSettings();
   const value = await run(workerData.method, workerData.input);
   parentPort.postMessage({ value });
 } catch (error) {

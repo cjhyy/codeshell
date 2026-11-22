@@ -87,7 +87,6 @@ import {
 import {
   agentNotificationBus,
   getMergedCatalog,
-  setGitPathOverride,
   isGitAvailable,
   resolveGitPath,
   describeTranscribe,
@@ -340,8 +339,7 @@ import { createWorkbenchSurface } from "./shell/workbench-window.js";
 import { getTrust, getTrustCachedSync, warmTrustCache } from "./trust-store.js";
 import { installAppMenu } from "./menu.js";
 import { disposeWorkbenchTray, installWorkbenchTray } from "./workbench-tray.js";
-import { seedDefaults } from "./seed-defaults.js";
-import { bootstrapCorePlugins } from "./bootstrap-core-plugins.js";
+import { applyGitPathFromSettings } from "./git-path-settings.js";
 import { invalidateMcpProbeCache } from "./mcp-probe-service.js";
 import { injectLoginShellPathAtStartup } from "./login-shell-path.js";
 import {
@@ -391,11 +389,22 @@ const appRendererNavigation = new AppRendererNavigation(
     pathToFileURL(resolve(__dirname, "..", "renderer", "index.html")).href,
   (url) => shell.openExternal(url),
 );
+let seededDefaults = false;
 const desktopHost = createDesktopHost(
   join(__dirname, "desktop-host.mjs"),
   appRendererNavigation,
   (): void => {
     taskInboxService.hostRestarted();
+    // Retry a lost Host generation on reconnect. A successful first-run seed is
+    // consumed for the life of this application so a user's later removal sticks.
+    if (!seededDefaults) {
+      const resourcesDir = app.isPackaged
+        ? join(process.resourcesPath, "packages", "desktop", "resources")
+        : join(app.getAppPath(), "resources");
+      void desktopHost.callBusiness("marketplace/bootstrap", { resourcesDir })
+        .then(() => { seededDefaults = true; })
+        .catch((error) => dlog("main", "plugins.bootstrap.failed", { error: String(error) }));
+    }
     void petExternalVisibilityController?.restart().catch((error) =>
       dlog("main", "pet.external.restart.failed", { error: String(error) }),
     );
@@ -2314,24 +2323,6 @@ async function openPetOverviewFromWidget(request?: unknown): Promise<void> {
   else notify();
 }
 
-/**
- * Push the user's `git.path` setting (if any) into core's git resolver, so
- * marketplace clones / worktrees use the configured binary even when a GUI
- * launch didn't inherit the user's PATH. Re-run after settings change. Reads
- * only the user scope — git location is a machine-level preference.
- */
-async function applyGitPathFromSettings(): Promise<void> {
-  try {
-    const s = ((await readSettings("user").catch(() => null)) ?? {}) as {
-      git?: { path?: unknown };
-    };
-    const p = typeof s.git?.path === "string" ? s.git.path : null;
-    setGitPathOverride(p);
-  } catch {
-    setGitPathOverride(null);
-  }
-}
-
 function writeSettingsSchemaAtStartup(): void {
   try {
     writeSettingsSchemaFile(join(userHome(), ".code-shell"));
@@ -2773,15 +2764,7 @@ app.whenReady().then(async () => {
   sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash
   sweepStaleCredentialCookies(); // clear UseCredential temp cookies.txt left by a prior crash
 
-  // First-run defaults: copy bundled agents + register seed marketplace
-  // sources into ~/.code-shell, THEN soft pre-install the core plugins
-  // (skill-creator from mimi-plugins; feedback#22 决策). Chained because the
-  // install needs the seeded marketplace registered first. best-effort,
-  // fully self-guarded — never blocks the startup chain. Apply the git.path
-  // override FIRST so the bootstrap clone honors a configured git binary.
-  void applyGitPathFromSettings()
-    .then(() => seedDefaults())
-    .then(() => bootstrapCorePlugins());
+  void applyGitPathFromSettings();
 
   // Register the scheduler while the first window hydrates. Native continuations
   // and notifications wait for their own services before touching that window.
