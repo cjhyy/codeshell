@@ -19,6 +19,7 @@ interface ConnectionInput {
 interface Options {
   cwd?: string;
   store?: CredentialStore;
+  withCaller?: <T>(work: () => T) => T;
   onChanged?: () => void;
   validateToken?: typeof validateLocalLinkToken;
   connectCli?: typeof connectCliLink;
@@ -26,7 +27,7 @@ interface Options {
 
 /** Desktop owns interactive login; the shared service owns the credential transaction. */
 export function createDesktopLinkConnections(options: Options) {
-  const service = createDesktopLinkService(options);
+  const service = createDesktopLinkService(options, options.withCaller);
   const context = { ownerId: "desktop-main", authorize: () => true };
   async function reviewed(input: ConnectionInput): Promise<LinkConnectionInput> {
     const prior = input.existingId

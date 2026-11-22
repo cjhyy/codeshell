@@ -87,6 +87,7 @@ const ipcMain = {
   },
 };
 const remote = registerRemoteLinkIpc({
+  withCaller: (_event, work) => work(),
   ipcMain,
   requireRendererProjectPath: async (path) => {
     assert.ok(project.roots.some((root) => root.path === path));

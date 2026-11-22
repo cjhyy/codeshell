@@ -98,6 +98,7 @@ function fixture() {
     return cwd;
   };
   registerRemoteLinkIpc({
+    withCaller: (_event, work) => work(),
     ipcMain: { handle: (name, handler) => void handlers.set(name, handler) },
     captureAccount: () => ({ signal: new AbortController().signal, current: () => {} }),
     requireRendererProjectPath: async (path) => {

@@ -33,6 +33,7 @@ const logAuthorizationDiagnostic: LinkAuthorizationDiagnosticSink = (diagnostic)
 /** Window-owned authorization managers retire on navigation and destruction. */
 export function registerRemoteLinkIpc(deps: {
   ipcMain: Pick<IpcMain, "handle">;
+  withCaller<T>(event: IpcMainInvokeEvent, work: () => T): T;
   requireRendererProjectPath: (cwd: string) => Promise<string>;
   isMainWindow: (contents: WebContents) => boolean;
   withMutation: <T>(cwd: string, write: () => Promise<T>) => Promise<T>;
@@ -184,18 +185,21 @@ export function registerRemoteLinkIpc(deps: {
     if (!manager) {
       if (owner.managers.size >= 64) throw new Error("打开的 Link 工作区过多，请重新打开窗口。");
       manager = createNativeRemoteLinkManager({
-        service: createDesktopLinkService({
-          onAuthorizationDiagnostic: logAuthorizationDiagnostic,
-          cwd: cwd || undefined,
-          remoteLink: () =>
-            accountAvailable()
-              ? desktopRemoteLinkConfiguration(process.env, app.isPackaged)
-              : undefined,
-          withMutation: (write) => deps.withMutation(cwd, write),
-          onChanged: deps.onChanged,
-          allowCliLogin: true,
-          hostOAuthAdapters: deps.hostOAuthAdapters?.(),
-        }),
+        service: createDesktopLinkService(
+          {
+            onAuthorizationDiagnostic: logAuthorizationDiagnostic,
+            cwd: cwd || undefined,
+            remoteLink: () =>
+              accountAvailable()
+                ? desktopRemoteLinkConfiguration(process.env, app.isPackaged)
+                : undefined,
+            withMutation: (write) => deps.withMutation(cwd, write),
+            onChanged: deps.onChanged,
+            allowCliLogin: true,
+            hostOAuthAdapters: deps.hostOAuthAdapters?.(),
+          },
+          (work) => deps.withCaller(event, work),
+        ),
         open: openNativeLinkAuthorization,
         onConnected: () => {
           if (!allowed() || nativeLinkOwners.get(event.sender) !== owner) return;

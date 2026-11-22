@@ -134,6 +134,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
 
   const remoteLinkIpc = registerRemoteLinkIpc({
     ipcMain,
+    withCaller: deps.withCaller,
     requireRendererProjectPath,
     isMainWindow: (sender) =>
       [...mainWindows].some((win) => !win.isDestroyed() && win.webContents === sender),
@@ -174,17 +175,21 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
       throw new Error("请在 Link 页的独立服务连接中管理或断开此连接，以同步撤销远端授权。");
   }
 
-  async function persistLocalLinkCredential(input: {
-    cwd: string;
-    providerId: string;
-    methodId: string;
-    label: string;
-    token: string;
-    browserOAuthToken?: LocalBrowserAuthToken;
-    existingId: string;
-    authSource: "manual-token" | "browser-oauth";
-  }) {
+  async function persistLocalLinkCredential(
+    event: IpcMainInvokeEvent,
+    input: {
+      cwd: string;
+      providerId: string;
+      methodId: string;
+      label: string;
+      token: string;
+      browserOAuthToken?: LocalBrowserAuthToken;
+      existingId: string;
+      authSource: "manual-token" | "browser-oauth";
+    },
+  ) {
     const connections = createDesktopLinkConnections({
+      withCaller: (work) => deps.withCaller(event, work),
       cwd: input.cwd || undefined,
       onChanged: () => deps.bridge()?.notifyWebConfigurationChanged(),
     });
@@ -195,15 +200,19 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     }
   }
 
-  async function persistCliLinkCredential(input: {
-    cwd: string;
-    providerId: CliLinkProviderId;
-    methodId: string;
-    label: string;
-    existingId: string;
-    loginIfNeeded: boolean;
-  }) {
+  async function persistCliLinkCredential(
+    event: IpcMainInvokeEvent,
+    input: {
+      cwd: string;
+      providerId: CliLinkProviderId;
+      methodId: string;
+      label: string;
+      existingId: string;
+      loginIfNeeded: boolean;
+    },
+  ) {
     const connections = createDesktopLinkConnections({
+      withCaller: (work) => deps.withCaller(event, work),
       cwd: input.cwd || undefined,
       onChanged: () => deps.bridge()?.notifyWebConfigurationChanged(),
     });
@@ -276,7 +285,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     }
   });
 
-  ipcMain.handle("links:completeBrowserAuth", async (_e, raw: unknown) => {
+  ipcMain.handle("links:completeBrowserAuth", async (event, raw: unknown) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
       throw new Error("links:completeBrowserAuth requires a connection request");
     }
@@ -299,7 +308,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     if (token.providerId !== providerId) {
       throw new Error("Browser-login provider does not match the connection request");
     }
-    return persistLocalLinkCredential({
+    return persistLocalLinkCredential(event, {
       cwd,
       providerId,
       methodId,
@@ -316,7 +325,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     return attemptId ? linkDeviceOAuthBroker.cancel(attemptId) : false;
   });
 
-  ipcMain.handle("links:connectCli", async (_e, raw: unknown) => {
+  ipcMain.handle("links:connectCli", async (event, raw: unknown) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
       throw new Error("links:connectCli requires a connection request");
     }
@@ -332,7 +341,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(methodId)) throw new Error("Invalid Link method");
     if (label.length > 200) throw new Error("Connection label is too long");
 
-    return persistCliLinkCredential({
+    return persistCliLinkCredential(event, {
       cwd,
       providerId: rawProviderId,
       methodId,
@@ -342,7 +351,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     });
   });
 
-  ipcMain.handle("links:connectLocal", async (_e, raw: unknown) => {
+  ipcMain.handle("links:connectLocal", async (event, raw: unknown) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
       throw new Error("links:connectLocal requires a connection request");
     }
@@ -363,7 +372,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     if (label.length > 200) throw new Error("Connection label is too long");
     if (token.length > 16_384) throw new Error("Token is too long");
 
-    return persistLocalLinkCredential({
+    return persistLocalLinkCredential(event, {
       cwd,
       providerId,
       methodId,
