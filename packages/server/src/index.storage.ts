@@ -15,3 +15,4 @@ export { projectDiskSessionState } from "./disk-session-list.js";
 export { listIndexedDiskSessions } from "./indexed-disk-sessions.js";
 export { createSessionIndex, type SessionIndex } from "./session-index.js";
 export { serveSessionIndexWorker } from "./session-index-host.js";
+export { RoomHistoryReader } from "./mobile-remote/room-manager.js";

@@ -1,8 +1,7 @@
-import { RoomHistoryReader } from "@cjhyy/code-shell-server/mobile-remote";
 import type { RoomHistoryOperations } from "../shared/room-history.js";
 import { isProfileLibraryRead, type ProfileLibraryReads } from "../shared/profile-library.js";
 import { readProfileLibrary } from "./hosted-profile-library.js";
-import { assertSafeSessionId } from "@cjhyy/code-shell-server/storage";
+import { assertSafeSessionId, RoomHistoryReader } from "@cjhyy/code-shell-server/storage";
 import {
   petSegmentTranscript,
   type SegmentClosureInput,

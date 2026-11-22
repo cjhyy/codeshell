@@ -229,7 +229,7 @@ test("foreign safeStorage ciphertext never reaches an Authorization header or er
 
 test("the Host probes only a matching saved connection and returns no OS credential material", async () => {
   const { configuredMcpProbe } = await import("../host/composition/configured-mcp-probe.js");
-  using ownedHome = spyOn(os, "homedir").mockReturnValue(process.env.HOME!);
+  using _ownedHome = spyOn(os, "homedir").mockReturnValue(process.env.HOME!);
   const root = join(process.env.HOME!, ".code-shell");
   mkdirSync(root, { recursive: true });
   const basic = { name: "docs", url: origin + "/mcp" };
