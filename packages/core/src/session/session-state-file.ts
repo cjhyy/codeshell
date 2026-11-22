@@ -40,6 +40,31 @@ function sleepSync(ms: number): void {
   Atomics.wait(syncSleepCell, 0, 0, ms);
 }
 
+// Windows can deny replacement while a reader or filesystem filter briefly
+// holds the destination without delete sharing. Retry the same atomic rename
+// with the Session lease still held. A lasting denial preserves the old state.
+function publishState(tmp: string, target: string): void {
+  let delay = 10;
+  const deadline = performance.now() + 1_000;
+  for (;;) {
+    try {
+      renameSync(tmp, target);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      const remaining = deadline - performance.now();
+      if (
+        process.platform !== "win32" ||
+        (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY") ||
+        remaining <= 0
+      )
+        throw error;
+      sleepSync(Math.min(delay, remaining));
+      delay = Math.min(100, delay * 2);
+    }
+  }
+}
+
 export function writeStateAtomically(target: string, state: SessionState, label = "state"): void {
   const tmp = `${target}.${process.pid}.${nanoid(8)}.${label}.tmp`;
   try {
@@ -47,7 +72,7 @@ export function writeStateAtomically(target: string, state: SessionState, label 
       encoding: "utf-8",
       mode: 0o600,
     });
-    renameSync(tmp, target);
+    publishState(tmp, target);
     if (stateCommitted.hasSubscribers) {
       const directory = dirname(target);
       stateCommitted.publish({ root: dirname(directory), id: basename(directory) });
