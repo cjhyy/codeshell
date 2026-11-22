@@ -169,16 +169,26 @@ try {
     timeout: 15000,
   });
   await delay(1500);
-  await page.evaluate(() => {
-    window.benchmarkInput = [];
-    document.addEventListener(
-      "wheel",
-      (event) => {
-        if (event.isTrusted) window.benchmarkInput.push(performance.now());
-      },
-      { passive: true, capture: true },
-    );
-  });
+  const pointer = await page
+    .locator('[data-chat-variant="main"] .cs-chat-transcript')
+    .evaluate((transcript) => {
+      const scroller = transcript.parentElement;
+      const rect = scroller.getBoundingClientRect();
+      const x = Math.floor((Math.max(rect.left, 0) + Math.min(rect.right, innerWidth)) / 2);
+      const y = Math.floor((Math.max(rect.top, 0) + Math.min(rect.bottom, innerHeight)) / 2);
+      if (!scroller.contains(document.elementFromPoint(x, y))) {
+        throw Error("The workbench transcript must be visible at the wheel target");
+      }
+      window.benchmarkInput = [];
+      scroller.addEventListener(
+        "wheel",
+        (event) => {
+          if (event.isTrusted) window.benchmarkInput.push(performance.now());
+        },
+        { passive: true, capture: true },
+      );
+      return { x, y };
+    });
   const trace = Promise.withResolvers();
   client.once("Tracing.tracingComplete", trace.resolve);
   await client.send("Tracing.start", {
@@ -217,16 +227,22 @@ try {
   const sentAt = [];
   const pending = new Set();
   let inputError;
+  let nextTick = started;
   while (performance.now() - started < 20000) {
     if (inputError) throw inputError;
     if (pending.size >= 4) await Promise.race(pending);
+    while (performance.now() < nextTick) {
+      await delay(Math.ceil(nextTick - performance.now()));
+    }
     const now = performance.now();
+    if (now - started >= 20000) break;
+    // Skip missed ticks and never send twice for the same input sample.
+    nextTick = started + (Math.floor((now - started) / 16) + 1) * 16;
     sentAt.push(now);
     const request = client
       .send("Input.dispatchMouseEvent", {
         type: "mouseWheel",
-        x: 320,
-        y: 320,
+        ...pointer,
         deltaX: 0,
         deltaY: sentAt.length % 2 ? 4 : -4,
       })
@@ -237,8 +253,6 @@ try {
     pending.add(request);
     // A mouse keeps sampling while Chromium consumes previous events. Waiting
     // for a compositor acknowledgment here would put harness latency in the input.
-    const nextTick = started + (Math.floor((now - started) / 16) + 1) * 16;
-    await delay(Math.max(1, Math.ceil(nextTick - performance.now())));
   }
   await Promise.all(pending);
   if (inputError) throw inputError;
@@ -289,6 +303,7 @@ try {
     trace: basename(await realpath(tracePath)),
     traceDurationMs: traceDuration,
     input: {
+      target: pointer,
       dispatched: sentAt.length,
       maxDispatchGapMs: Math.max(...sentAt.slice(1).map((at, i) => at - sentAt[i])),
       delivered: stamps.length,
