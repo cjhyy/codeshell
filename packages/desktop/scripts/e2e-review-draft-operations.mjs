@@ -1,4 +1,4 @@
-/* Actual Main/ReviewService/preload/React. Only catalog:list is synthetic.
+/* Actual Host ReviewService/preload/React with an offline model in the user catalog.
  * The original preparePrompt listener runs before its exact result is delayed.
  * Only bounded owned read-only agent metadata reaches its production listener.
  * Never starts agent turns, Engine/Worker/provider or OS operations.
@@ -77,7 +77,7 @@ const report = {
     actual:
       "Owned real Git, compiled Main ReviewService, preload, ReviewPanel, App bucket and ChatView input. No React internals or DOM fabrication.",
     controlled:
-      "catalog:list returns an owned synthetic UI catalog. Two actual preparePrompt responses are held only after the production listener finishes; their result bytes are never replaced. Synthetic owned sidebar/disk Session metadata. Strict owned goalGet/backgroundWork/backgroundShells-list RPCs use the original production listener; no metadata replies are mocked. The production SessionManager may initialize mkdir/chmod/owned staging housekeeping inside this fixture HOME.",
+      "The real catalog loads an owned offline model from the private HOME. Two actual preparePrompt responses are held only after the production listener finishes; their result bytes are never replaced. Synthetic owned sidebar/disk Session metadata. Strict owned goalGet/backgroundWork/backgroundShells-list RPCs use the original production listener; no metadata replies are mocked. The production SessionManager may initialize mkdir/chmod/owned staging housekeeping inside this fixture HOME.",
     excluded:
       "No agent turns, configuration or goal writes, shell control, Worker, Engine, provider, credentials, network, native crypto or OS open. Not an OS egress sandbox. Three new operations/one Main are separate from the unchanged original eleven Review operations.",
   },
@@ -331,6 +331,19 @@ try {
       git(session.path, "diff", "--no-ext-diff", "HEAD"),
     );
   }
+  await put(join(isolated.codeShellHome, "model-catalog.user.json"), [
+    {
+      id: "owned-review-ui",
+      tag: "text",
+      adapterKind: "openai",
+      displayName: "Owned Review UI model",
+      description: "Offline Review fixture",
+      defaultBaseUrl: "http://127.0.0.1:9",
+      modelPresets: [
+        { value: "owned-review-ui", label: "Owned Review UI model", maxContextTokens: 4096 },
+      ],
+    },
+  ]);
   await put(join(isolated.codeShellHome, "settings.json"), {
     autoUpdates: false,
     permissionMode: "default",
@@ -367,7 +380,7 @@ const { observeReviewPort, observeNativeReviewDrafts } = await import(${JSON.str
 const {createReviewDraftResponseGate} = await import(${JSON.stringify(new URL("./review-draft-response-gate.mjs", import.meta.url).href)});
 let ipcBytes=0;const ipcFile=${JSON.stringify(join(isolated.home, "review-draft-ipc.jsonl"))};
 const recordReviewIpc=(row)=>{const line=JSON.stringify(row)+"\\n";ipcBytes+=Buffer.byteLength(line);if(ipcBytes>512*1024)throw Error("Review IPC ledger cap");appendFileSync(ipcFile,line,{mode:0o600});};
-const state = globalThis.__ownedReviewDraft = {gate:createReviewDraftResponseGate(${JSON.stringify(sessions.map((s) => s.id))},{onRecord:recordReviewIpc}),catalogCalls:0,registered:0,agentMessages:[],readonlyAgentRequests:[],unexpected:[],probes:[],probing:false};
+const state = globalThis.__ownedReviewDraft = {gate:createReviewDraftResponseGate(${JSON.stringify(sessions.map((s) => s.id))},{onRecord:recordReviewIpc}),registered:0,agentMessages:[],readonlyAgentRequests:[],unexpected:[],probes:[],probing:false};
 const deny = (kind,metadata={}) => { if(!state.probing) {state.unexpected.push(kind);appendFileSync(${JSON.stringify(join(isolated.home, "denied-attempts.jsonl"))},JSON.stringify({pid:process.pid,kind,...metadata})+"\\n",{mode:0o600});} throw Error("Owned Review draft denied "+kind); };
 globalThis.fetch=()=>deny("fetch");
 for(const name of ["node:http","node:https"]) {const transport=(await import(name)).default;for(const method of ["get","request"])transport[method]=()=>deny(name+"."+method);}
@@ -392,11 +405,6 @@ net.fetch=net.request=()=>deny("electron.net");
 for(const name of ["isEncryptionAvailable","getSelectedStorageBackend","encryptString","decryptString"])if(typeof safeStorage[name]==="function")safeStorage[name]=()=>deny("crypto");
 for(const name of ["openPath","openExternal","showItemInFolder"])shell[name]=()=>deny("OS-open");
 app.on("web-contents-created",(_event,contents)=>contents.session.webRequest.onBeforeRequest({urls:["http://*/*","https://*/*","ws://*/*","wss://*/*"]},(_details,done)=>{state.unexpected.push("chromium-network");appendFileSync(${JSON.stringify(join(isolated.home, "denied-attempts.jsonl"))},JSON.stringify({pid:process.pid,kind:"chromium-network"})+"\\n",{mode:0o600});done({cancel:true});}));
-const handle=ipcMain.handle.bind(ipcMain);
-ipcMain.handle=(channel,listener)=>{
- if(channel==="catalog:list")return handle(channel,()=>{state.catalogCalls++;return [{id:"owned-review-ui",tag:"text",adapterKind:"openai",displayName:"Owned Review UI model",description:"No provider exists",defaultBaseUrl:"http://127.0.0.1:9",modelPresets:[{value:"owned-review-ui",label:"Owned Review UI model",maxContextTokens:4096}]}];});
- return handle(channel,listener);
-};
 ${reviewDraftReadonlyRpcGuardSource(sessions.map((session) => session.id))}
 state.probing=true;
 for(const[name,probe]of [
@@ -702,7 +710,6 @@ state.probing=false;
           const result = {
             gate: state.gate.snapshot(),
             registered: state.registered,
-            catalogCalls: state.catalogCalls,
             agentMessages: state.agentMessages,
             readonlyAgentRequests: state.readonlyAgentRequests,
             unexpected: state.unexpected,
