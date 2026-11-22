@@ -1,6 +1,7 @@
-import { mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, statSync } from "node:fs";
+import { mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { browserCookieLeaseDirectory } from "../host/cookie-lease-path.js";
+export { sweepStaleLeases } from "../host/cookie-lease-path.js";
 import { randomUUID } from "node:crypto";
 import { isBrowserPartition } from "../shared/browser-partition.js";
 
@@ -51,8 +52,6 @@ export function isRestorableCookieJar(value: unknown): value is ElectronCookieLi
 }
 
 export const BROWSER_PARTITION = "persist:browser";
-const LEASE_DIR = join(tmpdir(), "codeshell-cookie-leases");
-const LEASE_MAX_AGE_MS = 5 * 60 * 1000;
 
 export function sanitizeBrowserPartition(partition?: string): string {
   if (partition === undefined) return BROWSER_PARTITION;
@@ -277,11 +276,11 @@ export async function createCookieLease(
   // 0o700: lease files hold live session cookies (0o600). The dir lives under a
   // shared /tmp, so make it owner-only too — co-located users shouldn't even
   // enumerate the lease filenames. (audit Y-4)
-  mkdirSync(LEASE_DIR, { recursive: true, mode: 0o700 });
+  mkdirSync(browserCookieLeaseDirectory, { recursive: true, mode: 0o700 });
   // randomUUID (not just Date.now()+pid): two leases created in the same
   // millisecond would otherwise collide, so one overwrites the other's cookie
   // file and the first cleanupLease deletes a file still in use.
-  const filePath = join(LEASE_DIR, `lease-${Date.now()}-${randomUUID()}.txt`);
+  const filePath = join(browserCookieLeaseDirectory, `lease-${Date.now()}-${randomUUID()}.txt`);
   writeFileSync(filePath, formatNetscapeCookies(cookies), { mode: 0o600 });
   return { filePath, count: cookies.length };
 }
@@ -289,23 +288,6 @@ export async function createCookieLease(
 export function cleanupLease(filePath: string): void {
   try {
     if (existsSync(filePath)) rmSync(filePath, { force: true });
-  } catch {
-    /* best-effort */
-  }
-}
-
-/** Startup sweep: remove stale lease files older than LEASE_MAX_AGE_MS. */
-export function sweepStaleLeases(now = Date.now()): void {
-  try {
-    if (!existsSync(LEASE_DIR)) return;
-    for (const f of readdirSync(LEASE_DIR)) {
-      const p = join(LEASE_DIR, f);
-      try {
-        if (now - statSync(p).mtimeMs > LEASE_MAX_AGE_MS) rmSync(p, { force: true });
-      } catch {
-        /* skip */
-      }
-    }
   } catch {
     /* best-effort */
   }

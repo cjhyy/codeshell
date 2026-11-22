@@ -1,5 +1,5 @@
 import { constants, closeSync, fstatSync, openSync, writeFileSync } from "node:fs";
-import { cookieLeasePath } from "../cookie-lease-path.js";
+import { cookieLeasePath, sweepStaleLeases } from "../cookie-lease-path.js";
 import {
   formatNetscapeCookies,
   parseCookieJar,
@@ -7,7 +7,6 @@ import {
   sweepStaleCredentialCookies,
 } from "@cjhyy/code-shell-core";
 import type { StateStorage } from "@cjhyy/code-shell-core/internal/storage";
-import { sweepStaleLeases } from "../../main/credentials-service.js";
 import type {
   CookieFileOperations,
   CookieInspection,
