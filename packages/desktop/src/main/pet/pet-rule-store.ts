@@ -179,6 +179,7 @@ export interface PetRuleStoreOptions {
   now?: () => number;
   lock?: PetRuleStoreLock;
   maxRules?: number;
+  replaceFile?: (from: string, to: string) => Promise<void>;
 }
 
 export type PetRuleStoreErrorCode =
@@ -505,7 +506,7 @@ export class PetRuleStore {
   private readonly lock: PetRuleStoreLock;
   private readonly maxRules: number;
 
-  constructor(options: PetRuleStoreOptions) {
+  constructor(private readonly options: PetRuleStoreOptions) {
     this.path = options.path;
     this.now = options.now ?? Date.now;
     this.lock = options.lock ?? ((critical) => critical());
@@ -975,7 +976,11 @@ export class PetRuleStore {
   }
 
   /** Toggle / tune the "every Session" rule; creates it from the default on first use. */
-  setSystemRule(id: SystemNoticeRuleId, patch: SystemNoticeRulePatch): Promise<NoticeRule> {
+  setSystemRule(
+    id: SystemNoticeRuleId,
+    patch: SystemNoticeRulePatch,
+    expectedVersion?: number,
+  ): Promise<NoticeRule> {
     const snapshot = structuredClone(patch);
     return this.mutate((staged) => {
       if (id !== SYSTEM_RULE_ID) throw new PetRuleStoreError("rule_not_found");
@@ -985,6 +990,11 @@ export class PetRuleStore {
         throw new PetRuleStoreError("invalid_rule");
       const at = this.timestamp();
       const current = staged.get(SYSTEM_RULE_ID);
+      if (
+        expectedVersion !== undefined &&
+        expectedVersion !== (current ?? defaultSystemRule()).version
+      )
+        throw new PetRuleStoreError("version_conflict");
       const base = current ?? { ...defaultSystemRule(), createdAt: at };
       const next: NoticeRule = {
         ...structuredClone(base),
@@ -1036,7 +1046,7 @@ export class PetRuleStore {
             } satisfies PetRuleFile,
             MAX_FILE_BYTES,
             // Rewritten on every rule change: no indentation.
-            { compact: true },
+            { compact: true, replaceFile: this.options.replaceFile },
           );
           this.rules = staged;
           return { result: structuredClone(result), changed: true };

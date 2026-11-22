@@ -1,9 +1,10 @@
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
 import type { PetLongTask, PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
 import { NOTICE_EVENTS } from "@cjhyy/code-shell-pet/protocol";
 import type { PetHostActionExecutor } from "./pet-dispatch-service.js";
 import { errorText } from "./pet-notice-types.js";
 import type { DesktopPetSession } from "./pet-state-aggregator.js";
-import { noticeTargetKey, type NoticeRule, type PetRuleStore } from "./pet-rule-store.js";
+import { noticeTargetKey, type NoticeRule } from "./pet-rule-store.js";
 
 /**
  * Mimi's WatchSession host action: "tell this IM conversation when that
@@ -41,7 +42,7 @@ export interface SessionWatchHostDeps {
 }
 
 export interface SessionWatchDeps extends SessionWatchHostDeps {
-  rules: Pick<PetRuleStore, "load" | "activeForSession" | "upsertSessionRule" | "update">;
+  rules: Pick<PetRuleAccess, "load" | "activeForSession" | "upsertSessionRule" | "update">;
   isEligibleSession(sessionId: string): boolean;
   /** Mimi's own Sessions are never watched, by rule or long task. */
   isMimiSession?: (sessionId: string) => boolean;
@@ -136,9 +137,9 @@ export function createSessionWatchAction(deps: SessionWatchDeps): PetHostActionE
     await deps.rules.load();
     const target: NoticeRule["target"] = { kind: "route", route };
     const key = noticeTargetKey(target);
-    const existing = deps.rules
-      .activeForSession(sessionId)
-      .find((rule) => rule.when.kind === "session" && noticeTargetKey(rule.target) === key);
+    const existing = (await deps.rules.activeForSession(sessionId)).find(
+      (rule) => rule.when.kind === "session" && noticeTargetKey(rule.target) === key,
+    );
     if (existing)
       return {
         watching: true,

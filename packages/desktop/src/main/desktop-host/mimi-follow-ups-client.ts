@@ -9,7 +9,7 @@ export function nativeMimiFollowUps(
     signal?.throwIfAborted();
     await registered.load();
     signal?.throwIfAborted();
-    return { registered: registered.list() };
+    return { registered: await registered.list() };
   }
   return {
     collect: async (options, signal) =>

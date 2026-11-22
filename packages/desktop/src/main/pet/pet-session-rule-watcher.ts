@@ -1,3 +1,4 @@
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
 import {
   ruleDelivery,
   type DeliveryPlanEntry,
@@ -5,7 +6,7 @@ import {
   type PetDeliveryResolver,
 } from "./pet-delivery-plan.js";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
-import type { NoticeRule, NoticeRuleState, PetRuleStore } from "./pet-rule-store.js";
+import type { NoticeRule, NoticeRuleState } from "./pet-rule-store.js";
 import type { DesktopPendingDecision, DesktopPetProjectionEvent } from "./pet-state-aggregator.js";
 import type { ChangedFiles } from "./pet-notice-action-codes.js";
 import type { SessionBlockReason, SessionOutcome } from "./session-outcome.js";
@@ -49,7 +50,7 @@ export interface NoticeDraft {
 
 export interface PetSessionRuleWatcherOptions {
   /** Rule lifecycle only (spend, cancel); who is told comes from `deliveries`. */
-  rules: Pick<PetRuleStore, "activeForSession" | "update">;
+  rules: Pick<PetRuleAccess, "activeForSession" | "update">;
   /**
    * Who must be told about an outcome. A run whose plan is reported by the
    * long-task closure is left to it; the watcher reports the rest.
@@ -468,9 +469,9 @@ export class PetSessionRuleWatcher {
 
   private async cancelGoalRules(sessionId: string): Promise<void> {
     if (!this.options.isEligibleSession(sessionId)) return;
-    const goalRules = this.options.rules
-      .activeForSession(sessionId)
-      .filter((rule) => rule.when.kind === "session" && rule.when.scope === "goal");
+    const goalRules = (await this.options.rules.activeForSession(sessionId)).filter(
+      (rule) => rule.when.kind === "session" && rule.when.scope === "goal",
+    );
     await this.setState(sessionId, goalRules, "cancelled");
   }
 

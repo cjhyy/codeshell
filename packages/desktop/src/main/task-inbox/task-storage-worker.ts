@@ -1,3 +1,4 @@
+import { StoredMimiRules } from "../../host/composition/mimi-rules.js";
 import { isProfileLibraryChange } from "../../shared/profile-library.js";
 import { changeProfileLibrary } from "../hosted-profile-library.js";
 import { isMemoryCommand, writeHostedMemory } from "../hosted-memory.js";
@@ -46,6 +47,7 @@ catalog.onChanged((snapshot) => {
 let output: StoredDesktopOutput | undefined;
 let runLedger: RunOperationStorage | undefined;
 let ledger: OperationStorage | undefined;
+let mimiRules: StoredMimiRules | undefined;
 let mimiTurns:ReturnType<typeof storedMimiTurns>|undefined;
 let mimiWork: StoredMimiWorkMemory | undefined;
 let mimi: StoredMimiRecords | undefined;
@@ -58,11 +60,15 @@ await serveSessionIndexWorker({
     if (isProfileLibraryChange(command)) return changeProfileLibrary(command,payload as Parameters<typeof changeProfileLibrary>[1]);
     if (isMemoryCommand(command))
       return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);
-    if (command === "mimi/turnStorage" || command === "mimi/records" || command === "mimi/workMemory") {
+    if (command === "mimi/rules" || command === "mimi/turnStorage" || command === "mimi/records" || command === "mimi/workMemory") {
       const directory = workerData?.config?.taskInboxDirectory;
       if (typeof directory !== "string" || !isAbsolute(directory))
         throw Error("Desktop data directory unavailable");
       const root = join(dirname(directory), "pet");
+      if (command === "mimi/rules") {
+        mimiRules ??= new StoredMimiRules(root);
+        return mimiRules.run(payload as Parameters<StoredMimiRules["run"]>[0]);
+      }
       if(command==="mimi/turnStorage"){
         mimiTurns??=storedMimiTurns(root);
         return {value:await mimiTurns(payload as Parameters<typeof mimiTurns>[0])};

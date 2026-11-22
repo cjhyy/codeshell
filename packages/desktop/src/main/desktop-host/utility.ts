@@ -243,6 +243,16 @@ const business = new HostBusinessCalls({
   ...approvals.native,
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
   ...segments,
+  "mimi/rules": async (call, grant) => {
+    const db = await storage;
+    grant.assertCurrent();
+    const reply = await db.request<import("../../shared/mimi-rules.js").MimiRuleReply>(
+      "mimi/rules",
+      { call, permit: grant.permit },
+    );
+    if (!reply) throw Error("Mimi rule storage unavailable");
+    return reply;
+  },
   "mimi/renderReply": (input, grant) =>
     historyWorker.mimiReply("mimi/renderReply", input, grant.permit),
   "mimi/recordReceipt": recordMimiReceipt,

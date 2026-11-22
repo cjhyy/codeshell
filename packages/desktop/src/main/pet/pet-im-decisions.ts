@@ -80,7 +80,7 @@ export interface ImDecisionDelivery {
 export type ImDecisionDeliveryResolver = (
   sessionId: string,
   task: PetLongTask | undefined,
-) => DeliveryPlanEntry | undefined;
+) => DeliveryPlanEntry | undefined | Promise<DeliveryPlanEntry | undefined>;
 
 export interface ImDecision {
   code: string;
@@ -92,6 +92,31 @@ export interface ImDecision {
   task?: PetLongTask;
   envelope: Envelope;
   delivery: ImDecisionDelivery;
+}
+
+function activeDecisionTask(tasks: readonly PetLongTask[], sessionId: string) {
+  return tasks.find(
+    (task) =>
+      task.sessionId === sessionId && !["completed", "failed", "cancelled"].includes(task.status),
+  );
+}
+
+/** Resolve each Session's live routing rules once per scan before joining its worker envelopes. */
+export async function collectCurrentImDecisions(
+  snapshot: DesktopPetProjectionSnapshot,
+  tasks: readonly PetLongTask[],
+  lines: readonly string[],
+  deliveryFor: ImDecisionDeliveryResolver,
+): Promise<ImDecision[]> {
+  const entries = new Map<string, DeliveryPlanEntry | undefined>();
+  for (const row of snapshot.pending) {
+    if (row.status !== "pending" || entries.has(row.agentSessionId)) continue;
+    entries.set(
+      row.agentSessionId,
+      await deliveryFor(row.agentSessionId, activeDecisionTask(tasks, row.agentSessionId)),
+    );
+  }
+  return collectImDecisions(snapshot, tasks, lines, (sessionId) => entries.get(sessionId));
 }
 
 /** First-route reasons that mean "kept on the desktop only because the owner was there". */
@@ -112,7 +137,7 @@ export function collectImDecisions(
   snapshot: DesktopPetProjectionSnapshot,
   tasks: readonly PetLongTask[],
   lines: readonly string[],
-  deliveryFor: ImDecisionDeliveryResolver,
+  deliveryFor: (sessionId: string, task: PetLongTask | undefined) => DeliveryPlanEntry | undefined,
 ): ImDecision[] {
   const envelopes = new Map<string, Envelope>();
   for (const line of lines) {
@@ -129,11 +154,7 @@ export function collectImDecisions(
   const result: ImDecision[] = [];
   for (const pending of snapshot.pending) {
     if (pending.status !== "pending") continue;
-    const task = tasks.find(
-      (entry) =>
-        entry.sessionId === pending.agentSessionId &&
-        !["completed", "failed", "cancelled"].includes(entry.status),
-    );
+    const task = activeDecisionTask(tasks, pending.agentSessionId);
     const entry = deliveryFor(pending.agentSessionId, task);
     if (!entry) continue;
     const delivery: ImDecisionDelivery = {

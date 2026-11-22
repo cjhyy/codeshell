@@ -707,6 +707,7 @@ export function registerPetIpc(options: {
         ipcMain: options.ipcMain,
         windows: options.windows,
         controls: options.notices,
+        document: options.recordAuthority,
       })
     : undefined;
   const unsubscribeMemories = options.memories?.subscribe(() => {

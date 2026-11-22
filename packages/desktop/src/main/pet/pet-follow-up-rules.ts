@@ -1,3 +1,4 @@
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
 import { createHash } from "node:crypto";
 import type { PetCronAccess } from "./pet-rule-schedule.js";
 import {
@@ -25,7 +26,6 @@ import {
   isSystemScheduleRule,
   PetRuleStoreError,
   type NoticeRule,
-  type PetRuleStore,
   type ScheduleNoticeRule,
   type SystemScheduleNoticeRule,
 } from "./pet-rule-store.js";
@@ -225,7 +225,7 @@ type FollowUpViews =
   | { summaryStore: PetSummaryStore; summaryService: PetSummaryService; inbox: PetFollowUpInbox };
 
 export type PetFollowUpRulesDeps = FollowUpViews & {
-  rules: PetRuleStore;
+  rules: PetRuleAccess;
   sessions(): readonly DesktopPetSession[];
   tasks: {
     [K in "get" | "getSnapshot"]: (
@@ -255,10 +255,10 @@ export type PetFollowUpRulesDeps = FollowUpViews & {
 export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
   const { rules } = deps;
   const now = deps.now ?? Date.now;
-  const followUpRules = () => rules.list().filter(isFollowUpRule);
+  const followUpRules = async () => (await rules.list()).filter(isFollowUpRule);
   const registered = {
     load: () => rules.load(),
-    list: () => followUpRules().map(followUpRuleView),
+    list: async () => (await followUpRules()).map(followUpRuleView),
   };
   const petFollowUps =
     "makeViews" in deps
@@ -271,8 +271,8 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
           registered,
         });
 
-  const followUpRule = (id: string): FollowUpRule => {
-    const rule = rules.get(id);
+  const followUpRule = async (id: string): Promise<FollowUpRule> => {
+    const rule = await rules.get(id);
     if (!rule || !isFollowUpRule(rule)) throw new Error("跟进项不存在或已处理");
     return rule;
   };
@@ -285,7 +285,7 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
     await rules.load();
     const id = followUpRuleId(petFollowUpOperationKey(context));
     // A replay resolves the original operation, even edited or after its task disappeared.
-    const existing = rules.get(id);
+    const existing = await rules.get(id);
     if (existing && isFollowUpRule(existing)) return receipt("register", existing);
     let taskId = payload.taskId;
     if (payload.intent === "resume") {
@@ -323,7 +323,7 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
         target: route ? { kind: "route", route } : { kind: "owner" },
       }),
     );
-    return receipt("register", followUpRule(rule.id));
+    return receipt("register", await followUpRule(rule.id));
   }
 
   /** `followUpMutation` host action, and the workbench's controls (no context). */
@@ -344,14 +344,14 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
     }
     await rules.load();
     signal?.throwIfAborted();
-    const current = followUpRule(payload.followUpId);
+    const current = await followUpRule(payload.followUpId);
     if (payload.expectedRevision === undefined)
       throw new Error("registered follow-up requires expectedRevision");
     if (payload.action === "reschedule") {
       const rule = await explained(
         rules.rescheduleRule(current.id, payload.expectedRevision, scheduleWhen(payload)),
       );
-      return receipt("reschedule", followUpRule(rule.id));
+      return receipt("reschedule", await followUpRule(rule.id));
     }
     if (statusOf(current) !== "open") throw new Error("跟进项不存在或已处理");
     const rule = await explained(
@@ -359,7 +359,7 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
         state: payload.action === "complete" ? "completed" : "cancelled",
       }),
     );
-    return receipt(payload.action, followUpRule(rule.id));
+    return receipt(payload.action, await followUpRule(rule.id));
   }
 
   const notify = createFollowUpNotifier({ submit: deps.submitNotice, now });
@@ -415,8 +415,8 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
       // The owner may cancel or finish the follow-up while Mimi's turn runs;
       // its fence then refuses the launch. That is their decision, not an
       // unknown effect, and they need no reminder about it.
-      const finishedMidRun = () => {
-        const current = rules.get(rule.id);
+      const finishedMidRun = async () => {
+        const current = await rules.get(rule.id);
         if (!current || current.state === "active" || current.state === "paused") return undefined;
         return {
           status: "failed" as const,
@@ -430,12 +430,12 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
             ? await resume(wake)
             : { launched: false, text: rule.then.text };
       } catch (error) {
-        const finished = finishedMidRun();
+        const finished = await finishedMidRun();
         if (finished) return finished;
         throw error;
       }
       if (!outcome.launched && rule.then.mode === "run-mimi") {
-        const finished = finishedMidRun();
+        const finished = await finishedMidRun();
         if (finished) return finished;
       }
       // The router picks desktop / IM, records and dedupes the reminder (key: the occurrence).
@@ -467,7 +467,7 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
     /** Re-checked after Mimi decides, right before her wake turn launches anything. */
     async validateContinuation(wake: PetFollowUpWake): Promise<void> {
       const task = wake.taskId ? await deps.tasks.get(wake.taskId) : undefined;
-      const current = rules.get(wake.id);
+      const current = await rules.get(wake.id);
       if (
         !current ||
         !isFollowUpRule(current) ||

@@ -1,3 +1,4 @@
+import { PetRuleStore } from "./pet-rule-store.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -88,6 +89,7 @@ function fixture() {
   const writes: Record<string, unknown>[] = [];
   const created = wirePetNotices({
     userDataDir: dir,
+    rules: new PetRuleStore({ path: join(dir, "pet", "rules.json"), now: () => clock }),
     bridge: { setHostActionHandler: () => () => undefined },
     projection: {
       getSnapshot: () => ({

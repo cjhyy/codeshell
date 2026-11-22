@@ -11,7 +11,7 @@ import {
   type ExternalApprovalEvent,
   type ExternalApprovalRequest,
 } from "../external-runtime-approvals.js";
-import { collectImDecisions, PetImDecisions, type ImDecision } from "./pet-im-decisions.js";
+import { collectCurrentImDecisions, PetImDecisions, type ImDecision } from "./pet-im-decisions.js";
 import {
   externalDecisionCode,
   externalDecisionRequest,
@@ -100,7 +100,12 @@ function setup(
       {
         read: () => {
           if (nativeReadFails) throw new Error("projection unreadable");
-          return collectImDecisions(h.snapshot(), h.tasks, lines, h.wiring.decisions.deliveryFor);
+          return collectCurrentImDecisions(
+            h.snapshot(),
+            h.tasks,
+            lines,
+            h.wiring.decisions.deliveryFor,
+          );
         },
         approve: async (_entry, decision) => void nativeAnswers.push(decision),
       },

@@ -670,6 +670,16 @@ try {
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
+  const chosenRule = await main.evaluate(async () => {
+    const pet = window.codeshell.pet;
+    await pet.setSystemNoticeRule({ state: "active", channel: "desktop", events: ["failed"] });
+    const state = await pet.getNoticesState();
+    return {
+      rule: state.systemRule,
+      version: state.rules.find((row) => row.id === "all-sessions").version,
+    };
+  });
+  assert.deepEqual(chosenRule.rule, { state: "active", channel: "desktop", events: ["failed"] });
   const previousHost = (await hostStarts()).at(-1);
   const control = JSON.parse(
     await readFile(join(isolated.codeShellHome, "im-gateway", "desktop-control.json"), "utf8"),
@@ -701,9 +711,7 @@ try {
     .map((line) => JSON.parse(line))
     .findLast(
       (row) =>
-        row.data?.displayOnly &&
-        row.data?.role === "assistant" &&
-        row.data.content === reply.text,
+        row.data?.displayOnly && row.data?.role === "assistant" && row.data.content === reply.text,
     );
   assert(renderedReceipt, "Gateway response must match the durable display-only receipt");
   receipt.checks.push(
@@ -745,6 +753,17 @@ try {
   );
   assert.equal(restored.followUpId, followUp.followUpId);
   assert.equal(restored.text, followUpText);
+  const restoredRule = await main.evaluate(async () => {
+    const state = await window.codeshell.pet.getNoticesState();
+    return {
+      rule: state.systemRule,
+      version: state.rules.find((row) => row.id === "all-sessions").version,
+    };
+  });
+  assert.deepEqual(restoredRule, chosenRule);
+  receipt.checks.push(
+    "owner notification rules preserve their events, channel and version across a Host restart",
+  );
   assert.equal(model.requests.filter(({ body }) => summaryRequest(body)).length, 1);
   receipt.checks.push(
     "hosted follow-up from a completed Session survives a Host restart with no duplicate inference",

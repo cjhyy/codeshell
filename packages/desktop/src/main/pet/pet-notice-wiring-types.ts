@@ -33,7 +33,8 @@ import type {
   PetAttentionOptions,
 } from "./pet-notice-types.js";
 import type { PetReceiptStore } from "./pet-receipt-store.js";
-import type { NoticeRule, PetRuleStore } from "./pet-rule-store.js";
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
+import type { NoticeRule } from "./pet-rule-store.js";
 import type { PetSessionRuleWatcher } from "./pet-session-rule-watcher.js";
 import type { SessionOutcome } from "./session-outcome.js";
 
@@ -41,6 +42,7 @@ import type { SessionOutcome } from "./session-outcome.js";
 export interface PetNoticeWiringDeps {
   /** Electron `app.getPath("userData")`; stores live under `<userData>/pet/`. */
   userDataDir: string;
+  rules: PetRuleAccess;
   bridge: { setHostActionHandler(action: string, handler: HostActionHandler): () => void };
   /** The pet projection (PetStateAggregator): attention source and Session facts. */
   projection: PetAttentionOptions["source"];
@@ -112,7 +114,7 @@ export interface PetNoticeWiringDeps {
 
 export interface PetNoticeWiring {
   router: PetNoticeRouter;
-  ruleStore: PetRuleStore;
+  ruleStore: PetRuleAccess;
   watcher: PetSessionRuleWatcher;
   ledger: PetNoticeLedger;
   receipts: PetReceiptStore;

@@ -254,7 +254,7 @@ export interface NoticeDigestOptions {
    */
   resend?: (record: NoticeRecord) => Promise<RouteDecision>;
   /** Why a held notice should no longer be sent (see `staleReason`); undefined keeps it. */
-  stale?: (record: NoticeRecord, now: number) => string | undefined;
+  stale?: (record: NoticeRecord, now: number) => string | undefined | Promise<string | undefined>;
   /** Settle without throwing. */
   settle: (id: string, status: NoticeSettleStatus, error: string) => Promise<void>;
   log: (event: string, data: Record<string, unknown>) => void;
@@ -380,7 +380,7 @@ export class NoticeDigest {
     const candidates: NoticeRecord[] = [];
     for (const record of held) {
       if (isDigestRecord(record)) continue;
-      const stale = this.options.stale?.(record, now);
+      const stale = await this.options.stale?.(record, now);
       if (stale) await this.options.settle(record.id, "revoked", stale);
       else candidates.push(record);
     }

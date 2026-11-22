@@ -183,13 +183,15 @@ export function createDecisionHooks(deps: PetDecisionHooksDeps): PetDecisionHook
   const unsubscribeTasks = deps.subscribeTasks?.(() => nudge(""));
 
   const hooks: PetDecisionNoticeHooks = {
-    deliveryFor(sessionId, task) {
-      return deps.deliveries.planBlocked({
-        sessionId,
-        ...(task ? { task } : {}),
-        // Mimi's own Sessions and tailed CLI rollouts are never watched by rules.
-        useRules: view.isEligibleSession(sessionId),
-      }).entries[0];
+    async deliveryFor(sessionId, task) {
+      return (
+        await deps.deliveries.planBlocked({
+          sessionId,
+          ...(task ? { task } : {}),
+          // Mimi's own Sessions and tailed CLI rollouts are never watched by rules.
+          useRules: view.isEligibleSession(sessionId),
+        })
+      ).entries[0];
     },
     async isOwnerConversation(origin) {
       try {

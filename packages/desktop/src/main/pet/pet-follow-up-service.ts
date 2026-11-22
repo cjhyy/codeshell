@@ -51,7 +51,7 @@ export type PetFollowUpSession = Pick<
 };
 export interface RegisteredFollowUps {
   load(): Promise<void>;
-  list(): PetFollowUpRuleView[];
+  list(): PetFollowUpRuleView[] | Promise<PetFollowUpRuleView[]>;
 }
 
 export interface PetFollowUpService {
@@ -160,7 +160,7 @@ export function createPetFollowUpService(deps: {
     ];
     rows.sort((left, right) => right.terminalAt - left.terminalAt);
     // Registered obligations must not disappear behind a burst of completed Sessions.
-    const registered = (deps.registered?.list() ?? []).map(registeredRow);
+    const registered = ((await deps.registered?.list()) ?? []).map(registeredRow);
     return [...registered, ...rows.slice(0, MAX_TRACKED_FOLLOW_UPS)];
   }
 

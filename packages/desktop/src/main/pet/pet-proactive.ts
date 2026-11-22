@@ -1,3 +1,4 @@
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import type { PetProactiveStatus } from "../../shared/pet-notices.js";
 import { isFollowUpRule } from "./pet-follow-up-rules.js";
@@ -28,7 +29,7 @@ import {
   type PetProactiveStateStore,
 } from "./pet-proactive-state.js";
 import type { RuleScheduleDue } from "./pet-rule-schedule.js";
-import type { PetRuleStore, SystemScheduleNoticeRule } from "./pet-rule-store.js";
+import type { SystemScheduleNoticeRule } from "./pet-rule-store.js";
 import { dueAt, type RuleWakeOutcome } from "./pet-schedule-rule.js";
 import type { DesktopPendingDecision, DesktopPetSession } from "./pet-state-aggregator.js";
 
@@ -46,7 +47,7 @@ const NOTICE_SUMMARY_MAX = 600;
 
 export interface PetProactiveDeps {
   rules: Pick<
-    PetRuleStore,
+    PetRuleAccess,
     "load" | "list" | "get" | "update" | "setSystemSchedule" | "activeForSession"
   >;
   state: PetProactiveStateStore;
@@ -95,7 +96,7 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
   const onError = (event: string) => (error: unknown) =>
     deps.log(event, { error: error instanceof Error ? error.message : String(error) });
 
-  const followUps = () => deps.rules.list().filter(isFollowUpRule);
+  const followUps = async () => (await deps.rules.list()).filter(isFollowUpRule);
 
   async function brief(kind: BriefKind, rule: SystemScheduleNoticeRule, due: RuleScheduleDue) {
     const name = briefName(kind);
@@ -125,7 +126,7 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
         tasks: await deps.tasks(),
         sessions: deps.sessions(),
         pending: deps.pending(),
-        followUps: followUps(),
+        followUps: await followUps(),
         items: deps.ledger.actionRecords(),
       },
     );
@@ -186,7 +187,7 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
     const settings = deps.settings();
     const when = at + minutes * MINUTE;
     if (!inClockWindow(settings.heartbeat.activeHours, when, offset(when))) return false;
-    const current = deps.rules.get("system-heartbeat-recheck");
+    const current = await deps.rules.get("system-heartbeat-recheck");
     if (
       current?.state === "active" &&
       current.wake?.status === "scheduled" &&
@@ -218,14 +219,20 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
       beat.lastAt ?? at - HEARTBEAT_INTERVAL_MIN * MINUTE,
       at - HEARTBEAT_LOOKBACK_MS,
     );
+    const rules = await deps.rules.list();
+    const activeRules = rules.filter((rule) => rule.state === "active");
+    const watchAll = activeRules.some((rule) => rule.when.kind === "all-sessions");
+    const watched = new Set(
+      activeRules.flatMap((rule) => (rule.when.kind === "session" ? [rule.when.sessionId] : [])),
+    );
     const facts = heartbeatPrecheck({
       now: at,
       since,
       seen: new Set(beat.seen),
       recent: deps.ledger.changedSince(since),
-      followUps: followUps(),
+      followUps: rules.filter(isFollowUpRule),
       sessions: deps.sessions(),
-      sessionWatched: (sessionId) => deps.rules.activeForSession(sessionId).length > 0,
+      sessionWatched: (sessionId) => watchAll || watched.has(sessionId),
       wasSessionViewedSince: deps.wasSessionViewedSince,
     });
     /** Move the cursor past these facts: they are not new any more. */

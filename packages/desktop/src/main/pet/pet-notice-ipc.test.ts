@@ -11,7 +11,7 @@ import {
   type PetNoticeControls,
 } from "./pet-notice-ipc.js";
 import { wirePetNotices, type PetNoticeWiring } from "./pet-notice-wiring.js";
-import { PetRuleStoreError } from "./pet-rule-store.js";
+import { PetRuleStore, PetRuleStoreError } from "./pet-rule-store.js";
 import type { DesktopPetSession } from "./pet-state-aggregator.js";
 
 const SID = "s-work";
@@ -54,6 +54,7 @@ function fixture(): Fixture {
   const settings = { value: {} as unknown };
   const created = wirePetNotices({
     userDataDir: dir,
+    rules: new PetRuleStore({ path: join(dir, "pet", "rules.json"), now: () => NOW }),
     bridge: { setHostActionHandler: () => () => undefined },
     projection: {
       // Mimi's own Session is never in the work-Session projection.

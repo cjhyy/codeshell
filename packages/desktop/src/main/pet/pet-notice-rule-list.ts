@@ -293,12 +293,25 @@ export function noticeRuleSummaries(source: NoticeRuleListSource): PetNoticeRule
 /** The owner's partial `pet.notifications` write (deep-merged into user settings). */
 export type NotificationSettingsWrite = (notifications: Record<string, unknown>) => Promise<void>;
 
-export interface NoticeRuleUpdaterDeps extends NoticeRuleListSource {
-  rules: Pick<PetRuleStore, "list" | "systemRule" | "get" | "update" | "setSystemRule">;
+export interface NoticeRuleUpdaterDeps extends Omit<NoticeRuleListSource, "rules"> {
+  rules: Pick<
+    import("../../shared/mimi-rules.js").PetRuleAccess,
+    "list" | "systemRule" | "get" | "update" | "setSystemRule"
+  >;
   /** Briefs and the heartbeat are switched in the settings; main then syncs their rules. */
   writeNotificationSettings?: NotificationSettingsWrite;
   /** The follow-up control's cancel (`pet:follow-up-control`), so both paths stay one. */
   cancelFollowUp?(followUpId: string, expectedRevision: number): Promise<unknown>;
+}
+
+export async function readNoticeRuleSummaries(
+  source: NoticeRuleUpdaterDeps,
+): Promise<PetNoticeRuleSummary[]> {
+  const [all, system] = await Promise.all([
+    source.rules.list(),
+    source.rules.systemRule("all-sessions"),
+  ]);
+  return noticeRuleSummaries({ ...source, rules: { list: () => all, systemRule: () => system } });
 }
 
 const STATE_FOR: Record<PetNoticeRuleAction, NoticeRule["state"]> = {
@@ -330,21 +343,26 @@ export async function updateNoticeRule(
   deps: NoticeRuleUpdaterDeps,
   request: PetNoticeRuleUpdate,
 ): Promise<PetNoticeRuleUpdateResult> {
-  const summary = (id: string) => noticeRuleSummaries(deps).find((row) => row.id === id);
-  const refused = (
+  const summary = async (id: string) =>
+    (await readNoticeRuleSummaries(deps)).find((row) => row.id === id);
+  const refused = async (
     reason: "version_conflict" | "not_found" | "not_allowed",
-  ): PetNoticeRuleUpdateResult => {
-    const rule = summary(request.ruleId);
+  ): Promise<PetNoticeRuleUpdateResult> => {
+    const rule = await summary(request.ruleId);
     return { ok: false, reason, ...(rule ? { rule } : {}) };
   };
-  const current = summary(request.ruleId);
+  const current = await summary(request.ruleId);
   if (!current) return refused("not_found");
   if (current.version !== request.expectedVersion) return refused("version_conflict");
   if (!current.actions.includes(request.action)) return refused("not_allowed");
   const on = request.action === "resume";
   try {
     if (current.kind === "all-sessions") {
-      await deps.rules.setSystemRule("all-sessions", { state: on ? "active" : "paused" });
+      await deps.rules.setSystemRule(
+        "all-sessions",
+        { state: on ? "active" : "paused" },
+        current.version,
+      );
     } else if (isListedSystemSchedule(current.id)) {
       if (!deps.writeNotificationSettings) throw new Error("notification settings are read-only");
       // Settings are the source of truth; writing them re-syncs the rule.
@@ -361,6 +379,6 @@ export async function updateNoticeRule(
     if (code === "duplicate_active_rule" || code === "invalid_rule") return refused("not_allowed");
     throw error;
   }
-  const rule = summary(request.ruleId);
+  const rule = await summary(request.ruleId);
   return { ok: true, ...(rule ? { rule } : {}) };
 }

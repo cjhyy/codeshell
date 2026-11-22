@@ -388,7 +388,7 @@ export interface PetNoticeRouterOptions extends PetAttentionOptions {
   isDecisionStillPending?: (sessionId: string, requestId: string) => boolean;
   wasSessionViewedSince?: (sessionId: string, ms: number) => boolean;
   /** The rule is a goal-scope Session rule that was cancelled (its Goal was cleared). */
-  isGoalRuleCancelled?: (ruleId: string) => boolean;
+  isGoalRuleCancelled?: (ruleId: string) => boolean | Promise<boolean>;
   /** Owner's offset east of UTC at an instant; defaults to the host's (DST-aware). */
   timezoneOffsetMin?: (ms: number) => number;
   /** An IM send that has not answered by then counts as failed (default 30 s). */
@@ -527,14 +527,14 @@ export function normalizeSettings(
  * pause whose goal rule is cancelled), or (done / failed / report) the owner already
  * looked at the Session on the desktop.
  */
-export function staleReason(
+export async function staleReason(
   record: NoticeRecord,
   now: number,
   probes: Pick<
     PetNoticeRouterOptions,
     "isDecisionStillPending" | "wasSessionViewedSince" | "isGoalRuleCancelled"
   >,
-): string | undefined {
+): Promise<string | undefined> {
   if (record.expiresAt !== undefined && record.expiresAt <= now) return "expired";
   const { sessionId, requestId } = record;
   const pending = probes.isDecisionStillPending;
@@ -544,7 +544,7 @@ export function staleReason(
     (record.kind === "session.blocked" || record.kind === "session.paused") &&
     requestId === undefined &&
     goalCancelled &&
-    record.ruleIds.some((id) => goalCancelled(id))
+    (await Promise.all(record.ruleIds.map(goalCancelled))).some(Boolean)
   )
     return "goal-cleared";
   if (

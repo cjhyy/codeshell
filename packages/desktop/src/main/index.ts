@@ -113,6 +113,7 @@ import {
 } from "./pet/pet-host-action-completion.js";
 import type { PetHostActionExecution } from "./pet/pet-dispatch-service.js";
 import type { PetChatEvent } from "../preload/pet-api.js";
+import { currentMimiRuleDocument } from "./desktop-host/mimi-rules-client.js";
 import type { MimiReplyRender } from "../shared/mimi-gateway-turn.js";
 import { nativeMimiRecords } from "./desktop-host/mimi-records-client.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
@@ -138,7 +139,7 @@ import {
 } from "./pet/session-outcome.js";
 import {
   PetImDecisions,
-  collectImDecisions,
+  collectCurrentImDecisions,
   imDecisionWorkerActions,
 } from "./pet/pet-im-decisions.js";
 import { createOwnerReplyHandling, lastUserMessageIn } from "./pet/pet-notice-action-controls.js";
@@ -1019,6 +1020,7 @@ async function createWindow(): Promise<BrowserWindow> {
       })
       .catch(() => undefined);
     const notices = wirePetNotices({
+      rules: desktopHost.mimiRules,
       userDataDir: app.getPath("userData"),
       isMimiSession: (sessionId) => sessionId === mimiSessionId,
       bridge,
@@ -1056,10 +1058,14 @@ async function createWindow(): Promise<BrowserWindow> {
     petNotices = notices;
     let petNoticeControls: PetNoticeControls | undefined;
     const writePetNotificationSettings = async (notifications: Record<string, unknown>) => {
-      await desktopHost.callBusiness("settings/patch", {
-        scope: "user",
-        patch: { pet: { notifications } },
-      });
+      await desktopHost.callBusiness(
+        "settings/patch",
+        {
+          scope: "user",
+          patch: { pet: { notifications } },
+        },
+        currentMimiRuleDocument(),
+      );
     };
     // Mimi's Notices / Triggers / ManageTrigger / NotificationSettings (design §4.7).
     const mimiNoticeTools = wireMimiNoticeTools({
@@ -1192,7 +1198,7 @@ async function createWindow(): Promise<BrowserWindow> {
         {
           read: async () => {
             const [lines, taskSnapshot] = await Promise.all([pendingMobileApprovals.replayForMimi(), longTaskStore.getSnapshot()]);
-            return collectImDecisions(
+            return collectCurrentImDecisions(
               aggregator.getSnapshot(),
               taskSnapshot.tasks,
               lines,

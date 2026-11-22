@@ -93,7 +93,7 @@ export interface DeliveryQuery {
 }
 
 export interface DeliveryPlanSources {
-  rules: { activeForSession(sessionId: string): EventNoticeRule[] };
+  rules: { activeForSession(sessionId: string): EventNoticeRule[] | Promise<EventNoticeRule[]> };
   longTasks: {
     activeForSession(sessionId: string): PetLongTask | undefined | Promise<PetLongTask | undefined>;
     getSnapshot(): { tasks: readonly PetLongTask[] } | Promise<{ tasks: readonly PetLongTask[] }>;
@@ -108,8 +108,8 @@ export interface DeliveryPlanSources {
 export interface PetDeliveryResolver {
   /** The delivery plan for one outcome of a Session. Never rejects. */
   plan(query: DeliveryQuery): Promise<DeliveryPlan>;
-  /** A blocked plan, synchronously: a decision is never served by a Session reply. */
-  planBlocked(query: Omit<DeliveryQuery, "event">): DeliveryPlan;
+  /** A blocked plan: a decision is never served by a Session reply. */
+  planBlocked(query: Omit<DeliveryQuery, "event">): Promise<DeliveryPlan>;
   /**
    * Who hears a Session's own progress report (ReportToMimi): an IM-started
    * task's origin and the conversations watching it, each once. Never rejects.
@@ -396,9 +396,9 @@ function errorText(error: unknown): string {
 }
 
 export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeliveryResolver {
-  const matchingRules = (query: DeliveryQuery): NoticeRule[] => {
+  const matchingRules = async (query: DeliveryQuery): Promise<NoticeRule[]> => {
     if (query.useRules === false) return [];
-    return sources.rules.activeForSession(query.sessionId).filter((rule) => {
+    return (await sources.rules.activeForSession(query.sessionId)).filter((rule) => {
       if (!rule.when.events.includes(query.event)) return false;
       if (rule.when.kind !== "session") return query.includeSystem !== false;
       if (query.at !== undefined && rule.when.armedAt > query.at) return false;
@@ -413,12 +413,12 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
       (task) => task.sessionId === sessionId && task.runId === runKey,
     );
 
-  const build = (
+  const build = async (
     query: DeliveryQuery,
     task: PetLongTask | undefined,
     replyRoutes: readonly ConversationSessionRoute[],
-  ): DeliveryPlan => {
-    const rules = matchingRules(query);
+  ): Promise<DeliveryPlan> => {
+    const rules = await matchingRules(query);
     return {
       rules,
       entries: buildDeliveryPlan({
@@ -455,7 +455,7 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
       const rules =
         query.useRules === false
           ? []
-          : sources.rules.activeForSession(query.sessionId).filter(answersIm);
+          : (await sources.rules.activeForSession(query.sessionId)).filter(answersIm);
       return {
         rules,
         entries: buildReportPlan({ rules, ...(query.task ? { task: query.task } : {}) }),

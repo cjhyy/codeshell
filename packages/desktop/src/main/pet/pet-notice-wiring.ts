@@ -26,7 +26,6 @@ import { errorText } from "./pet-notice-types.js";
 import type { PetNoticeWiring, PetNoticeWiringDeps } from "./pet-notice-wiring-types.js";
 import { createPresenceDetector } from "./pet-presence.js";
 import { PetReceiptStore } from "./pet-receipt-store.js";
-import { PetRuleStore } from "./pet-rule-store.js";
 import {
   goalPauseDedupeKey,
   PetSessionRuleWatcher,
@@ -61,9 +60,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const now = deps.now ?? Date.now;
   const log = deps.log ?? ((event, data) => dlog("main", event, data));
   const petDir = join(deps.userDataDir, "pet");
-  // Desktop main is the only writer of rules.json / notices.json, so their
-  // in-process serialisation is enough (no cross-process lock).
-  const ruleStore = new PetRuleStore({ path: join(petDir, "rules.json"), now });
+  const ruleStore = deps.rules;
   const ledger = new PetNoticeLedger({ path: join(petDir, "notices.json"), now });
   // Each notice's files are copied here when it is recorded, so a resend sends the same bytes.
   const mediaStore = new PetNoticeMediaStore({ root: join(petDir, "notice-media"), log });
@@ -133,8 +130,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     supportsIdempotentSend: () => true,
     isDecisionStillPending: view.isDecisionStillPending,
     wasSessionViewedSince: (sessionId, ms) => viewedSince(sessionId, ms),
-    isGoalRuleCancelled: (ruleId) => {
-      const rule = ruleStore.get(ruleId);
+    isGoalRuleCancelled: async (ruleId) => {
+      const rule = await ruleStore.get(ruleId);
       return (
         rule?.when.kind === "session" && rule.when.scope === "goal" && rule.state === "cancelled"
       );

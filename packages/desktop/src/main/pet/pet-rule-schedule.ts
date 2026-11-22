@@ -1,7 +1,8 @@
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
 import { rm, stat } from "node:fs/promises";
 import type { CronJob, CronScheduler } from "@cjhyy/code-shell-core/internal";
 import type { PetNoticePowerEvents } from "./pet-notice-decision-hooks.js";
-import { isScheduleRule, type PetRuleStore, type ScheduleNoticeRule } from "./pet-rule-store.js";
+import { isScheduleRule, type ScheduleNoticeRule } from "./pet-rule-store.js";
 import {
   dueAt,
   occurrenceDeadline,
@@ -90,7 +91,7 @@ export type PetCronAccess = {
 };
 export interface PetRuleSchedulerDeps {
   rules: Pick<
-    PetRuleStore,
+    PetRuleAccess,
     "load" | "list" | "onChange" | "claimOccurrence" | "settleOccurrence" | "recoverClaims"
   >;
   scheduler(): PetCronAccess;
@@ -195,7 +196,7 @@ export class PetRuleScheduler {
         const scheduler = this.deps.scheduler();
         const now = this.now();
         const desired = new Map<string, ScheduleNoticeRule>();
-        for (const rule of this.deps.rules.list()) {
+        for (const rule of await this.deps.rules.list()) {
           if (!isScheduleRule(rule) || rule.state !== "active" || rule.wake.status !== "scheduled")
             continue;
           if (dueAt(rule.wake) <= now) {

@@ -129,7 +129,7 @@ export function createExternalDecisions(deps: {
             entry.sessionId === item.sessionId &&
             !["completed", "failed", "cancelled"].includes(entry.status),
         );
-        const entry = deps.deliveryFor(item.sessionId, task);
+        const entry = await deps.deliveryFor(item.sessionId, task);
         if (!entry) continue;
         const title = deps.title(item.sessionId);
         result.push({

@@ -181,7 +181,7 @@ describe("WatchSession arms a notice rule for the asking conversation", () => {
   test("a decision in the watched Session is prompted in that conversation", async () => {
     current = harness();
     await watchAction(current).watch({ sessionId: SID }, CONTEXT);
-    const delivery = current.wiring.decisions.deliveryFor(SID, undefined);
+    const delivery = await current.wiring.decisions.deliveryFor(SID, undefined);
     expect(delivery).toMatchObject({
       target: { kind: "route", route: ROUTE },
       channel: "lark",

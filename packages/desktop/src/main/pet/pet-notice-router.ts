@@ -642,7 +642,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       // Route notices live in the gateway outbox, never in this queue's replay.
       if (target.kind === "route") continue;
       if (!matchesConversation(target, channel, conversation)) continue;
-      const stale = staleReason(record, now, this.options);
+      const stale = await staleReason(record, now, this.options);
       if (stale) {
         await this.settleQuietly(record.id, "revoked", stale);
         continue;

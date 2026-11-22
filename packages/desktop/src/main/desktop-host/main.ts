@@ -1,3 +1,4 @@
+import { nativeMimiRules } from "./mimi-rules-client.js";
 import { NativeMimiProjection } from "./mimi-projection-client.js";
 import { NativeMimiDispatch } from "./mimi-dispatch-client.js";
 import { NativeMimiTasks } from "./mimi-task-client.js";
@@ -64,6 +65,7 @@ export function createDesktopHost(
         bindMimiTasks();
         bindMimiDispatch();
         mimiProjection.reconnect();
+        mimiRules.invalidate();
         const { port1, port2 } = new MessageChannelMain();
         if (supervisor.post({ type: "remote-services-port" }, [port2])) remote.bind(electronPrivatePort(port1));
         else {
@@ -167,6 +169,7 @@ export function createDesktopHost(
       port2.close();
     }
   }
+  const mimiRules = nativeMimiRules(supervisor.callBusiness.bind(supervisor));
   const mimiProjection = new NativeMimiProjection(
     supervisor.callBusiness.bind(supervisor),
     (error) => dlog("main","pet.projection.reconcile.failed",{ error:String(error) }),
@@ -278,6 +281,7 @@ export function createDesktopHost(
     inferExternalMemory: inferExternalMemory(openExternalProvider),
     mimiDispatch,
     mimiProjection,
+    mimiRules: mimiRules.rules,
     mimiTasks,
     automationListeners: supervisor.automationListeners,
     automation,
