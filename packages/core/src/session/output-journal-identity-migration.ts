@@ -2,6 +2,7 @@
 import * as fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import { durableReadMode } from "../model-request-boundary/durability.js";
 import { lockSync } from "../utils/lockfile.js";
 import { STATE_LEASE_LOCK_OPTIONS } from "./output-journal-state-lease.js";
 import {
@@ -123,7 +124,7 @@ function bytes(
   assertLease = noLease,
 ): Buffer {
   assertLease();
-  const fd = openFile(path, fs.constants.O_RDONLY, receiptAlias);
+  const fd = openFile(path, flush ? durableReadMode : fs.constants.O_RDONLY, receiptAlias);
   try {
     const before = stamp(fd),
       size = fs.fstatSync(fd).size;

@@ -3,11 +3,10 @@ import { dirname, resolve } from "node:path";
 
 /** FlushFileBuffers requires a writable handle on Windows. The file must
  * already exist; O_RDWR neither creates, truncates nor appends to it. */
+export const durableReadMode = process.platform === "win32" ? constants.O_RDWR : constants.O_RDONLY;
+
 export function openForDurableRead(file: string, flags = 0): number {
-  return openSync(
-    file,
-    (process.platform === "win32" ? constants.O_RDWR : constants.O_RDONLY) | flags,
-  );
+  return openSync(file, durableReadMode | flags);
 }
 
 /** Commit every ancestor entry too: fsync(leaf) alone cannot preserve a newly-created parent. */
