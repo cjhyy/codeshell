@@ -90,7 +90,7 @@ export async function runSessionReportTurn(
       ? await host.getReplyAttachmentRoots()
       : [];
   const metadata = await host.options.metadata.ensure();
-  const snapshot = host.options.aggregator.getSnapshot();
+  const snapshot = (await host.options.aggregator.getSnapshot());
   const personalization = await host.currentPersonalization();
   const contextInput = await host.prepareWorldContextInput(
     {

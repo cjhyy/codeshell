@@ -1,4 +1,5 @@
 import { createPanelCookieAdapter, registerPanelWindowShell } from "./shell/panel-app.js";
+import { petRemoteMemoryContext } from "./pet/pet-memory-host.js";
 import { mimiTurnStores } from "../shared/mimi-turn-storage.js";
 import { nativePendingApprovals } from "../shared/pending-approvals.js";
 import { reviewedLocalPlugins } from "./reviewed-local-plugins.js";
@@ -139,7 +140,7 @@ import {
   completePetHostActionReceipt,
   PetHostActionReceiptService,
 } from "./pet/pet-host-action-completion.js";
-import { PetDispatchService, type PetHostActionExecution } from "./pet/pet-dispatch-service.js";
+import type { PetHostActionExecution } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { nativeMimiRecords } from "./desktop-host/mimi-records-client.js";
 import { petWidgetMenuTemplate } from "./pet/pet-widget-menu.js";
@@ -176,6 +177,7 @@ import { buildMigrationSummary } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
+import type { MimiDispatchService } from "../shared/mimi-dispatch.js";
 import {
   createBoundSessionHealth,
   createBoundSessionRunner,
@@ -184,15 +186,12 @@ import {
   type SessionBridgeWiring,
 } from "./pet/session-bridge-wiring.js";
 import {
-  petChatModelKeyFromSettings,
   petMemoryAutoExtractFromSettings,
   petMemoryAutoExtractSettingsPatch,
-  petPersonalizationFromSettings,
   resolvePetDelegatedPermissionMode,
 } from "../shared/pet-settings.js";
 import {
   sessionModelKeyFromSettings,
-  defaultSessionModelKeyFromSettings,
 } from "../shared/session-model-default.js";
 import { createExternalRuntimeHostSubmission } from "./external-runtime-host-submission.js";
 import {
@@ -677,7 +676,7 @@ registerHostedWechatLogin(ipcMain, desktopHost, (work) => imGatewayService.withW
 let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ReturnType<typeof nativeMimiExternalActivity> | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
-let petDispatchService: PetDispatchService | null = null;
+let petDispatchService: MimiDispatchService | null = null;
 let petRuleScheduler: PetRuleScheduler | null = null;
 // The dispatcher exists before its worker and durable stores finish loading.
 // IM delivery shares the same completed initialization boundary as Pet IPC.
@@ -1485,7 +1484,7 @@ async function createWindow(): Promise<BrowserWindow> {
     });
     const petWorkInbox = mimiRecords.workInbox;
     petWorkInboxStore = petWorkInbox;
-    const turnStores=mimiTurnStores(command=>desktopHost.callBusiness("mimi/turnStorage",command));
+    const turnStores = mimiTurnStores((command) => desktopHost.callBusiness("mimi/turnStorage", command));
     // Built inside petInitialization once the durable pet session id is known.
     let petSegmentClosureService: PetSegmentClosureService | null = null;
     const longTaskCoordinator = longTaskStore.configure({
@@ -1796,23 +1795,14 @@ async function createWindow(): Promise<BrowserWindow> {
         }),
     });
     await sessionBridge.recoverOnStartup().catch(() => undefined);
-    petDispatchService = new PetDispatchService({
-      metadata: petMetadata,
+    petDispatchService = desktopHost.mimiDispatch.configure({
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
-      attachmentContext: turnStores.attachmentContext,
-      sessionsRootDir: petSessionsRootDir,
       externalRuntime: createPetExternalRuntime({
         service: () => externalRuntime.service,
         cwd: resolveNoRepoCwd(),
       }),
-      managerModel: async () => {
-        const settings = await readSettings("user");
-        return petChatModelKeyFromSettings(settings) ?? sessionModelKeyFromSettings(settings);
-      },
-      personalization: async () =>
-        petPersonalizationFromSettings(await readSettings("user").catch(() => null)),
       segmentController: {
         requestContextClear: async () => {
           if (!petSegmentController) throw new Error("Pet work-memory sink is not ready");
@@ -1834,14 +1824,11 @@ async function createWindow(): Promise<BrowserWindow> {
         onDelegationClosed: (closure) =>
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
-      longTasks: longTaskCoordinator,
       validateFollowUpContinuation: followUpRuntime.validateContinuation,
       taskInbox: async () => {
         if (!taskInboxService || !taskInboxEnabled()) throw new Error("Task inbox is unavailable");
         return taskInboxPetView(await taskInboxService.reconcile());
       },
-      hostActionReceipts: turnStores.receipts,
-      contextLinks: turnStores.contextLinks,
       // Atomic CodeShell capabilities Mimi may request via her host-action
       // tools; each runs only after her turn, and the real outcome is folded
       // into the reply. The key set gates which tools the worker exposes.
@@ -1863,19 +1850,6 @@ async function createWindow(): Promise<BrowserWindow> {
             expiresAt: opened.expiresAt,
           };
         },
-        longTaskControl: async (payload) => {
-          const taskId = typeof payload.taskId === "string" ? payload.taskId : "";
-          const action = payload.action;
-          if (
-            !taskId ||
-            (action !== "pause" && action !== "resume" && action !== "retry" && action !== "cancel")
-          ) {
-            throw new Error("invalid long-task control request");
-          }
-          const controlled = await longTaskCoordinator.control({ taskId, action });
-          if (!controlled.ok) throw new Error(controlled.message);
-          return { action, objective: controlled.task.objective, status: controlled.task.status };
-        },
         // A notice rule for the asking conversation (an active long task keeps reporting).
         sessionWatch: notices.sessionWatch({
           refreshCatalog: () => aggregator.refreshCatalog(false),
@@ -1887,7 +1861,6 @@ async function createWindow(): Promise<BrowserWindow> {
           },
           goals: externalGoalSessions,
         }),
-        memory: mimiRecords.memoryAction,
         followUpMutation: followUpHost,
         sessionBind: async (payload, context) =>
           sessionBridge
@@ -1963,10 +1936,7 @@ async function createWindow(): Promise<BrowserWindow> {
           };
         },
       },
-      worldContext: async (input) => ({
-        ...(await mimiRecords.worldContext(input, getMobileRemoteGatewayStatus())),
-        defaultWorkSessionModel: defaultSessionModelKeyFromSettings(await readSettings("user")),
-      }),
+      remoteContext: () => petRemoteMemoryContext(getMobileRemoteGatewayStatus()),
       listWorkspaces: () => mobileOrchestrator.projectList(),
       listFollowUps: (model) =>
         petFollowUps.listOpen({ allowGenerate: !parseExternalRuntimeModelKey(model) }),
@@ -1983,32 +1953,7 @@ async function createWindow(): Promise<BrowserWindow> {
           proactiveReady: target.proactiveReady,
         })),
       replyAttachmentRoots: knownReplyAttachmentCwds,
-      // Second-chance lookup for a DelegateWork selector Mimi found via the
-      // read-only Sessions tool: same opaque selector convention, resolved
-      // against the on-disk catalog with the same pool boundaries as
-      // listReusableSessions (desktop origin, not archived).
-      resolveReusableSessionBySelector: createReusableSessionResolver(petSessionsRootDir),
-      listReusableSessions: async () => {
-        const noWorkspaceCwd = resolveNoRepoCwd();
-        // No includeArchived: listDiskSessions default-filters archived rows, so
-        // auto-archived sessions leave the reuse-candidate pool automatically
-        // while completed-but-not-yet-archived sessions stay reusable. `status`
-        // rides along to the candidate description.
-        const { sessions } = await listDiskSessions({ limit: 100 });
-        return sessions
-          .filter((session) => session.origin === "desktop")
-          .map((session) => ({
-            sessionId: session.engineSessionId,
-            workspacePath:
-              resolve(session.cwd || noWorkspaceCwd) === resolve(noWorkspaceCwd)
-                ? null
-                : session.cwd,
-            title: session.title,
-            updatedAt: session.updatedAt,
-            status: session.status,
-          }));
-      },
-      startWorkSession: (delegation) => longTaskCoordinator.startDelegation(delegation),
+
     });
     const processingPetReports = new Set<string>();
     const deliveredPetReports = turnStores.reports;
@@ -2636,7 +2581,7 @@ async function dispatchGatewayPetChat(
 
 async function dispatchGatewayPetTurn(
   request: PetChatControlRequest,
-  dispatcher: PetDispatchService,
+  dispatcher: MimiDispatchService,
   sessionId: string,
   handoff: Exclude<Awaited<ReturnType<PetImDecisions["reply"]>>, string>,
 ): Promise<PetChatControlResult> {

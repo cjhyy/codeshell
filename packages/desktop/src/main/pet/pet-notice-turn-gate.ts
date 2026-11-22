@@ -17,9 +17,9 @@ export interface PetNoticeTurnGate {
   /** Whether an IM conversation is one of the owner's allowlisted targets. */
   isOwnerConversation(channel: string, target: string): boolean | Promise<boolean>;
   /** A Mimi turn starts in `sessionId`; `owner`: it is the owner's. */
-  begin(sessionId: string, owner: boolean, current?: () => Promise<boolean>): void;
+  begin(sessionId: string, owner: boolean, current?: () => Promise<boolean>): void | Promise<void>;
   /** That turn ended (however it ended). */
-  end(sessionId: string): void;
+  end(sessionId: string): void | Promise<void>;
 }
 
 type ChatCommand = Extract<PetDispatchCommand, { type: "chat" }>;
@@ -66,7 +66,7 @@ export async function withNoticeTurn<T>(
   if (!gate || !sessionId) return run();
   const profile = params.profileParams as { hostActions?: unknown } | undefined;
   const kinds = Array.isArray(profile?.hostActions) ? profile.hostActions : [];
-  gate.begin(
+  await gate.begin(
     sessionId,
     kinds.some((kind) => NOTICE_TOOL_KINDS.has(kind as string)),
     current,
@@ -74,6 +74,6 @@ export async function withNoticeTurn<T>(
   try {
     return await run();
   } finally {
-    gate.end(sessionId);
+    await gate.end(sessionId);
   }
 }

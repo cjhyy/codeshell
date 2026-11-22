@@ -127,7 +127,7 @@ export function mimiRecordsOperations(
     async "mimi/turnStorage"(command, grant) {
       const db=await storage;
       grant.assertCurrent();
-      const row=await db.request<{value:unknown}>("mimi/turnStorage",command);
+      const row=await db.request<{value:unknown}>("mimi/turnStorage",{cmd:command,permit:grant.permit});
       if(!row)throw Error("Mimi turn storage unavailable");
       return row.value;
     },
@@ -156,7 +156,7 @@ export function mimiRecordsOperations(
   } satisfies Pick<BusinessMethods, "mimi/turnStorage" | "mimi/records" | "mimi/workMemory">;
 }
 
-export async function readMimiList<K extends "memoryList" | "journalList" | "inboxSnapshot">(
+export async function readMimiList<K extends "metadata" | "memoryList" | "journalList" | "inboxSnapshot">(
   storage: Promise<StateStorage>,
   action: K,
 ) {

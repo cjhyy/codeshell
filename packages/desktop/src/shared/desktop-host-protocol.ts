@@ -24,6 +24,7 @@ export interface DesktopHostIdentity {
 }
 
 export type DesktopHostControl =
+  | {type:"mimi-dispatch-port"}
   | {type:"mimi-tasks-port"}
   | { type: "external-provider-port" }
   | { type: "remote-services-port" }
@@ -92,7 +93,7 @@ export function isDesktopHostIdentity(value: unknown): value is DesktopHostIdent
 
 export function isDesktopHostControl(value: unknown): value is DesktopHostControl {
   if (!record(value)) return false;
-  if (value.type === "mimi-tasks-port" || value.type === "external-provider-port" || value.type === "remote-services-port" || value.type === "im-gateway-port")
+  if (value.type === "mimi-dispatch-port" || value.type === "mimi-tasks-port" || value.type === "external-provider-port" || value.type === "remote-services-port" || value.type === "im-gateway-port")
     return hasOnly(value, ["type"]);
   if (value.type === "automation-port")
     return Object.keys(value).length === 2 && typeof value.searchPath === "string";

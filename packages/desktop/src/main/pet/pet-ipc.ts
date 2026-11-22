@@ -102,7 +102,7 @@ export function broadcastPetChatTranscriptUpdated(
 }
 
 export interface PetIpcDispatcher {
-  dispatch(command: PetDispatchCommand): Promise<PetDispatchResult>;
+  dispatch(command: PetDispatchCommand, signal?: AbortSignal): Promise<PetDispatchResult>;
 }
 
 export interface PetIpcAttention {
@@ -434,9 +434,11 @@ export function registerPetIpc(options: {
   if (options.dispatcher) {
     options.ipcMain.handle(PET_DISPATCH_CHANNEL, (_event, ...args) => {
       if (args.length !== 1) throw new Error("invalid pet command");
+      const signal = options.recordAuthority?.(_event);
       const parsed = parseDispatchCommand(args[0]);
       return afterReady(options.ready, async () => {
-        if (parsed.type !== "chat") return options.dispatcher!.dispatch(parsed);
+        signal?.throwIfAborted();
+        if (parsed.type !== "chat") return options.dispatcher!.dispatch(parsed, signal);
         const command = {
           ...parsed,
           clientMessageId: parsed.clientMessageId ?? `pet-${randomUUID()}`,
@@ -450,7 +452,7 @@ export function registerPetIpc(options: {
         for (const window of options.windows()) {
           if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, event);
         }
-        const result = await options.dispatcher!.dispatch(command);
+        const result = await options.dispatcher!.dispatch(command, signal);
         if (result.ok && result.type === "chat") {
           const delegations = result.delegations ?? (result.delegation ? [result.delegation] : []);
           if (delegations.length > 0) {

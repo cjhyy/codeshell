@@ -187,7 +187,7 @@ export interface PetHostActionExecution {
 export interface PetPendingNoticeSource {
   take(): Promise<readonly { kind: string; title?: string; body: string }[]>;
   /** The turn is starting with them in its runtime context. */
-  started(): void;
+  started(): void | Promise<void>;
 }
 
 export type PetDispatchCommand =
@@ -306,7 +306,7 @@ export type PetDispatchResult =
 export interface PetDispatchOptions {
   metadata: { ensure(): Promise<{ petSessionId: string }> };
   aggregator: {
-    getSnapshot(): DesktopPetProjectionSnapshot;
+    getSnapshot(): DesktopPetProjectionSnapshot | Promise<DesktopPetProjectionSnapshot>;
     resolveNavigation(request: PetNavigationRequest): Promise<PetNavigationResult>;
     refreshCatalog?(emit?: boolean, opts?: { full?: boolean }): Promise<void>;
   };
@@ -1384,7 +1384,7 @@ export class PetDispatchService {
     switch (command.type) {
       case "get_global_status": {
         const taskInbox = await this.readTaskInbox();
-        const snapshot = this.options.aggregator.getSnapshot();
+        const snapshot = (await this.options.aggregator.getSnapshot());
         const metadata = await this.options.metadata.ensure();
         const pending = snapshot.pending.filter((entry) => entry.status === "pending");
         return {
@@ -1428,8 +1428,7 @@ export class PetDispatchService {
         return {
           ok: true,
           type: "pending_list",
-          pending: this.options.aggregator
-            .getSnapshot()
+          pending: (await this.options.aggregator.getSnapshot())
             .pending.filter((pending) => pending.status === "pending")
             .slice(0, 100),
           ...(taskInbox
@@ -1676,7 +1675,7 @@ export class PetDispatchService {
           });
         }
         await catalogTask;
-        const snapshot = this.options.aggregator.getSnapshot();
+        const snapshot = (await this.options.aggregator.getSnapshot());
         const unavailableSessionIds = new Set(
           snapshot.sessions
             .filter(
@@ -1909,7 +1908,7 @@ export class PetDispatchService {
         this.lastLedgerContext = ledgerContext;
         timer.done();
         const activeChat = this.activeChatTurn;
-        command.pendingNotices?.started();
+        await command.pendingNotices?.started();
         const response = await this.requestChatRun(command, {
           sessionId: metadata.petSessionId,
           task: command.message.trim(),
@@ -2121,8 +2120,7 @@ export class PetDispatchService {
                 const selectionError = selectionErrors[index];
                 if (selectionError) throw selectionError;
                 if (command.hostWake) {
-                  const source = this.options.aggregator
-                    .getSnapshot()
+                  const source = (await this.options.aggregator.getSnapshot())
                     .sessions.find(
                       (row) => row.agentSessionId === command.hostWake!.sourceSessionId,
                     );

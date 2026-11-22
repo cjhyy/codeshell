@@ -618,6 +618,50 @@ try {
     "Clicking Mimi again did not close the bubble",
   );
   receipt.checks.push("clicking Mimi again closes the bubble");
+  const hostStarts = async () =>
+    (await readFile(join(isolated.home, "spawned-hosts.jsonl"), "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+  const previousHost = (await hostStarts()).at(-1);
+  const isOwned = await app.evaluate(
+    ({ app }, host) =>
+      host.ppid === process.pid &&
+      app.getAppMetrics().some((row) => row.type === "Utility" && row.pid === host.pid),
+    previousHost,
+  );
+  assert(isOwned, "Only restart the fixture's own Desktop Host");
+  process.kill(previousHost.pid, "SIGKILL");
+  const deadline = Date.now() + 15_000;
+  while ((await hostStarts()).at(-1).pid === previousHost.pid && Date.now() < deadline)
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.notEqual((await hostStarts()).at(-1).pid, previousHost.pid);
+  await waitForAsyncFunction(
+    main,
+    async ({ sessionId, title }) => {
+      try {
+        const status = await window.codeshell.pet.dispatch({ type: "get_global_status" });
+        const entries = await window.codeshell.pet.listJournal();
+        return (
+          status.ok &&
+          status.petSessionId === sessionId &&
+          entries.some((entry) => entry.title === title)
+        );
+      } catch {
+        return false;
+      }
+    },
+    { sessionId: firstStatus.petSessionId, title: closedTopic.title },
+  );
+  assert.equal(
+    model.requests.length,
+    receipt.providerRequests,
+    "Restoring the manager must not replay a settled turn",
+  );
+  receipt.checks.push(
+    "replacement Desktop Host restores the same Mimi Session and journal without replaying a model turn",
+  );
+
   receipt.passed = true;
   await put(join(isolated.home, "companion-trial-state.json"), receipt);
   console.log(JSON.stringify({ phase: "companion-chat-passed", ...receipt }));

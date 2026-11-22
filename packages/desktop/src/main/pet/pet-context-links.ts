@@ -58,7 +58,10 @@ export class PetContextLinkStore {
   private loadPromise: Promise<void> | undefined;
   private mutationQueue: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly path: string) {}
+  constructor(
+    private readonly path: string,
+    private readonly replaceFile?: (from: string, to: string) => Promise<void>,
+  ) {}
 
   record(input: PetContextLink): Promise<PetContextLink> {
     const parsed = parseLink(input);
@@ -83,7 +86,9 @@ export class PetContextLinkStore {
         const staged = new Map(this.entries);
         staged.set(entry.clientMessageId, entry);
         const retained = sorted(staged.values()).slice(0, MAX_ENTRIES);
-        await writeOwnerJsonAtomic(this.path, { version: 1, entries: retained }, MAX_FILE_BYTES);
+        await writeOwnerJsonAtomic(this.path, { version: 1, entries: retained }, MAX_FILE_BYTES, {
+          replaceFile: this.replaceFile,
+        });
         this.entries = new Map(retained.map((row) => [row.clientMessageId, row]));
         return structuredClone(entry);
       });

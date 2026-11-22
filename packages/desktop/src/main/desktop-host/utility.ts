@@ -1,4 +1,6 @@
 import { gitOperations } from "../../host/composition/git.js";
+import { HostedMimiDispatch } from "../../host/composition/mimi-dispatch.js";
+import { randomUUID } from "node:crypto";
 import { labFiles } from "../../host/composition/optimization-lab.js";
 import {hostedMarketplace} from "../../host/composition/marketplace.js";
 import { hostedProfileLibrary } from "../../host/composition/profile-library.js";
@@ -140,6 +142,27 @@ const pluginCommandsChanged=(requestId:string)=>parent.postMessage({
 });
 const skills=hostedSkills(new URL("./skill-worker.mjs",import.meta.url),pluginCommandsChanged);
 const marketplace=hostedMarketplace(new URL("./marketplace-worker.mjs",import.meta.url),jobs=>parent.postMessage({type:"plugin-jobs",jobs}),pluginCommandsChanged);
+async function mimiBusiness(
+  method: "mimi/tasks" | "mimi/records" | "mimi/turnStorage",
+  input: unknown,
+  signal?: AbortSignal,
+) {
+  signal?.throwIfAborted();
+  const id = `mimi:${randomUUID()}`;
+  const cancel = () => business.revoke(id);
+  signal?.addEventListener("abort", cancel, { once: true });
+  try {
+    return await business.run(id, method, input);
+  } finally {
+    signal?.removeEventListener("abort", cancel);
+  }
+}
+const mimiDispatch = new HostedMimiDispatch(
+  storage, sessionsRoot(), (options) => catalog.list(options), mimiTasks,
+  (cmd, signal) => mimiBusiness("mimi/tasks", cmd, signal),
+  (cmd, signal) => mimiBusiness("mimi/records", cmd, signal),
+  (cmd, signal) => mimiBusiness("mimi/turnStorage", cmd, signal),
+);
 let server: DesktopHostServer | undefined;
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 // Native lifecycle retains the verified roots across Host restarts for its periodic sweep.
@@ -202,8 +225,10 @@ let worker: ReturnType<typeof bindHostWorker> | undefined;
 const output = new HostOutput(
   storage,
   (frames) => {
-    for (const { envelope } of frames)
+    for (const { envelope } of frames) {
       server?.notifySession(envelope.sessionId, "agent/streamEvent", { ...envelope });
+      mimiDispatch.observe(envelope);
+    }
     worker?.publish(frames);
   },
   (message, details) => console.warn("[Desktop Host]", message, details),
@@ -223,6 +248,10 @@ parent.on("message", ({ data, ports }) => {
   }
   if (isDesktopHostControl(data) && data.type === "im-gateway-port" && server && ports.length === 1 && !im) {
     im = bindImGateway(electronPrivatePort(ports[0]));
+    return;
+  }
+  if (isDesktopHostControl(data) && data.type === "mimi-dispatch-port" && server && ports.length === 1) {
+    mimiDispatch.bind(electronPrivatePort(ports[0]));
     return;
   }
   if (isDesktopHostControl(data) && data.type === "mimi-tasks-port" && server && ports.length === 1) {
@@ -303,6 +332,7 @@ parent.on("message", ({ data, ports }) => {
           index.close(),
           historyWorker.close(),
           skills.close(),
+          mimiDispatch.close(),
           mimiTasks.close(),
           marketplace.close(),
           worker?.close(),

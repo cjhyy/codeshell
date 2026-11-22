@@ -60,7 +60,9 @@ export function wireMimiNoticeTools(deps: MimiNoticeToolsDeps) {
       if (owner) ownerTurns.set(sessionId, current);
       else ownerTurns.delete(sessionId);
     },
-    end: (sessionId) => ownerTurns.delete(sessionId),
+    end: (sessionId) => {
+      ownerTurns.delete(sessionId);
+    },
   };
   const onlyMimi =
     (read: (args: Record<string, unknown>) => Promise<unknown>): HostActionHandler =>

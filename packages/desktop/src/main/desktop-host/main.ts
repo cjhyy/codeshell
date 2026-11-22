@@ -1,3 +1,4 @@
+import { NativeMimiDispatch } from "./mimi-dispatch-client.js";
 import { NativeMimiTasks } from "./mimi-task-client.js";
 import { ExternalProviderPorts, externalProviderFactories, inferExternalMemory } from "./native-external-provider.js";
 import { electronPrivatePort } from "../../host/native-peer.js";
@@ -59,6 +60,7 @@ export function createDesktopHost(
         bindWorker();
         bindAutomation();
         bindMimiTasks();
+        bindMimiDispatch();
         const { port1, port2 } = new MessageChannelMain();
         if (supervisor.post({ type: "remote-services-port" }, [port2])) remote.bind(electronPrivatePort(port1));
         else {
@@ -78,6 +80,7 @@ export function createDesktopHost(
         worker?.disconnect();
         automation.disconnect();
         mimiTasks.disconnect();
+        mimiDispatch.disconnect();
         remote.disconnect();
         im.disconnect();
         terminals?.disconnect();
@@ -177,6 +180,20 @@ export function createDesktopHost(
       port2.close();
     }
   }
+  const mimiDispatch = new NativeMimiDispatch(async () => {
+    await supervisor.waitUntilReady();
+    bindMimiDispatch();
+  });
+  function bindMimiDispatch() {
+    if (!mimiDispatch.needsPort) return;
+    const { port1, port2 } = new MessageChannelMain();
+    if (supervisor.post({ type: "mimi-dispatch-port" }, [port2])) {
+      mimiDispatch.bind(electronPrivatePort(port1));
+    } else {
+      port1.close();
+      port2.close();
+    }
+  }
   function bindTerminals() {
     if (!terminals) return;
     const { port1, port2 } = new MessageChannelMain();
@@ -222,6 +239,7 @@ export function createDesktopHost(
     mimiRecordListeners: supervisor.mimiRecordListeners,
     externalProviders: externalProviderFactories(openExternalProvider),
     inferExternalMemory: inferExternalMemory(openExternalProvider),
+    mimiDispatch,
     mimiTasks,
     automationListeners: supervisor.automationListeners,
     automation,
@@ -366,6 +384,7 @@ export function createDesktopHost(
     setDeleting: (sessionId: string, deleting: boolean) =>
       supervisor.setDeleting(sessionId, deleting),
     dispose() {
+      mimiDispatch.disconnect();
       mimiTasks.stop();
       providerPorts.disconnect();
       terminals?.disconnect();

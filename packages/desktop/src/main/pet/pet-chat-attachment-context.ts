@@ -193,7 +193,10 @@ export class PetChatAttachmentContext {
   private loaded = false;
   private queue: Promise<void> = Promise.resolve();
 
-  constructor(rootDirectory: string) {
+  constructor(
+    rootDirectory: string,
+    private readonly replaceFile?: (from: string, to: string) => Promise<void>,
+  ) {
     this.filePath = join(rootDirectory, "chat-attachment-context.json");
   }
 
@@ -323,7 +326,9 @@ export class PetChatAttachmentContext {
       MAX_STATE_BYTES
     )
       bounded.shift();
-    await writeOwnerJsonAtomic(this.filePath, { version: 1, records: bounded }, MAX_STATE_BYTES);
+    await writeOwnerJsonAtomic(this.filePath, { version: 1, records: bounded }, MAX_STATE_BYTES, {
+      replaceFile: this.replaceFile,
+    });
     this.records = bounded;
   }
 }
