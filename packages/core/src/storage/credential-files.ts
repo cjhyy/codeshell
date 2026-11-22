@@ -221,17 +221,35 @@ function withUserRevisionLock<T>(
     projectInfo && projectInfo.dev === userInfo.dev && projectInfo.ino === userInfo.ino;
   const release = sameDirectory ? undefined : acquireFileLock(join(user, "credentials.json"));
   try {
-    return write(() => {
-      checkCredentialDirectory(user);
-      checkCredentialDirectory(project);
-      return (
-        revisionOf(readBoundedJsonFile(join(user, "credentials.json"), maxBytes)) ===
-          expected.user &&
-        revisionOf(readBoundedJsonFile(join(project, "credentials.json"), maxBytes)) ===
-          expected.project
-      );
-    });
+    return write(() => revisionsMatch(user, project, expected));
   } finally {
     release?.();
   }
+}
+
+function revisionsMatch(
+  user: string,
+  project: string,
+  expected: ProfileCredentialRevisions,
+): boolean {
+  checkCredentialDirectory(user);
+  checkCredentialDirectory(project);
+  return (
+    revisionOf(readBoundedJsonFile(join(user, "credentials.json"), maxBytes)) === expected.user &&
+    revisionOf(readBoundedJsonFile(join(project, "credentials.json"), maxBytes)) ===
+      expected.project
+  );
+}
+
+/** Check a native masked review before an independent catalog commit. Project settings
+ * mutations additionally pin both credential directories with withProfileCredentialRevisions. */
+export function credentialFileRevisionsMatch(
+  cwd: string,
+  expected: ProfileCredentialRevisions,
+): boolean {
+  return revisionsMatch(
+    credentialDirectory(undefined, { scope: "user" }),
+    credentialDirectory(undefined, { scope: "project", cwd }),
+    expected,
+  );
 }

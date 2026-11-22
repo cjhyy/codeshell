@@ -9,6 +9,7 @@ export type { SqlValue, StorageDatabase, StorageStatement } from "./driver.js";
 export {
   credentialCommands,
   credentialFileCommand,
+  credentialFileRevisionsMatch,
   withProfileCredentialRevisions,
   type ProfileCredentialRevisions,
   type CredentialFileAddress,

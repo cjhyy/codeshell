@@ -1,4 +1,5 @@
 import { runCookieFileWork } from "../../host/composition/cookie-files.js";
+import { commitLinkedFileSources, type LinkedFileWork } from "../../host/composition/linked-file-sources.js";
 import { readTranscriptContext } from "../../host/composition/transcript-context.js";
 import { storedAttentionReceipts } from "../../host/composition/mimi-attention-receipts.js";
 import {storedMimiProactiveState} from "../../host/composition/mimi-proactive-state.js";
@@ -75,6 +76,7 @@ await serveSessionIndexWorker({
   async handle(ctx, command, payload) {
     if (command === "cookies/materialize" || command === "cookies/inspect" || command === "cookies/sweep")
       return runCookieFileWork(command, payload as Parameters<typeof runCookieFileWork>[1]);
+    if (command === "sources/addLinkedFiles") return commitLinkedFileSources(payload as LinkedFileWork);
     if (command === "transcripts/context")
       return readTranscriptContext(ctx.sessionsRoot, payload as Parameters<typeof readTranscriptContext>[1]);
     if (command === "sessions/archive" || command === "sessions/deleteFiles")

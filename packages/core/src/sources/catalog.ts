@@ -139,6 +139,7 @@ export function readSourceDefinition(id: string): SourceDefinition | undefined {
 /** Batch create-only write. Existing definitions, including disabled ones, remain untouched. */
 export function insertSourceDefinitionsIfAbsent(
   definitions: SourceDefinition[],
+  beforeCommit?: () => void,
 ): SourceDefinition[] {
   if (!Array.isArray(definitions) || definitions.length > 100)
     throw new Error("Invalid source batch");
@@ -163,6 +164,7 @@ export function insertSourceDefinitionsIfAbsent(
       return [...current, ...inserted];
     },
     parsed.map((source) => source.id),
+    beforeCommit,
   );
   return inserted;
 }

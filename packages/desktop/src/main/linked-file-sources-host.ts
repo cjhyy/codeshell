@@ -1,15 +1,24 @@
 import { BrowserWindow, type IpcMainInvokeEvent } from "electron";
-import type { LinkSnapshot } from "@cjhyy/code-shell-link";
+import type {
+  AddLinkedFileSourcesInput,
+  CommitLinkedFiles,
+  LinkedFileProject,
+  StoredLinkedFiles,
+} from "../shared/linked-file-sources.js";
 import { captureSourceCollectionOwner } from "./source-collections-owner.js";
 import { requireRendererProjectPrimary } from "./renderer-project-path.js";
-import { getProjectStore } from "./project-store.js";
 import { requireMountedProjectRoot } from "./mounted-project-root.js";
-import { createLinkedFileSourceService } from "./linked-file-sources-service.js";
+import { getProjectStore } from "./project-store.js";
+import {
+  parseLinkedFileSelection,
+  describeLinkedFileSources,
+} from "./linked-file-sources-service.js";
 
 export function openLinkedFileSourceOperation(
   event: IpcMainInvokeEvent,
   isMainWindow: (window: BrowserWindow) => boolean,
-  storedSnapshot: (event: IpcMainInvokeEvent, cwd: string) => Promise<() => LinkSnapshot>,
+  storedSnapshot: (event: IpcMainInvokeEvent, cwd: string) => Promise<StoredLinkedFiles>,
+  call: CommitLinkedFiles,
 ) {
   const owner = BrowserWindow.fromWebContents(event.sender);
   const frame = event.senderFrame;
@@ -21,55 +30,55 @@ export function openLinkedFileSourceOperation(
     frame,
     isMainWindow: () => isMainWindow(owner),
   });
-  const snapshots = new Map<string, () => LinkSnapshot>();
-  const changed = new Set<string>();
-  const reviewed = new Map<string, { rootId: string; path: string }>();
+  const rootChanged = new AbortController();
+  const signal = AbortSignal.any([authority.signal, rootChanged.signal]);
+  let reviewed: LinkedFileProject | undefined;
   const unsubscribe = getProjectStore().onChanged((projects) => {
-    for (const [id, original] of reviewed) {
-      const project = projects.find((item) => item.id === id && item.deletedAt === undefined);
-      const root = project?.roots.find((item) => item.id === original.rootId);
-      if (!project || project.primaryRootId !== original.rootId || root?.path !== original.path)
-        changed.add(id);
-    }
+    if (!reviewed) return;
+    const project = projects.find((p) => p.id === reviewed!.projectId && p.deletedAt === undefined);
+    const root = project?.roots.find((r) => r.id === project.primaryRootId);
+    if (
+      !root ||
+      root.id !== reviewed.rootId ||
+      root.path !== reviewed.cwd ||
+      root.canonicalIdentity !== reviewed.canonicalIdentity
+    )
+      rootChanged.abort(Error("项目主目录已改变，请重新打开项目配置。"));
   });
-  const api = createLinkedFileSourceService({
-    assertCurrent: authority.assertCurrent,
-    async resolveProject(projectId) {
-      const current = await requireRendererProjectPrimary(projectId);
-      authority.assertCurrent();
-      if (!snapshots.has(current.path)) {
-        snapshots.set(current.path, await storedSnapshot(event, current.path));
-        authority.assertCurrent();
-      }
-      reviewed.set(projectId, { rootId: current.rootId, path: current.path });
-      return {
-        projectId: current.project.id,
-        rootId: current.rootId,
-        cwd: current.path,
-        canonicalIdentity: current.root.canonicalIdentity!,
-      };
-    },
-    assertProjectCurrent(project) {
-      authority.assertCurrent();
-      if (
-        changed.has(project.projectId) ||
-        requireMountedProjectRoot({
-          path: project.cwd,
-          canonicalIdentity: project.canonicalIdentity,
-        }) !== project.cwd
-      )
-        throw new Error("项目主目录已改变，请重新打开项目配置。");
-    },
-    snapshot(cwd) {
-      authority.assertCurrent();
-      const snapshot = snapshots.get(cwd);
-      if (!snapshot) throw new Error("连接快照尚未读取，请重新打开项目配置。");
-      // Read the stored masked snapshot only. Never refresh a remote catalog or fetch content.
-      return snapshot();
-    },
-  });
+  async function authorize(id: string) {
+    authority.assertCurrent();
+    const { project, root, rootId, path } = await requireRendererProjectPrimary(id);
+    reviewed = {
+      projectId: project.id,
+      rootId,
+      cwd: path,
+      canonicalIdentity: root.canonicalIdentity!,
+    };
+    signal.throwIfAborted();
+    const review = await storedSnapshot(event, path);
+    authority.assertCurrent();
+    signal.throwIfAborted();
+    if (requireMountedProjectRoot(root) !== path)
+      throw Error("项目主目录已改变，请重新打开项目配置。");
+    return { project: reviewed, review };
+  }
   return {
-    api,
+    api: {
+      async snapshot(id: string) {
+        const { project, review } = await authorize(id);
+        return describeLinkedFileSources(project, review);
+      },
+      async add(id: string, input: AddLinkedFileSourcesInput) {
+        input = parseLinkedFileSelection(input);
+        const { project, review } = await authorize(id);
+        const connections = review.connections.filter((c) => c.id === input.connectionId);
+        return call(
+          "sources/addLinkedFiles",
+          { project, review: { connections, revisions: review.revisions }, input },
+          signal,
+        );
+      },
+    },
     dispose() {
       unsubscribe();
       authority.dispose();

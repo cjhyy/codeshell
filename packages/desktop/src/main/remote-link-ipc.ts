@@ -7,6 +7,9 @@ import {
   type IpcMainInvokeEvent,
   type WebContents,
 } from "electron";
+import { CredentialStore } from "@cjhyy/code-shell-core";
+import type { ProfileCredentialRevisions } from "@cjhyy/code-shell-core/internal/storage";
+import { credentialFiles } from "./credential-file-client.js";
 import { randomUUID } from "node:crypto";
 import {
   type LinkConnectionInput,
@@ -334,7 +337,24 @@ export function registerRemoteLinkIpc(deps: {
     async storedSnapshot(event: IpcMainInvokeEvent, cwd: string) {
       const { manager, context } = await nativeLinkContext(event, cwd);
       await manager.service.assertAuthorized(context);
-      return () => manager.service.snapshot();
+      const revisions: Partial<ProfileCredentialRevisions> = {};
+      const files = credentialFiles();
+      const connections = await new CredentialStore(cwd).withAsyncCipher(
+        {
+          ...files,
+          async read(address) {
+            const image = await files.read(address);
+            revisions[address.scope] = image.revision;
+            return image;
+          },
+        },
+        ["user", "project"],
+        undefined,
+        (store) => manager.service.snapshotFromStore(store).connections,
+      );
+      await manager.service.assertAuthorized(context);
+      if (!revisions.user || !revisions.project) throw Error("缺少连接快照的凭据版本。");
+      return { connections, revisions: { user: revisions.user, project: revisions.project } };
     },
   };
 }

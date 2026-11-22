@@ -39,6 +39,7 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
 export interface ShellBusinessOperations extends CookieFileOperations, AgentDefinitionChanges, MimiAttentionOperations, GoalRecoveryOperations, ProjectMigrationOperations, MimiReplyOperations, MimiProjectionOperations, MimiFollowUpOperations, MarketplaceOperations, PluginPackageOperations, GitOperations, PendingApprovalOperations, LabFileOperations, ConfiguredMcpProbe, RoomHistoryOperations, SkillOperations, MediaProtocolOperations, AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits, ProfileLibraryOperations {
+  "sources/addLinkedFiles": { input: import("./linked-file-sources.js").LinkedFileCommit; result: {sourceIds:string[]} };
   "files/turnHistory": {
     input: { sessionId: string; action: "state" | "undo" | "redo" };
     result: import("../main/file-history-service.js").TurnUndoState | import("../main/file-history-service.js").TurnUndoResult[];

@@ -1,4 +1,4 @@
-import type { LinkFileSelectionInput } from "@cjhyy/code-shell-link";
+import type { LinkFileSelectionInput, MaskedLinkConnection } from "@cjhyy/code-shell-link";
 
 export interface LinkedFileConnectionView {
   id: string;
@@ -33,3 +33,26 @@ export interface LinkedFileSourceApi {
   snapshot(projectId: string): Promise<LinkedFileSourceSnapshot>;
   add(projectId: string, input: AddLinkedFileSourcesInput): Promise<{ sourceIds: string[] }>;
 }
+
+export interface LinkedFileProject {
+  projectId: string;
+  rootId: string;
+  cwd: string;
+  canonicalIdentity: string;
+}
+
+export interface StoredLinkedFiles {
+  connections: MaskedLinkConnection[];
+  revisions: import("@cjhyy/code-shell-core/internal/storage").ProfileCredentialRevisions;
+}
+export interface LinkedFileCommit {
+  project: LinkedFileProject;
+  input: AddLinkedFileSourcesInput;
+  review: StoredLinkedFiles;
+}
+
+export type CommitLinkedFiles = (
+  method: "sources/addLinkedFiles",
+  input: LinkedFileCommit,
+  signal: AbortSignal,
+) => Promise<{ sourceIds: string[] }>;

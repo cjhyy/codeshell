@@ -832,6 +832,7 @@ registerLinkedFileSourceIpc({
       event,
       (window) => mainWindows.has(window),
       remoteLinkIpc.storedSnapshot,
+      desktopHost.callBusiness,
     ),
 });
 registerSourceCatalogIpc(ipcMain, desktopHost, (options) => dialog.showOpenDialog(options));
