@@ -9,6 +9,7 @@ import { createRequire, syncBuiltinESMExports } from "node:module";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  acceptanceMockKeychainRequested,
   assertSourceElectronTransportSettled,
   captureRendererErrors,
   createElectronTestDiagnostics,
@@ -85,6 +86,44 @@ async function bounded(promise, timeout, label) {
     ]);
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/** A new, visible BrowserWindow can answer IPC before Viz can copy its first surface. */
+export async function captureStartupWindow(app, page, path) {
+  await page.bringToFront();
+  const native = await app.browserWindow(page);
+  try {
+    for (let attempt = 1; ; attempt++) {
+      await bounded(
+        page.evaluate(
+          () =>
+            new Promise((done) =>
+              window.requestAnimationFrame(() => window.requestAnimationFrame(done)),
+            ),
+        ),
+        3000,
+        "Startup workbench did not paint after activation",
+      );
+      let png;
+      try {
+        png = await native.evaluate(async (win) => {
+          if (!win.isVisible()) throw Error("Startup workbench is hidden");
+          const frame = await win.webContents.capturePage();
+          if (frame.isEmpty()) throw Error("Startup workbench has no compositor frame");
+          return frame.toPNG().toString("base64");
+        });
+      } catch (error) {
+        // Electron's CopyFromSurface can race a newly presented surface on macOS.
+        // Retry just that readback on the next paint. All other failures are final.
+        if (attempt < 3 && /(?:^|: )UnknownVizError$/.test(error.message)) continue;
+        throw error;
+      }
+      await writeFile(path, Buffer.from(png, "base64"), { mode: 0o600 });
+      return;
+    }
+  } finally {
+    await native.dispose();
   }
 }
 
@@ -202,20 +241,23 @@ export async function runStartupOperationCycles(args) {
       assertStartupCycleSettled(resource.proof);
       // The first launch pins metadata. Reuse that exact reference after each
       // shutdown; never refresh a changed identity or substitute native crypto.
-      resource.diagnostics.phase("startup-post-exit-keychain-preflight");
-      const context = ensureElectronKeychainContext({
-        home: isolated.home,
-        environment: {
-          ...fixture.env,
-          HOME: isolated.home,
-          USERPROFILE: isolated.home,
-          CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE:
-            process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE,
-        },
-      });
-      resource.diagnostics.phase("startup-cycle-gates");
-      if (process.platform === "darwin") assert.equal(context?.reused, true);
-      resource.proof.keychainMetadataRechecked = process.platform === "darwin";
+      resource.proof.keychainMetadataRechecked = false;
+      if (process.platform === "darwin" && !acceptanceMockKeychainRequested(fixture.env)) {
+        resource.diagnostics.phase("startup-post-exit-keychain-preflight");
+        const context = ensureElectronKeychainContext({
+          home: isolated.home,
+          environment: {
+            ...fixture.env,
+            HOME: isolated.home,
+            USERPROFILE: isolated.home,
+            CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE:
+              process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE,
+          },
+        });
+        assert.equal(context?.reused, true);
+        resource.proof.keychainMetadataRechecked = true;
+        resource.diagnostics.phase("startup-cycle-gates");
+      }
     } catch (error) {
       observeElectronDiagnostic(resource.diagnostics, "error", error, resource.child);
       errors.push(error);
@@ -409,21 +451,6 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
         assert.ok(result.attention && typeof result.attention === "object");
         return { activeSessionCleared: true, snapshotRead: true, attentionRead: true };
       };
-      const capture = async (page, path) => {
-        await page.bringToFront();
-        const native = await app.browserWindow(page);
-        try {
-          const png = await native.evaluate(async (win) => {
-            if (!win.isVisible()) throw Error("Startup workbench is hidden");
-            const frame = await win.webContents.capturePage();
-            if (frame.isEmpty()) throw Error("Startup workbench has no compositor frame");
-            return frame.toPNG().toString("base64");
-          });
-          await writeFile(path, Buffer.from(png, "base64"), { mode: 0o600 });
-        } finally {
-          await native.dispose();
-        }
-      };
       diagnostics.phase("startup-cold-pet");
       proof.operations.push({
         operation: "cold renderer real Pet IPC",
@@ -436,7 +463,7 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
         operation: "renderer reload real Pet IPC",
         result: await checkPet(win),
       });
-      await capture(win, join(evidence, `cycle-${cycle}-reload.png`));
+      await captureStartupWindow(app, win, join(evidence, `cycle-${cycle}-reload.png`));
       if (cycle === 1) {
         diagnostics.phase("startup-second-window");
         const opened = app.waitForEvent("window", { timeout: 15000 });
@@ -449,7 +476,7 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
           operation: "production second window real Pet IPC",
           result: await checkPet(other),
         });
-        await capture(other, join(evidence, "second-window.png"));
+        await captureStartupWindow(app, other, join(evidence, "second-window.png"));
         diagnostics.phase("startup-second-window-close");
         await other.close();
       }
