@@ -17,7 +17,7 @@ describe("preload local plugin review contract", () => {
     expect(preload).toContain('ipcRenderer.invoke("plugins:installLocal"');
     expect(preload).toContain("reviewToken: string");
     expect(main).toMatch(/ipcMain\.handle\(\s*"plugins:previewLocal"/);
-    expect(main).toContain("reviewToken: string");
-    expect(main).toContain("previewLocalPluginForUi(input)");
+    expect(main).toContain("localPluginReviews.preview");
+    expect(main).toContain("localPluginReviews.install");
   });
 });

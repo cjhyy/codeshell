@@ -343,6 +343,7 @@ export function loadMarketplaceForUi(name: string): MarketplaceDetailDTO | null 
 /** Parse a user-typed marketplace source string (github repo / git url) and add it. */
 export async function addMarketplaceFromInput(
   input: string,
+  beforeCommit?: () => void,
 ): Promise<{ ok: boolean; name?: string; error?: string }> {
   if (typeof input !== "string" || !input.trim()) {
     return { ok: false, error: "请输入 GitHub 仓库或 git URL" };
@@ -352,26 +353,27 @@ export async function addMarketplaceFromInput(
     return { ok: false, error: "无法识别的市场来源（应为 owner/repo 或 git URL）" };
   }
   const name = deriveMarketplaceName(source);
-  const res = await addMarketplace(name, source);
+  const res = await addMarketplace(name, source, beforeCommit);
   if (res.ok) return { ok: true, name: res.name };
   return { ok: false, error: humanizeGitError(res.error) };
 }
 
-export function removeMarketplaceForUi(name: string): boolean {
+export function removeMarketplaceForUi(name: string, beforeCommit?: () => void): boolean {
   if (typeof name !== "string" || !name) {
     throw new Error("removeMarketplaceForUi requires name");
   }
-  return removeMarketplace(name);
+  return removeMarketplace(name, beforeCommit);
 }
 
 /** Re-pull a known marketplace from its source (git fetch + reset). */
 export async function refreshMarketplaceForUi(
   name: string,
+  beforeCommit?: () => void,
 ): Promise<{ ok: boolean; error?: string }> {
   if (typeof name !== "string" || !name) {
     throw new Error("refreshMarketplaceForUi requires name");
   }
-  const res = await refreshMarketplace(name);
+  const res = await refreshMarketplace(name, beforeCommit);
   if (res.ok) return { ok: true };
   return { ok: false, error: humanizeGitError(res.error) };
 }
@@ -490,6 +492,7 @@ async function drainInstallQueue(): Promise<void> {
 export async function installPluginForUi(
   pluginName: string,
   marketplaceName: string,
+  beforeCommit?: () => void,
 ): Promise<{ ok: boolean; job?: PluginInstallJobDTO; error?: string }> {
   if (typeof pluginName !== "string" || !pluginName) {
     throw new Error("installPluginForUi requires pluginName");
@@ -516,6 +519,7 @@ export async function installPluginForUi(
       finishedAt: undefined,
       error: undefined,
     };
+    beforeCommit?.();
     installJobs.set(id, job);
     queueInstallJob(job);
     return { ok: true, job };
@@ -527,6 +531,7 @@ export async function installPluginForUi(
     status: "queued",
     requestedAt: Date.now(),
   };
+  beforeCommit?.();
   installJobs.set(id, job);
   queueInstallJob(job);
   return { ok: true, job };
@@ -534,19 +539,21 @@ export async function installPluginForUi(
 
 export async function retryPluginInstallJobForUi(
   id: string,
+  beforeCommit?: () => void,
 ): Promise<{ ok: boolean; job?: PluginInstallJobDTO; error?: string }> {
   const existing = installJobs.get(id);
   if (!existing) return { ok: false, error: "找不到安装任务" };
-  return installPluginForUi(existing.pluginName, existing.marketplaceName);
+  return installPluginForUi(existing.pluginName, existing.marketplaceName, beforeCommit);
 }
 
 export async function addRecommendedMarketplaceForUi(
   id: string,
+  beforeCommit?: () => void,
 ): Promise<{ ok: boolean; name?: string; error?: string }> {
   const list = await listRecommendedMarketplacesForUi();
   const item = list.items.find((m) => m.id === id || m.name === id);
   if (!item) return { ok: false, error: "推荐市场不存在" };
-  const res = await addMarketplace(item.name, item.source);
+  const res = await addMarketplace(item.name, item.source, beforeCommit);
   if (res.ok) return { ok: true, name: res.name };
   return { ok: false, error: humanizeGitError(res.error) };
 }
@@ -603,12 +610,15 @@ export async function previewLocalPluginForUi(input: {
   }
 }
 
-export async function installLocalPluginForUi(input: {
-  kind: "dir" | "zip";
-  path: string;
-  reviewToken: string;
-  overwrite?: boolean;
-},beforeCommit?:()=>void): Promise<{ ok: true; name: string } | LocalInstallError> {
+export async function installLocalPluginForUi(
+  input: {
+    kind: "dir" | "zip";
+    path: string;
+    reviewToken: string;
+    overwrite?: boolean;
+  },
+  beforeCommit?: () => void,
+): Promise<{ ok: true; name: string } | LocalInstallError> {
   if (
     !input ||
     (input.kind !== "dir" && input.kind !== "zip") ||

@@ -1,5 +1,6 @@
 import { gitOperations } from "../../host/composition/git.js";
 import { labFiles } from "../../host/composition/optimization-lab.js";
+import {hostedMarketplace} from "../../host/composition/marketplace.js";
 import { hostedProfileLibrary } from "../../host/composition/profile-library.js";
 import { configuredMcpProbe } from "../../host/composition/configured-mcp-probe.js";
 import { HostedMimiTasks } from "../../host/composition/mimi-tasks.js";
@@ -134,9 +135,11 @@ const mimiTasks = new HostedMimiTasks(join(dirname(process.argv[2]), "pet"));
 const segments = hostedMimiSegments(storage, historyWorker, (domain) =>
   parent.postMessage({ type: "mimi-records-changed", domain }),
 );
-const skills = hostedSkills(new URL("./skill-worker.mjs", import.meta.url),requestId=>parent.postMessage({
+const pluginCommandsChanged=(requestId:string)=>parent.postMessage({
   type:"settings-committed",requestId,effects:{panelApps:false,git:false,pet:false,externalVisibility:false,pluginCommands:true}
-}));
+});
+const skills=hostedSkills(new URL("./skill-worker.mjs",import.meta.url),pluginCommandsChanged);
+const marketplace=hostedMarketplace(new URL("./marketplace-worker.mjs",import.meta.url),jobs=>parent.postMessage({type:"plugin-jobs",jobs}),pluginCommandsChanged);
 let server: DesktopHostServer | undefined;
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 // Native lifecycle retains the verified roots across Host restarts for its periodic sweep.
@@ -155,6 +158,7 @@ const business = new HostBusinessCalls({
   ...gitOperations(),
   ...labFiles,
   ...skills.methods,
+  ...marketplace.operations,
   ...profileLibrary.operations,
   ...configuredMcpProbe,
   ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
@@ -300,6 +304,7 @@ parent.on("message", ({ data, ports }) => {
           historyWorker.close(),
           skills.close(),
           mimiTasks.close(),
+          marketplace.close(),
           worker?.close(),
           transcripts.close(),
           automation.close(),
@@ -351,6 +356,7 @@ parent.on("message", ({ data, ports }) => {
         ...memoryReads,
         ...activities.reads,
         ...profileLibrary.reads,
+        ...marketplace.reads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
         ...workspaceReads((options) => catalog.list(options), reportGitRoot),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),

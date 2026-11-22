@@ -1227,15 +1227,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     reusedCredentialCatalogId?: string;
   }> => ipcRenderer.invoke("stt:describe", cwd),
   ensureMicAccess: (): Promise<{ granted: boolean }> => ipcRenderer.invoke("stt:ensureMicAccess"),
-  listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
-  loadMarketplace: (name: string) => ipcRenderer.invoke("marketplace:load", name),
   listRecommendedMarketplaces: () => ipcRenderer.invoke("marketplace:recommended"),
   addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),
   addRecommendedMarketplace: (id: string) => ipcRenderer.invoke("marketplace:addRecommended", id),
   removeMarketplace: (name: string) => ipcRenderer.invoke("marketplace:remove", name),
   refreshMarketplace: (name: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke("marketplace:refresh", name),
-  listPluginInstallJobs: () => ipcRenderer.invoke("plugins:installJobs"),
   onPluginInstallJobsChanged: (cb: (jobs: import("./types").PluginInstallJob[]) => void) => {
     const h = (_e: IpcRendererEvent, jobs: import("./types").PluginInstallJob[]) => cb(jobs);
     ipcRenderer.on("plugins:installJobsChanged", h);

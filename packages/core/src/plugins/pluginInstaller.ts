@@ -516,11 +516,13 @@ export function uninstallPlugin(pluginName: string, marketplaceName: string): Un
 export async function uninstallPluginAsync(
   pluginName: string,
   marketplaceName: string,
+  beforeCommit?: () => void,
 ): Promise<UninstallResult> {
   assertSafePluginName(pluginName);
   assertSafePluginName(marketplaceName);
   const cleanup: string[] = [];
   try {
+    beforeCommit?.();
     return uninstallPluginDirectories(pluginName, marketplaceName, (dir) =>
       cleanup.push(detachPluginDirectory(dir)),
     );

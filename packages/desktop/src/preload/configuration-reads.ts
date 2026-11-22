@@ -17,6 +17,12 @@ export function createConfigurationReads(
     return host ? host.readBusiness(name, params, fallback) : fallback();
   }
   return {
+    listMarketplaces: () =>
+      read("marketplace/list", {}, () => ipcRenderer.invoke("marketplace:list")),
+    loadMarketplace: (name: string) =>
+      read("marketplace/load", { name }, () => ipcRenderer.invoke("marketplace:load", name)),
+    listPluginInstallJobs: () =>
+      read("marketplace/jobs", {}, () => ipcRenderer.invoke("plugins:installJobs")),
     listProfiles: (target: RendererConfigurationTarget | null) =>
       read("profiles/list", { target }, () => ipcRenderer.invoke("profiles:list", target)),
     listProfileCatalog: () =>

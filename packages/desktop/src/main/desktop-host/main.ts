@@ -213,6 +213,7 @@ export function createDesktopHost(
   return {
     callBusiness: supervisor.callBusiness.bind(supervisor),
     documentSignal,
+    onPluginJobsChanged(listener:NonNullable<DesktopHostSupervisor["pluginJobsChanged"]>){supervisor.pluginJobsChanged=listener;},
     onWechatEvent(listener: NonNullable<DesktopHostSupervisor["wechatEvent"]>) { supervisor.wechatEvent = listener; },
     remote,
     im,

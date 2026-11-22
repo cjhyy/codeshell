@@ -14,6 +14,7 @@ export function desktopMainBuildOptions(root = desktopRoot): BuildOptions {
       "desktop-host": resolve(root, "src/main/desktop-host/utility.ts"),
       "link-provider-module": resolve(root, "src/main/link-provider-module.ts"),
       "cua-activity-proxy": resolve(root, "src/main/computer-use/cua-activity-proxy.ts"),
+      "marketplace-worker":resolve(root,"src/host/composition/marketplace-worker.ts"),
       "skill-worker": resolve(root, "src/host/composition/skill-worker.ts"),
       "activity-history-worker": resolve(root, "src/main/activity-history-worker.ts"),
       "session-transcript-cache-worker": resolve(

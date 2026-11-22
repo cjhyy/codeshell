@@ -204,6 +204,7 @@ export interface UninstallPluginResult {
 export async function uninstallPluginEntry(
   pluginName: string,
   marketplaceName: string,
+  beforeCommit?: () => void,
 ): Promise<UninstallPluginResult> {
   if (typeof pluginName !== "string" || !pluginName) {
     throw new Error("uninstallPluginEntry requires pluginName");
@@ -211,7 +212,7 @@ export async function uninstallPluginEntry(
   if (typeof marketplaceName !== "string" || !marketplaceName) {
     throw new Error("uninstallPluginEntry requires marketplaceName");
   }
-  const result = await uninstallPluginAsync(pluginName, marketplaceName);
+  const result = await uninstallPluginAsync(pluginName, marketplaceName, beforeCommit);
   reconcilePluginInstallJobs();
   return result;
 }
@@ -223,11 +224,14 @@ export async function uninstallPluginEntry(
  * renderer derives from the install key (see resolveUninstallTarget).
  * Throws on bad input so the IPC layer surfaces a clear error.
  */
-export async function uninstallLocalPluginEntry(name: string,beforeCommit?:()=>void): Promise<void> {
+export async function uninstallLocalPluginEntry(
+  name: string,
+  beforeCommit?: () => void,
+): Promise<void> {
   if (typeof name !== "string" || !name) {
     throw new Error("uninstallLocalPluginEntry requires a plugin name");
   }
-  await uninstallPluginByNameAsync(name,beforeCommit);
+  await uninstallPluginByNameAsync(name, beforeCommit);
 }
 
 type PluginUpdateCatalogEntry = Pick<
@@ -237,8 +241,13 @@ type PluginUpdateCatalogEntry = Pick<
 
 interface PluginUpdateServices {
   listCatalog(): PluginUpdateCatalogEntry[];
-  updateLocal(name: string, installedAt: string, force: boolean): Promise<UpdateResult>;
-  refreshMarket(name: string): Promise<{ ok: boolean; error?: string }>;
+  updateLocal(
+    name: string,
+    installedAt: string,
+    force: boolean,
+    options?: { beforeCommit?: () => void },
+  ): Promise<UpdateResult>;
+  refreshMarket(name: string, beforeCommit?: () => void): Promise<{ ok: boolean; error?: string }>;
   installFromMarket(
     pluginName: string,
     marketplaceName: string,
@@ -287,19 +296,28 @@ function resolvePluginUpdateEntry(
 export async function updatePluginEntry(
   identity: string,
   services: PluginUpdateServices = defaultPluginUpdateServices,
+  beforeCommit?: () => void,
 ): Promise<UpdateResult> {
   if (typeof identity !== "string" || !identity) {
     throw new Error("updatePluginEntry requires an install key");
   }
   const plugin = resolvePluginUpdateEntry(identity, services.listCatalog());
   if (plugin.installationKind === "direct") {
-    return services.updateLocal(plugin.name, services.now(), true);
+    return services.updateLocal(
+      plugin.name,
+      services.now(),
+      true,
+      ...(beforeCommit ? [{ beforeCommit }] : []),
+    );
   }
   if (plugin.installationKind !== "marketplace" || !plugin.marketplace) {
     throw new PluginInstallError(`cannot determine installed plugin source for '${identity}'`);
   }
 
-  const refreshed = await services.refreshMarket(plugin.marketplace);
+  const refreshed = await services.refreshMarket(
+    plugin.marketplace,
+    ...(beforeCommit ? [beforeCommit] : []),
+  );
   if (!refreshed.ok) {
     throw new PluginInstallError(
       `could not refresh marketplace '${plugin.marketplace}': ${refreshed.error ?? "unknown error"}`,

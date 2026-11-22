@@ -1,3 +1,4 @@
+import { withLocalPluginMutation } from "./mutation-lock.js";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { rename, rm } from "node:fs/promises";
@@ -24,6 +25,7 @@ export interface UpdateResult {
 }
 
 export interface UpdatePluginOptions {
+  beforeCommit?: () => void;
   allowUnsafeTransport?: boolean;
 }
 
@@ -134,48 +136,56 @@ export async function updatePluginByName(
   force: boolean,
   options: UpdatePluginOptions = {},
 ): Promise<UpdateResult> {
-  const dir = pluginInstallDir(name);
-  const metaPath = join(dir, ".cs-meta.json");
-  if (!existsSync(metaPath)) throw new PluginInstallError(`no plugin named '${name}'`);
-  const meta = CSMeta.parse(JSON.parse(readFileSync(metaPath, "utf-8")));
+  return withLocalPluginMutation(name, async () => {
+    const dir = pluginInstallDir(name);
+    const metaPath = join(dir, ".cs-meta.json");
+    if (!existsSync(metaPath)) throw new PluginInstallError(`no plugin named '${name}'`);
+    const meta = CSMeta.parse(JSON.parse(readFileSync(metaPath, "utf-8")));
 
-  const parsed = parseSource(meta.source, {
-    allowUnsafeTransport: options.allowUnsafeTransport === true,
-  });
+    const parsed = parseSource(meta.source, {
+      allowUnsafeTransport: options.allowUnsafeTransport === true,
+    });
 
-  if (parsed.kind === "npm") {
-    throw new PluginInstallError(
-      "npm plugin auto-update is not available in Phase A; install an explicit npm:<package>@<version> source instead",
-    );
-  }
-
-  if (parsed.kind === "remote") {
-    // No local version to diff against — always re-clone and reinstall.
-    await reinstallAtomic(name, meta.source, () =>
-      installPluginFromSource(parsed, name, installedAt),
-    );
-    return { updated: true, reason: "reinstalled from git source" };
-  }
-
-  if (!existsSync(meta.source)) {
-    throw new PluginInstallError(`source no longer exists: ${meta.source}`);
-  }
-
-  if (!force) {
-    if (detectPluginFormat(meta.source) === "codex") {
-      const manifest = CodexPluginManifest.parse(
-        JSON.parse(readFileSync(join(meta.source, ".codex-plugin", "plugin.json"), "utf-8")),
+    if (parsed.kind === "npm") {
+      throw new PluginInstallError(
+        "npm plugin auto-update is not available in Phase A; install an explicit npm:<package>@<version> source instead",
       );
-      if (manifest.version === meta.version) {
-        return { updated: false, reason: "already up to date" };
-      }
-    } else {
-      return { updated: false, reason: "CC plugin needs --force to reinstall" };
     }
-  }
 
-  await reinstallAtomic(name, meta.source, () =>
-    installPluginFromPath(meta.source, name, installedAt),
-  );
-  return { updated: true, reason: "reinstalled" };
+    if (parsed.kind === "remote") {
+      // No local version to diff against — always re-clone and reinstall.
+      await reinstallAtomic(
+        name,
+        meta.source,
+        () => installPluginFromSource(parsed, name, installedAt),
+        options.beforeCommit,
+      );
+      return { updated: true, reason: "reinstalled from git source" };
+    }
+
+    if (!existsSync(meta.source)) {
+      throw new PluginInstallError(`source no longer exists: ${meta.source}`);
+    }
+
+    if (!force) {
+      if (detectPluginFormat(meta.source) === "codex") {
+        const manifest = CodexPluginManifest.parse(
+          JSON.parse(readFileSync(join(meta.source, ".codex-plugin", "plugin.json"), "utf-8")),
+        );
+        if (manifest.version === meta.version) {
+          return { updated: false, reason: "already up to date" };
+        }
+      } else {
+        return { updated: false, reason: "CC plugin needs --force to reinstall" };
+      }
+    }
+
+    await reinstallAtomic(
+      name,
+      meta.source,
+      () => installPluginFromPath(meta.source, name, installedAt),
+      options.beforeCommit,
+    );
+    return { updated: true, reason: "reinstalled" };
+  });
 }

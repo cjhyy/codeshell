@@ -1,3 +1,4 @@
+import type { PluginInstallJobDTO } from "../marketplace-service.js";
 import type { WechatLoginEvent } from "../../shared/wechat-login.js";
 import type { AutomationRunNotice } from "../../host/composition/automation-run.js";
 import type { LocalProject } from "../../preload/project-authority-types.js";
@@ -51,6 +52,7 @@ export class DesktopHostSupervisor {
   private readonly owners = new Map<string, number>();
   private sequence = 0;
   readonly projectRegistryListeners = new Set<(projects: LocalProject[]) => Promise<void>>();
+  pluginJobsChanged?:(jobs:PluginInstallJobDTO[])=>void;
   wechatEvent?: (event: WechatLoginEvent) => void;
   settingsCommitted?: (effects: SettingsChange) => Promise<void>;
   private readonly reads = new Map<
@@ -129,6 +131,8 @@ export class DesktopHostSupervisor {
         else read.resolve(read.effects ? read.effects.then(() => message.result) : message.result);
       } else if (message?.type === "git-root-observed" && this.ready && typeof message.root === "string") {
         this.knownGitRoots.add(message.root);
+      } else if(message?.type==="plugin-jobs" && this.ready && Array.isArray(message.jobs)){
+        this.pluginJobsChanged?.(message.jobs);
       } else if (message?.type === "wechat-login-event" && this.ready) {
         this.wechatEvent?.(message.event);
       } else if (
@@ -298,6 +302,7 @@ export class DesktopHostSupervisor {
     // GitHub downloads have per-request deadlines and may stage a whole bundle.
     // Local copies can wait for a Skill worker and the cross-process directory lock.
     const longRunning = waitsForRun || method === "im/wechatLogin" || method === "memory/dream" ||
+      method === "marketplace/add" || method === "marketplace/addRecommended" || method === "marketplace/refresh" || method === "marketplace/updatePlugin" || method === "marketplace/uninstall" || method === "marketplace/recommended" ||
       method === "plugins/previewLocal" || method === "plugins/installLocal" || method === "plugins/uninstallLocal" || method === "plugins/checkUpdate" ||
       method === "profiles/addRepo" || method === "profiles/previewRequirements" || method === "profiles/installRequirements" ||
       method === "sources/uploadPicked" || method === "skills/inspectGithub" ||

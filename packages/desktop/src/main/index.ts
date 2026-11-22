@@ -304,8 +304,6 @@ import { listSkills, readSkillBody } from "./skills-service.js";
 import {
   listPlugins,
   getPluginDetail,
-  uninstallPluginEntry,
-  updatePluginEntry,
 } from "./plugins-service.js";
 import { invalidatePanelAppBindingGuard, isPanelAppBoundToProject } from "./panel-apps-service.js";
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
@@ -317,17 +315,6 @@ import { installThemeAssetProtocol } from "./theme-asset-protocol.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
 import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
-  listMarketplacesForUi,
-  loadMarketplaceForUi,
-  addMarketplaceFromInput,
-  addRecommendedMarketplaceForUi,
-  listPluginInstallJobsForUi,
-  listRecommendedMarketplacesForUi,
-  removeMarketplaceForUi,
-  refreshMarketplaceForUi,
-  installPluginForUi,
-  onPluginInstallJobsChanged,
-  retryPluginInstallJobForUi,
   gitDownloadUrl,
   gitInstallGuidance,
 } from "./marketplace-service.js";
@@ -772,7 +759,7 @@ function broadcastPanelAppsChanged(windows: Iterable<BrowserWindow>): void {
   }
 }
 
-onPluginInstallJobsChanged((jobs) => {
+desktopHost.onPluginJobsChanged((jobs) => {
   const installed = jobs.some((job) => job.status === "installed");
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("plugins:installJobsChanged", jobs);
@@ -3271,17 +3258,9 @@ ipcMain.handle(
     );
   },
 );
-ipcMain.handle("plugins:uninstall", async (_e, pluginName: string, marketplaceName: string) => {
-  const result = await uninstallPluginEntry(pluginName, marketplaceName);
-  broadcastPluginCommandsChanged(mainWindows);
-  return result;
-});
+ipcMain.handle("plugins:uninstall",(event,pluginName,marketplaceName)=>desktopHost.callBusiness("marketplace/uninstall",{pluginName,marketplaceName},desktopHost.documentSignal(event)));
 ipcMain.handle("plugins:uninstallLocal",(event,name:string)=>desktopHost.callBusiness("plugins/uninstallLocal",{name},desktopHost.documentSignal(event)));
-ipcMain.handle("plugins:update", async (_e, installKey: string) => {
-  const result = await updatePluginEntry(installKey);
-  broadcastPluginCommandsChanged(mainWindows);
-  return result;
-});
+ipcMain.handle("plugins:update",(event,installKey)=>desktopHost.callBusiness("marketplace/updatePlugin",{installKey},desktopHost.documentSignal(event)));
 ipcMain.handle("plugins:checkUpdate",(event,name:string)=>desktopHost.callBusiness("plugins/checkUpdate",{name},desktopHost.documentSignal(event)));
 // Is a usable git binary available (PATH, or the configured git.path)? The
 // marketplace UI uses this to show an "install Git" banner up front instead of
@@ -3300,20 +3279,16 @@ ipcMain.handle("git:check", async () => {
 });
 
 registerSpeechIpc();
-ipcMain.handle("marketplace:list", async () => listMarketplacesForUi());
-ipcMain.handle("marketplace:load", async (_e, name: string) => loadMarketplaceForUi(name));
-ipcMain.handle("marketplace:recommended", async () => listRecommendedMarketplacesForUi());
-ipcMain.handle("marketplace:add", async (_e, input: string) => addMarketplaceFromInput(input));
-ipcMain.handle("marketplace:addRecommended", async (_e, id: string) =>
-  addRecommendedMarketplaceForUi(id),
-);
-ipcMain.handle("marketplace:remove", async (_e, name: string) => removeMarketplaceForUi(name));
-ipcMain.handle("marketplace:refresh", async (_e, name: string) => refreshMarketplaceForUi(name));
-ipcMain.handle("plugins:installJobs", async () => listPluginInstallJobsForUi());
-ipcMain.handle("plugins:install", async (_e, pluginName: string, marketplaceName: string) =>
-  installPluginForUi(pluginName, marketplaceName),
-);
-ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) => retryPluginInstallJobForUi(id));
+ipcMain.handle("marketplace:list",(event)=>desktopHost.callBusiness("marketplace/list",{},desktopHost.documentSignal(event)));
+ipcMain.handle("marketplace:load",(event,name)=>desktopHost.callBusiness("marketplace/load",{name},desktopHost.documentSignal(event)));
+ipcMain.handle("marketplace:recommended",(event)=>desktopHost.callBusiness("marketplace/recommended",{},desktopHost.documentSignal(event)));
+ipcMain.handle("marketplace:add",(event,source)=>desktopHost.callBusiness("marketplace/add",{source},desktopHost.documentSignal(event)));
+ipcMain.handle("marketplace:addRecommended",(event,id)=>desktopHost.callBusiness("marketplace/addRecommended",{id},desktopHost.documentSignal(event)));
+ipcMain.handle("marketplace:remove",(event,name)=>desktopHost.callBusiness("marketplace/remove",{name},desktopHost.documentSignal(event)));
+ipcMain.handle("marketplace:refresh",(event,name)=>desktopHost.callBusiness("marketplace/refresh",{name},desktopHost.documentSignal(event)));
+ipcMain.handle("plugins:installJobs",(event)=>desktopHost.callBusiness("marketplace/jobs",{},desktopHost.documentSignal(event)));
+ipcMain.handle("plugins:install",(event,pluginName,marketplaceName)=>desktopHost.callBusiness("marketplace/install",{pluginName,marketplaceName},desktopHost.documentSignal(event)));
+ipcMain.handle("plugins:retryInstallJob",(event,id)=>desktopHost.callBusiness("marketplace/retry",{id},desktopHost.documentSignal(event)));
 const localPluginReviews=reviewedLocalPlugins(desktopHost.callBusiness);
 ipcMain.handle("plugins:previewLocal",(event,input)=>localPluginReviews.preview(input,desktopHost.documentSignal(event)));
 ipcMain.handle("plugins:installLocal",(event,input)=>localPluginReviews.install(input,desktopHost.documentSignal(event)));
