@@ -256,6 +256,8 @@ const expectedRuntimeExportsByPartition = {
   extendedHostTypes: [],
   sourcesProfilesCapabilityControl: [
     "sourceCatalogPath",
+    "sourceCredentialQuestion",
+    "decideSourceCredential",
     "collectionConfig",
     "captureCollectionLocalFile",
     "readCollectionLocalFile",

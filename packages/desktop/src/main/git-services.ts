@@ -1003,7 +1003,7 @@ async function assertUndoParent(root: string, parent: string): Promise<void> {
       const entry = await fs.lstat(current).catch((error: NodeJS.ErrnoException) => {
         if (error.code !== "ENOENT") throw error;
       });
-      if (entry) throw Error("refused: undo path contains an unavailable directory");
+      if (entry) throw Error("refused: undo path contains an unavailable directory", { cause: error });
     }
   }
 }
