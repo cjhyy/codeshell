@@ -47,7 +47,7 @@ export function registerHostedWechatLogin(
         host.callBusiness("im/wechatLogin", { loginId: id }, signal),
       );
     } catch (error) {
-      if (signal.aborted) throw Error("微信登录已取消");
+      if (signal.aborted) throw Error("微信登录已取消", { cause: error });
       throw error;
     } finally {
       flow = undefined;
