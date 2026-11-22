@@ -304,18 +304,11 @@ L3 的目录查询继续使用已有的目录修改时间和 ID 游标，兼容�
 
 ### 8.2 凭据改为异步（H1，单列）
 
-`safeStorage` 的同步接口在 45 废弃、46 删除。难点：
+Electron 45 废弃了同步的 `safeStorage` 接口。0.12 的 Desktop 凭据路径使用 `AsyncEncryptionCipher`，Core SDK 继续提供原有的同步接口。[平台密钥实现](../../packages/desktop/src/main/credential-cipher.ts) · [Core 凭据事务](../../packages/core/src/credentials/async-store.ts)
 
-- `EncryptionCipher` 是 core 公开导出的 SDK 接口（`core/src/index.ts:726`）；
-- 凭据写入在同步文件锁**内部**完成加密（`credentials/store.ts:361`）。
-
-方案：
-
-- 新增 `AsyncEncryptionCipher`，保留同步接口和现有调用方；
-- 凭据存储改为「**锁外加密，锁内写入**」：先在锁外通过反向 RPC 完成加解密，再在存储线程里加锁、核对版本后写入；版本不一致就重来。
-- 约束测试：持有文件锁期间不得等待任何跨进程 RPC。
-
-放在 L6，必须在升级到 Electron 46 之前完成。
+1. 存储线程读取带版本的密文快照。Electron Main 在文件锁外调用系统钥匙环。只读操作在交出结果前复核版本。写入时，存储线程在锁内比较版本并原子替换文件。并发修改会触发重读，每次重试都重新核对授权。
+2. 桌面 Link 修改用户层连接时，同时核对当前项目层的版本。如果项目后来新增同名连接，由存储线程拒绝旧快照。工作台发起的提交还须持有当前文档的有效许可。提交成功后才通知界面或把授权任务标为已连接。[桌面 Link 适配器](../../packages/desktop/src/main/desktop-link-service.ts) · [存储版本检查](../../packages/core/src/storage/credential-files.ts)
+3. 启动清理只向存储线程查询待撤销授权的数量。队列为空时无需打开钥匙环。Panel 或 worker 请求 cookie 文件时，存储线程写入临时文件，Native 在交付前再次检查凭据和调用者。[Link 回归测试](../../packages/server/src/links/service.test.ts) · [Cookie 交付回归测试](../../packages/desktop/src/main/desktop-cookie-lease.test.ts)
 
 ### 8.3 自动更新与发布
 
