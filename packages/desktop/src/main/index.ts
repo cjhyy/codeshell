@@ -1,3 +1,4 @@
+import { assertQuickChatClaim, registerSessionLifecycle } from "./shell/session-lifecycle.js";
 import { createDesktopTaskInbox } from "./shell/task-inbox.js";
 import { createMimiPresenceShell } from "./shell/mimi-presence.js";
 import { createPanelCookieAdapter, registerPanelWindowShell } from "./shell/panel-app.js";
@@ -35,7 +36,6 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
-  session,
   shell,
   safeStorage,
   powerMonitor,
@@ -167,15 +167,10 @@ import { type ManagedCliInstallResult } from "./link-cli-installer.js";
 import { inspectReadableReplyAttachment } from "./image-read-service.js";
 import { NativeMediaProtocol } from "./hosted-media-protocol.js";
 import {
-  partitionForSession,
-} from "./browser-driver/active-guest.js";
-import {
   beginBrowserRunForSession,
   browserRuntime,
-  builtInBrowserHandoffGrants,
   chromeExtensionRuntimeService,
   interactiveBrowserBridgeForSession,
-  panelAccessRequests,
 } from "./browser-runtime/index.js";
 import type { AutomationSessionMeta } from "./automation-host.js";
 import { createAutomationResumeTurn } from "./automation-resume-turn.js";
@@ -187,7 +182,6 @@ import * as desktopNotifications from "./desktop-notification-routes.js";
 import type { CreateAutomationInput } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
-import { isBrowserPartition } from "../shared/browser-partition.js";
 import {
   markAttachmentsSent,
   stageFileBytes,
@@ -507,7 +501,6 @@ const managedCliInstallJobs = new Map<string, Promise<ManagedCliInstallResult>>(
 
 
 const quickChatOwnership = new QuickChatOwnershipRegistry();
-const quickChatOwnerCleanupRegistered = new Set<number>();
 
 function getMcpOAuthService(): McpOAuthService {
   if (!mcpOAuthService) {
@@ -1790,9 +1783,7 @@ async function inspectKnownReplyAttachments(
   return attachments;
 }
 
-function cleanupKnownAttachments(sessionId?: string): Promise<void> {
-  return desktopHost.callBusiness("startup/cleanupAttachments", {sessionId});
-}
+
 
 /** Bring a CodeShell window forward with this Session open (notification click, notice item). */
 function revealSessionWindow(sessionId: string): void {
@@ -2119,6 +2110,13 @@ const { assertRendererSessionAccess, deletingBrowserSessions, rendererBrowserSes
     bridge: () => bridge,
     chromeNativeRegistration: nativeStartup.chromeRegistration,
   });
+const deleteDesktopSession = registerSessionLifecycle({
+  desktopHost, deletingBrowserSessions, rendererBrowserSessionAccess, mediaPreviewService,
+  bridge: () => bridge, external: () => externalRuntime.service,
+  deleted: id => taskInboxService.sessionIntent({ type: "sessionDeleted", sessionId: id }),
+  quickChatOwnership, quickChatsReady: nativeStartup.quickChatsReady,
+});
+
 // Is a usable git binary available (PATH, or the configured git.path)? The
 // marketplace UI uses this to show an "install Git" banner up front instead of
 // only after a clone fails.
@@ -2273,112 +2271,6 @@ async function applyRendererSettingsSideEffects(change: SettingsChange): Promise
 }
 
 registerMemoryIpc({ mainWindows, host: desktopHost });
-const sessionDeletions = new Map<string, Promise<void>>();
-function deleteDesktopSession(id: string): Promise<void> {
-  const existing = sessionDeletions.get(id);
-  if (existing) return existing;
-  deletingBrowserSessions.add(id);
-  desktopHost.setStreamView(id, false);
-  desktopHost.setDeleting(id, true);
-  rendererBrowserSessionAccess.forgetSession(id);
-  const pending = Promise.resolve()
-    .then(() => deleteDesktopSessionResources(id))
-    .finally(() => {
-      // Invalidate any authorization captured before deletion started, including
-      // in-flight durable reads, before allowing this ID to be opened again.
-      rendererBrowserSessionAccess.forgetSession(id);
-      deletingBrowserSessions.delete(id);
-      desktopHost.setDeleting(id, false);
-      sessionDeletions.delete(id);
-    });
-  sessionDeletions.set(id, pending);
-  return pending;
-}
-
-async function deleteDesktopSessionResources(id: string): Promise<void> {
-  mediaPreviewService.releaseSession(id);
-  builtInBrowserHandoffGrants.clearSession(id);
-  panelAccessRequests.forgetSession(id);
-  chromeExtensionRuntimeService.forgetSession(id);
-  const browserPartition = partitionForSession(id);
-  const ephemeralBrowserPartition = id.startsWith("qchat-") ? browserPartition : null;
-  if (browserPartition && isBrowserPartition(browserPartition)) {
-    cookieCredentialAutoRefresh.unbind(session.fromPartition(browserPartition));
-  }
-  // Reap the session's background shells (if any) before dropping it —
-  // explicit delete is the one tab-close path that DOES kill (core §6).
-  await bridge?.closeSession(id);
-  // An external runtime is a child process plus a listening port; neither is
-  // owned by the worker, so closeSession above does not touch them. Without
-  // this a deleted session leaves both alive for the rest of the app's life.
-  await externalRuntime.service?.stop(id).catch((error) => {
-    dlog("external-runtime", "session.delete.stop_failed", { id, error: String(error) });
-  });
-  // The external binding is a file inside the Session directory.
-  await desktopHost.callBusiness("sessions/deleteFiles", { sessionId: id });
-  await taskInboxService.sessionIntent({ type: "sessionDeleted", sessionId: id });
-  await cleanupKnownAttachments(id);
-  // Drop any in-memory snapshot for the deleted session so it can't be
-  // replayed into a fresh tab that happens to reuse the id.
-  await bridge?.forgetSession(id);
-  if (ephemeralBrowserPartition?.startsWith("browser:qchat:")) {
-    const ephemeralSession = session.fromPartition(ephemeralBrowserPartition);
-    await Promise.all([ephemeralSession.clearStorageData(), ephemeralSession.clearCache()]).catch(
-      (error) => {
-        dlog("browser", "quick_chat.partition_cleanup_failed", {
-          id,
-          partition: ephemeralBrowserPartition,
-          error: String(error),
-        });
-      },
-    );
-  }
-}
-
-
-ipcMain.handle("sessions:delete", async (_e, id: string) => {
-  assertDesktopSessionId(id);
-  await deleteDesktopSession(id);
-});
-function assertQuickChatClaim(id: unknown, claimId: unknown): asserts id is string {
-  if (typeof id !== "string" || !/^qchat-[A-Za-z0-9.-]+$/.test(id)) {
-    throw new Error("quick-chat session id required");
-  }
-  if (typeof claimId !== "string" || !/^[A-Za-z0-9.-]{1,128}$/.test(claimId)) {
-    throw new Error("quick-chat claim id required");
-  }
-}
-
-ipcMain.handle("quickChat:claimSession", async (event, id: unknown, claimId: unknown) => {
-  assertQuickChatClaim(id, claimId);
-  const document = desktopHost.documentSignal(event);
-  await nativeStartup.quickChatsReady;
-  document.throwIfAborted();
-  const ownerId = event.sender.id;
-  quickChatOwnership.claim(id, ownerId, claimId as string);
-  if (!quickChatOwnerCleanupRegistered.has(ownerId)) {
-    quickChatOwnerCleanupRegistered.add(ownerId);
-    event.sender.once("destroyed", () => {
-      quickChatOwnerCleanupRegistered.delete(ownerId);
-      void quickChatOwnership
-        .releaseOwner(ownerId, deleteDesktopSession)
-        .catch((error) =>
-          dlog("main", "quick_chat.owner_cleanup_failed", { ownerId, error: String(error) }),
-        );
-    });
-  }
-});
-ipcMain.handle("quickChat:isClaimActive", async (event, id: unknown, claimId: unknown) => {
-  assertQuickChatClaim(id, claimId);
-  return quickChatOwnership.isClaimActive(id, event.sender.id, claimId as string);
-});
-ipcMain.handle("quickChat:cleanupSession", async (event, id: unknown, claimId: unknown) => {
-  assertQuickChatClaim(id, claimId);
-  return quickChatOwnership.cleanup(id, event.sender.id, claimId as string, () =>
-    deleteDesktopSession(id),
-  );
-});
-
 ipcMain.handle("agent:pendingApprovals", async (event) => {
   appRendererNavigation.assertSender(event);
   const signal = desktopHost.documentSignal(event);
