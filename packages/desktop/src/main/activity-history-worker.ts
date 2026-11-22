@@ -161,3 +161,4 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
     }
   });
 });
+port.postMessage({ type: "ready" });

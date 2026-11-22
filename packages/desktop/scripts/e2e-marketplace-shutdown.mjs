@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { once } from "node:events";
-import { access, mkdir, readFile, readdir, rmdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rmdir, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -26,6 +26,9 @@ const registry = join(plugins, "known_marketplaces.json");
 const trace = join(isolated.home, "git-trace.jsonl");
 const receipt = join(isolated.home, "host-close.jsonl");
 const config = join(isolated.home, ".gitconfig");
+const heldLock = markets + ".lock";
+const lockReceipt = join(isolated.home, "publish-lock-wait.json");
+const spawnedHosts = join(isolated.home, "spawned-hosts.jsonl");
 const gitEnv = {
   ...process.env,
   HOME: isolated.home,
@@ -89,7 +92,15 @@ try {
     [
       "import " + JSON.stringify(networkGuard) + ";",
       'import { appendFileSync } from "node:fs"; import { isMainThread } from "node:worker_threads";',
+      "import { observeMarketplaceWorker } from " +
+        JSON.stringify(new URL("./marketplace-lock-witness.mjs", import.meta.url).href) +
+        ";",
       "if (isMainThread && process.parentPort) {",
+      "  observeMarketplaceWorker(" +
+        [pathToFileURL(join(appDir, "out/main/marketplace-worker.mjs")).href, heldLock, lockReceipt]
+          .map((value) => JSON.stringify(value))
+          .join(", ") +
+        ");",
       "  const record = (kind, code) => appendFileSync(" +
         JSON.stringify(receipt) +
         ', JSON.stringify({ kind, code, pid: process.pid, time: Date.now() }) + "\\n");',
@@ -191,31 +202,37 @@ try {
   git("config", "--file", config, "url." + pathToFileURL(repo).href + ".insteadOf", source);
   // Simulate a second process holding the publish lock. Quit must interrupt
   // only this worker's wait and remove only its private staging directory.
-  const ownedLock = markets + ".lock";
-  await mkdir(ownedLock);
+  await mkdir(heldLock);
   application = await launch();
-  await waitFor(async () => {
-    const staging = (await readdir(markets)).find((name) => name.startsWith(".publish-"));
-    return (
-      staging &&
-      access(join(markets, staging, "next", ".claude-plugin", "marketplace.json")).then(
-        () => true,
-        () => false,
-      )
-    );
-  }, "Local retry did not reach the held publish lock");
+  const witness = await waitFor(
+    () =>
+      readFile(lockReceipt, "utf8")
+        .then(JSON.parse)
+        .catch((error) => {
+          if (error.code === "ENOENT" || error instanceof SyntaxError) return false;
+          throw error;
+        }),
+    "Local retry did not encounter the held publish lock",
+  );
+  const [firstHost, lockedHost, ...others] = await rows(spawnedHosts);
+  assert(firstHost && lockedHost && others.length === 0);
+  assert.equal(firstHost.pid, events[0].pid);
+  assert.equal(lockedHost.ppid, application.process().pid);
+  assert.equal(witness.pid, lockedHost.pid);
+  assert(witness.threadId > 0);
   await quit();
-  const lockedQuit = (await rows(receipt)).slice(-2);
+  const lockedQuit = (await rows(receipt)).slice(events.length);
   assert.deepEqual(
     lockedQuit.map(({ kind }) => kind),
     ["shutdown", "exit"],
   );
+  assert(lockedQuit.every((row) => row.pid === lockedHost.pid));
   assert.equal(lockedQuit[1].code, 0);
   const lockDrainMs = lockedQuit[1].time - lockedQuit[0].time;
   assert(lockDrainMs < 2000);
   assert.deepEqual(await readdir(markets), []);
   assert.deepEqual(JSON.parse(await readFile(registry, "utf8")), known);
-  await rmdir(ownedLock);
+  await rmdir(heldLock);
 
   application = await launch();
   await waitFor(
@@ -235,6 +252,7 @@ try {
     JSON.stringify({
       hostDrainMs,
       lockDrainMs,
+      lockedHostPid: witness.pid,
       hostPid: events[0].pid,
       gitPids: pids,
       processGroup: pgid,

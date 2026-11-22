@@ -61,6 +61,9 @@ export function createActivityHistoryWorker(options: ActivityHistoryWorkerOption
 /** Disk history scans and capture-policy maintenance never run on Electron Main. */
 export class ActivityHistoryWorker {
   private worker?: HistoryWorker;
+  // Do not send work until the thread has finished loading its handlers. A fast
+  // quit can then cancel dashboard reads that have provably never executed.
+  private startupQueue?: ActivityHistoryWorkerRequest[] = [];
   private nextId = 0;
   private failure?: Error;
   private closing?: Promise<void>;
@@ -150,10 +153,19 @@ export class ActivityHistoryWorker {
   setTitle(input: { id: string; title: string }, permit: Int32Array): Promise<void> {
     return this.request("activity/setTitle", input, permit);
   }
-  /** Drain accepted requests and retention work before terminating; refuse new intake. */
+  /** Flush writes and possible trace maintenance before terminating a running worker. */
   close(): Promise<void> {
     if (this.closing) return this.closing;
-    const drained = this.worker || this.failure ? this.request("flush") : Promise.resolve();
+    const unstartedReads = this.startupQueue?.every(({ method }) =>
+      method === "mimiExternalActivity" || method === "activity/runs" || method === "profiles/list",
+    );
+    if (unstartedReads) {
+      this.startupQueue = undefined;
+      this.rejectPending(new Error("activity history is closed"));
+    }
+    let drained = Promise.resolve();
+    if (this.failure) drained = Promise.reject(this.failure);
+    else if (this.worker && !unstartedReads) drained = this.request<void>("flush");
     this.closing = drained
       .then(() => undefined)
       .finally(async () => {
@@ -180,12 +192,9 @@ export class ActivityHistoryWorker {
         const id = ++this.nextId;
         this.pending.set(id, { resolve: (value) => resolve(value as T), reject });
         worker.ref();
-        worker.postMessage({
-          id,
-          method,
-          input,
-          ...(permit && { permit }),
-        } satisfies ActivityHistoryWorkerRequest);
+        const request = { id, method, input, ...(permit && { permit }) };
+        if (this.startupQueue) this.startupQueue.push(structuredClone(request));
+        else worker.postMessage(request);
       } catch (error) {
         this.fail(error instanceof Error ? error : new Error(String(error)));
         reject(this.failure!);
@@ -199,10 +208,17 @@ export class ActivityHistoryWorker {
     this.worker = worker;
     worker.on(
       "message",
-      (reply: ActivityHistoryWorkerReply | { type: "mimi-external-changed" }) => {
+      (reply: ActivityHistoryWorkerReply | { type: "ready" | "mimi-external-changed" }) => {
         if ("type" in reply) {
-          if (!this.closing && reply.type === "mimi-external-changed")
-            this.onExternalActivityChanged?.();
+          if (reply.type === "ready") {
+            const queued = this.startupQueue;
+            this.startupQueue = undefined;
+            try {
+              for (const request of queued ?? []) worker.postMessage(request);
+            } catch (error) {
+              this.fail(error instanceof Error ? error : new Error(String(error)));
+            }
+          } else if (!this.closing) this.onExternalActivityChanged?.();
           return;
         }
         const request = this.pending.get(reply.id);
@@ -226,8 +242,13 @@ export class ActivityHistoryWorker {
       this.failure = error;
       if (!this.closing) this.onExternalActivityChanged?.();
     }
-    for (const request of this.pending.values()) request.reject(this.failure);
-    this.pending.clear();
+    this.startupQueue = undefined;
+    this.rejectPending(this.failure);
     this.worker?.unref();
+  }
+
+  private rejectPending(error: Error): void {
+    for (const request of this.pending.values()) request.reject(error);
+    this.pending.clear();
   }
 }
