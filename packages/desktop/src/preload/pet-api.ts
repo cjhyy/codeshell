@@ -563,8 +563,11 @@ export function createPetApi(
       ipcRenderer.on("pet:journal-changed", handler);
       return () => ipcRenderer.removeListener("pet:journal-changed", handler);
     },
-    getSegmentMessages: (range) =>
-      ipcRenderer.invoke("pet:segment-transcript", range) as Promise<PetSegmentMessage[]>,
+    getSegmentMessages: (range) => {
+      const fallback = () =>
+        ipcRenderer.invoke("pet:segment-transcript", range) as Promise<PetSegmentMessage[]>;
+      return host ? host.readBusiness("mimi/segmentMessages", range, fallback) : fallback();
+    },
     getMemoryAutoExtract: () =>
       (ipcRenderer.invoke("pet:prefs-get") as Promise<{ autoExtract: boolean }>).then(
         (prefs) => prefs.autoExtract,

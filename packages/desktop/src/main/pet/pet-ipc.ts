@@ -1,3 +1,4 @@
+import { parseMimiSegmentRange } from "../../shared/mimi-records.js";
 import { dlog } from "../desktop-logger.js";
 import type {
   DesktopPetProjectionEvent,
@@ -654,19 +655,8 @@ export function registerPetIpc(options: {
       return afterReady(options.ready, () => options.journal!.list());
     });
     options.ipcMain.handle(PET_SEGMENT_TRANSCRIPT_CHANNEL, (_event, ...args) => {
-      const payload = args[0] as { start?: unknown; end?: unknown } | undefined;
-      if (
-        args.length !== 1 ||
-        !payload ||
-        typeof payload !== "object" ||
-        !Number.isSafeInteger(payload.start) ||
-        !Number.isSafeInteger(payload.end) ||
-        (payload.start as number) < 0 ||
-        (payload.end as number) < (payload.start as number)
-      ) {
-        throw new Error("invalid segment transcript range");
-      }
-      const range = { start: payload.start as number, end: payload.end as number };
+      if (args.length !== 1) throw Error("invalid segment transcript range");
+      const range = parseMimiSegmentRange(args[0]);
       return afterReady(options.ready, () => options.journal!.readSegmentMessages(range));
     });
   }

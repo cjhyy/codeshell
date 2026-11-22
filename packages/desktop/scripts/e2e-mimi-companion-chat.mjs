@@ -96,7 +96,21 @@ process.on("SIGINT", requestStop);
 process.on("SIGTERM", requestStop);
 
 try {
-  model = await startMockProviderServer();
+  model = await startMockProviderServer({
+    scriptResponse: (body) =>
+      body.messages?.some(
+        (message) =>
+          message.role === "system" && JSON.stringify(message.content).includes("事件档案"),
+      )
+        ? {
+            text: JSON.stringify({
+              title: "Synthetic topic",
+              summary: "Two local test turns",
+              memories: ["Mimi synthetic closure preference"],
+            }),
+          }
+        : undefined,
+  });
   const fixture = await prepareConfinedElectronFixture({ appDir, isolated, origin: model.origin });
   await seedOfflinePluginBootstrap(isolated.codeShellHome);
   const externalId = "mimi-external-fixture";
@@ -207,15 +221,17 @@ try {
       reading = true;
       const start = Date.now();
       try {
-        const [rows, journal, work] = await Promise.all([
+        const [rows, journal, work, segment] = await Promise.all([
           window.codeshell.pet.listMemories(),
           window.codeshell.pet.listJournal(),
           window.codeshell.pet.getWorkMemory(),
+          window.codeshell.pet.getSegmentMessages({ start: 0, end: 1 }),
         ]);
         if (
           rows.some((row) => row.id === id && row.text === "Updated synthetic preference") &&
           Array.isArray(journal) &&
-          Array.isArray(work.segments)
+          Array.isArray(work.segments) &&
+          Array.isArray(segment)
         )
           window.__mimiRecordReads.push({ start, end: Date.now() });
       } finally {
@@ -504,6 +520,47 @@ try {
       body.tools?.some((tool) => tool.function?.name === "DelegateWork"),
     ),
     "Actual worker did not load the Pet capability",
+  );
+  const clear = await main.evaluate(() =>
+    window.codeshell.pet.dispatch({
+      type: "chat",
+      message: "/clear",
+      clientMessageId: window.crypto.randomUUID(),
+    }),
+  );
+  assert.ok(clear.ok && clear.contextCleared, "Mimi should record a fresh topic boundary");
+  const nextTopic = await main.evaluate(() =>
+    window.codeshell.pet.dispatch({
+      type: "chat",
+      message: "COMPANION_NEW_TOPIC: begin fresh",
+      clientMessageId: window.crypto.randomUUID(),
+    }),
+  );
+  assert.ok(nextTopic.ok);
+  const closedTopic = await waitForAsyncFunction(main, async () =>
+    (await window.codeshell.pet.listJournal()).find((row) => row.title === "Synthetic topic"),
+  );
+  const segment = await main.evaluate(
+    (range) => window.codeshell.pet.getSegmentMessages(range),
+    closedTopic.range,
+  );
+  assert.ok(
+    inputs.every((input) =>
+      segment.some((message) => message.role === "user" && message.text.includes(input)),
+    ),
+    "Journal range should resolve both settled turns",
+  );
+  assert.ok(
+    !segment.some((message) => message.text.includes("COMPANION_NEW_TOPIC")),
+    "The new topic must not enter the archived range",
+  );
+  await waitForAsyncFunction(main, async () =>
+    (await window.codeshell.pet.listMemories()).some(
+      (row) => row.source === "auto" && row.text === "Mimi synthetic closure preference",
+    ),
+  );
+  receipt.checks.push(
+    "Host extracted the closed topic through the local model and committed the journal and automatic memory on the original range",
   );
   receipt.petSessionId = firstStatus.petSessionId;
   receipt.providerRequests = model.requests.length;

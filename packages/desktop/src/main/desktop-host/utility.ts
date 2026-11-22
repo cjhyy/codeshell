@@ -1,3 +1,5 @@
+import { parseMimiSegmentRange } from "../../shared/mimi-records.js";
+import { hostedMimiSegments } from "../../host/composition/mimi-segments.js";
 import { wechatLoginOperations } from "../../host/composition/wechat-login.js";
 import { bindExternalProvider } from "../../host/composition/external-provider.js";
 import { electronPrivatePort } from "../../host/native-peer.js";
@@ -120,7 +122,11 @@ historyWorker.onExternalActivityChanged = () => parent.postMessage({ type: "mimi
 const activities = hostedActivityHistory(historyWorker);
 const roomReads = ccRoomReads(historyWorker);
 const mediaProtocol = hostedMediaProtocol();
+const segments = hostedMimiSegments(storage, historyWorker, (domain) =>
+  parent.postMessage({ type: "mimi-records-changed", domain }),
+);
 const business = new HostBusinessCalls({
+  ...segments,
   ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
   "mimi/externalActivity": (input) => historyWorker.mimiExternalActivity(input),
   ...mimiRecordsOperations(storage, (domain) =>
@@ -281,6 +287,9 @@ parent.on("message", ({ data, ports }) => {
       new Map([
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
+        businessRead("mimi/segmentMessages", parseMimiSegmentRange, (range) =>
+          segments["mimi/segmentMessages"](range),
+        ),
         businessRead("mimi/workMemory", noBusinessArguments, async () => {
           const snapshot = await (
             await storage

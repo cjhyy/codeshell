@@ -28,6 +28,7 @@ export function nativeMimiRecords(
       ReturnType<MimiRecords[K]>
     >;
   return {
+    metadata: { ensure: () => call("metadata", []) },
     interactive: {
       list: () => call("memoryList", []),
       remember: (text: string, signal?: AbortSignal) => call("remember", [text, "user"], signal),

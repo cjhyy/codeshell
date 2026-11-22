@@ -1,3 +1,7 @@
+import type {
+  petSegmentTranscript,
+  SegmentClosureInput,
+} from "./pet/pet-segment-closure-service.js";
 import type { ShellBusinessOperations } from "../shared/shell-business-contracts.js";
 import type { CcRoomReads, CliList, CliHistory } from "../shared/cc-room-reads.js";
 import type { ActivityReads } from "../shared/activity-history-contracts.js";
@@ -15,6 +19,8 @@ export interface ActivityHistoryWorkerRequest {
     | keyof TraceHistory
     | "externalSessions"
     | "externalHistory"
+    | "mimiSegmentWindow"
+    | "mimiSegmentMessages"
     | "mimiExternalActivity"
     | "flush"
     | keyof ActivityReads
@@ -61,6 +67,18 @@ export class ActivityHistoryWorker {
   ) {}
 
   onExternalActivityChanged?: () => void;
+  mimiSegmentWindow(input: {
+    petSessionId: string;
+    input: SegmentClosureInput;
+  }): ReturnType<ReturnType<typeof petSegmentTranscript>["prepare"]> {
+    return this.request("mimiSegmentWindow", input);
+  }
+  mimiSegmentMessages(input: {
+    petSessionId: string;
+    range: { start: number; end: number };
+  }): ReturnType<ReturnType<typeof petSegmentTranscript>["read"]> {
+    return this.request("mimiSegmentMessages", input);
+  }
   mimiExternalActivity(
     input: ShellBusinessOperations["mimi/externalActivity"]["input"],
   ): Promise<ShellBusinessOperations["mimi/externalActivity"]["result"]> {

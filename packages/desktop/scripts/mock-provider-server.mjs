@@ -78,7 +78,7 @@ function hasOpenAiToolResult(body) {
   return Array.isArray(body?.messages) && body.messages.some((message) => message?.role === "tool");
 }
 
-function openAiResponse(body, scenario, scriptedCall) {
+function openAiResponse(body, scenario, scriptedCall, scriptedText) {
   const model = typeof body.model === "string" ? body.model : `mock-${scenario}`;
   const usage = usageFor(scenario);
   if (scriptedCall || (scenario === "tool-call" && !hasOpenAiToolResult(body))) {
@@ -147,13 +147,14 @@ function openAiResponse(body, scenario, scriptedCall) {
   }
 
   const text =
-    scenario === "tool-call"
+    scriptedText ??
+    (scenario === "tool-call"
       ? "The smoke tool call completed."
       : scenario === "usage-with-cache"
         ? "The cache usage smoke response completed."
         : scenario === "error-then-ok"
           ? "The retry smoke response completed."
-          : "The plain streaming smoke response completed.";
+          : "The plain streaming smoke response completed.");
   if (!body.stream) {
     return {
       id: "chatcmpl-codeshell-smoke",
@@ -348,7 +349,7 @@ export async function startMockProviderServer(options = {}) {
         );
         return await writeOpenAiSse(res, chunks, script.afterChunk);
       }
-      const response = openAiResponse(body, scenario, script?.toolCall);
+      const response = openAiResponse(body, scenario, script?.toolCall, script?.text);
       if (Array.isArray(response)) return await writeOpenAiSse(res, response, script?.afterChunk);
       return sendJson(res, 200, response);
     } catch (error) {

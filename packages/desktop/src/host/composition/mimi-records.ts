@@ -1,3 +1,5 @@
+import { nativeExtractionAllowed } from "../../main/pet/pet-native-extraction-policy.js";
+import { PetMetadataStore } from "../../main/pet/pet-metadata-store.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { renameSync } from "node:fs";
 import { join } from "node:path";
@@ -10,24 +12,41 @@ import type { MimiRecordDomain, MimiRecordCall, MimiRecords } from "../../shared
 import { claimBusinessCommit, type BusinessMethods } from "./business-calls.js";
 
 export class StoredMimiRecords {
-  private readonly grants = new AsyncLocalStorage<Int32Array>();
+  private readonly grants = new AsyncLocalStorage<{ permit: Int32Array; autoSessionId?: string }>();
   private readonly memory: PetMemoryStore;
+  private readonly metadata: PetMetadataStore;
   private readonly journal: PetJournalStore;
   constructor(dir: string) {
     const replaceFile = async (from: string, to: string) => {
-      const permit = this.grants.getStore();
-      if (!permit) throw Error("Missing Mimi write grant");
-      claimBusinessCommit(permit);
+      const grant = this.grants.getStore();
+      if (!grant) throw Error("Missing Mimi write grant");
+      if (grant.autoSessionId && !nativeExtractionAllowed(grant.autoSessionId))
+        throw Error("Mimi extraction disabled");
+      claimBusinessCommit(grant.permit);
       renameSync(from, to);
     };
+    this.metadata = new PetMetadataStore(join(dir, "metadata.json"));
     this.memory = new PetMemoryStore(join(dir, "memories.json"), { replaceFile });
     this.journal = new PetJournalStore(join(dir, "journal.json"), { replaceFile });
   }
-  async run({ call, permit }: { call: MimiRecordCall; permit: Int32Array }) {
-    return this.grants.run(permit, async () => {
+  async run({
+    call,
+    permit,
+    autoSessionId,
+  }: {
+    call: MimiRecordCall;
+    permit: Int32Array;
+    autoSessionId?: string;
+  }) {
+    if (autoSessionId && (await this.metadata.ensure()).petSessionId !== autoSessionId)
+      throw Error("Mimi session changed");
+    return this.grants.run({ permit, autoSessionId }, async () => {
       let result: unknown;
       let changed: MimiRecordDomain | undefined;
       switch (call.action) {
+        case "metadata":
+          result = await this.metadata.ensure();
+          break;
         case "memoryList":
           await this.memory.load();
           result = this.memory.list();

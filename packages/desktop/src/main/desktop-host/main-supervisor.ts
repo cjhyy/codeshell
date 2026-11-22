@@ -285,8 +285,10 @@ export class DesktopHostSupervisor {
   ): Promise<ShellBusinessOperations[K]["result"]> {
     signal?.throwIfAborted();
     if (!this.ready || this.stopped) await this.waitUntilReady(signal);
-    // A scheduled Engine turn can span many tool calls. Its scheduler owns cancellation.
+    // Model-backed work owns its cancellation and can outlast a normal data read.
     const waitsForRun =
+      method === "mimi/backfillSegments" ||
+      method === "mimi/closeSegment" ||
       method === "automation/command" && (input as { method?: string }).method === "cancel";
     const timeout = waitsForRun || method === "im/wechatLogin" || method === "memory/dream" || method === "sources/uploadPicked" ? 0 : method === "ccRoom/sessions" || method === "ccRoom/history" ? 120_000 : 15_000;
     const value = await this.request("host/business", { method, input }, timeout, signal);

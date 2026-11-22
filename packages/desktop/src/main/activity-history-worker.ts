@@ -1,3 +1,8 @@
+import { assertSafeSessionId } from "@cjhyy/code-shell-server/storage";
+import {
+  petSegmentTranscript,
+  type SegmentClosureInput,
+} from "./pet/pet-segment-closure-service.js";
 import { createMimiExternalActivity } from "../host/composition/mimi-external-activity.js";
 import { externalHistory, externalSessions } from "../host/composition/cc-room-history.js";
 import { claimBusinessCommit } from "../host/composition/business-calls.js";
@@ -39,7 +44,22 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
           (input as ActivityReads["activity/usage"]["params"]).query,
           options.sessionsDir,
         );
-      else if (method === "mimiExternalActivity")
+      else if (method === "mimiSegmentWindow" || method === "mimiSegmentMessages") {
+        const request = input as {
+          petSessionId: string;
+          input: SegmentClosureInput;
+          range: { start: number; end: number };
+        };
+        assertSafeSessionId(request.petSessionId);
+        if (!request.petSessionId.startsWith("pet-")) throw Error("Invalid Mimi session");
+        const transcript = petSegmentTranscript(
+          join(options.sessionsDir, request.petSessionId, "transcript.jsonl"),
+        );
+        value =
+          method === "mimiSegmentWindow"
+            ? await transcript.prepare(request.input)
+            : await transcript.read(request.range);
+      } else if (method === "mimiExternalActivity")
         value = await externalActivity.snapshot(
           input as Parameters<typeof externalActivity.snapshot>[0],
         );
@@ -63,8 +83,7 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
       else if (method === "flush") {
         externalActivity.close();
         await store.flushMaintenance();
-      }
-      else throw new Error("Unknown activity history operation");
+      } else throw new Error("Unknown activity history operation");
       port.postMessage({ id, value } satisfies ActivityHistoryWorkerReply);
     } catch (error) {
       port.postMessage({

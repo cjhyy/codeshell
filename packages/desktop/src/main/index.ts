@@ -131,7 +131,6 @@ import { createLatestResultCache } from "./pet/latest-result-cache.js";
 import { createPetSummaryStore } from "./pet/pet-summary-store.js";
 import { createPetSummaryService } from "./pet/pet-summary-service.js";
 import {
-  createPetSegmentClosureService,
   type PetSegmentClosureService,
 } from "./pet/pet-segment-closure-service.js";
 import {
@@ -143,7 +142,6 @@ import {
   completePetHostActionReceipt,
   PetHostActionReceiptService,
 } from "./pet/pet-host-action-completion.js";
-import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import { PetDispatchService, type PetHostActionExecution } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { nativeMimiRecords } from "./desktop-host/mimi-records-client.js";
@@ -213,7 +211,6 @@ import {
 } from "./mobile-remote/external-runtime-commands.js";
 import {
   allowNativePetAuxiliary,
-  allowNativePetExtraction,
 } from "./pet/pet-native-extraction-policy.js";
 import { createPetRuntimeControlWorker } from "./pet/pet-runtime-control-worker.js";
 import { createPetExternalRuntime } from "./pet/pet-external-runtime.js";
@@ -1564,9 +1561,8 @@ async function createWindow(): Promise<BrowserWindow> {
         mobileRemote.broadcastRaw(line);
       }
     });
-    const petMetadata = new PetMetadataStore(
-      resolve(app.getPath("userData"), "pet", "metadata.json"),
-    );
+    const mimiRecords = nativeMimiRecords(desktopHost.callBusiness, desktopHost.mimiRecordListeners);
+    const petMetadata = mimiRecords.metadata;
     const imRuntimeSessions = new SessionManager();
     const imExternalSubmissions = createExternalRuntimeHostSubmission({
       service: () => externalRuntime.service,
@@ -1741,7 +1737,6 @@ async function createWindow(): Promise<BrowserWindow> {
       isOwnerConversation: (channel, target) =>
         imGatewayService.isOwnerConversation(channel, target),
     });
-    const mimiRecords = nativeMimiRecords(desktopHost.callBusiness, desktopHost.mimiRecordListeners);
     const petWorkInbox = new PetWorkInboxStore(
       resolve(app.getPath("userData"), "pet", "work-inbox.json"),
     );
@@ -2402,32 +2397,12 @@ async function createWindow(): Promise<BrowserWindow> {
       // whether the user has auto-memory extraction enabled. Extraction (not
       // just archival) is what writes journal entries, so both consumers need
       // the same read of this preference.
-      const autoExtractEnabled = (): boolean => {
-        try {
-          const settings = new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user");
-          // An external chat choice must not trigger a hidden native API call
-          // at the next topic boundary. Retain raw history; extraction resumes
-          // when the owner selects a native manager again.
-          return allowNativePetExtraction(
-            settings,
-            imRuntimeSessions.readSessionState(petSessionId),
-          );
-        } catch {
-          return false; // Unreadable settings must not authorize paid inference.
-        }
+      const autoExtractEnabled = () => desktopHost.callBusiness("mimi/extractionAllowed", {});
+      petSegmentClosureService = {
+        close: (input) => desktopHost.callBusiness("mimi/closeSegment", input),
+        backfill: (segments, now) => desktopHost.callBusiness("mimi/backfillSegments", { segments, now }),
+        readSegmentMessages: (range) => desktopHost.callBusiness("mimi/segmentMessages", range),
       };
-      // Segment-closure pipeline: distill a journal entry + auto-memories from
-      // each closed Mimi topic segment. Context archival is requested on the
-      // boundary agent/run itself, after its user message is appended and
-      // before the first model call, so the end anchor cannot race turn startup.
-      petSegmentClosureService = createPetSegmentClosureService({
-        petSessionId,
-        sessionsRootDir: petSessionsRootDir,
-        journal: mimiRecords.journal,
-        memory: mimiRecords.memory,
-        autoExtractEnabled,
-        cwd: resolveNoRepoCwd(),
-      });
       const closureService = petSegmentClosureService;
       // Defense-in-depth against a segment's range being archived twice.
       // archive_range uses absolute message indices; a second archive of the
@@ -2475,7 +2450,7 @@ async function createWindow(): Promise<BrowserWindow> {
         // visibility regression versus today's full-history behavior. Skip
         // and leave today's (uncompacted) exposure as-is until the toggle is
         // back on and a later launch can migrate with full coverage.
-        if (!autoExtractEnabled()) {
+        if (!(await autoExtractEnabled())) {
           dlog("main", "pet.contextMigration.skippedAutoExtractOff", { petSessionId });
           return;
         }
