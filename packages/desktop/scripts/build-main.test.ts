@@ -94,7 +94,9 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
         (specifier) =>
           !isBuiltin(specifier) &&
           specifier !== "@cjhyy/code-shell-capability-coding/orchestration" &&
-          // Profile reads resolve Session worktrees using the packaged Git capability.
+          // Profile previews resolve bound Link sources, coding capabilities and worktrees.
+          specifier !== "@cjhyy/code-shell-link" &&
+          specifier !== "@cjhyy/code-shell-capability-coding/capability" &&
           specifier !== "@cjhyy/code-shell-capability-coding/git" &&
           !/^@cjhyy\/code-shell-core(?:\/|$)/.test(specifier),
       ),

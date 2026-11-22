@@ -331,6 +331,12 @@ try {
       git(session.path, "diff", "--no-ext-diff", "HEAD"),
     );
   }
+  // A fresh first window opens the no-repo project before the recents sidebar.
+  // Persist the same view-only choice for each owned path before that navigation.
+  await put(join(isolated.codeShellHome, "desktop/trust.json"), Object.fromEntries(
+    [join(isolated.codeShellHome, "no-repo"), ...sessions.map((session) => session.path)]
+      .map((path) => [path, "untrusted"]),
+  ));
   await put(join(isolated.codeShellHome, "model-catalog.user.json"), [
     {
       id: "owned-review-ui",
