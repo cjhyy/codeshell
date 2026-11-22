@@ -504,6 +504,9 @@ async function boot(name) {
       : (blocked.push(route.url()), route.close()),
   );
   page = await context.newPage();
+  // The persistent owner retains a separate empty window. Activate this
+  // incognito tab before asking Chromium for stable, clickable frames.
+  await page.bringToFront();
   page.setDefaultTimeout(7_000);
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${origin}/?session=first`);
