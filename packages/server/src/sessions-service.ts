@@ -1,4 +1,8 @@
-import { MAX_HISTORY_STATE_BYTES, readHistorySummary } from "./session-history-summary.js";
+import {
+  historyEntryId,
+  MAX_HISTORY_STATE_BYTES,
+  readHistorySummary,
+} from "./session-history-summary.js";
 /**
  * List session files persisted by the agent worker.
  * Uses core's canonical session root so CODE_SHELL_HOME matches the worker.
@@ -44,23 +48,43 @@ function isQuickChatSessionId(id: string): boolean {
 
 export async function listSessions(
   baseDir: string = sessionsRoot(),
+  indexed?: ReadonlyMap<string, DesktopSessionSummary | null>,
 ): Promise<DesktopSessionSummary[]> {
   try {
+    if (indexed && !(await fs.lstat(baseDir)).isDirectory()) return [];
     const entries = await fs.readdir(baseDir, { withFileTypes: true });
-    // Prefer the current directory layout when a migration left a flat copy.
-    const candidates = entries.sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()));
-    const summaries = new Map<string, DesktopSessionSummary>();
+    const sources = new Map<string, typeof entries>();
+    for (const entry of entries) {
+      const id = historyEntryId(entry);
+      if (!id) continue;
+      const group = sources.get(id) ?? [];
+      // Prefer the directory layout when a migration left a flat copy.
+      if (entry.isDirectory()) group.unshift(entry);
+      else group.push(entry);
+      sources.set(id, group);
+    }
+    const summaries: DesktopSessionSummary[] = [];
+    const candidates = [...sources];
     for (let offset = 0; offset < candidates.length; offset += 32) {
       const batch = await Promise.all(
-        candidates.slice(offset, offset + 32).map((entry) => readHistorySummary(entry, baseDir)),
+        candidates.slice(offset, offset + 32).map(async ([id, group]) => {
+          const cached = indexed?.get(id);
+          if (cached === null) return;
+          for (const entry of group) {
+            const source = path.join(baseDir, entry.name);
+            if (
+              cached &&
+              (entry.isDirectory() ? path.dirname(cached.file) : cached.file) === source
+            )
+              return cached;
+            const summary = await readHistorySummary(entry, baseDir);
+            if (summary) return summary;
+          }
+        }),
       );
-      for (const summary of batch) {
-        if (summary && !summaries.has(summary.id)) summaries.set(summary.id, summary);
-      }
+      for (const summary of batch) if (summary) summaries.push(summary);
     }
-    return [...summaries.values()].sort(
-      (a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id),
-    );
+    return summaries.sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw e;

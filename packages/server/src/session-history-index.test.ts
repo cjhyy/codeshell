@@ -49,6 +49,28 @@ test("history preserves flat files, directory precedence and private sessions ac
   }
 });
 
+test("opening history finds the first SDK session published after its directory was indexed", async () => {
+  const home = await mkdtemp(join(tmpdir(), "codeshell-history-late-"));
+  const root = join(home, "sessions");
+  const catalog = createSessionIndex(root, {
+    workerUrl: new URL("./session-index-worker.ts", import.meta.url),
+  });
+  try {
+    expect(await catalog.history()).toEqual([]);
+    const dir = join(root, "external-session");
+    await mkdir(dir, { recursive: true });
+    await catalog.changed("external-session");
+    // An external SDK writes inside an existing directory. No Desktop commit
+    // notification and no change to the watched parent accompanies this write.
+    await writeFile(join(dir, "state.json"), JSON.stringify({ title: "External SDK" }));
+    expect(await catalog.history()).toEqual(await listSessions(root));
+    expect((await catalog.history()).map((row) => row.title)).toEqual(["External SDK"]);
+  } finally {
+    await catalog.close();
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
 test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
   "an unreadable session leaves the other indexed rows available and returns once readable",
   async () => {

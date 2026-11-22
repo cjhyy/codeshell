@@ -13,14 +13,21 @@ export function isHistorySessionId(id: string) {
   );
 }
 
+type HistoryEntry = Pick<Dirent, "name" | "isFile" | "isDirectory">;
+
+export function historyEntryId(entry: HistoryEntry): string | undefined {
+  if (!entry.isDirectory() && (!entry.isFile() || !/\.jsonl?$/.test(entry.name))) return;
+  const id = entry.isDirectory() ? entry.name : entry.name.replace(/\.jsonl?$/, "");
+  return isHistorySessionId(id) ? id : undefined;
+}
+
 export async function readHistorySummary(
-  entry: Pick<Dirent, "name" | "isFile" | "isDirectory">,
+  entry: HistoryEntry,
   baseDir: string,
 ): Promise<DesktopSessionSummary | null> {
   const directory = entry.isDirectory();
-  if (!directory && (!entry.isFile() || !/\.jsonl?$/.test(entry.name))) return null;
-  const id = directory ? entry.name : entry.name.replace(/\.jsonl?$/, "");
-  if (!isHistorySessionId(id)) return null;
+  const id = historyEntryId(entry);
+  if (!id) return null;
 
   try {
     const file = path.join(baseDir, entry.name, ...(directory ? ["state.json"] : []));

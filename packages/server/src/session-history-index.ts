@@ -23,6 +23,7 @@ function stamp(stat?: Stats) {
 function sources(root: string, id: string) {
   const candidates: Candidate[] = [];
   const stamps: Array<ReturnType<typeof stamp>> = [];
+  let hasSource = false;
   const add = (name: string, stat: Stats) =>
     candidates.push({
       name,
@@ -31,20 +32,21 @@ function sources(root: string, id: string) {
     });
   const dir = info(join(root, id));
   if (dir?.isDirectory()) {
-    stamps.push(
-      stamp(dir),
-      stamp(info(join(root, id, "state.json"))),
-      stamp(info(join(root, id, "transcript.jsonl"))),
-    );
+    const state = info(join(root, id, "state.json"));
+    hasSource = !!state;
+    stamps.push(stamp(dir), stamp(state), stamp(info(join(root, id, "transcript.jsonl"))));
     add(id, dir);
   }
   for (const suffix of [".json", ".jsonl"]) {
     const name = id + suffix;
     const flat = info(join(root, name));
     stamps.push(stamp(flat));
-    if (flat?.isFile()) add(name, flat);
+    if (flat?.isFile()) {
+      add(name, flat);
+      hasSource = true;
+    }
   }
-  return { candidates, stamp: JSON.stringify(stamps) };
+  return { candidates, hasSource, stamp: JSON.stringify(stamps) };
 }
 
 /** Update the Sessions page's file summaries in the storage worker. Only files
@@ -78,11 +80,12 @@ export async function reconcileSessionHistory(
   }
   for (const id of ids) {
     if (!isHistorySessionId(id)) continue;
-    const before = present ? sources(root, id) : { candidates: [], stamp: "" };
+    const before = present ? sources(root, id) : { candidates: [], hasSource: false, stamp: "" };
     const old = previous
       ? previous.get(id)
       : db.get<{ stamp: string }>("SELECT stamp FROM session_history WHERE id=?", [id])?.stamp;
-    if (!before.candidates.length) {
+    // Creating a directory and publishing state.json are separate filesystem events.
+    if (!before.hasSource) {
       if (old !== undefined) db.run("DELETE FROM session_history WHERE id=?", [id]);
       continue;
     }

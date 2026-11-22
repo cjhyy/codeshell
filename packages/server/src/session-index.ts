@@ -116,13 +116,26 @@ export function createSessionIndex(
     async history() {
       const db = await storage;
       if (!closed && usable && db.mode === "sqlite") {
-        const rows = db.read<Omit<DesktopSessionSummary, "title"> & { title: string | null }>(
-          "SELECT id, file, title, size, created_at AS createdAt, updated_at AS updatedAt FROM session_history WHERE file IS NOT NULL ORDER BY updated_at DESC",
+        const rows = db.read<
+          Omit<DesktopSessionSummary, "title" | "file"> & {
+            title: string | null;
+            file: string | null;
+          }
+        >(
+          "SELECT id, file, title, size, created_at AS createdAt, updated_at AS updatedAt FROM session_history",
         );
-        if (rows)
-          return rows
-            .map(({ title, ...row }) => (title === null ? row : { ...row, title }))
-            .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
+        if (rows) {
+          if (!watcher) watchRoot();
+          const indexed = new Map<string, DesktopSessionSummary | null>();
+          for (const { file, title, ...row } of rows) {
+            indexed.set(row.id, file ? { ...row, file, ...(title !== null && { title }) } : null);
+          }
+          // A CLI/SDK can publish the first session after this Host starts. One
+          // non-recursive name listing finds it without reopening indexed files.
+          const summaries = await listSessions(sessionsRoot, indexed);
+          for (const row of summaries) if (!indexed.has(row.id)) void changed(row.id);
+          return summaries;
+        }
       }
       return (
         (await db

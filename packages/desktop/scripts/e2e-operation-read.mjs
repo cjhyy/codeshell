@@ -416,7 +416,7 @@ try {
   );
   await writeFile(
     join(isolated.codeShellHome, "desktop/trust.json"),
-    JSON.stringify({ [projectRoot]: "trusted" }),
+    JSON.stringify({ [projectRoot]: "trusted", [join(isolated.codeShellHome, "no-repo")]: "untrusted" }),
   );
   await writeFile(
     join(isolated.home, "read-fixture.json"),
