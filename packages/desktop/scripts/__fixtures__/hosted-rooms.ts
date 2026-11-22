@@ -14,7 +14,7 @@ import { PrivateHostPeer, type PrivatePort } from "../../src/host/native-peer.js
 import { hostedRooms } from "../../src/host/rooms/service.js";
 import { NativeRooms } from "../../src/main/desktop-host/rooms-client.js";
 
-const root = realpathSync(process.argv[2]!);
+const root = realpathSync.native(process.argv[2]!);
 const cwd = join(root, ".code-shell", "no-repo");
 const journal = join(root, "activity.jsonl");
 const text = (message: string) => appendFileSync(journal, message + "\n");
@@ -119,8 +119,11 @@ if (process.argv[3] === "utility") {
     }) + "\n",
   );
   const output: MobileServerEvent[] = [];
-  let valid = true,
-    modal = 0;
+  let valid = true;
+  let dialogShown!: () => void;
+  const dialog = new Promise<void>((resolve) => {
+    dialogShown = resolve;
+  });
   let doc = new AbortController();
   const sender = { sender: { id: 18 } } as Electron.IpcMainInvokeEvent;
   let peer: PrivateHostPeer;
@@ -152,7 +155,7 @@ if (process.argv[3] === "utility") {
       discard: async () => {},
     },
     confirm: async (_request, _origin, signal) => {
-      modal++;
+      dialogShown();
       await new Promise<void>((r) => signal.addEventListener("abort", () => r(), { once: true }));
       return { approved: true };
     },
@@ -202,8 +205,12 @@ if (process.argv[3] === "utility") {
       sessionId,
       cwd,
     });
+    // An authorization failure before the native dialog should report the actual error.
+    await Promise.race([
+      dialog,
+      opening.then(() => { throw Error("Room opened without approval"); }),
+    ]);
     const cancelled = assert.rejects(opening);
-    await until(() => modal === 1);
     doc.abort();
     await cancelled;
     assert.equal(observed().includes("start bypassPermissions"), false);

@@ -98,7 +98,8 @@ interface RoomGrant {
 function canonical(path: string): string {
   const absolute = resolve(path);
   try {
-    return realpathSync(absolute);
+    // Match fs.promises.realpath used by project authorization, including Windows 8.3 aliases.
+    return realpathSync.native(absolute);
   } catch {
     return absolute;
   }
