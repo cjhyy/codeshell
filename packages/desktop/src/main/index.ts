@@ -164,8 +164,6 @@ import { nativeMimiWorkMemory } from "./desktop-host/mimi-work-client.js";
 import type { PetArchiveAnchors } from "./pet/pet-segment-controller.js";
 import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closure.js";
 import { PetReportReceiptStore } from "./pet/pet-report-receipt-store.js";
-import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
-import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import {
   createSessionOutcomeFanout,
   createSessionOutcomeTap,
@@ -871,8 +869,6 @@ let petRuntimeReady = false;
 let petHostActionReceiptService: PetHostActionReceiptService | null = null;
 let petNotices: PetNoticeWiring | null = null;
 let petWorkInboxStore: ReturnType<typeof nativeMimiRecords>["workInbox"] | null = null;
-let petLongTaskStore: PetLongTaskStore | null = null;
-let petLongTaskCoordinator: PetLongTaskCoordinator | null = null;
 const taskInboxDisposers: Array<() => void> = [];
 const taskInboxAutomationSessions = new Map<string, string>();
 let petImDecisions: PetImDecisions | null = null;
@@ -1592,10 +1588,7 @@ async function createWindow(): Promise<BrowserWindow> {
     // durable pet session id is known; until then the dispatch service holds a
     // stable wrapper that no-ops (beginTurn → undefined; closure → nothing).
     let petSegmentController: ReturnType<typeof petWorkMemory.controller> | null = null;
-    const longTaskStore = new PetLongTaskStore(
-      resolve(app.getPath("userData"), "pet", "long-tasks.json"),
-    );
-    petLongTaskStore = longTaskStore;
+    const longTaskStore = desktopHost.mimiTasks;
     taskInboxDisposers.push(
       longTaskStore.subscribe(() => taskInboxService.scheduleRefresh("mimi-delegation")),
     );
@@ -1681,8 +1674,7 @@ async function createWindow(): Promise<BrowserWindow> {
     );
     // Built inside petInitialization once the durable pet session id is known.
     let petSegmentClosureService: PetSegmentClosureService | null = null;
-    const longTaskCoordinator = new PetLongTaskCoordinator({
-      store: longTaskStore,
+    const longTaskCoordinator = longTaskStore.configure({
       projection: aggregator,
       worker: createPetRuntimeControlWorker({
         worker: bridge,
@@ -1789,7 +1781,6 @@ async function createWindow(): Promise<BrowserWindow> {
         dlog("main", `pet.longTask.${operation}.failed`, { error: String(error) });
       },
     });
-    petLongTaskCoordinator = longTaskCoordinator;
     const decisionBridge = bridge;
     petImDecisions = new PetImDecisions({
       // The worker's decisions and the desktop external runtimes' (Codex / Claude Code).
@@ -1797,10 +1788,10 @@ async function createWindow(): Promise<BrowserWindow> {
         notices.externalDecisions,
         {
           read: async () => {
-            const lines = await pendingMobileApprovals.replayForMimi();
+            const [lines, taskSnapshot] = await Promise.all([pendingMobileApprovals.replayForMimi(), longTaskStore.getSnapshot()]);
             return collectImDecisions(
               aggregator.getSnapshot(),
-              longTaskStore.getSnapshot().tasks,
+              taskSnapshot.tasks,
               lines,
               notices.decisions.deliveryFor,
             );
@@ -1932,7 +1923,7 @@ async function createWindow(): Promise<BrowserWindow> {
         service: () => externalRuntime.service,
         cwd: resolveNoRepoCwd(),
       }),
-      tasks: () => longTaskStore.getSnapshot().tasks,
+      tasks: async () => (await longTaskStore.getSnapshot()).tasks,
       projection: () => aggregator.getSnapshot(),
       log: (event, data) => dlog("main", event, data),
     });
@@ -2216,7 +2207,7 @@ async function createWindow(): Promise<BrowserWindow> {
       processingPetReports.add(event.reportId);
       try {
         if (await deliveredPetReports.has(event.reportId)) return;
-        const task = longTaskStore.activeForSession(event.sessionId);
+        const task = await longTaskStore.activeForSession(event.sessionId);
         if (!petDispatchService) throw new Error("Mimi dispatch service is unavailable");
         const report = await petDispatchService.reportSessionMessage(
           {
@@ -2456,9 +2447,9 @@ async function createWindow(): Promise<BrowserWindow> {
       },
       longTasks: {
         getSnapshot: () => longTaskStore.getSnapshot(),
-        control: (request) => longTaskCoordinator.control(request),
-        clearTerminal: () => longTaskCoordinator.clearTerminal(),
-        clearTask: (taskId) => longTaskCoordinator.clearTerminalTask(taskId),
+        control: (request, signal) => longTaskCoordinator.control(request, signal),
+        clearTerminal: (signal) => longTaskCoordinator.clearTerminal(signal),
+        clearTask: (taskId, signal) => longTaskCoordinator.clearTerminalTask(taskId, signal),
         subscribe: (listener) => longTaskStore.subscribe(listener),
       },
       memories: mimiRecords.interactive,
@@ -4043,15 +4034,9 @@ const taskInboxSources = createTaskInboxSources({
     runNow: (id) => cron.call("runNow", id),
   },
   mimi: {
-    snapshot: () => {
-      if (!petLongTaskStore) throw new Error("Delegation ledger is not ready");
-      return petLongTaskStore.getSnapshot();
-    },
-    get: (id) => petLongTaskStore?.get(id),
-    control: async (request) => {
-      if (!petLongTaskCoordinator) throw new Error("Delegation controller is not ready");
-      return petLongTaskCoordinator.control(request);
-    },
+    snapshot: () => desktopHost.mimiTasks.getSnapshot(),
+    get: (id) => desktopHost.mimiTasks.get(id),
+    control: (request) => desktopHost.mimiTasks.control(request),
   },
   external: {
     hasSession: (id) => !!externalRuntime.service?.hasSession(id),
@@ -4136,8 +4121,6 @@ registerDesktopShutdown(app, {
     petHostActionReceiptService = null;
     petImDecisions?.stop();
     petImDecisions = null;
-    petLongTaskCoordinator?.stop();
-    petLongTaskCoordinator = null;
     unsubscribePetLongTaskStream?.();
     unsubscribePetLongTaskStream = null;
     unsubscribePetReportStream?.();
@@ -4147,8 +4130,7 @@ registerDesktopShutdown(app, {
     petNotices = null;
     const petWorkInboxFlush = petWorkInboxStore?.flush();
     petWorkInboxStore = null;
-    const petLongTaskFlush = petLongTaskStore?.flush();
-    petLongTaskStore = null;
+
     disposePetIpc?.();
     disposePetIpc = null;
 
@@ -4170,7 +4152,7 @@ registerDesktopShutdown(app, {
       mobileRemoteController.dispose(),
       cloudManagementManager.dispose(),
       petWorkInboxFlush,
-      petLongTaskFlush,
+
       petNoticeFlush,
       externalRuntimeShutdown,
       cookieRefreshShutdown,

@@ -55,7 +55,7 @@ export interface PetProactiveDeps {
     changedSince(ms: number): NoticeRecord[];
     actionRecords(): NoticeRecord[];
   };
-  tasks(): readonly PetLongTask[];
+  tasks(): readonly PetLongTask[] | Promise<readonly PetLongTask[]>;
   sessions(): readonly DesktopPetSession[];
   pending(): readonly DesktopPendingDecision[];
   wasSessionViewedSince(sessionId: string, ms: number): boolean;
@@ -122,7 +122,7 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
         dayAfterStart: localDayStart(today + 2, zone),
       },
       {
-        tasks: deps.tasks(),
+        tasks: await deps.tasks(),
         sessions: deps.sessions(),
         pending: deps.pending(),
         followUps: followUps(),

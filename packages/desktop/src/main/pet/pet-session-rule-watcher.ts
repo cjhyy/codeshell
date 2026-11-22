@@ -73,7 +73,7 @@ export interface PetSessionRuleWatcherOptions {
    * The Session's active long task. A Goal pause in a task the owner asked
    * for over IM is answered there, like its decision prompts (`reply`).
    */
-  activeTask?: (sessionId: string) => PetLongTask | undefined;
+  activeTask?: (sessionId: string) => PetLongTask | undefined | Promise<PetLongTask | undefined>;
   now?: () => number;
   log?: (event: string, data: Record<string, unknown>) => void;
 }
@@ -388,7 +388,7 @@ export class PetSessionRuleWatcher {
     // long task owns the run (no `runKey`: the closure only reports done / failed).
     // The active task, like a decision prompt's: an IM-started task's pause goes
     // back to its conversation as a reply.
-    const task = this.options.activeTask?.(sessionId);
+    const task = await this.options.activeTask?.(sessionId);
     await this.emit(
       sessionId,
       "blocked",

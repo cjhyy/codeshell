@@ -3,7 +3,6 @@ import {
   buildPetLongTaskContext,
   petLongTaskResumePrompt,
   type PetLongTask,
-  type PetLongTaskArtifact,
   type PetLongTaskClosureDecision,
   type PetLongTaskCompletionTarget,
   type PetLongTaskContinuationDecision,
@@ -28,18 +27,13 @@ import type {
 import { PetLongTaskStore } from "./pet-long-task-store.js";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import { ErrorCodes } from "@cjhyy/code-shell-core";
-import {
-  closingOutcome,
-  runningOutcome,
-  topLevelEvent,
-  type SessionOutcome,
-} from "./session-outcome.js";
+import { closingOutcome, runningOutcome, type SessionOutcome } from "./session-outcome.js";
 
-const MAX_PET_LONG_TASK_SUMMARY_LENGTH = 8_000;
+import { projectMimiTaskEvent, type MimiTaskEvent } from "../../shared/mimi-task-event.js";
 const PROJECTION_LAUNCH_GRACE_MS = 2_000;
 
-interface PetLongTaskWorker {
-  hasLiveWorker(sessionId?: string): boolean;
+export interface PetLongTaskWorker {
+  hasLiveWorker(sessionId?: string): boolean | Promise<boolean>;
   requestWorker(
     method: string,
     params: Record<string, unknown>,
@@ -48,9 +42,11 @@ interface PetLongTaskWorker {
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
 }
 
-interface PetLongTaskCoordinatorOptions {
+export interface PetLongTaskCoordinatorOptions {
   store: PetLongTaskStore;
-  projection: Pick<PetStateAggregator, "getSnapshot" | "subscribe">;
+  projection: Pick<PetStateAggregator, "subscribe"> & {
+    getSnapshot(): DesktopPetProjectionSnapshot | Promise<DesktopPetProjectionSnapshot>;
+  };
   worker: PetLongTaskWorker;
   launcher: { start(delegation: PetAutoDelegation): Promise<PetWorkDelegationLaunch> };
   now?: () => number;
@@ -217,53 +213,6 @@ function runFence(task: PetLongTask) {
   return { attempt: task.attempt, runId: task.runId, clientMessageId: task.clientMessageId };
 }
 
-function extractText(value: unknown): string | undefined {
-  const collect = (input: unknown): string[] => {
-    if (typeof input === "string") return [input];
-    if (!Array.isArray(input)) return [];
-    return input.flatMap((block) => {
-      if (typeof block === "string") return [block];
-      if (!block || typeof block !== "object") return [];
-      const record = block as Record<string, unknown>;
-      return typeof record.text === "string" ? [record.text] : [];
-    });
-  };
-  if (!value || typeof value !== "object") return undefined;
-  const record = value as Record<string, unknown>;
-  const text = collect(record.content ?? record.text)
-    .join("\n")
-    .replace(/\s+/gu, " ")
-    .trim();
-  return text ? text.slice(0, MAX_PET_LONG_TASK_SUMMARY_LENGTH) : undefined;
-}
-
-function generatedImageArtifacts(value: unknown): PetLongTaskArtifact[] {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
-  const event = value as Record<string, unknown>;
-  const result = event.result;
-  if (!result || typeof result !== "object" || Array.isArray(result)) return [];
-  const record = result as Record<string, unknown>;
-  if (record.toolName !== "GenerateImage" || record.isError === true || record.error) return [];
-  const output = [record.transcriptResult, record.displayResult, record.result].find(
-    (candidate): candidate is string => typeof candidate === "string" && candidate.length > 0,
-  );
-  if (!output) return [];
-  const match = /\bsaved to\s+([^\r\n]+?\.(?:png|jpe?g|gif|webp))(?=$|\s)/iu.exec(output);
-  const reference = match?.[1]?.trim().replace(/^`|`$/gu, "");
-  return reference
-    ? [{ kind: "file", label: "Generated image", reference: reference.slice(0, 2_048) }]
-    : [];
-}
-
-function safeToolName(event: Record<string, unknown>): string {
-  const toolCall = event.toolCall;
-  if (!toolCall || typeof toolCall !== "object") return "tool";
-  const name = (toolCall as Record<string, unknown>).toolName;
-  return typeof name === "string"
-    ? name.replace(/[^\p{L}\p{N}_.:@/-]+/gu, " ").slice(0, 80)
-    : "tool";
-}
-
 function projectionPhase(phase: string | undefined): PetLongTaskPhase {
   if (phase === "waiting-decision") return "waiting-user";
   if (phase === "finalizing") return "finalizing";
@@ -288,10 +237,10 @@ export class PetLongTaskCoordinator {
     this.now = options.now ?? Date.now;
   }
 
-  async start(): Promise<void> {
+  async start(options?: { alreadyLoaded: boolean }): Promise<void> {
     if (this.started) return;
     this.started = true;
-    await this.options.store.load();
+    if (!options?.alreadyLoaded) await this.options.store.load();
     for (const task of this.options.store.getSnapshot().tasks) {
       if (!wasClosedWhileWaitingForBackgroundResult(task)) continue;
       const completedAt = task.completedAt ?? task.updatedAt;
@@ -318,7 +267,7 @@ export class PetLongTaskCoordinator {
         this.options.onBackgroundError?.("projection", error),
       );
     });
-    await this.reconcile(this.options.projection.getSnapshot());
+    await this.reconcile(await this.options.projection.getSnapshot());
   }
 
   stop(): void {
@@ -333,7 +282,7 @@ export class PetLongTaskCoordinator {
 
   /** Close any watched task whose terminal marker arrived during watch setup. */
   async reconcileNow(): Promise<void> {
-    await this.reconcile(this.options.projection.getSnapshot());
+    await this.reconcile(await this.options.projection.getSnapshot());
   }
 
   async recordClosureDecision(
@@ -449,7 +398,7 @@ export class PetLongTaskCoordinator {
       throw new Error("This Session is already managed with a different completion route");
     }
 
-    const snapshot = this.options.projection.getSnapshot();
+    const snapshot = await this.options.projection.getSnapshot();
     const session = snapshot.sessions.find(
       (candidate) => candidate.agentSessionId === input.sessionId,
     );
@@ -540,10 +489,19 @@ export class PetLongTaskCoordinator {
     value: unknown,
     outcomes: readonly SessionOutcome[],
   ): Promise<void> {
+    const event = projectMimiTaskEvent(value);
+    if (event) await this.observeTaskEvent(sessionId, event, outcomes);
+  }
+
+  async observeTaskEvent(
+    sessionId: string,
+    event: MimiTaskEvent,
+    outcomes: readonly SessionOutcome[],
+  ): Promise<void> {
     const previous = this.sessionEventQueues.get(sessionId) ?? Promise.resolve();
     const operation = previous
       .catch(() => undefined)
-      .then(() => this.applySessionEvent(sessionId, value, outcomes));
+      .then(() => this.applySessionEvent(sessionId, event, outcomes));
     this.sessionEventQueues.set(sessionId, operation);
     try {
       await operation;
@@ -555,11 +513,9 @@ export class PetLongTaskCoordinator {
 
   private async applySessionEvent(
     sessionId: string,
-    value: unknown,
+    event: MimiTaskEvent,
     outcomes: readonly SessionOutcome[],
   ): Promise<void> {
-    const event = topLevelEvent(value);
-    if (!event) return;
     // What the event means is decided once, by SessionOutcomeDeriver; the
     // outcome → task-state mapping is tabulated in session-outcome.ts.
     const closing = closingOutcome(outcomes);
@@ -595,7 +551,7 @@ export class PetLongTaskCoordinator {
       // An assistant_message may precede a Goal rejection or a steer backfill.
       // Only the finalized run payload is safe to publish as a result update.
       if (closing && isOrdinaryCompletion(closing)) {
-        const summary = typeof event.text === "string" ? extractText(event) : undefined;
+        const summary = event.summary;
         if (task.verificationMode === "turn" || summary) {
           await transition({
             kind: "result-updated",
@@ -638,20 +594,20 @@ export class PetLongTaskCoordinator {
         }
         return;
       case "tool_use_start":
-        await this.recordProgress(task, at, `Running ${safeToolName(event)}`);
+        await this.recordProgress(task, at, `Running ${event.toolName}`);
         return;
       case "context_compact":
         await this.recordProgress(task, at, "Compacting context for continued work");
         return;
       case "tool_result": {
-        const artifacts = generatedImageArtifacts(event);
+        const artifacts = event.artifacts ?? [];
         if (artifacts.length > 0) {
           await transition({ kind: "artifact", at, artifacts });
         }
         return;
       }
       case "assistant_message": {
-        const summary = extractText(event.message);
+        const summary = event.summary;
         if (summary) {
           await transition({
             kind: "checkpoint",
@@ -718,11 +674,11 @@ export class PetLongTaskCoordinator {
         if (!closing || !current || current.status === "paused" || current.status === "cancelled")
           return;
         if (closing.kind === "failed") {
-          if (closing.budgetExhausted && typeof event.text === "string" && event.text.trim()) {
+          if (closing.budgetExhausted && event.summary) {
             await transition({
               kind: "checkpoint",
               at,
-              summary: extractText(event)!,
+              summary: event.summary,
               nextAction: "Continue the unfinished objective in the existing Session",
             });
           }
@@ -778,7 +734,7 @@ export class PetLongTaskCoordinator {
           const completed = await transition({
             kind: "completed",
             at,
-            summary: typeof event.text === "string" ? extractText(event) : undefined,
+            summary: event.summary,
             artifacts: [
               { kind: "result", label: "Completed work session", reference: current.sessionId },
             ],
@@ -806,7 +762,7 @@ export class PetLongTaskCoordinator {
 
   private async observeProjectionEvent(event: DesktopPetProjectionEvent): Promise<void> {
     if (event.kind === "reset") {
-      await this.reconcile(this.options.projection.getSnapshot());
+      await this.reconcile(await this.options.projection.getSnapshot());
       return;
     }
     if (event.kind === "pending-upsert") {
@@ -1029,7 +985,7 @@ export class PetLongTaskCoordinator {
       at: this.now(),
       reason: "Paused by user",
     });
-    if (this.options.worker.hasLiveWorker(paused.sessionId)) {
+    if (await this.options.worker.hasLiveWorker(paused.sessionId)) {
       await this.pausePersistedGoal(paused).catch((error) =>
         this.options.onBackgroundError?.("pause-goal", error),
       );
@@ -1087,7 +1043,7 @@ export class PetLongTaskCoordinator {
     });
     try {
       if (
-        this.options.worker.hasLiveWorker(resumed.sessionId) &&
+        (await this.options.worker.hasLiveWorker(resumed.sessionId)) &&
         (await this.resumePersistedGoal(resumed))
       ) {
         return { ok: true, task: this.options.store.get(task.id) ?? resumed };
@@ -1212,7 +1168,7 @@ export class PetLongTaskCoordinator {
     if (task.status === "cancelled" || task.status === "completed") {
       return { ok: false, code: "invalid-state", message: "This task is already closed" };
     }
-    const hadLiveWorker = this.options.worker.hasLiveWorker(task.sessionId);
+    const hadLiveWorker = await this.options.worker.hasLiveWorker(task.sessionId);
     if (hadLiveWorker) {
       try {
         const outcome = await this.options.worker.requestWorker(
@@ -1258,9 +1214,9 @@ export class PetLongTaskCoordinator {
     // Goal verdicts precede end hooks and the Session's idle boundary. Keep the
     // durable closure pending until that exact run has finished; never wait on
     // the per-session stream queue that must process its remaining events.
-    const session = this.options.projection
-      .getSnapshot()
-      .sessions.find((entry) => entry.agentSessionId === task.sessionId);
+    const session = (await this.options.projection.getSnapshot()).sessions.find(
+      (entry) => entry.agentSessionId === task.sessionId,
+    );
     if (
       session &&
       matchesRun(task, session) &&

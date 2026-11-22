@@ -1265,7 +1265,7 @@ export class PetDispatchService {
     try {
       if (!knownTasks.length && input.eventKind !== "follow-up-wake") {
         const previous = await links.query({ originId: input.originRef.id, limit: 8 });
-        const context = this.options.longTasks?.context() as
+        const context = (await this.options.longTasks?.context()) as
           | {
               active?: PetGroundedTaskRef[];
               recent?: PetGroundedTaskRef[];
@@ -1542,7 +1542,7 @@ export class PetDispatchService {
         ) {
           leaderTurn.inputAttachments = structuredClone(attachments);
         }
-        const wakeTaskContext = this.options.longTasks?.context() as
+        const wakeTaskContext = (await this.options.longTasks?.context()) as
           | { active?: PetGroundedTaskRef[]; recent?: PetGroundedTaskRef[] }
           | undefined;
         const wakeTasks = command.hostWake
@@ -1818,7 +1818,7 @@ export class PetDispatchService {
             .filter(([key]) => !reservedWorldKeys.has(key))
             .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)),
         );
-        const longTaskContext = this.options.longTasks?.context();
+        const longTaskContext = (await this.options.longTasks?.context());
         const taskInbox = await taskInboxTask;
         const noticeWorld = await petNoticeWorld(command, this.options.recentProactive);
         const world = {

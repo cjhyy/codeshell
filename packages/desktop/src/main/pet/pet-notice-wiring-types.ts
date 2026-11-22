@@ -45,8 +45,8 @@ export interface PetNoticeWiringDeps {
   /** The pet projection (PetStateAggregator): attention source and Session facts. */
   projection: PetAttentionOptions["source"];
   longTasks: {
-    activeForSession(sessionId: string): PetLongTask | undefined;
-    getSnapshot(): { tasks: readonly PetLongTask[] };
+    activeForSession(sessionId: string): PetLongTask | undefined | Promise<PetLongTask | undefined>;
+    getSnapshot(): { tasks: readonly PetLongTask[] } | Promise<{ tasks: readonly PetLongTask[] }>;
     /** Tasks changed (an IM-started task may now own where a prompt goes). */
     subscribe?(listener: () => void): () => void;
   };

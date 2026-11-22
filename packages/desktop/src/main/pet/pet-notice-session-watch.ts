@@ -24,7 +24,7 @@ export interface SessionWatchHostDeps {
   refreshCatalog(): Promise<unknown>;
   sessions(): readonly DesktopPetSession[];
   longTasks: {
-    activeForSession(sessionId: string): PetLongTask | undefined;
+    activeForSession(sessionId: string): PetLongTask | undefined | Promise<PetLongTask | undefined>;
     /** Point an active long task at the conversation (`PetLongTaskCoordinator.watchSession`). */
     watchSession(input: {
       originClientMessageId: string;
@@ -112,7 +112,7 @@ export function createSessionWatchAction(deps: SessionWatchDeps): PetHostActionE
     // A delegated Session's long task already reports its result: point it
     // here. A Session rules cannot watch (a tailed CLI rollout) keeps the
     // long-task watch it always had.
-    if (deps.longTasks.activeForSession(sessionId) || !deps.isEligibleSession(sessionId)) {
+    if ((await deps.longTasks.activeForSession(sessionId)) || !deps.isEligibleSession(sessionId)) {
       const watched = await deps.longTasks.watchSession({
         originClientMessageId: context.originClientMessageId,
         requestedAt: context.requestedAt,

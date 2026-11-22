@@ -517,7 +517,10 @@ export function createPetApi(
       ipcRenderer.on("pet:work-inbox-dismissed-changed", handler);
       return () => ipcRenderer.removeListener("pet:work-inbox-dismissed-changed", handler);
     },
-    getLongTasks: () => ipcRenderer.invoke("pet:long-tasks-get") as Promise<PetLongTaskSnapshot>,
+    getLongTasks: () => {
+      const fallback=()=>ipcRenderer.invoke("pet:long-tasks-get") as Promise<PetLongTaskSnapshot>;
+      return host ? host.readBusiness("mimi/longTasks",{},fallback):fallback();
+    },
     controlLongTask: (request) =>
       ipcRenderer.invoke("pet:long-task-control", request) as Promise<PetLongTaskControlResult>,
     clearTerminalLongTasks: () =>

@@ -98,8 +98,8 @@ export interface TaskInboxSourcesDeps {
     runNow(id: string): boolean | Promise<boolean>;
   };
   mimi?: {
-    snapshot(): PetLongTaskSnapshot;
-    get(id: string): PetLongTask | undefined;
+    snapshot(): PetLongTaskSnapshot | Promise<PetLongTaskSnapshot>;
+    get(id: string): PetLongTask | undefined | Promise<PetLongTask | undefined>;
     control(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult>;
   };
   external?: {
@@ -529,7 +529,7 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
       return (await sessions()).filter((record) => record.source === source);
     if (source === "automation")
       return ((await deps.automations?.list()) ?? []).map(automationRecord);
-    if (source === "mimi-delegation") return deps.mimi?.snapshot().tasks.map(mimiRecord) ?? [];
+    if (source === "mimi-delegation") return (await deps.mimi?.snapshot())?.tasks.map(mimiRecord) ?? [];
     if (source === "subagent") return subagents();
     if (source === "legacy-run")
       return ((await deps.runs?.list()) ?? []).map((run) =>
@@ -560,7 +560,7 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
       return found ? [automationRecord(found)] : [];
     }
     if (source === "mimi-delegation") {
-      const found = deps.mimi?.get(id);
+      const found = await deps.mimi?.get(id);
       return found ? [mimiRecord(found)] : [];
     }
     if (source === "subagent") return (await subagents(id)).filter((r) => r.sourceId === id);

@@ -95,8 +95,8 @@ export interface DeliveryQuery {
 export interface DeliveryPlanSources {
   rules: { activeForSession(sessionId: string): EventNoticeRule[] };
   longTasks: {
-    activeForSession(sessionId: string): PetLongTask | undefined;
-    getSnapshot(): { tasks: readonly PetLongTask[] };
+    activeForSession(sessionId: string): PetLongTask | undefined | Promise<PetLongTask | undefined>;
+    getSnapshot(): { tasks: readonly PetLongTask[] } | Promise<{ tasks: readonly PetLongTask[] }>;
   };
   /** Every IM conversation that receives the Session's turn replies (bound, left, suspended). */
   replyRoutes(sessionId: string): Promise<readonly ConversationSessionRoute[]>;
@@ -407,11 +407,11 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
   };
 
   // A long task owns its Session while active, and owns the run it closed.
-  const owningTask = (sessionId: string, runKey: string): PetLongTask | undefined =>
-    sources.longTasks.activeForSession(sessionId) ??
-    sources.longTasks
-      .getSnapshot()
-      .tasks.find((task) => task.sessionId === sessionId && task.runId === runKey);
+  const owningTask = async (sessionId: string, runKey: string): Promise<PetLongTask | undefined> =>
+    (await sources.longTasks.activeForSession(sessionId)) ??
+    (await sources.longTasks.getSnapshot()).tasks.find(
+      (task) => task.sessionId === sessionId && task.runId === runKey,
+    );
 
   const build = (
     query: DeliveryQuery,
@@ -465,7 +465,7 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
       if (query.event === "blocked") return planBlocked(query);
       const task =
         query.task ??
-        (query.runKey !== undefined ? owningTask(query.sessionId, query.runKey) : undefined);
+        (query.runKey !== undefined ? await owningTask(query.sessionId, query.runKey) : undefined);
       return build(query, task, await replyRoutesOrNone(query.sessionId));
     },
     planBlocked,
@@ -474,7 +474,7 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
       const routes = await replyRoutesOrNone(sessionId);
       const bound = routes.find((route) => route.mode === "bound" && route.status === "active");
       if (bound) return routeTarget(bound);
-      const origin = sources.longTasks.activeForSession(sessionId)?.completionTarget;
+      const origin = (await sources.longTasks.activeForSession(sessionId))?.completionTarget;
       return origin ? { kind: "route", route: origin } : { kind: "owner" };
     },
     taskOrigin: (task) => taskOrigin(task, sources.delegatedFromDesktop()),

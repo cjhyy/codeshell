@@ -69,7 +69,7 @@ export interface NoticeActionControls {
     runtime: NoticeActionRuntime,
     expected: { goalId: string; revision: number },
   ): Promise<boolean>;
-  task(taskId: string): { status: string } | undefined;
+  task(taskId: string): { status: string } | undefined | Promise<{ status: string } | undefined>;
   controlTask(
     taskId: string,
     action: "retry" | "cancel",
@@ -357,7 +357,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
 
   async function stop(record: SessionActionRecord) {
     const { code, sessionId, runtime, goalId, revision, taskId } = record.actions;
-    const task = taskId ? controls.task(taskId) : undefined;
+    const task = taskId ? await controls.task(taskId) : undefined;
     if (taskId && task && !TERMINAL_TASKS.has(task.status)) {
       const result = await controls.controlTask(taskId, "cancel");
       if (!result.ok) return `没能停止：${result.message}`;
@@ -394,7 +394,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
   async function retry(record: SessionActionRecord) {
     const { code, sessionId, runtime, taskId } = record.actions;
     if (taskId) {
-      const task = controls.task(taskId);
+      const task = await controls.task(taskId);
       if (!task) return "这个任务已经不在了，没有重试。";
       if (task.status !== "failed" && task.status !== "interrupted")
         return "这个任务已经不是失败状态（可能已在别处重试），没有重试。";

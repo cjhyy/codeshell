@@ -12,7 +12,7 @@ const MAX_REMEMBERED = 200;
 
 export interface NoticeActionSourcesDeps {
   isExternal(sessionId: string): boolean;
-  activeTask(sessionId: string): PetLongTask | undefined;
+  activeTask(sessionId: string): PetLongTask | undefined | Promise<PetLongTask | undefined>;
   /** The Session's last user message (retry resends it); without it a failure offers no retry. */
   lastUserMessage?: (sessionId: string) => Promise<string | undefined>;
   log?: (event: string, data: Record<string, unknown>) => void;
@@ -54,13 +54,13 @@ export function createNoticeActionSources(deps: NoticeActionSourcesDeps): Notice
   }
 
   return {
-    forDraft(draft) {
+    async forDraft(draft) {
       const { sessionId, context } = draft;
       switch (draft.kind) {
         case "session.blocked":
         case "session.paused": {
           const reason = context?.reason ?? "user";
-          const task = deps.activeTask(sessionId);
+          const task = await deps.activeTask(sessionId);
           return {
             ...base(sessionId),
             family: reason === "user" ? "goal" : "limit",

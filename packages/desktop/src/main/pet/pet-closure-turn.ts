@@ -145,7 +145,7 @@ export async function runLongTaskClosureTurn(
       // Which request this is among those made to the Session, and whether it ran.
       ...closureRequestIdentity(
         task,
-        host.options.longTasks?.context() as PetLongTaskContext | undefined,
+        (await host.options.longTasks?.context()) as PetLongTaskContext | undefined,
       ),
     };
     const personalization = await host.currentPersonalization();

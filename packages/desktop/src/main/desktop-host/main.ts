@@ -1,3 +1,4 @@
+import { NativeMimiTasks } from "./mimi-task-client.js";
 import { ExternalProviderPorts, externalProviderFactories, inferExternalMemory } from "./native-external-provider.js";
 import { electronPrivatePort } from "../../host/native-peer.js";
 import { NativeImGateway } from "./im-gateway-client.js";
@@ -57,6 +58,7 @@ export function createDesktopHost(
       if (status === "ready") {
         bindWorker();
         bindAutomation();
+        bindMimiTasks();
         const { port1, port2 } = new MessageChannelMain();
         if (supervisor.post({ type: "remote-services-port" }, [port2])) remote.bind(electronPrivatePort(port1));
         else {
@@ -75,6 +77,7 @@ export function createDesktopHost(
         providerPorts.disconnect();
         worker?.disconnect();
         automation.disconnect();
+        mimiTasks.disconnect();
         remote.disconnect();
         im.disconnect();
         terminals?.disconnect();
@@ -157,6 +160,23 @@ export function createDesktopHost(
       port2.close();
     }
   }
+  const mimiTasks = new NativeMimiTasks(
+    (command, signal) => supervisor.callBusiness("mimi/tasks", command, signal),
+    async () => {
+      await supervisor.waitUntilReady();
+      bindMimiTasks();
+    },
+  );
+  function bindMimiTasks() {
+    if (!mimiTasks.needsPort) return;
+    const { port1, port2 } = new MessageChannelMain();
+    if (supervisor.post({ type: "mimi-tasks-port" }, [port2])) {
+      mimiTasks.bind(electronPrivatePort(port1));
+    } else {
+      port1.close();
+      port2.close();
+    }
+  }
   function bindTerminals() {
     if (!terminals) return;
     const { port1, port2 } = new MessageChannelMain();
@@ -201,6 +221,7 @@ export function createDesktopHost(
     mimiRecordListeners: supervisor.mimiRecordListeners,
     externalProviders: externalProviderFactories(openExternalProvider),
     inferExternalMemory: inferExternalMemory(openExternalProvider),
+    mimiTasks,
     automationListeners: supervisor.automationListeners,
     automation,
     catalogListeners: supervisor.catalogListeners,
@@ -343,6 +364,7 @@ export function createDesktopHost(
     setDeleting: (sessionId: string, deleting: boolean) =>
       supervisor.setDeleting(sessionId, deleting),
     dispose() {
+      mimiTasks.stop();
       providerPorts.disconnect();
       terminals?.disconnect();
       changes?.close();

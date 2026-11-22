@@ -384,6 +384,35 @@ try {
     await readFile(join(isolated.userDataDir, "pet", "long-tasks.json"), "utf8"),
   );
   assert.equal(ledger.tasks.find((task) => task.id === mimi.sourceId)?.status, "paused");
+  await win.evaluate((id) => {
+    window.__mimiTaskReads = [];
+    window.__mimiTaskReadTimer = setInterval(async () => {
+      const from = Date.now();
+      try {
+        const { tasks } = await window.codeshell.pet.getLongTasks();
+        if (tasks.find((task) => task.id === id)?.status === "paused")
+          window.__mimiTaskReads.push({ from, to: Date.now() });
+      } catch {
+        /* Host may reconnect between probes. */
+      }
+    }, 80);
+  }, mimi.sourceId);
+  const hold = await app.evaluate(() => {
+    const from = Date.now();
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1800);
+    return { from, to: Date.now() };
+  });
+  const reads = await win.evaluate(() => {
+    clearInterval(window.__mimiTaskReadTimer);
+    return window.__mimiTaskReads;
+  });
+  assert(
+    reads.some((read) => read.from > hold.from && read.to < hold.to),
+    "The Host must serve the committed paused task while Main is blocked",
+  );
+  console.log(
+    "PASS: Mimi task control commits in the Host and its workbench read completes during a Main hold",
+  );
 
   const job = await win.evaluate(() =>
     window.codeshell.createAutomation({

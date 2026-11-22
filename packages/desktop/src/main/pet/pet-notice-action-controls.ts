@@ -57,7 +57,7 @@ export interface NoticeActionControlsDeps {
   /** The projection's Sessions (run state). */
   sessions: () => ReadonlyArray<{ agentSessionId: string; runState?: string }>;
   longTasks: {
-    get(taskId: string): { status: string } | undefined;
+    get(taskId: string): { status: string } | undefined | Promise<{ status: string } | undefined>;
     control(request: {
       taskId: string;
       action: "retry" | "cancel";

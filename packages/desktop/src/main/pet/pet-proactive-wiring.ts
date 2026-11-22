@@ -33,7 +33,7 @@ export function wirePetProactive(input: {
   cwd: string;
   externalReplyModel?: ExternalReplyModel;
   accounting?: ReplyModelOptions["accounting"];
-  tasks(): readonly PetLongTask[];
+  tasks(): readonly PetLongTask[] | Promise<readonly PetLongTask[]>;
   projection(): Pick<DesktopPetProjectionSnapshot, "sessions" | "pending">;
   log(event: string, data: Record<string, unknown>): void;
 }): PetProactive {

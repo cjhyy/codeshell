@@ -288,6 +288,7 @@ export class DesktopHostSupervisor {
     if (!this.ready || this.stopped) await this.waitUntilReady(signal);
     // Model-backed work owns its cancellation and can outlast a normal data read.
     const waitsForRun =
+      method === "mimi/tasks" && ["start", "control", "clearTerminal", "clearTerminalTask", "reconcileNow", "startDelegation", "watchSession", "observeSessionEvent"].includes((input as {method:string}).method) ||
       method === "mimi/backfillSegments" ||
       method === "mimi/closeSegment" ||
       method === "automation/command" && (input as { method?: string }).method === "cancel";

@@ -75,7 +75,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   // Read lazily: where a prompt goes needs the hooks and view built below.
   const externalDecisions = createExternalDecisions({
     ...(deps.externalApprovals ? { source: deps.externalApprovals } : {}),
-    tasks: () => deps.longTasks.getSnapshot().tasks,
+    tasks: async () => (await deps.longTasks.getSnapshot()).tasks,
     deliveryFor: (sessionId, task) => decisions.hooks.deliveryFor(sessionId, task),
     title: (sessionId) => view.sessionTitle(sessionId),
     onChange: (event) => {

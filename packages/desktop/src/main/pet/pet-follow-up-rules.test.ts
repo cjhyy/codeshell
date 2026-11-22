@@ -402,14 +402,12 @@ describe("firing", () => {
       sessions: [session("s-native")],
       wakeFollowUp: async (wake) => {
         // Re-checked by the dispatch turn while the occurrence is claimed.
-        validated = (() => {
-          try {
-            f.runtime.validateContinuation(wake);
-            return "ok";
-          } catch (error) {
-            return String(error);
-          }
-        })();
+        try {
+          await f.runtime.validateContinuation(wake);
+          validated = "ok";
+        } catch (error) {
+          validated = String(error);
+        }
         return { launched: true, text: "已交回原任务", taskId: "task-new" };
       },
     });
@@ -441,7 +439,7 @@ describe("firing", () => {
     expect(f.submitted[0]).toMatchObject({ body: "「交材料」：已交回原任务", channel: "wechat" });
     expect(f.rules.get(id)?.wake).toMatchObject({ status: "launched", taskId: "task-new" });
     // After the occurrence settled, a late continuation is refused.
-    expect(() => f.runtime.validateContinuation(f.wakes[0]!)).toThrow("授权已变化");
+    await expect(f.runtime.validateContinuation(f.wakes[0]!)).rejects.toThrow("授权已变化");
   });
 
   test("run-mimi cancelled by the owner mid-run: recorded as cancelled, no reminder", async () => {
@@ -452,7 +450,7 @@ describe("firing", () => {
         // The owner cancels while Mimi's turn runs; the turn's fence refuses the launch.
         await f.host({ action: "cancel", followUpId: id, expectedRevision: 1 });
         try {
-          f.runtime.validateContinuation(wake);
+          await f.runtime.validateContinuation(wake);
         } catch (error) {
           return { launched: false, text: String((error as Error).message) };
         }

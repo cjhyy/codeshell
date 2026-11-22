@@ -221,7 +221,11 @@ export interface PetFollowUpRulesDeps {
   summaryStore: PetSummaryStore;
   summaryService: PetSummaryService;
   inbox: PetFollowUpInbox;
-  tasks: PetLongTaskStore;
+  tasks: {
+    [K in "get" | "getSnapshot"]: (
+      ...args: Parameters<PetLongTaskStore[K]>
+    ) => ReturnType<PetLongTaskStore[K]> | Promise<ReturnType<PetLongTaskStore[K]>>;
+  };
   longTasks: Pick<PetLongTaskCoordinator, "control">;
   scheduler(): PetCronAccess;
   /** The notice router (`PetNoticeWiring.submitNotice`): every reminder is sent through it. */
@@ -276,14 +280,12 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
       if (!source || source.external)
         throw new Error("续办来源已不存在或不受当前 Host 支持，请重新选择原任务");
       const task = taskId
-        ? deps.tasks.get(taskId)
-        : deps.tasks
-            .getSnapshot()
-            .tasks.find(
-              (row) =>
-                row.sessionId === payload.sourceSessionId &&
-                !["completed", "failed", "cancelled"].includes(row.status),
-            );
+        ? await deps.tasks.get(taskId)
+        : (await deps.tasks.getSnapshot()).tasks.find(
+            (row) =>
+              row.sessionId === payload.sourceSessionId &&
+              !["completed", "failed", "cancelled"].includes(row.status),
+          );
       if (taskId && (!task || task.sessionId !== payload.sourceSessionId))
         throw new Error("续办任务与来源 Session 不匹配");
       taskId = task?.id;
@@ -360,7 +362,7 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
     if (source.runState === "running" || source.runState === "queued")
       return { launched: false, text: "原任务已在运行，未重复启动。" };
     if (wake.taskId) {
-      const task = deps.tasks.get(wake.taskId);
+      const task = await deps.tasks.get(wake.taskId);
       if (!task || task.sessionId !== wake.sourceSessionId)
         return { launched: false, text: "跟进关联的原任务已变化，请核对后再续办。" };
       if (task.status === "paused" || task.status === "interrupted") {
@@ -447,7 +449,8 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
     coordinator,
     subscribe: (listener: () => void) => rules.onChange(listener),
     /** Re-checked after Mimi decides, right before her wake turn launches anything. */
-    validateContinuation(wake: PetFollowUpWake): void {
+    async validateContinuation(wake: PetFollowUpWake): Promise<void> {
+      const task = wake.taskId ? await deps.tasks.get(wake.taskId) : undefined;
       const current = rules.get(wake.id);
       if (
         !current ||
@@ -465,7 +468,6 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
               : "跟进授权已变化，未自动续办",
         );
       if (wake.taskId) {
-        const task = deps.tasks.get(wake.taskId);
         if (
           !task ||
           task.sessionId !== wake.sourceSessionId ||

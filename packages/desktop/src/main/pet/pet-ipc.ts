@@ -129,10 +129,13 @@ export interface PetIpcWorkInbox {
 }
 
 export interface PetIpcLongTasks {
-  getSnapshot(): PetLongTaskSnapshot;
-  control(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult>;
-  clearTerminal(): Promise<PetLongTaskSnapshot>;
-  clearTask(taskId: string): Promise<PetLongTaskSnapshot>;
+  getSnapshot(): PetLongTaskSnapshot | Promise<PetLongTaskSnapshot>;
+  control(
+    request: PetLongTaskControlRequest,
+    signal?: AbortSignal,
+  ): Promise<PetLongTaskControlResult>;
+  clearTerminal(signal?: AbortSignal): Promise<PetLongTaskSnapshot>;
+  clearTask(taskId: string, signal?: AbortSignal): Promise<PetLongTaskSnapshot>;
   subscribe(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
 }
 
@@ -569,23 +572,27 @@ export function registerPetIpc(options: {
   if (options.longTasks) {
     options.ipcMain.handle(PET_LONG_TASK_SNAPSHOT_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) throw new Error("Pet long-task snapshot does not accept arguments");
+      options.recordAuthority?.(_event);
       return afterReady(options.ready, () => options.longTasks!.getSnapshot());
     });
     options.ipcMain.handle(PET_LONG_TASK_CONTROL_CHANNEL, (_event, ...args) => {
       if (args.length !== 1) throw new Error("invalid Pet long-task control");
       const request = parseLongTaskControl(args[0]);
-      return afterReady(options.ready, () => options.longTasks!.control(request));
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.longTasks!.control(request, signal));
     });
     options.ipcMain.handle(PET_LONG_TASK_CLEAR_TERMINAL_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) {
         throw new Error("Pet ended long-task cleanup does not accept arguments");
       }
-      return afterReady(options.ready, () => options.longTasks!.clearTerminal());
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.longTasks!.clearTerminal(signal));
     });
     options.ipcMain.handle(PET_LONG_TASK_CLEAR_ONE_CHANNEL, (_event, ...args) => {
       if (args.length !== 1) throw new Error("invalid Pet long-task cleanup");
       const taskId = parseLongTaskClear(args[0]);
-      return afterReady(options.ready, () => options.longTasks!.clearTask(taskId));
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.longTasks!.clearTask(taskId, signal));
     });
   }
   if (options.memories) {

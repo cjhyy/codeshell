@@ -2,6 +2,7 @@ import { gitOperations } from "../../host/composition/git.js";
 import { labFiles } from "../../host/composition/optimization-lab.js";
 import { hostedProfileLibrary } from "../../host/composition/profile-library.js";
 import { configuredMcpProbe } from "../../host/composition/configured-mcp-probe.js";
+import { HostedMimiTasks } from "../../host/composition/mimi-tasks.js";
 import { parseMimiSegmentRange } from "../../shared/mimi-records.js";
 import { hostedMimiSegments } from "../../host/composition/mimi-segments.js";
 import { hostedSkills } from "../../host/composition/skills.js";
@@ -43,7 +44,7 @@ import { scopedConfigurationReads } from "./scoped-configuration-reads.js";
 import { configurationReads } from "./configuration-reads.js";
 import { isDesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
 import { lstat } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { ingressMethods } from "./ingress-methods.js";
 import { HostApprovalState } from "./approval-state.js";
 import {
@@ -129,6 +130,7 @@ const profileLibrary = hostedProfileLibrary(storage, historyWorker, (options) =>
 const activities = hostedActivityHistory(historyWorker);
 const roomReads = ccRoomReads(historyWorker);
 const mediaProtocol = hostedMediaProtocol();
+const mimiTasks = new HostedMimiTasks(join(dirname(process.argv[2]), "pet"));
 const segments = hostedMimiSegments(storage, historyWorker, (domain) =>
   parent.postMessage({ type: "mimi-records-changed", domain }),
 );
@@ -137,6 +139,7 @@ let server: DesktopHostServer | undefined;
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 const business = new HostBusinessCalls({
   ...approvals.native,
+  "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
   ...segments,
   "rooms/messages": (p) => historyWorker.roomHistory("rooms/messages", p),
   "rooms/historyPage": (p) => historyWorker.roomHistory("rooms/historyPage", p),
@@ -207,6 +210,10 @@ parent.on("message", ({ data, ports }) => {
   }
   if (isDesktopHostControl(data) && data.type === "im-gateway-port" && server && ports.length === 1 && !im) {
     im = bindImGateway(electronPrivatePort(ports[0]));
+    return;
+  }
+  if (isDesktopHostControl(data) && data.type === "mimi-tasks-port" && server && ports.length === 1) {
+    mimiTasks.bind(electronPrivatePort(ports[0]));
     return;
   }
   if (isDesktopHostControl(data) && data.type === "external-provider-port" && server && ports.length === 1) {
@@ -283,6 +290,7 @@ parent.on("message", ({ data, ports }) => {
           index.close(),
           historyWorker.close(),
           skills.close(),
+          mimiTasks.close(),
           worker?.close(),
           transcripts.close(),
           automation.close(),
@@ -310,6 +318,7 @@ parent.on("message", ({ data, ports }) => {
       new Map([
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
+        businessRead("mimi/longTasks", noBusinessArguments, () => mimiTasks.snapshot()),
         businessRead("mimi/workInbox", noBusinessArguments, () => readMimiList(storage,"inboxSnapshot")),
         businessRead("mimi/segmentMessages", parseMimiSegmentRange, (range) =>
           segments["mimi/segmentMessages"](range),
