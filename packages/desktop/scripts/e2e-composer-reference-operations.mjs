@@ -327,6 +327,10 @@ async function submit(marker, expectRefs = []) {
     () => document.querySelector('textarea[aria-autocomplete="list"]')?.value === "",
   );
   await win.getByRole("button", { name: /^(停止|Stop)$/ }).waitFor({ state: "hidden" });
+  assert.ok(
+    (await mainState()).providers.some((row) => row.provider === marker),
+    "The real Engine must reach its owned model provider for " + marker,
+  );
   return { text, payload: call };
 }
 async function startHeld(marker) {

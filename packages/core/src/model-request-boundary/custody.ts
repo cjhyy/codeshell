@@ -6,14 +6,13 @@ import {
   fsyncSync,
   lstatSync,
   mkdirSync,
-  openSync,
   readFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import type { EncryptionCipher } from "../credentials/cipher.js";
 import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
 import { canonicalDigest, canonicalJson } from "./canonical.js";
-import { syncDirectoryAncestors } from "./durability.js";
+import { openForDurableRead, syncDirectoryAncestors } from "./durability.js";
 import type {
   ModelRequestCustody,
   ModelRequestSignInput,
@@ -159,7 +158,7 @@ export class ModelRequestKeyStore implements ModelRequestSigner {
               (typeof process.getuid === "function" && info.uid !== process.getuid())))
         )
           throw new Error("Request key is not a private bounded regular file");
-        const fd = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+        const fd = openForDurableRead(file, constants.O_NOFOLLOW ?? 0);
         try {
           const opened = fstatSync(fd);
           if (
@@ -222,7 +221,7 @@ export class ModelRequestKeyStore implements ModelRequestSigner {
         if (!record) {
           record = candidate;
           writeFileAtomic(file, canonicalJson(record), 0o600);
-          const committed = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+          const committed = openForDurableRead(file, constants.O_NOFOLLOW ?? 0);
           try {
             fsyncSync(committed);
           } finally {
