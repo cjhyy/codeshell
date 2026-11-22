@@ -69,7 +69,6 @@ import {
 import { AgentBridge,resolveNoRepoCwd } from "./agent-bridge.js";
 import { createNativeExternalRuntime } from "./shell/external-runtime.js";
 import { nativeExternalGoals } from "./shell/external-goals.js";
-import { buildExternalRuntimeHandoffFromEvents } from "./external-runtime-handoff.js";
 import {
 	requireRendererProjectPath,
 } from "./renderer-project-path.js";
@@ -112,7 +111,6 @@ import { hostCatalogClient } from "./desktop-host/catalog-client.js";
 import * as backgroundWork from "./cc-room/background-work-ipc.js";
 import { registerOptimizationLabHost } from "./optimization-lab-host.js";
 import { assertDesktopSessionId } from "./session-validation.js";
-import { getSessionEvents } from "./rawTranscript.js";
 import { invalidatePanelAppBindingGuard,isPanelAppBoundToProject } from "./panel-apps-service.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
 import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
@@ -284,8 +282,8 @@ const panelAppBridge = new PanelAppBridge({
   resolveBackgroundServiceNode: desktopManagedRuntimes.resolveBackgroundServiceNode,
   getAgentBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntime.service,
-  externalRuntimeInitialContext: async (sessionId) =>
-    buildExternalRuntimeHandoffFromEvents(await getSessionEvents(sessionId)),
+  externalRuntimeInitialContext: (sessionId) =>
+    desktopHost.callBusiness("transcripts/context", { sessionId, kind: "handoff" }),
   agentTaskModels: (cwd) =>
     buildPanelAgentTaskModelCatalog(
       new SettingsManager(cwd, "full", getTrustCachedSync(cwd) === "trusted").get(),

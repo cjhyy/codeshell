@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { BrowserWindow } from "electron";
 import { SessionManager, type GoalConfig } from "@cjhyy/code-shell-core";
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
+import { readTranscriptContext } from "../host/composition/transcript-context.js";
 import { createExternalRuntimeHostSubmission } from "./external-runtime-host-submission.js";
 import type {
   DesktopExternalRuntimeTurnInput,
@@ -103,6 +104,8 @@ function harness(
   };
   let currentService: ExternalRuntimeService | null = fake as unknown as ExternalRuntimeService;
   const submit = createExternalRuntimeHostSubmission({
+    initialContext: (sessionId) =>
+      readTranscriptContext(sessions.getStorageDir(), { sessionId, kind: "handoff" }),
     sessions,
     service: () => currentService,
     resolveStartWorkspace: async (sessionId, requestedCwd) => {

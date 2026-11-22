@@ -1,3 +1,4 @@
+import { readTranscriptContext } from "../../host/composition/transcript-context.js";
 import { changeSessionFiles } from "../../host/composition/session-files.js";
 import {StoredMimiNoticeLedger} from "../../host/composition/mimi-notice-ledger.js";
 import { SessionManager } from "@cjhyy/code-shell-core";
@@ -64,6 +65,8 @@ installDefaultLinkProviders();
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (command === "transcripts/context")
+      return readTranscriptContext(ctx.sessionsRoot, payload as Parameters<typeof readTranscriptContext>[1]);
     if (command === "sessions/archive" || command === "sessions/deleteFiles")
       return changeSessionFiles(ctx.sessionsRoot, command, payload as Parameters<typeof changeSessionFiles>[2]);
     if (command === "goals/read" || command === "goals/resume" || command === "goals/recent" || command === "goals/attention")

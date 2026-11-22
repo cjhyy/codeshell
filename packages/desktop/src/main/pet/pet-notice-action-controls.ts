@@ -63,10 +63,7 @@ export interface NoticeActionControlsDeps {
       action: "retry" | "cancel";
     }): Promise<{ ok: true } | { ok: false; message: string }>;
   };
-  /** Raw transcript events of a Session (rawTranscript.getSessionEvents). */
-  readEvents: (
-    sessionId: string,
-  ) => Promise<Array<{ type: string; data: Record<string, unknown> }>>;
+  lastUserMessage(sessionId: string): Promise<string | undefined>;
   workspace: (sessionId: string) => Promise<string | undefined>;
   openPath: (path: string) => Promise<string>;
   revealPath: (path: string) => void;
@@ -77,7 +74,6 @@ export interface NoticeActionControlsDeps {
 const META = { meta: { origin: "host" as const, producer: "pet-notice-action" } };
 /** The reply model budget in a chat bound to a Session (its route call times out at 20 s). */
 export const BOUND_TIMEOUT_MS = 8_000;
-const MAX_MESSAGE = 12_000;
 
 function liveGoal(value: unknown): NoticeLiveGoal | null {
   if (!value || typeof value !== "object") return null;
@@ -88,38 +84,6 @@ function liveGoal(value: unknown): NoticeLiveGoal | null {
     ...(typeof goal.revision === "number" ? { revision: goal.revision } : {}),
     paused: goal.paused === true,
   };
-}
-
-/** The text of one transcript message (its text blocks); undefined when it has none. */
-function messageText(content: unknown): string | undefined {
-  if (typeof content === "string") return content.trim() || undefined;
-  if (!Array.isArray(content)) return undefined;
-  const text = content
-    .map((block) =>
-      block && typeof block === "object" && (block as { type?: unknown }).type === "text"
-        ? String((block as { text?: unknown }).text ?? "")
-        : "",
-    )
-    .join("")
-    .trim();
-  return text || undefined;
-}
-
-/** The text of a Session's last message from its user, from its transcript events. */
-export function lastUserMessageIn(
-  events: ReadonlyArray<{ type: string; data: Record<string, unknown> }>,
-): string | undefined {
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const event = events[index]!;
-    if (event.type !== "message" || event.data.role !== "user") continue;
-    // Host-injected continuations and agent / policy messages are not the user's.
-    if (event.data.injected === true) continue;
-    const authority = event.data.authority;
-    if (authority !== undefined && authority !== "user") continue;
-    const text = messageText(event.data.content);
-    return text && text.length <= MAX_MESSAGE ? text : undefined;
-  }
-  return undefined;
 }
 
 /**
@@ -198,9 +162,7 @@ export function createNoticeActionControls(deps: NoticeActionControlsDeps): Noti
     },
     task: (taskId) => deps.longTasks.get(taskId),
     controlTask: (taskId, action) => deps.longTasks.control({ taskId, action }),
-    async lastUserMessage(sessionId) {
-      return lastUserMessageIn(await deps.readEvents(sessionId));
-    },
+    lastUserMessage: deps.lastUserMessage,
     workspace: deps.workspace,
     async openPath(path) {
       const error = await deps.openPath(path);

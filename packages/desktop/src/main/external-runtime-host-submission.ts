@@ -7,9 +7,7 @@ import {
   isPersistedExternalRuntime,
 } from "./mobile-remote/external-runtime-commands.js";
 import type { ExternalRuntimeService } from "./external-runtime-service.js";
-import { buildExternalRuntimeHandoffFromEvents } from "./external-runtime-handoff.js";
 import { resolveExternalRuntimeStartWorkspace } from "./external-runtime-start-workspace.js";
-import { getSessionEvents } from "./rawTranscript.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 
 /** Main-originated IM/delegation submissions keep their selected provider. */
@@ -17,6 +15,7 @@ export function createExternalRuntimeHostSubmission(deps: {
   service(): ExternalRuntimeService | null;
   ownerWindow(sessionId: string): BrowserWindow | undefined;
   sessions?: SessionManager;
+  initialContext(sessionId: string): Promise<string | undefined>;
   resolveStartWorkspace?: (
     sessionId: string,
     requestedCwd: unknown,
@@ -68,9 +67,7 @@ export function createExternalRuntimeHostSubmission(deps: {
         }
       };
       assertCurrent();
-      const initialContext = buildExternalRuntimeHandoffFromEvents(
-        await getSessionEvents(sessionId, undefined, sessions.getStorageDir()),
-      );
+      const initialContext = await deps.initialContext(sessionId);
       await service.ensureContinuation({
         kind: parsed.kind,
         sessionId,

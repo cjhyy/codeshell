@@ -12,9 +12,9 @@ import {
 import { createOwnerReplyHandling } from "../pet/pet-notice-action-controls.js";
 import { createPetExternalReplyModel } from "../pet/pet-external-reply-model.js";
 import { dlog } from "../desktop-logger.js";
-import { getSessionEvents } from "../rawTranscript.js";
 import type { MimiShellOptions, NativeMimiHost, MimiBoundTasks } from "./mimi-shell-types.js";
 export function startMimiDecisions({
+  lastUserMessage,
   options,
   bridge,
   notices,
@@ -23,6 +23,7 @@ export function startMimiDecisions({
   longTaskCoordinator,
   currentSession,
 }: {
+  lastUserMessage(sessionId: string): Promise<string | undefined>;
   options: Pick<
     MimiShellOptions,
     "pendingMobileApprovals" | "mobileOrchestrator" | "externalRuntime" | "revealSessionWindow"
@@ -95,7 +96,7 @@ export function startMimiDecisions({
         get: (id) => longTaskStore.get(id),
         control: (r) => longTaskCoordinator.control(r),
       },
-      readEvents: (sessionId) => getSessionEvents(sessionId),
+      lastUserMessage,
       workspace: async (sessionId) => {
         const entry = await getSessionCwdIndex().refresh(sessionId);
         return entry?.status === "confirmed" ? (entry.workspaceRoot ?? entry.cwd) : undefined;

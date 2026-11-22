@@ -38,7 +38,6 @@ import {
   SessionOutcomeDeriver,
 } from "../pet/session-outcome.js";
 import { PetImDecisions } from "../pet/pet-im-decisions.js";
-import { lastUserMessageIn } from "../pet/pet-notice-action-controls.js";
 import { createReusableSessionResolver } from "../pet/reusable-session-resolver.js";
 import type { MimiDispatchService } from "../../shared/mimi-dispatch.js";
 import {
@@ -61,7 +60,6 @@ import {
 import { createPetExternalReplyModel } from "../pet/pet-external-reply-model.js";
 import { dlog } from "../desktop-logger.js";
 import { readSettings } from "../settings-service.js";
-import { getSessionEvents } from "../rawTranscript.js";
 import { getTrustCachedSync } from "../trust-store.js";
 import { runPetAutoArchive } from "./mimi-archive.js";
 /** Native window, IM and worker adapters share one process-wide Mimi lifecycle. */
@@ -110,7 +108,11 @@ export function createMimiRuntimeShell(desktopHost: NativeMimiHost) {
     );
     const petMetadata = mimiRecords.metadata;
     const sessionStore = new SessionManager();
+    const lastUserMessage = (sessionId: string) =>
+      desktopHost.callBusiness("transcripts/context", { sessionId, kind: "lastUserMessage" });
     const imExternalSubmissions = createExternalRuntimeHostSubmission({
+      initialContext: (sessionId) =>
+        desktopHost.callBusiness("transcripts/context", { sessionId, kind: "handoff" }),
       service: () => externalRuntime.service,
       sessions: sessionStore,
       ownerWindow: (sessionId) => {
@@ -242,7 +244,7 @@ export function createMimiRuntimeShell(desktopHost: NativeMimiHost) {
         subscribe: (listener) => externalRuntime.subscribeApprovals(listener),
       },
       onWorkerLost: (keep) => sessionOutcomeDeriver.reset(keep),
-      lastUserMessage: async (sessionId) => lastUserMessageIn(await getSessionEvents(sessionId)),
+      lastUserMessage,
     });
     petNotices = notices;
     let petNoticeControls: PetNoticeControls | undefined;
@@ -298,6 +300,7 @@ export function createMimiRuntimeShell(desktopHost: NativeMimiHost) {
       segments,
     });
     petImDecisions = startMimiDecisions({
+      lastUserMessage,
       options,
       bridge,
       notices,

@@ -6,9 +6,9 @@ import {
   BOUND_TIMEOUT_MS,
   createNoticeActionControls,
   createOwnerReplyHandling,
-  lastUserMessageIn,
   type NoticeActionControlsDeps,
 } from "./pet-notice-action-controls.js";
+import { lastUserMessageIn } from "../../host/composition/transcript-context.js";
 import { hostTimezoneOffsetMin } from "./pet-notice-policy.js";
 import { localIsoTime, type ReplyItem } from "./pet-notice-reply-interpreter.js";
 import type { NoticeActionRecord } from "./pet-notice-types.js";
@@ -43,7 +43,7 @@ function controls(
     }),
     sessions: () => options.sessions ?? [],
     longTasks: { get: () => undefined, control: async () => ({ ok: true }) },
-    readEvents: async () => [],
+    lastUserMessage: async () => undefined,
     workspace: async () => undefined,
     openPath: async () => "",
     revealPath: () => {},
