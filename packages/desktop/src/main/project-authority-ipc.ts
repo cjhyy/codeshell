@@ -13,17 +13,13 @@ import type { ProjectStore } from "./project-store.js";
 import { requireRendererProjectRoot } from "./renderer-project-path.js";
 import {
   cleanupSessionWorktreeForUi,
-  getSessionWorktreeDiffForUi,
   getSessionWorkspaceAuthorityForUi,
   getSessionWorkspaceForUi,
-  listSessionWorktreesForUi,
   releaseSessionWorkspaceForUi,
-  requireUsableSessionRootAuthority,
   switchSessionWorkspaceForUi,
   type SessionWorkspaceReleaseResult,
   type WorkspaceCleanupAction,
 } from "./session-workspace-service.js";
-import { listProfiles } from "./profiles-service.js";
 
 interface ProjectAuthorityWindow {
   isDestroyed(): boolean;
@@ -51,8 +47,6 @@ export interface ProjectAuthorityIpcDependencies {
   assertSessionId(value: unknown): asserts value is string;
   trackGitRoot(root: string): void;
   broadcastMobileProjects(): Promise<void>;
-  getGitStatus: typeof import("./desktop-services.js").getGitStatus;
-  getGitBranches: typeof import("./desktop-services.js").getGitBranches;
   revealInFinder: typeof import("./desktop-services.js").revealInFinder;
   openPath: typeof import("./desktop-services.js").openPath;
 }
@@ -284,45 +278,6 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
         return { mainRoot: current.mainRoot ?? current.cwd, cwd: current.cwd };
       },
     });
-  });
-  deps.ipcMain.handle("workspace:gitStatus", async (_event, sessionId: string) => {
-    deps.assertSessionId(sessionId);
-    const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
-    requireUsableSessionRootAuthority(authority);
-    deps.trackGitRoot(authority.mainRoot);
-    return deps.getGitStatus(authority.mainRoot);
-  });
-  deps.ipcMain.handle("workspace:gitBranches", async (_event, sessionId: string) => {
-    deps.assertSessionId(sessionId);
-    const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
-    requireUsableSessionRootAuthority(authority);
-    deps.trackGitRoot(authority.mainRoot);
-    return deps.getGitBranches(authority.mainRoot);
-  });
-  deps.ipcMain.handle("workspace:profiles", async (_event, sessionId: string) => {
-    deps.assertSessionId(sessionId);
-    const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
-    requireUsableSessionRootAuthority(authority);
-    return listProfiles(authority.mainRoot);
-  });
-  deps.ipcMain.handle("workspace:list", async (_event, sessionId: string, cwd: string) => {
-    deps.assertSessionId(sessionId);
-    if (typeof cwd !== "string" || !cwd) throw new Error("workspace:list requires cwd");
-    const list = await listSessionWorktreesForUi(sessionId, cwd);
-    deps.trackGitRoot(list.mainRoot);
-    return list;
-  });
-  deps.ipcMain.handle("workspace:diff", async (_event, sessionId: string, worktreePath: string) => {
-    deps.assertSessionId(sessionId);
-    if (
-      typeof worktreePath !== "string" ||
-      !worktreePath ||
-      worktreePath.length > 32_768 ||
-      worktreePath.includes("\0")
-    ) {
-      throw new Error("workspace:diff requires worktreePath");
-    }
-    return getSessionWorktreeDiffForUi(sessionId, worktreePath);
   });
   deps.ipcMain.handle(
     "workspace:switch",

@@ -21,7 +21,7 @@ export async function getWorktreeDiff(
 }
 
 export async function worktreeHasUncommittedChanges(worktreePath: string): Promise<boolean> {
-  const out = await gitOutput(worktreePath, ["status", "--porcelain"], 10000);
+  const out = await gitOutput(worktreePath, ["--no-optional-locks", "status", "--porcelain"], 10000);
   return (out?.trim().length ?? 0) > 0;
 }
 

@@ -18,6 +18,11 @@ export interface WorkspaceReadContracts {
   "files/searchProject": Read<"searchProjectFiles", Project & { query: string; rootId?: string }>;
   "git/projectStatus": Read<"getProjectGitStatus", Project>;
   "git/projectBranches": Read<"getProjectGitBranches", Project>;
+  "workspace/gitStatus": Read<"getSessionGitStatus", Session>;
+  "workspace/gitBranches": Read<"getSessionGitBranches", Session>;
+  "workspace/profiles": Read<"listSessionProfiles", Session>;
+  "workspace/list": Read<"listSessionWorktrees", Session & { cwd: string }>;
+  "workspace/diff": Read<"getSessionWorktreeDiff", Session & { worktreePath: string }>;
   "review/status": Read<"getReviewStatus", Session>;
   "review/diff": Read<"getReviewDiff", Session & { request: ReviewGitDiffRequest }>;
   "review/prompt": Read<"prepareReviewPrompt", Session & { request: ReviewAiPromptRequest }>;

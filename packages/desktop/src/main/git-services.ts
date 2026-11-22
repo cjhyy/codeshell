@@ -64,7 +64,11 @@ export interface StaleWorktreeCleanupResult {
 }
 
 async function gitRun(cwd: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync("git", args, {
+  // Status and diff are polled by multiple windows. An optional index refresh
+  // can otherwise take index.lock while an actual stash or switch needs it.
+  const command =
+    args[0] === "status" || args[0] === "diff" ? ["--no-optional-locks", ...args] : args;
+  const { stdout } = await execFileAsync("git", command, {
     cwd,
     maxBuffer: 32 * 1024 * 1024, // 32 MB cap; diffs can be huge
     windowsHide: true,
@@ -592,7 +596,7 @@ export async function getGitDiffForReview(cwd: string, mode: GitDiffMode = "all"
   const maxDiffBytes = 8 * 1024 * 1024;
   const run = async (args: string[]): Promise<string> => {
     try {
-      const { stdout } = await execFileAsync("git", args, {
+      const { stdout } = await execFileAsync("git", ["--no-optional-locks", ...args], {
         cwd,
         maxBuffer: maxDiffBytes,
         timeout: 30_000,

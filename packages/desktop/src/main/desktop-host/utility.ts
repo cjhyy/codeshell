@@ -139,6 +139,13 @@ const skills = hostedSkills(new URL("./skill-worker.mjs", import.meta.url),reque
 }));
 let server: DesktopHostServer | undefined;
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
+// Native lifecycle retains the verified roots across Host restarts for its periodic sweep.
+const reportedGitRoots = new Set<string>();
+function reportGitRoot(root: string) {
+  if (reportedGitRoots.has(root)) return;
+  parent.postMessage({ type: "git-root-observed", root });
+  reportedGitRoots.add(root);
+}
 const business = new HostBusinessCalls({
   ...approvals.native,
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
@@ -345,7 +352,7 @@ parent.on("message", ({ data, ports }) => {
         ...activities.reads,
         ...profileLibrary.reads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
-        ...workspaceReads((options) => catalog.list(options)),
+        ...workspaceReads((options) => catalog.list(options), reportGitRoot),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),
         ...ingressMethods(
           (req, current) => {

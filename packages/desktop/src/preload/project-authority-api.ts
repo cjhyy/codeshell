@@ -21,7 +21,7 @@ export function createProjectAuthorityApi(
   ) {
     if (host) return host.readBusiness(name, params, fallback);
     if (fallback) return fallback();
-    return Promise.reject(new Error("Git review requires the workbench Host"));
+    return Promise.reject(new Error("Workspace reads require the workbench Host"));
   }
   return {
     searchProjectFiles: (projectId: string, query: string, rootId?: string) =>
@@ -40,10 +40,8 @@ export function createProjectAuthorityApi(
       ipcRenderer.invoke("workspace:current", sessionId, cwd),
     getSessionWorkspaceAuthority: (sessionId: string) =>
       ipcRenderer.invoke("workspace:authority", sessionId),
-    getSessionGitStatus: (sessionId: string) =>
-      ipcRenderer.invoke("workspace:gitStatus", sessionId),
-    getSessionGitBranches: (sessionId: string) =>
-      ipcRenderer.invoke("workspace:gitBranches", sessionId),
+    getSessionGitStatus: (sessionId: string) => read("workspace/gitStatus", { sessionId }),
+    getSessionGitBranches: (sessionId: string) => read("workspace/gitBranches", { sessionId }),
     getReviewStatus: (sessionId: string) => read("review/status", { sessionId }),
     getReviewDiff: (sessionId: string, request: ReviewGitDiffRequest) =>
       read("review/diff", { sessionId, request }),
@@ -51,11 +49,11 @@ export function createProjectAuthorityApi(
       read("review/prompt", { sessionId, request }),
     getReviewRecentCommits: (sessionId: string, limit?: number) =>
       read("review/commits", { sessionId, limit }),
-    listSessionProfiles: (sessionId: string) => ipcRenderer.invoke("workspace:profiles", sessionId),
+    listSessionProfiles: (sessionId: string) => read("workspace/profiles", { sessionId }),
     listSessionWorktrees: (sessionId: string, cwd: string) =>
-      ipcRenderer.invoke("workspace:list", sessionId, cwd),
+      read("workspace/list", { sessionId, cwd }),
     getSessionWorktreeDiff: (sessionId: string, worktreePath: string) =>
-      ipcRenderer.invoke("workspace:diff", sessionId, worktreePath),
+      read("workspace/diff", { sessionId, worktreePath }),
     switchSessionWorkspace: (sessionId: string, cwd: string, target: string) =>
       ipcRenderer.invoke("workspace:switch", sessionId, cwd, target),
     releaseSessionWorkspace: (sessionId: string) =>

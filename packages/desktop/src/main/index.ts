@@ -284,7 +284,7 @@ import { registerImGatewayIpc } from "./im-gateway-ipc.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { createRoomTranscriptSubscriptions } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
-import { getGitStatus, getGitBranches, revealInFinder, openPath } from "./desktop-services.js";
+import { revealInFinder, openPath } from "./desktop-services.js";
 import { readSettings } from "./settings-service.js";
 import { registerDesktopOutputHistoryHost } from "./session-output-history-host.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
@@ -3460,7 +3460,7 @@ const {
   mobileOrchestrator,
   remoteTerminals,
 });
-const knownGitRoots = new Set<string>();
+const { knownGitRoots } = desktopHost;
 
 registerProjectAuthorityIpc({
   host: desktopHost,
@@ -3475,8 +3475,6 @@ registerProjectAuthorityIpc({
   assertSessionId: assertDesktopSessionId,
   trackGitRoot: (root) => knownGitRoots.add(root),
   broadcastMobileProjects: () => mobileOrchestrator.broadcastProjects(),
-  getGitStatus,
-  getGitBranches,
   revealInFinder,
   openPath,
 });

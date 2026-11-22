@@ -136,9 +136,6 @@ describe("desktop IPC contract", () => {
       "workspace:authority",
       "projectRegistry:migrateSessionMainRoot",
       "sessions:setArchived",
-      "workspace:gitStatus",
-      "workspace:gitBranches",
-      "workspace:profiles",
       "fsSession:readDir",
       "fsSession:readFile",
       "fsSession:exists",
@@ -154,6 +151,11 @@ describe("desktop IPC contract", () => {
     const main = registeredMainHandleChannels(sourceFiles("src/main"));
     const preload = readFileSync(join(desktopRoot, "src/preload/project-authority-api.ts"), "utf8");
     for (const [oldChannel, method] of [
+      ["workspace:gitStatus", "workspace/gitStatus"],
+      ["workspace:gitBranches", "workspace/gitBranches"],
+      ["workspace:profiles", "workspace/profiles"],
+      ["workspace:list", "workspace/list"],
+      ["workspace:diff", "workspace/diff"],
       ["git:projectStatus", "git/projectStatus"], ["git:projectBranches", "git/projectBranches"],
       ["review:status", "review/status"], ["review:diff", "review/diff"],
       ["review:recentCommits", "review/commits"], ["review:preparePrompt", "review/prompt"],

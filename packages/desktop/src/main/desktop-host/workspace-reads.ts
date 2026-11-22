@@ -14,9 +14,13 @@ import {
   requireRendererProjectPrimary,
   requireRendererProjectRoot,
 } from "../renderer-project-path.js";
+import { listProfiles } from "../profiles-service.js";
 import { ReviewService } from "../review-service.js";
 import {
   getSessionWorkspaceAuthorityForUi,
+  getSessionWorktreeDiffForUi,
+  listSessionWorktreesForUi,
+  requireUsableSessionRootAuthority,
   requireSessionFileRootForUi,
   resolveSessionReviewWorkspaceForUi,
 } from "../session-workspace-service.js";
@@ -122,7 +126,31 @@ function review<R>(
   );
 }
 
-export function workspaceReads(list: ListSessions) {
+export function workspaceReads(list: ListSessions, trackGitRoot: (root: string) => void) {
+  async function atSessionRoot<T>(
+    id: string,
+    ctx: HostRequestContext,
+    read: (root: string) => Promise<T> | T,
+    track = false,
+  ) {
+    const resolved = await readCurrentWorkspace(
+      async () => {
+        const authority = await getSessionWorkspaceAuthorityForUi(id);
+        requireUsableSessionRootAuthority(authority);
+        const revision = authority.projectId
+          ? (await requireRendererProject(authority.projectId)).revision
+          : null;
+        return { authority, revision };
+      },
+      ctx,
+      async ({ authority }) => ({
+        root: authority.mainRoot,
+        value: await read(authority.mainRoot),
+      }),
+    );
+    if (track) trackGitRoot(resolved.root);
+    return resolved.value;
+  }
   return [
     scopedBusinessRead(
       "files/list",
@@ -189,6 +217,40 @@ export function workspaceReads(list: ListSessions) {
     ),
     businessRead("git/projectBranches", project, ({ projectId }, ctx) =>
       atPrimary(projectId, ctx, getGitBranches),
+    ),
+    scopedBusinessRead("workspace/gitStatus", list, session, sessionScope, ({ sessionId }, ctx) =>
+      atSessionRoot(sessionId, ctx, getGitStatus, true),
+    ),
+    scopedBusinessRead("workspace/gitBranches", list, session, sessionScope, ({ sessionId }, ctx) =>
+      atSessionRoot(sessionId, ctx, getGitBranches, true),
+    ),
+    scopedBusinessRead("workspace/profiles", list, session, sessionScope, ({ sessionId }, ctx) =>
+      atSessionRoot(sessionId, ctx, listProfiles),
+    ),
+    scopedBusinessRead(
+      "workspace/list",
+      list,
+      (raw) => {
+        const args = businessArguments(raw, ["sessionId", "cwd"]);
+        return { sessionId: sessionId(args.sessionId), cwd: textArgument(args.cwd) };
+      },
+      sessionScope,
+      ({ sessionId }, ctx) =>
+        atSessionRoot(sessionId, ctx, (root) => listSessionWorktreesForUi(sessionId, root), true),
+    ),
+    scopedBusinessRead(
+      "workspace/diff",
+      list,
+      (raw) => {
+        const args = businessArguments(raw, ["sessionId", "worktreePath"]);
+        return {
+          sessionId: sessionId(args.sessionId),
+          worktreePath: textArgument(args.worktreePath),
+        };
+      },
+      sessionScope,
+      ({ sessionId, worktreePath }, ctx) =>
+        atSessionRoot(sessionId, ctx, () => getSessionWorktreeDiffForUi(sessionId, worktreePath)),
     ),
     scopedBusinessRead("review/status", list, session, sessionScope, ({ sessionId }, ctx) =>
       review(sessionId, ctx, (s) => s.getStatus(sessionId)),

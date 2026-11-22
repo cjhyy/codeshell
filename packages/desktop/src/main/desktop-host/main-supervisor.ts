@@ -45,6 +45,7 @@ export class DesktopHostSupervisor {
   readonly mimiRecordListeners = new Set<
     (domain: import("../../shared/mimi-records.js").MimiRecordDomain) => void
   >();
+  readonly knownGitRoots = new Set<string>();
   readonly automationListeners = new Set<(notice: AutomationRunNotice) => void>();
   readonly catalogListeners = new Set<(snapshot: SessionCatalogSnapshot) => void>();
   private readonly owners = new Map<string, number>();
@@ -126,6 +127,8 @@ export class DesktopHostSupervisor {
         if (message.error)
           read.reject(Object.assign(new Error(message.error.message), message.error));
         else read.resolve(read.effects ? read.effects.then(() => message.result) : message.result);
+      } else if (message?.type === "git-root-observed" && this.ready && typeof message.root === "string") {
+        this.knownGitRoots.add(message.root);
       } else if (message?.type === "wechat-login-event" && this.ready) {
         this.wechatEvent?.(message.event);
       } else if (

@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 /* global window */
 import { verifyPairedHostTerminal } from "./paired-host-terminal.mjs";
 import assert from "node:assert/strict";
-import { mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, realpath, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
@@ -83,7 +83,7 @@ try {
       origin: "desktop",
       parentSessionId: null,
       title: "Host indexed row",
-      cwd: isolated.home,
+      cwd: mount,
     }),
   );
   await writeFile(
@@ -157,6 +157,32 @@ utilityProcess.fork = function (...args) {
   await second.evaluate((id) => window.codeshell.stashAndSwitchProjectGitBranch(id, "main"), projectId);
   assert.equal(git("branch", "--show-current"), "main");
   assert.match(git("stash", "list"), /auto-stash before switching to main/);
+
+  // A status poll must not refresh the index when the tracked file has a
+  // new timestamp but identical contents. Another window can be mid-stash.
+  await utimes(join(mount, "host-file.txt"), 1_000_000, 1_000_000);
+  const indexBeforeRead = await readFile(join(mount, ".git", "index"));
+  const sessionWorkspace = await second.evaluate(async (unrelated) => {
+    const id = "index-visible";
+    const [status, branches, profiles, worktrees] = await Promise.all([
+      window.codeshell.getSessionGitStatus(id),
+      window.codeshell.getSessionGitBranches(id),
+      window.codeshell.listSessionProfiles(id),
+      window.codeshell.listSessionWorktrees(id, unrelated),
+    ]);
+    return { status, branches, profiles, mainRoot: worktrees.mainRoot };
+  }, unregistered);
+  assert.deepEqual(await readFile(join(mount, ".git", "index")), indexBeforeRead);
+  assert.equal(sessionWorkspace.mainRoot, mount, "Session binding determines the repository");
+  assert.equal(sessionWorkspace.status.branch, "main");
+  assert.equal(sessionWorkspace.branches.current, "main");
+  assert(Array.isArray(sessionWorkspace.profiles));
+  const diff = await first.evaluate((root) =>
+    window.codeshell.getSessionWorktreeDiff("index-visible", root), mount);
+  assert.equal(diff.changedFiles, 0);
+  await assert.rejects(first.evaluate((other) =>
+    window.codeshell.getSessionWorktreeDiff("index-visible", other), unregistered),
+    /Desktop Host request failed/);
 
   assert.deepEqual(await readCatalog(second), catalog);
   const skillSource = join(isolated.home, "owned-skill-directory");

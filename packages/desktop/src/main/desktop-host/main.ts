@@ -225,6 +225,7 @@ export function createDesktopHost(
     automationListeners: supervisor.automationListeners,
     automation,
     catalogListeners: supervisor.catalogListeners,
+    knownGitRoots: supervisor.knownGitRoots,
     projectRegistryListeners: supervisor.projectRegistryListeners,
     start() {
       ipcMain.removeListener(DesktopHostIpc.connect, connect);

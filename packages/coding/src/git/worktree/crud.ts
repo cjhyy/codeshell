@@ -473,7 +473,7 @@ export function inspectWorktreeChanges(
   baseRef?: string,
 ): WorktreeChangeState {
   const uncommitted =
-    execGitSync(worktreePath, ["status", "--porcelain"], 10_000).trim().length > 0;
+    execGitSync(worktreePath, ["--no-optional-locks", "status", "--porcelain"], 10_000).trim().length > 0;
   let commitsAhead = 0;
   if (baseRef) {
     const raw = execGitSync(
