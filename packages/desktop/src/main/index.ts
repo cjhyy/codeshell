@@ -3301,13 +3301,14 @@ app.whenReady().then(async () => {
     .then(() => seedDefaults())
     .then(() => bootstrapCorePlugins());
 
-  // Start the Host scheduler after native continuation and Mimi services can receive jobs.
+  // Register the scheduler while the first window hydrates. Native continuations
+  // and notifications wait for their own services before touching that window.
   try {
-    // Recover Mimi's ledger and initialize dispatch before restored timers can fire.
-    await initialWindowReady;
     const announceAutomationSession = (meta: AutomationSessionMeta) => {
       taskInboxAutomationSessions.set(meta.sessionId, meta.cronJobId);
-      bridge?.broadcastAutomationSession(meta);
+      void initialWindowReady.then(() => bridge?.broadcastAutomationSession(meta)).catch((error) =>
+        dlog("main", "automation.session.broadcast.failed", { error: String(error) }),
+      );
       markSessionTaskDirty(meta.sessionId);
       taskInboxService.markDirty("automation", meta.cronJobId);
     };
@@ -3328,9 +3329,11 @@ app.whenReady().then(async () => {
       notifyMissingTarget: (job) =>
         desktopNotifications.notifyMissingAutomationResumeTarget(desktopNotifier, job),
     });
-    await cron.start({
+    const schedulerReady = cron.start({
       dirty: (id) => taskInboxService.markDirty("automation", id),
       execute: async (job, signal) => {
+        await initialWindowReady;
+        signal.throwIfAborted();
         if (job.resumeSessionId && !isPetRuleScheduleJob(job))
           return injectResumeTurn(job.resumeSessionId, job.prompt, signal, job);
         if (!isPetRuleScheduleJob(job))
@@ -3345,6 +3348,7 @@ app.whenReady().then(async () => {
         return { text: "Scheduled rule wake handled", reason: "done" };
       },
       deliver: async (event) => {
+        await initialWindowReady;
         if (isPetRuleScheduleJob(event.job)) {
           if (event.type === "job_missed") await petRuleScheduler?.missed(event.job);
           if (event.type === "job_error") petRuleScheduler?.repairSoon();
@@ -3362,6 +3366,7 @@ app.whenReady().then(async () => {
         desktopNotifications.notifyMissedAutomation(desktopNotifier, notification, event);
       },
     });
+    await Promise.all([schedulerReady, initialWindowReady]);
     await petRuleScheduler?.start();
 
     agentNotificationBus.subscribe((envelope) =>

@@ -3,7 +3,7 @@ import type { MessagePort } from "node:worker_threads";
 import { resolveDesktopAutomationJobWorkspace } from "../../main/automation-host.js";
 import { isPetRuleScheduleJob } from "../../main/pet/pet-rule-schedule.js";
 import type { HostAutomationRuns } from "../composition/automation-run.js";
-import { CronPeer, electronCronPort, nodeCronPort } from "./peer.js";
+import { CronPeer, nodeCronPort, type CronPort } from "./peer.js";
 import type { CronCommand } from "./commands.js";
 
 export class HostScheduler {
@@ -11,9 +11,11 @@ export class HostScheduler {
   private native?: CronPeer;
   private searchPath = "";
   private ready?: Promise<unknown>;
+  private closing = false;
+  private readonly awaitingBind = new Set<() => void>();
   constructor(
     port: MessagePort,
-    private readonly engines: HostAutomationRuns,
+    private readonly engines: Pick<HostAutomationRuns, "run">,
   ) {
     this.storage = new CronPeer(nodeCronPort(port), async (method, input, signal) => {
       const native = this.native;
@@ -43,16 +45,17 @@ export class HostScheduler {
       throw Error("Unknown scheduler request");
     });
   }
-  bind(port: Electron.MessagePortMain, searchPath: string) {
-    if (this.native) {
+  bind(port: CronPort, searchPath: string) {
+    if (this.native || this.closing) {
       port.close();
       return;
     }
     this.searchPath = searchPath;
-    this.native = new CronPeer(electronCronPort(port), () => {
+    this.native = new CronPeer(port, () => {
       throw Error("Unexpected native request");
     });
     this.ready = this.storage.call("start", undefined);
+    for (const wake of this.awaitingBind) wake();
     const native = this.native;
     void this.ready
       .then(() => native.call("online", undefined))
@@ -61,17 +64,34 @@ export class HostScheduler {
         native.close();
       });
   }
-  async command(cmd: CronCommand, permit: Int32Array) {
-    if (!this.ready) {
-      if (cmd.method === "list" || cmd.method === "forSession") return [];
-      if (cmd.method === "get") return null;
-      if (cmd.method === "reload") return;
-      throw Error("Automation scheduler is not initialized");
+  async command(cmd: CronCommand, permit: Int32Array, signal: AbortSignal) {
+    signal.throwIfAborted();
+    if (!this.ready && !this.closing) {
+      // The workbench can connect before Main has handed over the native adapter.
+      // A command belongs to this Host generation and its originating document.
+      await new Promise<void>((resolve, reject) => {
+        const wake = () => {
+          this.awaitingBind.delete(wake);
+          signal.removeEventListener("abort", abort);
+          resolve();
+        };
+        const abort = () => {
+          this.awaitingBind.delete(wake);
+          reject(signal.reason);
+        };
+        this.awaitingBind.add(wake);
+        signal.addEventListener("abort", abort, { once: true });
+      });
     }
+    if (this.closing || !this.ready) throw Error("Automation scheduler is closed");
     await this.ready;
-    return this.storage.call("command", { cmd, permit });
+    signal.throwIfAborted();
+    if (this.closing) throw Error("Automation scheduler is closed");
+    return this.storage.call("command", { cmd, permit }, signal);
   }
   async close() {
+    this.closing = true;
+    for (const wake of this.awaitingBind) wake();
     try {
       if (this.ready) await this.storage.call("stop", undefined);
     } finally {

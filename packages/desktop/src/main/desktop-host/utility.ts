@@ -140,7 +140,7 @@ const business = new HostBusinessCalls({
   ...mediaProtocol.methods,
   ...activities.operations,
   ...attachmentOperations,
-  "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
+  "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit, grant.signal),
   ...externalRuntimeCatalogOperations(),
   ...roomReads.native,
   ...catalogFiles,
@@ -228,7 +228,7 @@ parent.on("message", ({ data, ports }) => {
     server &&
     ports.length === 1
   ) {
-    scheduler.bind(ports[0], data.searchPath);
+    scheduler.bind(electronPrivatePort(ports[0]), data.searchPath);
     return;
   }
   if (
