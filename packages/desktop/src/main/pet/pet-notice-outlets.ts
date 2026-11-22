@@ -29,7 +29,7 @@ export interface PetNoticeWiringGateway {
   resolveOwnerTarget(targetId: string): { channel: string; target: string } | undefined;
   lastOwnerInboundChannel(): string | undefined;
   /** An allowlisted owner conversation on this channel (callers also require a direct message). */
-  isOwnerConversation(channel: string, target: string): boolean;
+  isOwnerConversation(channel: string, target: string): boolean | Promise<boolean>;
 }
 
 /** `read()`'s result for a short while (wall time), so a burst of notices reads it once. */

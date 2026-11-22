@@ -53,11 +53,11 @@ export function wireMimiNoticeTools(deps: MimiNoticeToolsDeps) {
   const reads = createMimiNoticeReads({ ...deps, rules });
   const changes = createMimiNoticeChanges({ ...deps, controls: ruleControls });
   /** Mimi Sessions whose running turn is the owner's (set by the dispatcher per turn). */
-  const ownerTurns = new Set<string>();
+  const ownerTurns = new Map<string, () => Promise<boolean>>();
   const turnGate: PetNoticeTurnGate = {
     isOwnerConversation: (channel, target) => deps.isOwnerConversation(channel, target),
-    begin: (sessionId, owner) => {
-      if (owner) ownerTurns.add(sessionId);
+    begin: (sessionId, owner, current = async () => true) => {
+      if (owner) ownerTurns.set(sessionId, current);
       else ownerTurns.delete(sessionId);
     },
     end: (sessionId) => ownerTurns.delete(sessionId),
@@ -67,9 +67,15 @@ export function wireMimiNoticeTools(deps: MimiNoticeToolsDeps) {
     async (sessionId, args) => {
       if (!deps.isMimiSession(sessionId)) throw new Error("only Mimi's Session may read notices");
       // Defence in depth: the tools are hidden outside the owner's turns anyway.
-      if (!ownerTurns.has(sessionId))
-        throw new Error("notices are readable only in the owner's turn");
-      return read(args);
+      const turn = ownerTurns.get(sessionId);
+      const assertOwner = async () => {
+        if (!turn || !(await turn()) || ownerTurns.get(sessionId) !== turn)
+          throw new Error("notices are readable only in the owner's turn");
+      };
+      await assertOwner();
+      const value = await read(args);
+      await assertOwner();
+      return value;
     };
   const removers = [
     deps.bridge.setHostActionHandler(PET_NOTICES_QUERY_ACTION, onlyMimi(reads.noticesQuery)),

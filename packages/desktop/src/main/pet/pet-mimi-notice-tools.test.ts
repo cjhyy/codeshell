@@ -358,6 +358,18 @@ describe("Notices query", () => {
     expect(f.tools.turnGate.isOwnerConversation("wechat", "owner-dm")).toBe(true);
   });
 
+  test("revocation during a notice read withholds the completed private result", async () => {
+    const f = fixture();
+    let checks = 0;
+    f.tools.turnGate.begin(MIMI, true, async () => ++checks === 1);
+    const result = await f.handlers.get(PET_NOTICES_QUERY_ACTION)!(MIMI, { limit: 3 }).then(
+      () => "returned private records",
+      (error: Error) => error.message,
+    );
+    expect(result).toContain("only in the owner's turn");
+    expect(checks).toBe(2);
+  });
+
   test("answers only Mimi's own Session", async () => {
     const f = fixture();
     f.tools.turnGate.begin(SID, true);
@@ -424,14 +436,14 @@ describe("Triggers and settings queries", () => {
 });
 
 describe("owner authority", () => {
-  test("only the desktop owner or the owner's private chat may change notices", () => {
-    expect(ownerTurnRefusal(DESKTOP, isOwnerConversation)).toBeUndefined();
-    expect(ownerTurnRefusal(OWNER_DM, isOwnerConversation)).toBeUndefined();
-    expect(ownerTurnRefusal(GROUP, isOwnerConversation)).toContain("群聊");
-    expect(ownerTurnRefusal(STRANGER_DM, isOwnerConversation)).toContain("只有主人本人");
-    expect(ownerTurnRefusal(undefined, isOwnerConversation)).toContain("无法核实");
+  test("only the desktop owner or the owner's private chat may change notices", async () => {
+    expect(await ownerTurnRefusal(DESKTOP, isOwnerConversation)).toBeUndefined();
+    expect(await ownerTurnRefusal(OWNER_DM, isOwnerConversation)).toBeUndefined();
+    expect(await ownerTurnRefusal(GROUP, isOwnerConversation)).toContain("群聊");
+    expect(await ownerTurnRefusal(STRANGER_DM, isOwnerConversation)).toContain("只有主人本人");
+    expect(await ownerTurnRefusal(undefined, isOwnerConversation)).toContain("无法核实");
     expect(
-      ownerTurnRefusal(
+      await ownerTurnRefusal(
         { ...DESKTOP, originRef: { id: "origin-x", kind: "unknown", channel: "wechat" } },
         isOwnerConversation,
       ),

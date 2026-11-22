@@ -1040,8 +1040,9 @@ export class PetDispatchService {
       active.resolveRunStarted(true);
     }
     try {
-      return await noticeGate.withNoticeTurn(this.options.noticeTurns, params, () =>
-        this.requestRoutedRun(params, "pet-dispatch"),
+      return await noticeGate.withNoticeTurn(this.options.noticeTurns, params,
+        () => this.requestRoutedRun(params, "pet-dispatch"),
+        () => noticeGate.isNoticeOwnerTurn(command, this.options.noticeTurns),
       );
     } finally {
       if (active) {
@@ -1774,7 +1775,7 @@ export class PetDispatchService {
           "noticeTriggerMutation",
           "notificationSettingsMutation",
         ]);
-        const noticeOwner = noticeGate.isNoticeOwnerTurn(command, this.options.noticeTurns);
+        const noticeOwner = await noticeGate.isNoticeOwnerTurn(command, this.options.noticeTurns);
         const hostActionKinds = command.hostWake
           ? []
           : command.source?.kind === "im-gateway"

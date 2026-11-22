@@ -40,7 +40,11 @@ export interface PetDecisionNoticeHooks {
    */
   deliveryFor: ImDecisionDeliveryResolver;
   /** An IM conversation that belongs to the owner (direct messages only). */
-  isOwnerConversation(origin: { channel: string; target: string; senderId?: string }): boolean;
+  isOwnerConversation(origin: {
+    channel: string;
+    target: string;
+    senderId?: string;
+  }): boolean | Promise<boolean>;
   /** Hear about a pending decision in a rule-watched Session as it appears, or a rule armed. */
   onBlocked(listener: (sessionId: string) => void): () => void;
   /** The owner is away (the router's presence): a desktop-kept prompt may now go to IM. */
@@ -73,7 +77,7 @@ export interface PetDecisionHooksDeps {
   getSystemIdleTimeSec(): number;
   presenceIdleSec(): number;
   ownerChannels(): ImGatewayOwnerChannel[];
-  isOwnerConversation(channel: string, target: string): boolean;
+  isOwnerConversation(channel: string, target: string): boolean | Promise<boolean>;
   /** Tasks changed (an IM-started task may now own where a prompt goes). */
   subscribeTasks?: (listener: () => void) => () => void;
   powerEvents?: PetNoticePowerEvents;
@@ -186,9 +190,9 @@ export function createDecisionHooks(deps: PetDecisionHooksDeps): PetDecisionHook
         useRules: view.isEligibleSession(sessionId),
       }).entries[0];
     },
-    isOwnerConversation(origin) {
+    async isOwnerConversation(origin) {
       try {
-        return deps.isOwnerConversation(origin.channel, origin.target);
+        return await deps.isOwnerConversation(origin.channel, origin.target);
       } catch (error) {
         log("pet.notice.owner_lookup_failed", { error: errorText(error) });
         return false;

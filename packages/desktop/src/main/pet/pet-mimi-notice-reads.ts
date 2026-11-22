@@ -49,7 +49,7 @@ export interface MimiNoticeReadsDeps {
   channels(): readonly PetNoticeChannel[];
   sessionTitle(sessionId: string): string | undefined;
   /** Whether an IM conversation is one of the owner's allowlisted targets. */
-  isOwnerConversation(channel: string, target: string): boolean;
+  isOwnerConversation(channel: string, target: string): boolean | Promise<boolean>;
   now?: () => number;
   timezoneOffsetMin?: (ms: number) => number;
 }
@@ -288,12 +288,13 @@ export function createMimiNoticeReads(deps: MimiNoticeReadsDeps) {
    * sees every one that went out to the owner.
    */
   async function recentProactive(origin: MimiTurnOrigin): Promise<PetRecentProactiveNotice[]> {
+    await deps.ledger.load();
     if (
       origin.kind === "im" &&
-      (origin.isDirectMessage !== true || !deps.isOwnerConversation(origin.channel, origin.target))
+      (origin.isDirectMessage !== true ||
+        !(await deps.isOwnerConversation(origin.channel, origin.target)))
     )
       return [];
-    await deps.ledger.load();
     const since = now() - RECENT_PROACTIVE_WINDOW_MS;
     const found = deps.ledger.newest((record) => {
       if (!PROACTIVE_KINDS.has(record.kind) || record.createdAt < since) return false;

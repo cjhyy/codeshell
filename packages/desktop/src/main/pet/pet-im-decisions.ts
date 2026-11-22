@@ -223,7 +223,11 @@ export interface PetImDecisionsOptions {
    */
   router: NoticeDecisionPrompts;
   /** A direct chat that belongs to the owner, for owner-targeted prompts. */
-  isOwnerConversation?: (origin: { channel: string; target: string; senderId?: string }) => boolean;
+  isOwnerConversation?: (origin: {
+    channel: string;
+    target: string;
+    senderId?: string;
+  }) => boolean | Promise<boolean>;
   /** The owner target on this channel is a confirmed private chat. */
   ownerChannelIsDirect?: (channel: string) => boolean;
   /** The owner left the computer: a prompt kept on the desktop may now go to IM. */
@@ -285,7 +289,7 @@ type ReplyOrigin = Pick<
 type OpenItem =
   | { source: "decision"; code: string; entry: ImDecision; model: ReplyItem }
   | { source: "action"; code: string; record: NoticeActionRecord; model: ReplyItem }
-  | { source: "ended"; code: string; model: ReplyItem };
+  | { source: "ended"; code: string; target: NoticeTarget; model: ReplyItem };
 
 type DraftItem<T> = T extends OpenItem
   ? Omit<T, "model"> & { model: Omit<ReplyItem, "ordinal" | "ref"> }
@@ -427,18 +431,18 @@ export class PetImDecisions {
     if (skippableEnvelope(entry.envelope)) return Number.POSITIVE_INFINITY;
     return entry.createdAt + (this.options.timeoutMs ?? USER_DECISION_TIMEOUT_MS);
   }
-  private sameOrigin(
+  private async sameOrigin(
     target: NoticeTarget,
     origin: Parameters<PetImDecisions["reply"]>[0]["origin"],
-  ): boolean {
+  ): Promise<boolean> {
     if (!origin || origin.isDirectMessage !== true || !this.canReply(target)) return false;
     if (target.kind === "owner") {
       return (
-        this.options.isOwnerConversation?.({
+        (await this.options.isOwnerConversation?.({
           channel: origin.channel,
           target: origin.target,
           ...(origin.senderId !== undefined ? { senderId: origin.senderId } : {}),
-        }) === true
+        })) === true
       );
     }
     return (
@@ -783,7 +787,7 @@ export class PetImDecisions {
     const ordinals: Array<number | undefined> = [];
     let expired = false;
     for (const entry of entries) {
-      if (!this.sameOrigin(entry.delivery.target, origin)) continue;
+      if (!(await this.sameOrigin(entry.delivery.target, origin))) continue;
       const found = this.router.decisionRecord(entry.code);
       const record = found ? await this.catchUp(entry, found) : undefined;
       const delivered =
@@ -806,7 +810,7 @@ export class PetImDecisions {
       ordinals.push(slot?.channel === origin.channel ? slot.ordinal : undefined);
     }
     for (const record of this.options.actions?.items(origin.channel) ?? []) {
-      if (!this.sameOrigin(record.target, origin)) continue;
+      if (!(await this.sameOrigin(record.target, origin))) continue;
       items.push({
         source: "action",
         code: record.actions.code,
@@ -819,10 +823,11 @@ export class PetImDecisions {
     // are shown too (no actions), so a late answer to one is never taken for another.
     if (items.length === 0) return { items: [], expired };
     const live = new Set(items.map((item) => item.code));
-    for (const record of this.recentlyEnded(origin)) {
+    for (const record of await this.recentlyEnded(origin)) {
       if (live.has(record.code)) continue;
       items.push({
         source: "ended",
+        target: record.target,
         code: record.code,
         model: {
           kind: "ended",
@@ -862,16 +867,18 @@ export class PetImDecisions {
   }
 
   /** Prompts that reached this conversation and ended within the last 10 minutes. */
-  private recentlyEnded(origin: ReplyOrigin): DecisionPromptRecord[] {
+  private async recentlyEnded(origin: ReplyOrigin): Promise<DecisionPromptRecord[]> {
     const now = this.now();
-    return this.router
-      .decisionRecords(
-        (prompt) =>
-          isPromptEnded(prompt.phase) &&
-          prompt.channel === origin.channel &&
-          now - (prompt.endedAt ?? 0) <= USER_DECISION_TIMEOUT_MS,
-      )
-      .filter((record) => this.sameOrigin(record.target, origin));
+    const records = this.router.decisionRecords(
+      (prompt) =>
+        isPromptEnded(prompt.phase) &&
+        prompt.channel === origin.channel &&
+        now - (prompt.endedAt ?? 0) <= USER_DECISION_TIMEOUT_MS,
+    );
+    const allowed = await Promise.all(
+      records.map((record) => this.sameOrigin(record.target, origin)),
+    );
+    return records.filter((_record, index) => allowed[index]);
   }
 
   private itemOptions(entry: ImDecision): { wait: boolean; skip: boolean } {
@@ -913,6 +920,17 @@ export class PetImDecisions {
       items.map((item) => item.model),
       { bound: request.handoff === false },
     );
+    const hasOwnerItem = items.some(
+      (item) =>
+        (item.source === "decision"
+          ? item.entry.delivery.target
+          : item.source === "action"
+            ? item.record.target
+            : item.target
+        ).kind === "owner",
+    );
+    if (hasOwnerItem && !(await this.sameOrigin({ kind: "owner" }, request.origin)))
+      return "当前会话的主人授权已结束，没有采用这条回复。";
     if (!reading)
       // Only notice items open: nothing waits on an answer, so Mimi takes the message.
       return items.some((item) => item.source === "decision") ? NOT_UNDERSTOOD : undefined;
