@@ -581,22 +581,22 @@ fixtureApp.on('session-created',ses=>{
   report.cases.push(
     "One launcher window action binds a real source and opens its sandboxed native Panel window",
   );
-  await electron.evaluate(({ BrowserWindow }, url) => {
-    BrowserWindow.getAllWindows()
-      .find((item) => item.webContents.getURL() === url)
-      ?.focus();
-  }, win.url());
+  const parentWindow = await electron.browserWindow(win);
+  const parentId = await parentWindow.evaluate((window) => window.id);
+  // A background application cannot reliably make one of its windows key on
+  // macOS. Activate the isolated test application before transferring focus.
+  if (process.platform === "darwin") {
+    await electron.evaluate(({ app }) => app.focus());
+  }
+  await parentWindow.evaluate((window) => {
+    window.show();
+    window.focus();
+  });
   await until(
-    () =>
-      electron.evaluate(
-        ({ BrowserWindow }, url) =>
-          BrowserWindow.getAllWindows().some(
-            (item) => item.webContents.getURL() === url && item.isFocused(),
-          ),
-        win.url(),
-      ),
+    () => parentWindow.evaluate((window) => window.isFocused()),
     "The main window must own focus before testing repeated popup focus",
   );
+  await parentWindow.dispose();
   const repeatedLauncher = await openLauncher();
   await repeatedLauncher.locator(`[data-panel-launcher-window-kind="${descriptor.id}"]`).click();
   assert.deepEqual(
@@ -758,11 +758,6 @@ fixtureApp.on('session-created',ses=>{
     .click();
   await until(() => executeSource(view, "window.fixture?.ready"), "Reopened source guest binds");
   popup = await popupContents();
-  const parentId = await electron.evaluate(
-    ({ BrowserWindow }, url) =>
-      BrowserWindow.getAllWindows().find((item) => item.webContents.getURL() === url).id,
-    win.url(),
-  );
   await win.evaluate(() => window.codeshell.newWindow());
   await until(
     () =>

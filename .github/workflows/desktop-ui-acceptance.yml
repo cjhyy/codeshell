@@ -305,6 +305,15 @@ jobs:
           set -euo pipefail
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/commands/builtin/branch-command.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/branch-command.log"
 
+      - name: macOS Panel launcher, guest isolation and native window focus
+        if: runner.os == 'macOS'
+        timeout-minutes: 5
+        env:
+          CODESHELL_E2E_MOCK_KEYCHAIN: "1"
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-panel-app-window.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/native-panel-window.log"
+
       - name: Host IM gateway restart, delivery authority and private notices
         timeout-minutes: 3
         run: node scripts/run-bun-test-shard.mjs --timeout 60000 packages/desktop/src/host/im/gateway.native.test.ts packages/desktop/src/host/im/private-notices.test.ts
