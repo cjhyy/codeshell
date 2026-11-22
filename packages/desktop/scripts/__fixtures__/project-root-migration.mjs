@@ -83,17 +83,22 @@ export async function verifyRootMigrations({
   );
   assert.equal((await moveSession(second, "root")).mainRoot, mount);
   const liveId = "host-resident-root-migration";
-  const run = await first.evaluate(
-    ({ cwd, projectId, liveId }) =>
-      window.codeshell.run("Reply briefly to this local fixture", {
-        cwd,
-        projectId,
-        sessionId: liveId,
-        clientMessageId: "host-migration-turn",
-      }),
-    { cwd: mount, projectId, liveId },
-  );
-  assert.equal(run.reason, "completed", JSON.stringify(run));
+  const { run, errors } = await first.evaluate(async ({ cwd, projectId, liveId }) => {
+    const errors = [];
+    const stop = window.codeshell.onStreamEvent(({ sessionId, event }) => {
+      if (sessionId === liveId && event.type === "error" && errors.length < 3)
+        errors.push(String(event.error).slice(0, 600));
+    });
+    try {
+      const run = await window.codeshell.run("Reply briefly to this local fixture", {
+        cwd, projectId, sessionId: liveId, clientMessageId: "host-migration-turn",
+      });
+      return { run, errors };
+    } finally {
+      stop();
+    }
+  }, { cwd: mount, projectId, liveId });
+  assert.equal(run.reason, "completed", JSON.stringify({ run, errors }));
   const live = await first.evaluate(
     (id) => window.codeshell.projectRegistry.migrateSessionMainRoot(id, "secondary"),
     liveId,

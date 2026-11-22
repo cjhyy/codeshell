@@ -1,7 +1,7 @@
 import { withdrawPendingRootMigration, verifyRootMigrations } from "./__fixtures__/project-root-migration.mjs";
 import { gitRepositoryId } from "@cjhyy/code-shell-capability-coding/git";
 import { execFileSync } from "node:child_process";
-/* global window */
+/* global window, performance */
 import { verifyPairedHostTerminal } from "./paired-host-terminal.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, readdir, realpath, stat, utimes, writeFile } from "node:fs/promises";
@@ -103,7 +103,7 @@ try {
       credentials: [
         {
           id: "fixture-key",
-          catalogId: "openai",
+          catalogId: "deepseek",
           apiKey: "synthetic",
           baseUrl: provider.baseUrl,
         },
@@ -111,9 +111,9 @@ try {
       modelConnections: [
         {
           id: "fixture",
-          catalogId: "openai",
+          catalogId: "deepseek",
           tag: "text",
-          model: "gpt-4o",
+          model: "deepseek-v4-flash",
           credentialId: "fixture-key",
         },
       ],
