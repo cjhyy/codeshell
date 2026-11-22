@@ -1,33 +1,50 @@
 import { PrivateHostPeer, electronPrivatePort } from "../native-peer.js";
-import { HostedRelay } from "./relay.js";
+import { HostedMobile } from "./mobile.js";
+import { codeShellHome } from "@cjhyy/code-shell-core";
+import { join } from "node:path";
 
 import { HostedAccountDevices } from "./account-devices.js";
 import { HostedCloudProjects } from "./cloud-projects.js";
 import { HostedCloudAccount } from "./cloud-account.js";
-export function bindRemoteServices(port: Electron.MessagePortMain, cloudGrantFile: string) {
-  const account = new HostedCloudAccount(() => peer, cloudGrantFile);
-  const devices = new HostedAccountDevices(() => peer, account.manager);
+export function bindRemoteServices(port: Electron.MessagePortMain, userData: string) {
+  const account = new HostedCloudAccount(
+    () => peer,
+    join(userData, "cloud-account", "session.enc"),
+  );
+  const mobile = new HostedMobile(
+    () => peer,
+    join(userData, "mobile-remote", "relay.enc"),
+    join(codeShellHome(), "desktop"),
+    account.manager,
+  );
+  const devices = new HostedAccountDevices(
+    () => peer,
+    account.manager,
+    (identity, signal) => mobile.controller.accountRelaySource(identity, signal),
+  );
   const projects = new HostedCloudProjects(() => peer, account);
-  const relay = new HostedRelay(() => peer);
   const peer: PrivateHostPeer = new PrivateHostPeer(
     electronPrivatePort(port),
     (method, input, signal) => {
       if (method === "cloud/account") return account.run(input, signal);
       if (method.startsWith("devices/")) return devices.run(method, input, signal);
       if (method.startsWith("projects/")) return projects.run(method, input, signal);
-      return relay.run(method, input);
+      return mobile.run(method, input, signal);
     },
     () => {
       devices.close();
       account.close();
-      void Promise.allSettled([relay.close(), projects.close()]);
+      void Promise.allSettled([mobile.close(), projects.close()]);
+    },
+    (method, raw) => {
+      if (method === "mobile/targetEnded") mobile.targetEnded((raw as { id?: string })?.id);
     },
   );
   return {
     async close() {
       devices.close();
       try {
-        await Promise.allSettled([projects.close(), relay.close()]);
+        await Promise.allSettled([projects.close(), mobile.close()]);
       } finally {
         peer.close();
       }

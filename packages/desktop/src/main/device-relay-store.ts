@@ -1,4 +1,10 @@
-import { EncryptedGrantStore, type RelaySecretCipher } from "@cjhyy/code-shell-core/internal/storage";
+import {
+  EncryptedGrantStore,
+  grantCustody,
+  type AsyncGrantCipher,
+  type GrantCustody,
+  type RelaySecretCipher,
+} from "@cjhyy/code-shell-core/internal/storage";
 export type { RelaySecretCipher } from "@cjhyy/code-shell-core/internal/storage";
 import { isRelayHostId, isRelayOrigin, isRelayToken } from "@cjhyy/code-shell-server/remote-relay";
 
@@ -40,6 +46,53 @@ export function validRegistration(value: unknown): value is RelayRegistration {
         Number.isSafeInteger(data.credentialExpiresAt) &&
         data.credentialExpiresAt! > 0)
   );
+}
+
+/** OS custody accepts only the known relay registration fields, including for a legacy grant. */
+export function relayGrantCustody(
+  path: string,
+  cipher: AsyncGrantCipher,
+): GrantCustody<RelayRegistration> {
+  const custody = grantCustody(path, cipher, validRegistration);
+  const project = (grant: RelayRegistration): RelayRegistration => {
+    if (!validRegistration(grant)) throw Error("设备登记无效。");
+    const {
+      relayOrigin,
+      publicOrigin,
+      hostId,
+      environmentId,
+      credential,
+      credentialEpoch,
+      protocolVersion,
+      name,
+      accountId,
+      refreshToken,
+      credentialExpiresAt,
+      remoteAccessEnabled,
+    } = grant;
+    return {
+      relayOrigin,
+      publicOrigin,
+      hostId,
+      environmentId,
+      credential,
+      credentialEpoch,
+      protocolVersion,
+      name,
+      accountId,
+      refreshToken,
+      credentialExpiresAt,
+      remoteAccessEnabled,
+    };
+  };
+  return {
+    checkKeyring: () => custody.checkKeyring(),
+    async readSaved() {
+      const saved = await custody.readSaved();
+      return saved && project(saved);
+    },
+    seal: (grant) => custody.seal(project(grant)),
+  };
 }
 
 /** Separate from generic credentials: no renderer enumeration/export path. */

@@ -27,6 +27,7 @@ export class HostedAccountDevices {
   constructor(
     private readonly peer: () => PrivateHostPeer,
     private readonly account: CloudAccountManager,
+    sourceProof: AccountDeviceDependencies["sourceProof"],
     transport?: Pick<AccountDeviceDependencies, "fetch" | "socket"> & {
       request?: CloudAccountTransport;
     },
@@ -51,7 +52,7 @@ export class HostedAccountDevices {
       },
       credential: (identity, signal) =>
         account.getCredential(identity.origin, identity.accountId, signal),
-      sourceProof: (identity, signal) => ask("devices/sourceProof", identity, signal),
+      sourceProof,
       relayOrigin: (identity, scope) => ask("devices/relayOrigin", { identity, scope }),
       authorizeTarget: (target) =>
         createAccountRemoteAuthorizer({

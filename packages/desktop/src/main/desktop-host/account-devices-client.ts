@@ -12,7 +12,7 @@ import type { DeviceInput, DeviceMethod } from "../../host/remote/account-device
 import type { AccountDeviceDependencies } from "../account-device-service.js";
 import type { NativeCloudAccount } from "./cloud-client.js";
 
-type DeviceNative = Pick<AccountDeviceDependencies, "sourceProof" | "relayOrigin"> & {
+type DeviceNative = Pick<AccountDeviceDependencies, "relayOrigin"> & {
   account: NativeCloudAccount;
   openExternal(url: string): Promise<void>;
 };
@@ -125,14 +125,6 @@ export class NativeAccountDevices {
       )
         throw Error("设备账号已变更。");
       result = await this.deps.relayOrigin(expected, need);
-    } else if (
-      method === "devices/sourceProof" &&
-      ["projects", "connect", "resume"].includes(scope.op)
-    ) {
-      const id = req.input as typeof expected;
-      if (id?.origin !== scope.origin || id.accountId !== scope.accountId)
-        throw Error("设备账号已变更。");
-      result = await this.deps.sourceProof(expected, AbortSignal.any([scope.signal, signal]));
     } else throw Error("Unknown account device callback");
     scope.current();
     signal.throwIfAborted();

@@ -22,8 +22,7 @@ const project = {
   createdAt: 1,
   updatedAt: 1,
 };
-let origin,
-  active,
+let active,
   saved,
   redirectTargetRequests = 0,
   mode = "normal";
@@ -128,6 +127,13 @@ const server = createServer({ cert, key }, async (req, res) => {
     res.end('{"revoked":true}');
     return;
   }
+  if (req.url === "/api/v1/account/overview") {
+    assert.equal(req.headers.authorization, "Bearer " + active.accessToken);
+    res.end(
+      JSON.stringify({ account: { ...active.account, displayName: "Fixture" }, features: {} }),
+    );
+    return;
+  }
   if (req.url === "/api/v1/account/status") {
     res.end(
       JSON.stringify({
@@ -190,7 +196,7 @@ const server = createServer({ cert, key }, async (req, res) => {
 });
 devices.bind(server);
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-origin = `https://127.0.0.1:${server.address().port}`;
+const origin = `https://127.0.0.1:${server.address().port}`;
 const transport = createCloudAccountTransport(cert);
 const manager = new CloudAccountManager({
   store: {

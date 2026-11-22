@@ -88,7 +88,7 @@ export function enrollRelayComputer(
   });
 }
 
-/** Account token is supplied only by main, for the exact signed-in service origin. */
+/** The account authority supplies a token only for the exact signed-in service origin. */
 export async function enrollAccountRelayComputer(
   input: DesktopRelayEnrollment,
   environmentId: string,

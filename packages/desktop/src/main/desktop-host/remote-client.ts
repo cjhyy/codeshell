@@ -1,5 +1,5 @@
 import { PrivateHostPeer, electronPrivatePort } from "../../host/native-peer.js";
-import { NativeRelayConnector } from "./relay-client.js";
+import { NativeMobile } from "./mobile-client.js";
 
 import { NativeCloudAccount } from "./cloud-client.js";
 import type { CloudEffects } from "./cloud-effects.js";
@@ -25,8 +25,13 @@ export class NativeRemoteClient {
     return this.account;
   }
   private peer?: PrivateHostPeer;
-  readonly relay = new NativeRelayConnector(() => this.current());
-  lostRelay?: () => void;
+  private mobile?: NativeMobile;
+  createMobile(deps: ConstructorParameters<typeof NativeMobile>[1]) {
+    if (this.mobile) throw Error("Mobile service already initialized");
+    this.mobile = new NativeMobile(() => this.current(), deps);
+    if (this.peer) void this.mobile.connect().catch(() => {});
+    return this.mobile;
+  }
   private current() {
     if (!this.peer) throw Error("Desktop Host unavailable");
     return this.peer;
@@ -36,7 +41,8 @@ export class NativeRemoteClient {
     const peer: PrivateHostPeer = new PrivateHostPeer(
       electronPrivatePort(port),
       (method, input, signal) => {
-        if (method.startsWith("relay/")) return this.relay.handle(method, input, signal);
+        if (method.startsWith("mobile/") && this.mobile)
+          return this.mobile.handle(method, input, signal);
         if (method.startsWith("devices/") && this.devices)
           return this.devices.handle(method, input, signal);
         if (method.startsWith("projects/") && this.projects)
@@ -50,15 +56,18 @@ export class NativeRemoteClient {
           this.account?.disconnect();
           this.devices?.disconnect();
           void this.projects?.disconnect().catch(() => {});
-          if (this.relay.disconnect()) this.lostRelay?.();
+          this.mobile?.disconnect();
         }
       },
       (method, input) => {
         if (method === "devices/event") this.devices?.notice(input);
+        if (method === "mobile/status")
+          this.mobile?.changed(input as import("../../shared/device-relay.js").DesktopRelayStatus);
       },
     );
     this.peer = peer;
     void this.account?.connect().catch(() => {});
+    void this.mobile?.connect().catch(() => {});
   }
   disconnect() {
     this.peer?.close();

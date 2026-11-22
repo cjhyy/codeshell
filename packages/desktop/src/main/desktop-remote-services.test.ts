@@ -104,6 +104,8 @@ test("remote composition scopes IPC and reads the computer directory without loc
       },
     });
     services.cloudAccountManager.overview = async () => ({ account, features });
+    if (!("getCredential" in services.cloudAccountManager))
+      throw Error("Expected in-process account fixture");
     services.cloudAccountManager.getCredential = async () => "directory-fixture-token";
     let directoryReads = 0;
     let sourceProofReads = 0;

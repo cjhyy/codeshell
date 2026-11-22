@@ -23,7 +23,8 @@ import {
   type AsyncGrantCipher,
 } from "@cjhyy/code-shell-core/internal/storage";
 import { CloudAccountStore } from "./cloud-account-store.js";
-import { validRegistration } from "./device-relay-store.js";
+import { relayGrantCustody, validRegistration } from "./device-relay-store.js";
+import type { DesktopRelayStatus } from "../shared/device-relay.js";
 import { MobileRemoteController } from "./mobile-remote-controller.js";
 import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
 import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
@@ -102,46 +103,51 @@ export function createDesktopRemoteServices(options: {
     ...effects,
     custody: CloudAccountStore.custody(grantFile, cipher),
   });
-  const cloudAccountManager =
-    hosted ??
-    new CloudAccountManager({
-      ...effects,
-      store: CloudAccountStore.asynchronous(grantFile, cipher),
-    });
+  const localAccount = hosted
+    ? undefined
+    : new CloudAccountManager({
+        ...effects,
+        store: CloudAccountStore.asynchronous(grantFile, cipher),
+      });
+  const cloudAccountManager = hosted ?? localAccount!;
   const projectDeps = {
-    account: cloudAccountManager,
     windows: options.cloudWindows,
     requireFeature: () => accountFeatures.requireReady("cloud.projects"),
     onFeatureChange: (listener: () => void) => accountFeatures.onChanged(listener),
   };
   const cloudManagementManager =
-    options.remote?.createProjects(projectDeps) ?? new CloudManagementManager(projectDeps);
-  const mobileRemoteController = new MobileRemoteController({
-    account: cloudAccountManager,
-    connectorFactory: options.remote?.relay.create,
+    (hosted && options.remote?.createProjects({ ...projectDeps, account: hosted })) ??
+    new CloudManagementManager({ ...projectDeps, account: localAccount! });
+  const relayFile = resolve(options.userDataDir, "mobile-remote", "relay.enc");
+  const mobileDeps = {
     host: options.host,
     tunnel: options.tunnel,
     binary: options.binary,
     passcode: options.passcode,
-    environmentDir: options.environmentDir,
     listProjects: options.listProjects,
-    store: new AsyncEncryptedGrantStore(
-      resolve(options.userDataDir, "mobile-remote", "relay.enc"),
-      cipher,
-      validRegistration,
-    ),
-    changed: (status) => {
+    changed: (status: DesktopRelayStatus) => {
       accountFeatures.localChanged();
-      for (const window of options.windows()) {
+      for (const window of options.windows())
         if (!window.isDestroyed())
           window.webContents.send("mobileRemote:relayStatusChanged", status);
-      }
     },
-  });
-  if (options.remote)
-    options.remote.lostRelay = () => {
-      void mobileRemoteController.hostRelayDisconnected().catch(() => {});
-    };
+  };
+  const hostedMobile =
+    hosted &&
+    options.remote?.createMobile({
+      ...mobileDeps,
+      account: hosted,
+      custody: relayGrantCustody(relayFile, cipher),
+    });
+  const localMobile = hostedMobile
+    ? undefined
+    : new MobileRemoteController({
+        ...mobileDeps,
+        environmentDir: options.environmentDir,
+        account: localAccount!,
+        store: new AsyncEncryptedGrantStore(relayFile, cipher, validRegistration),
+      });
+  const mobileRemoteController = hostedMobile ?? localMobile!;
   const accountFeatures = new AccountFeatureService({
     account: cloudAccountManager,
     supported: [
@@ -168,8 +174,8 @@ export function createDesktopRemoteServices(options: {
         : undefined;
     },
     credential: (identity, signal) =>
-      cloudAccountManager.getCredential(identity.origin, identity.accountId, signal),
-    sourceProof: (identity, signal) => mobileRemoteController.accountRelaySource(identity, signal),
+      localAccount!.getCredential(identity.origin, identity.accountId, signal),
+    sourceProof: (identity, signal) => localMobile!.accountRelaySource(identity, signal),
     relayOrigin: async (identity, scope) => {
       await accountFeatures.refresh();
       accountFeatures.requireReady(
@@ -186,7 +192,6 @@ export function createDesktopRemoteServices(options: {
       options.remote?.createDevices({
         account: hosted,
         openExternal: options.openExternal,
-        sourceProof: deviceDeps.sourceProof,
         relayOrigin: deviceDeps.relayOrigin,
       })) ??
     new AccountDeviceService(deviceDeps);
@@ -230,6 +235,7 @@ export function createDesktopRemoteServices(options: {
   registerDeviceRelayIpc({
     ipcMain: options.ipcMain,
     controller: mobileRemoteController,
+    documentSignal: options.documentSignal,
     isMainWindow,
   });
   if (options.app)

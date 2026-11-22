@@ -206,7 +206,7 @@ parent.on("message", ({ data, ports }) => {
     ports.length === 1 &&
     !remote
   ) {
-    remote = bindRemoteServices(ports[0], join(process.argv[2], "..", "cloud-account", "session.enc"));
+    remote = bindRemoteServices(ports[0], join(process.argv[2], ".."));
     return;
   }
   if (

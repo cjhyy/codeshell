@@ -29,6 +29,10 @@ if (workerData?.kind === "account-fixture") {
   const devices = new HostedAccountDevices(
     () => peer,
     account.manager,
+    async () => ({
+      sourceHostId: "fixture-source",
+      sourceDeviceCredential: "fixture-source-proof",
+    }),
     deviceTransports(origin, Buffer.from(ca)),
   );
   const projectTransport = createCloudManagementTransport(Buffer.from(ca));
@@ -169,10 +173,10 @@ export async function exerciseHostedAccount(options: {
     const id = status.account.id;
     const lease = active.account.captureRootAccount(login.origin, id, () => true);
     const values = await Promise.all([
-      active.account.getCredential(login.origin, id),
-      active.account.getCredential(login.origin, id),
+      active.account.overview({ origin: login.origin, accountId: id }),
+      active.account.overview({ origin: login.origin, accountId: id }),
     ]);
-    assert.ok(values.every((v) => v === options.token()));
+    assert.ok(values.every((v) => v.account.id === id));
     assert.ok(!JSON.stringify(active.account.status()).includes(options.token()));
     assert.ok(!readFileSync(file).includes(options.token()));
     await active.exercise(options.projectId);
@@ -208,8 +212,14 @@ export async function exerciseHostedAccount(options: {
     );
     assert.deepEqual(loggedOut, { action: "logout", revoked: true });
     assert.equal(partitions.size, 0);
-    assert.equal(await active.account.getCredential(login.origin, id), options.token());
-    await assert.rejects(active.account.getCredential(login.origin, "wrong-account"), /账号/);
+    assert.equal(
+      (await active.account.overview({ origin: login.origin, accountId: id })).account.id,
+      id,
+    );
+    await assert.rejects(
+      active.account.overview({ origin: login.origin, accountId: "wrong-account" }),
+      /账号/,
+    );
     assert.equal((await active.account.logout()).revocation, "confirmed");
     assert.ok(!existsSync(file));
 

@@ -3,16 +3,16 @@ import {
   cloudManagementRequest,
   managedCloudGrant,
   managedCloudPartition,
-  type CloudAccountManager,
   type CloudManagementRequest,
   type CloudManagementResult,
 } from "@cjhyy/code-shell-server/account";
+import type { NativeCloudAccount } from "./cloud-client.js";
 import type { ManagedCloudWindows } from "../cloud-management-manager.js";
 import type { PrivateHostPeer } from "../../host/native-peer.js";
 
 type Dependencies = {
   windows: ManagedCloudWindows;
-  account: Pick<CloudAccountManager, "captureRootAccount">;
+  account: Pick<NativeCloudAccount, "captureRootAccount">;
   requireFeature(): void;
   onFeatureChange(listener: () => void): () => void;
 };

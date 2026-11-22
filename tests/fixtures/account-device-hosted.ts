@@ -51,8 +51,7 @@ export function nativeDevices(
   account: NativeCloudAccount,
   origin: string,
 ) {
-  let proofs = 0,
-    opens = 0;
+  let opens = 0;
   const events: unknown[] = [];
   const devices = new NativeAccountDevices(peer, {
     account,
@@ -60,11 +59,6 @@ export function nativeDevices(
       assert.equal(new URL(url).origin, origin);
       assert.equal(new URL(url).pathname, "/remote-access");
       opens++;
-    },
-    sourceProof: async (id) => {
-      assert.equal(id.origin, origin);
-      proofs++;
-      return { sourceHostId: "fixture-source", sourceDeviceCredential: "fixture-source-proof" };
     },
     relayOrigin: async (id) => {
       assert.equal(id.origin, origin);
@@ -77,7 +71,6 @@ export function nativeDevices(
     async exercise(projectId: string) {
       const records = await devices.list(1);
       assert.equal(records[0].hostId, "fixture-target");
-      assert.equal(proofs, 0);
       assert.equal(opens, 0);
       const projects = await devices.projects(1, { hostId: "fixture-target" });
       assert.equal(projects[0].id, projectId);

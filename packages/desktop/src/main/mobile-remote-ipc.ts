@@ -16,7 +16,7 @@ export interface MobileRemoteIpcDeps {
   cloudflaredBinary: CloudflaredBinary;
   tunnelManager: TunnelManager;
   accessPasscode: AccessPasscode;
-  mobileRemoteController: MobileRemoteController;
+  mobileRemoteController: Pick<MobileRemoteController, "status" | "pairingUrl" | "start" | "stop">;
   mobileOrchestrator: MobileRemoteOrchestrator;
   remoteTerminals: Pick<RemoteTerminals, "enabled" | "setEnabled">;
 }
