@@ -1,4 +1,11 @@
 import { expect, test } from "bun:test";
+import { randomUUID, randomBytes } from "node:crypto";
+import { MessageChannel } from "node:worker_threads";
+import { CloudAccountStore } from "@cjhyy/code-shell-server/account";
+import { fixtureCipher } from "../../../server/src/account/__fixtures__/native-account-fixture-store.js";
+import { NativeRemoteClient } from "./desktop-host/remote-client.js";
+import { bindRemoteServices } from "../host/remote/service.js";
+import { nodePrivatePort } from "../host/native-peer.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,34 +19,37 @@ test("remote composition scopes IPC and reads the computer directory without loc
   const sender = { mainFrame: {}, isDestroyed: () => false, send: () => {} };
   const window = { webContents: sender, isDestroyed: () => false };
   const previousFetch = globalThis.fetch;
+  const remote = new NativeRemoteClient();
+  let host: ReturnType<typeof bindRemoteServices> | undefined;
+  const cipher = fixtureCipher();
   let services: ReturnType<typeof createDesktopRemoteServices> | undefined;
   try {
     services = createDesktopRemoteServices({
       ipcMain: { handle: (name, handler) => void handlers.set(name, handler) },
       userDataDir: root,
-      environmentDir: root,
+      remote,
       windows: () => (owned ? [window as any] : []),
       safeStorage: {
-        isAsyncEncryptionAvailable: async () => false,
-        getSelectedStorageBackend: () => "basic_text",
-        encryptStringAsync: async () => {
-          throw new Error("unexpected encryption before sign-in");
-        },
-        decryptStringAsync: async () => {
-          throw new Error("unexpected decryption before sign-in");
-        },
+        isAsyncEncryptionAvailable: async () => true,
+        getSelectedStorageBackend: () => "gnome_libsecret",
+        encryptStringAsync: async (value) => cipher.encrypt(value),
+        decryptStringAsync: async (bytes) => ({
+          result: cipher.decrypt(bytes),
+          shouldReEncrypt: false,
+        }),
       },
       openExternal: async () => {
         starts++;
       },
       host: {
         status: () => undefined,
+        stop: async () => {},
         start: async () => {
           starts++;
         },
         onlineDeviceIds: () => [],
       } as any,
-      tunnel: { isRunning: () => false, isConnected: () => false } as any,
+      tunnel: { stop: async () => {}, isRunning: () => false, isConnected: () => false } as any,
       binary: {} as any,
       passcode: { isSet: () => false } as any,
       cloudWindows: {
@@ -86,12 +96,21 @@ test("remote composition scopes IPC and reads the computer directory without loc
     // Real feature resolution: directory is ready for an account whose local
     // computer has no enrollment, while native dispatch remains pending.
     const origin = "https://account.fixture.invalid";
-    const account = { id: "fixture-account", username: "fixture" };
+    const account = { id: randomUUID(), username: "fixture" };
     const features = {
       "devices.directory": { version: 1, enabled: true },
       "devices.dispatch": { version: 1, enabled: true },
     };
-    services.cloudAccountManager.status = () => ({ state: "signed-in", origin, account });
+    const token = randomBytes(32).toString("base64url");
+    new CloudAccountStore(join(root, "cloud-account", "session.enc"), cipher).save({
+      origin,
+      account,
+      accessToken: token,
+      refreshToken: randomBytes(32).toString("base64url"),
+      sessionId: randomUUID(),
+      accessTokenExpiresAt: Date.now() + 600_000,
+      refreshTokenExpiresAt: Date.now() + 3_600_000,
+    });
     services.cloudAccountManager.capabilities = async () => ({
       features,
       registrationAllowed: false,
@@ -104,21 +123,23 @@ test("remote composition scopes IPC and reads the computer directory without loc
       },
     });
     services.cloudAccountManager.overview = async () => ({ account, features });
-    if (!("getCredential" in services.cloudAccountManager))
-      throw Error("Expected in-process account fixture");
-    services.cloudAccountManager.getCredential = async () => "directory-fixture-token";
+    const { port1, port2 } = new MessageChannel();
+    host = bindRemoteServices(nodePrivatePort(port2), root);
+    remote.bind(nodePrivatePort(port1));
+    for (let i = 0; i < 200 && services.cloudAccountManager.status().state !== "signed-in"; i++)
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(services.cloudAccountManager.status()).toMatchObject({
+      state: "signed-in",
+      origin,
+      account,
+    });
     let directoryReads = 0;
-    let sourceProofReads = 0;
-    services.mobileRemoteController.accountRelaySource = async () => {
-      sourceProofReads++;
-      throw new Error("fixture has no enrolled local computer");
-    };
     globalThis.fetch = (async (url: string, init: RequestInit) => {
       expect(url).toBe(`${origin}/api/v1/remote-hosts`);
       expect(init.method).toBe("GET");
       expect(init.redirect).toBe("error");
       expect(init.credentials).toBe("omit");
-      expect(init.headers).toMatchObject({ Authorization: "Bearer directory-fixture-token" });
+      expect(init.headers).toMatchObject({ Authorization: `Bearer ${token}` });
       directoryReads++;
       return Response.json({ hosts: [] });
     }) as typeof fetch;
@@ -129,16 +150,19 @@ test("remote composition scopes IPC and reads the computer directory without loc
       state: "pending",
       reason: "device_not_registered",
     });
-    await expect(services.accountDeviceService.projects(1, { hostId: "host" })).rejects.toThrow(
-      "尚未准备好",
+    const dispatch = await services.accountDeviceService.projects(1, { hostId: "host" }).then(
+      () => undefined,
+      (error: Error) => error.message,
     );
+    expect(dispatch).toContain("尚未准备好");
     expect(directoryReads).toBe(1);
-    expect(sourceProofReads).toBe(0);
     expect(starts).toBe(0);
   } finally {
     globalThis.fetch = previousFetch;
     services?.accountDeviceService.retireIdentity();
     services?.accountFeatures.dispose();
+    remote.disconnect();
+    await host?.close();
     rmSync(root, { recursive: true, force: true });
   }
 });

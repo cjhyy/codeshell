@@ -1,4 +1,4 @@
-import { PrivateHostPeer, electronPrivatePort } from "../../host/native-peer.js";
+import { PrivateHostPeer, type PrivatePort } from "../../host/native-peer.js";
 import { NativeMobile } from "./mobile-client.js";
 
 import { NativeCloudAccount } from "./cloud-client.js";
@@ -36,10 +36,10 @@ export class NativeRemoteClient {
     if (!this.peer) throw Error("Desktop Host unavailable");
     return this.peer;
   }
-  bind(port: Electron.MessagePortMain) {
+  bind(port: PrivatePort) {
     this.disconnect();
     const peer: PrivateHostPeer = new PrivateHostPeer(
-      electronPrivatePort(port),
+      port,
       (method, input, signal) => {
         if (method.startsWith("mobile/") && this.mobile)
           return this.mobile.handle(method, input, signal);

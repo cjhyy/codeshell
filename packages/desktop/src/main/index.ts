@@ -1058,7 +1058,6 @@ const { mobileRemoteController, cloudManagementManager, captureLinkAccount, acco
     app,
     ipcMain,
     userDataDir: app.getPath("userData"),
-    environmentDir: join(codeShellHome(), "desktop"),
     listProjects: async () =>
       (await getProjectStore().list()).flatMap((project) => {
         const root = project.roots.find((entry) => entry.id === project.primaryRootId);

@@ -56,7 +56,7 @@ export function createDesktopHost(
         bindWorker();
         bindAutomation();
         const { port1, port2 } = new MessageChannelMain();
-        if (supervisor.post({ type: "remote-services-port" }, [port2])) remote.bind(port1);
+        if (supervisor.post({ type: "remote-services-port" }, [port2])) remote.bind(electronPrivatePort(port1));
         else {
           port1.close();
           port2.close();

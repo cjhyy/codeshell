@@ -14,23 +14,16 @@ import type {
   RemoteHostManager,
   TunnelManager,
 } from "@cjhyy/code-shell-server/mobile-remote";
-import { AccountDeviceService, type AccountDeviceDependencies } from "./account-device-service.js";
-import { createAccountRemoteAuthorizer } from "./account-device-passkey.js";
 import { registerAccountDeviceIpc } from "./account-device-ipc.js";
-import { CloudAccountManager } from "./cloud-account-manager.js";
-import {
-  AsyncEncryptedGrantStore,
-  type AsyncGrantCipher,
-} from "@cjhyy/code-shell-core/internal/storage";
+import type { AsyncGrantCipher } from "@cjhyy/code-shell-core/internal/storage";
 import { CloudAccountStore } from "./cloud-account-store.js";
-import { relayGrantCustody, validRegistration } from "./device-relay-store.js";
+import { relayGrantCustody } from "./device-relay-store.js";
 import type { DesktopRelayStatus } from "../shared/device-relay.js";
-import { MobileRemoteController } from "./mobile-remote-controller.js";
 import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
 import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
 import { registerCloudWorkbenchIpc } from "./cloud-workbench-ipc.js";
 import type { PrepareAccountGitHubLink } from "./account-github-link.js";
-import { CloudManagementManager, type ManagedCloudWindows } from "./cloud-management-manager.js";
+import type { ManagedCloudWindows } from "./cloud-management-manager.js";
 import { createLinkAccountAccess } from "./link-account-access.js";
 import { bindDesktopAccountLifecycle } from "./desktop-account-lifecycle.js";
 
@@ -39,8 +32,7 @@ export function createDesktopRemoteServices(options: {
   app?: Pick<App, "on" | "once" | "whenReady">;
   ipcMain: Pick<IpcMain, "handle" | "removeHandler">;
   userDataDir: string;
-  environmentDir: string;
-  remote?: NativeRemoteClient;
+  remote: NativeRemoteClient;
   documentSignal?: (event: Electron.IpcMainInvokeEvent) => AbortSignal;
   safeStorage: Pick<
     SafeStorage,
@@ -99,25 +91,19 @@ export function createDesktopRemoteServices(options: {
         if (!window.isDestroyed()) window.webContents.send("cloudAccount:statusChanged", status);
     },
   };
-  const hosted = options.remote?.createAccount({
+  const cloudAccountManager = options.remote.createAccount({
     ...effects,
     custody: CloudAccountStore.custody(grantFile, cipher),
   });
-  const localAccount = hosted
-    ? undefined
-    : new CloudAccountManager({
-        ...effects,
-        store: CloudAccountStore.asynchronous(grantFile, cipher),
-      });
-  const cloudAccountManager = hosted ?? localAccount!;
   const projectDeps = {
     windows: options.cloudWindows,
     requireFeature: () => accountFeatures.requireReady("cloud.projects"),
     onFeatureChange: (listener: () => void) => accountFeatures.onChanged(listener),
   };
-  const cloudManagementManager =
-    (hosted && options.remote?.createProjects({ ...projectDeps, account: hosted })) ??
-    new CloudManagementManager({ ...projectDeps, account: localAccount! });
+  const cloudManagementManager = options.remote.createProjects({
+    ...projectDeps,
+    account: cloudAccountManager,
+  });
   const relayFile = resolve(options.userDataDir, "mobile-remote", "relay.enc");
   const mobileDeps = {
     host: options.host,
@@ -132,22 +118,11 @@ export function createDesktopRemoteServices(options: {
           window.webContents.send("mobileRemote:relayStatusChanged", status);
     },
   };
-  const hostedMobile =
-    hosted &&
-    options.remote?.createMobile({
-      ...mobileDeps,
-      account: hosted,
-      custody: relayGrantCustody(relayFile, cipher),
-    });
-  const localMobile = hostedMobile
-    ? undefined
-    : new MobileRemoteController({
-        ...mobileDeps,
-        environmentDir: options.environmentDir,
-        account: localAccount!,
-        store: new AsyncEncryptedGrantStore(relayFile, cipher, validRegistration),
-      });
-  const mobileRemoteController = hostedMobile ?? localMobile!;
+  const mobileRemoteController = options.remote.createMobile({
+    ...mobileDeps,
+    account: cloudAccountManager,
+    custody: relayGrantCustody(relayFile, cipher),
+  });
   const accountFeatures = new AccountFeatureService({
     account: cloudAccountManager,
     supported: [
@@ -165,17 +140,9 @@ export function createDesktopRemoteServices(options: {
     windows: options.windows,
   });
   if (options.app) bindAccountFeatureLifecycle(options.app, accountFeatures, options.windows);
-  const deviceDeps: AccountDeviceDependencies = {
-    authorizeTarget: createAccountRemoteAuthorizer({ openExternal: options.openExternal }),
-    identity: () => {
-      const status = cloudAccountManager.status();
-      return status.state === "signed-in" && status.origin && status.account
-        ? { origin: status.origin, accountId: status.account.id }
-        : undefined;
-    },
-    credential: (identity, signal) =>
-      localAccount!.getCredential(identity.origin, identity.accountId, signal),
-    sourceProof: (identity, signal) => localMobile!.accountRelaySource(identity, signal),
+  const accountDeviceService = options.remote.createDevices({
+    account: cloudAccountManager,
+    openExternal: options.openExternal,
     relayOrigin: async (identity, scope) => {
       await accountFeatures.refresh();
       accountFeatures.requireReady(
@@ -186,15 +153,7 @@ export function createDesktopRemoteServices(options: {
         throw new Error("当前账号服务不支持设备协作，请升级服务。");
       return capabilities.relay.directoryOrigin;
     },
-  };
-  const accountDeviceService =
-    (hosted &&
-      options.remote?.createDevices({
-        account: hosted,
-        openExternal: options.openExternal,
-        relayOrigin: deviceDeps.relayOrigin,
-      })) ??
-    new AccountDeviceService(deviceDeps);
+  });
   registerAccountDeviceIpc({
     ipcMain: options.ipcMain,
     service: accountDeviceService,
@@ -208,11 +167,10 @@ export function createDesktopRemoteServices(options: {
   registerCloudAccountIpc({
     ipcMain: options.ipcMain,
     manager: cloudAccountManager,
-    ...(hosted &&
-      options.documentSignal && {
-        withDocument: (event, callback) =>
-          hosted.withDocument(options.documentSignal!(event), callback),
-      }),
+    ...(options.documentSignal && {
+      withDocument: (event, callback) =>
+        cloudAccountManager.withDocument(options.documentSignal!(event), callback),
+    }),
     openExternal: options.openExternal,
     isMainWindow,
     focusMainWindow: (contents) => {

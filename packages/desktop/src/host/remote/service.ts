@@ -1,4 +1,4 @@
-import { PrivateHostPeer, electronPrivatePort } from "../native-peer.js";
+import { PrivateHostPeer, type PrivatePort } from "../native-peer.js";
 import { HostedMobile } from "./mobile.js";
 import { codeShellHome } from "@cjhyy/code-shell-core";
 import { join } from "node:path";
@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { HostedAccountDevices } from "./account-devices.js";
 import { HostedCloudProjects } from "./cloud-projects.js";
 import { HostedCloudAccount } from "./cloud-account.js";
-export function bindRemoteServices(port: Electron.MessagePortMain, userData: string) {
+export function bindRemoteServices(port: PrivatePort, userData: string) {
   const account = new HostedCloudAccount(
     () => peer,
     join(userData, "cloud-account", "session.enc"),
@@ -24,7 +24,7 @@ export function bindRemoteServices(port: Electron.MessagePortMain, userData: str
   );
   const projects = new HostedCloudProjects(() => peer, account);
   const peer: PrivateHostPeer = new PrivateHostPeer(
-    electronPrivatePort(port),
+    port,
     (method, input, signal) => {
       if (method === "cloud/account") return account.run(input, signal);
       if (method.startsWith("devices/")) return devices.run(method, input, signal);
