@@ -1,3 +1,5 @@
+import type { BusinessMethods } from "../../host/composition/business-calls.js";
+import type { PendingApprovalOperations } from "../../shared/pending-approvals.js";
 import { randomUUID } from "node:crypto";
 import { PendingMobileApprovals } from "@cjhyy/code-shell-server/mobile-remote";
 import type { ApprovalRequestEnvelope } from "../../preload/types.js";
@@ -37,6 +39,40 @@ export class HostApprovalState {
     this.pending.setWorkerState(generation, false);
     this.callers = new WeakMap();
   }
+
+  /** A paired device, Mimi and the legacy desktop IPC read the same live queue
+   * observed by the generation-bound worker port. These are private Main calls. */
+  readonly native = {
+    "approvals/find": ({ sessionId, requestId }) => this.pending.find(sessionId, requestId),
+    "approvals/replay": (input) => {
+      if (input.scope === "session") return this.pending.replayLines(input.sessionId);
+      if (input.scope === "mimi") return this.pending.replayAllLines();
+      if (input.scope === "window" && Number.isSafeInteger(input.owner))
+        return this.pending
+          .replayAllLines()
+          .filter((line) => this.visible(JSON.parse(line).params.sessionId, input.owner));
+      throw Error("Invalid approval recipient");
+    },
+    "approvals/resolve": ({ requestId, owner, ...route }, grant) => {
+      grant.assertCurrent();
+      if (owner !== undefined) {
+        const pending = route.sessionId && this.pending.find(route.sessionId, requestId);
+        if (
+          !route.sessionId ||
+          !this.visible(route.sessionId, owner) ||
+          !pending ||
+          pending.connectionId !== undefined ||
+          pending.generation !== undefined
+        )
+          throw Error("Approval no longer belongs to the requesting document");
+      }
+      this.pending.resolve(requestId, route);
+    },
+    "approvals/forget": ({ sessionId }, grant) => {
+      grant.assertCurrent();
+      this.forgetSession(sessionId);
+    },
+  } satisfies Pick<BusinessMethods, keyof PendingApprovalOperations>;
 
   readonly method: DesktopHostMethod = {
     run: (ctx, params) => {

@@ -1,3 +1,4 @@
+import type { MobileApprovalAccess } from "../shared/pending-approvals.js";
 import { readMobileSnapshot } from "./mobile-remote/read-snapshot.js";
 /**
  * Mobile-remote orchestration — routes authenticated mobile client events
@@ -43,7 +44,6 @@ import {
   type MobileProjectMeta,
   type MobileServerEvent,
   type MobileUploadService,
-  type PendingMobileApprovals,
   type PermissionMode,
   type RemoteHostManager,
   type RoomManager,
@@ -99,7 +99,7 @@ export interface MobileRemoteOrchestratorDeps {
   listDiskSessions?: OrchestratorCtx["listDiskSessions"];
   remote: RemoteHostManager;
   uploads: MobileUploadService;
-  pendingApprovals: PendingMobileApprovals;
+  pendingApprovals: MobileApprovalAccess;
   roomManager: RoomManager;
   roomHistory?: OrchestratorCtx["roomHistory"];
   approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
@@ -336,19 +336,21 @@ export class MobileRemoteOrchestrator {
   }
 
   /** Every old tab and approval is retired, not just the confirming caller. */
-  retireOutputHistorySession(sessionId: string): void {
+  async retireOutputHistorySession(sessionId: string): Promise<void> {
     const errors: unknown[] = [];
+    const retirements: Array<void | Promise<void>> = [];
     for (const retire of [
       () => this.outputRecovery.revokeSession(sessionId),
       () => this.externalCommands.revokeSession(sessionId),
       () => this.deps.pendingApprovals.forgetSession(sessionId),
     ]) {
       try {
-        retire();
+        retirements.push(retire());
       } catch (error) {
         errors.push(error);
       }
     }
+    for (const result of await Promise.allSettled(retirements)) if (result.status === "rejected") errors.push(result.reason);
     if (errors.length) throw new AggregateError(errors, "Session recovery retirement failed");
   }
 
@@ -464,31 +466,36 @@ export class MobileRemoteOrchestrator {
 
   // ── Approvals ──────────────────────────────────────────────────────────────
 
-  private replayPendingMobileApprovals(sessionId: string, deviceId?: string): void {
-    for (const line of this.deps.pendingApprovals.replayLines(sessionId)) {
-      if (deviceId) this.deps.remote.sendRawToDevice(deviceId, line);
+  private async replayPendingMobileApprovals(sessionId: string, deviceId?: string, viewerId?:string): Promise<void> {
+    const lines = await this.deps.pendingApprovals.replayLines(sessionId);
+    if (viewerId && deviceId && !this.deps.remote.hasAuthenticatedViewer(viewerId,deviceId)) return;
+    for (const line of lines) {
+      if (viewerId) this.deps.remote.sendRawToViewer(viewerId,line);
+      else if (deviceId) this.deps.remote.sendRawToDevice(deviceId, line);
       else this.deps.remote.broadcastRaw(line);
     }
   }
 
-  broadcastApprovalResolved(params: {
+  async broadcastApprovalResolved(params: {
     requestId: string;
     sessionId?: string;
     connectionId?: string;
     generation?: number;
     approved?: boolean;
     answer?: string;
-  }): void {
+  }, caller?:{owner:number;signal:AbortSignal}): Promise<void> {
     if (params.connectionId === undefined || params.generation === undefined) {
       const pending = params.sessionId
-        ? this.deps.pendingApprovals.find(params.sessionId, params.requestId)
+        ? await this.deps.pendingApprovals.find(params.sessionId, params.requestId)
         : undefined;
       // New workers publish their own fully routed resolution. An old renderer
       // acknowledgement cannot revoke an unrelated or successor worker request.
       if (!pending || pending.connectionId !== undefined || pending.generation !== undefined)
         return;
     }
-    this.deps.pendingApprovals.resolve(params.requestId, params);
+    caller?.signal.throwIfAborted();
+    await this.deps.pendingApprovals.resolve(params.requestId, params, caller);
+    caller?.signal.throwIfAborted();
     const line = JSON.stringify({
       jsonrpc: "2.0",
       method: Methods.ApprovalResolved,
@@ -606,8 +613,8 @@ export class MobileRemoteOrchestrator {
       sendMobilePermissionMode: (deviceId, sessionId) =>
         this.sendMobilePermissionMode(deviceId, sessionId),
       sendSelectedMobilePermissionModes: () => this.sendSelectedMobilePermissionModes(),
-      replayPendingMobileApprovals: (sessionId, deviceId) =>
-        this.replayPendingMobileApprovals(sessionId, deviceId),
+      replayPendingMobileApprovals: (sessionId, deviceId, viewerId) =>
+        this.replayPendingMobileApprovals(sessionId, deviceId, viewerId),
       broadcastDesktopSessionSettings: (params) => this.broadcastDesktopSessionSettings(params),
       broadcastMobileSession: (meta) => this.broadcastMobileSession(meta),
       broadcastApprovalResolved: (params) => this.broadcastApprovalResolved(params),

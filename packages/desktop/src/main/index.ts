@@ -1,3 +1,4 @@
+import { nativePendingApprovals } from "../shared/pending-approvals.js";
 import { registerHostedWechatLogin } from "./desktop-host/wechat-login-client.js";
 import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
 import type { SettingsChange } from "../shared/settings-change.js";
@@ -273,7 +274,6 @@ import {
   CloudflaredBinary,
   CodexRoomAgent,
   MobileUploadService,
-  PendingMobileApprovals,
   RemoteHostManager,
   ResidentAgentProcess,
   RoomManager,
@@ -1016,7 +1016,7 @@ const mobileRemote = new RemoteHostManager({
     await mobileOrchestrator.handleMobileClientEvent(event as AuthenticatedMobileClientEvent);
   },
 });
-const pendingMobileApprovals = new PendingMobileApprovals();
+const pendingMobileApprovals = nativePendingApprovals(desktopHost.callBusiness);
 
 // ── Public tunnel mode (off by default) ─────────────────────────────────────
 // cloudflared binary manager, tunnel process manager, and the access passcode
@@ -1490,11 +1490,6 @@ async function createWindow(): Promise<BrowserWindow> {
     // Mirror every worker→renderer line onto any connected mobile clients, so
     // the phone sees the same stream (messages, tool summaries, approvals).
     bridge.subscribeOutbound((line, snapshotEntry) => {
-      pendingMobileApprovals.setWorkerState(
-        externalBridge.workerGeneration(),
-        externalBridge.hasLiveWorker(),
-      );
-      pendingMobileApprovals.observeOutboundLine(line);
       if (snapshotEntry) {
         mobileRemote.broadcast({
           type: "session.stream",
@@ -1801,15 +1796,12 @@ async function createWindow(): Promise<BrowserWindow> {
       ...withExternalDecisions(
         notices.externalDecisions,
         {
-          read: () => {
-            pendingMobileApprovals.setWorkerState(
-              decisionBridge.workerGeneration(),
-              decisionBridge.hasLiveWorker(),
-            );
+          read: async () => {
+            const lines = await pendingMobileApprovals.replayForMimi();
             return collectImDecisions(
               aggregator.getSnapshot(),
               longTaskStore.getSnapshot().tasks,
-              pendingMobileApprovals.replayAllLines(),
+              lines,
               notices.decisions.deliveryFor,
             );
           },
@@ -3662,6 +3654,11 @@ const {
   createMobileRemotePairingUrl,
   getMobileRemoteGatewayStatus,
 } = registerMobileRemoteIpc({
+  approvalCaller(event,sessionId) {
+    const signal = desktopHost.documentSignal(event);
+    if (bridge?.panelOwnerWebContentsId(sessionId) !== event.sender.id) throw Error("Approval session belongs to another document");
+    return {owner:event.sender.id,signal};
+  },
   mobileDevices,
   mobileRemote,
   cloudflaredBinary,
@@ -3871,8 +3868,8 @@ async function deleteDesktopSessionResources(id: string): Promise<void> {
       },
     );
   }
-  pendingMobileApprovals.forgetSession(id);
 }
+
 
 ipcMain.handle("sessions:delete", async (_e, id: string) => {
   assertDesktopSessionId(id);
@@ -3914,21 +3911,14 @@ ipcMain.handle("quickChat:cleanupSession", async (event, id: unknown, claimId: u
   );
 });
 
-ipcMain.handle("agent:pendingApprovals", (event) => {
+ipcMain.handle("agent:pendingApprovals", async (event) => {
   appRendererNavigation.assertSender(event);
-  // Native approval events already reach all main windows. Preserve that queue
-  // and its session envelopes, without replaying resolved historical requests.
-  pendingMobileApprovals.setWorkerState(
-    bridge?.workerGeneration() ?? 0,
-    bridge?.hasLiveWorker() ?? false,
-  );
+  const signal = desktopHost.documentSignal(event);
+  const lines = await pendingMobileApprovals.replayForWindow(event.sender.id, signal);
+  signal.throwIfAborted();
   return [
-    ...pendingMobileApprovals
-      .replayAllLines()
-      .map((line) => JSON.parse(line).params)
-      .filter(
-        (envelope) => bridge?.panelOwnerWebContentsId(envelope.sessionId) === event.sender.id,
-      ),
+    ...lines.map((line) => JSON.parse(line).params).filter((item) =>
+      bridge?.panelOwnerWebContentsId(item.sessionId) === event.sender.id),
     ...(externalRuntime.approvals?.pendingForWindow(event.sender.id) ?? []),
   ];
 });

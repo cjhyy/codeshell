@@ -657,6 +657,7 @@ describe("mobile question answer acknowledgment", () => {
         decision: "approve",
         answer: "Read only",
       });
+      await Promise.resolve(); // the pending decision is read from its Host owner
       expect(requests).toHaveLength(1);
       expect(resolved).toEqual([]);
       expect(requests[0]?.params).toEqual({
@@ -1197,6 +1198,7 @@ describe("mobile keep-waiting on a model question", () => {
         connectionId: "worker",
         generation: 2,
       });
+      await Promise.resolve(); // the pending decision is read from its Host owner
       expect(requests).toHaveLength(1);
       expect(requests[0]!.method).toBe("agent/approvalKeepWaiting");
       expect(requests[0]!.params).toEqual({

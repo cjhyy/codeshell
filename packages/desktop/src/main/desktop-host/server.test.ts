@@ -312,6 +312,11 @@ test("approval snapshots are scoped to the document's current sessions and worke
     };
   };
   request("mine");
+  const { HostBusinessCalls } = await import("../../host/composition/business-calls.js");
+  const native = new HostBusinessCalls(state.native);
+  expect(await native.run("read", "approvals/replay", {scope:"window", owner:2})).toEqual([]);
+  await expect(native.run("deny", "approvals/resolve", {owner:2, sessionId:"mine", requestId:"r"})).rejects.toThrow();
+  expect(await native.run("phone", "approvals/find", {sessionId:"mine", requestId:"r"})).toMatchObject({sessionId:"mine", requestId:"r"});
   const initial = await read(first, 1);
   expect(initial.pending?.map((p) => p.sessionId)).toEqual(["mine"]);
   const cursor = { epoch: initial.epoch, stateVersion: initial.stateVersion };

@@ -130,7 +130,10 @@ const segments = hostedMimiSegments(storage, historyWorker, (domain) =>
   parent.postMessage({ type: "mimi-records-changed", domain }),
 );
 const skills = hostedSkills(new URL("./skill-worker.mjs", import.meta.url));
+let server: DesktopHostServer | undefined;
+const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 const business = new HostBusinessCalls({
+  ...approvals.native,
   ...segments,
   "rooms/messages": (p) => historyWorker.roomHistory("rooms/messages", p),
   "rooms/historyPage": (p) => historyWorker.roomHistory("rooms/historyPage", p),
@@ -165,12 +168,10 @@ const business = new HostBusinessCalls({
 } satisfies BusinessMethods);
 const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);
-let server: DesktopHostServer | undefined;
 const terminals = hostedTerminals(
   () => server!,
   (options) => catalog.list(options),
 );
-const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 let im: ReturnType<typeof bindImGateway> | undefined;
 let remote: ReturnType<typeof bindRemoteServices> | undefined;
 let stopping = false;

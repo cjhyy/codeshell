@@ -73,7 +73,7 @@ interface MobileRecoveryHost {
     sessionId: string,
     caller: Extract<OutputHistoryRecoveryCaller, { kind: "mobile" }>,
   ): Promise<OutputHistoryRecoveryAuthorization>;
-  retireOutputHistorySession(sessionId: string): void;
+  retireOutputHistorySession(sessionId: string): void | Promise<void>;
 }
 
 /** Every open Desktop projection must retire the previous journal domain. */
@@ -111,8 +111,8 @@ export function registerDesktopOutputHistoryHost(deps: {
       caller.kind === "desktop"
         ? desktop(sessionId, caller)
         : deps.mobile.authorizeOutputHistoryRecovery(sessionId, caller),
-    retire: (sessionId) => {
-      deps.mobile.retireOutputHistorySession(sessionId);
+    retire: async (sessionId) => {
+      await deps.mobile.retireOutputHistorySession(sessionId);
       broadcastOutputHistoryReset(deps.windows(), sessionId);
     },
   });

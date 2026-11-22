@@ -1,3 +1,4 @@
+import type { MobileApprovalAccess } from "../../shared/pending-approvals.js";
 import { readMobileSnapshot } from "./read-snapshot.js";
 import {
   buildSessionHistory,
@@ -11,7 +12,6 @@ import {
   type RoomManager,
   type RoomMeta,
   type RoomPublic,
-  type PendingMobileApprovals,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import { transcriptUserDisplay } from "@cjhyy/code-shell-web";
@@ -99,7 +99,7 @@ export interface OrchestratorCtx {
   roomManager: RoomManager;
   roomHistory?: import("../../shared/room-history.js").RoomHistoryAccess;
   approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
-  pendingApprovals: Pick<PendingMobileApprovals, "find">;
+  pendingApprovals: Pick<MobileApprovalAccess, "find">;
   transcriptSubscriptions: TranscriptSubscriptionManager;
   getBridge: () => AgentBridge | null;
   mobileSessionCwds: Map<string, string | null>;
@@ -116,7 +116,7 @@ export interface OrchestratorCtx {
   resolveSessionWorkspaceRoot: (sessionId: string, fallbackCwd: string) => Promise<string>;
   sendMobilePermissionMode: (deviceId: string | undefined, sessionId: string) => void;
   sendSelectedMobilePermissionModes: () => void;
-  replayPendingMobileApprovals: (sessionId: string, deviceId?: string) => void;
+  replayPendingMobileApprovals: (sessionId: string, deviceId?: string, viewerId?:string) => void | Promise<void>;
   /** Mirrors Host-accepted phone choices onto the Desktop Session's composer. */
   broadcastDesktopSessionSettings: (params: {
     sessionId: string;
@@ -491,7 +491,7 @@ export async function handleClientEvent(
         mode: ctx.mobilePermissionModes.get(event.sessionId) ?? "default",
       });
     }
-    ctx.replayPendingMobileApprovals(event.sessionId, deviceId);
+    await ctx.replayPendingMobileApprovals(event.sessionId, deviceId, event.viewerId);
     await ctx.externalCommands?.replayApprovals(event.viewerId, deviceId, event.sessionId);
     return;
   }
@@ -854,7 +854,8 @@ export async function handleClientEvent(
       return;
     }
     const sessionId = selectedSessionId;
-    const pending = ctx.pendingApprovals.find(sessionId, event.approvalId);
+    const pending = await ctx.pendingApprovals.find(sessionId, event.approvalId);
+    if (event.viewerId && deviceId && !ctx.remote.hasAuthenticatedViewer(event.viewerId,deviceId)) return;
     if (
       !pending ||
       (event.connectionId !== undefined && event.connectionId !== pending.connectionId) ||
@@ -901,7 +902,7 @@ export async function handleClientEvent(
       reply({ type: "error", approvalId: event.approvalId, message: result.message });
       return;
     }
-    ctx.broadcastApprovalResolved({
+    await ctx.broadcastApprovalResolved({
       ...route,
       approved: event.decision === "approve",
       ...(event.decision === "approve" && event.answer !== undefined
@@ -914,7 +915,8 @@ export async function handleClientEvent(
     const sessionId = resolveSessionId(event.sessionId);
     const pending = ctx.externalCommands?.isExternal(sessionId, event.viewerId)
       ? undefined
-      : ctx.pendingApprovals.find(sessionId, event.approvalId);
+      : await ctx.pendingApprovals.find(sessionId, event.approvalId);
+    if (event.viewerId && deviceId && !ctx.remote.hasAuthenticatedViewer(event.viewerId,deviceId)) return;
     if (
       !pending ||
       (event.connectionId !== undefined && event.connectionId !== pending.connectionId) ||
@@ -1071,7 +1073,7 @@ export async function handleClientEvent(
       ...(snapshot.epoch ? { epoch: snapshot.epoch } : {}),
       ...(snapshot.historicalGap ? { historicalGap: true } : {}),
     });
-    ctx.replayPendingMobileApprovals(event.sessionId, deviceId);
+    await ctx.replayPendingMobileApprovals(event.sessionId, deviceId, event.viewerId);
     return;
   }
   if (event.type === "permission.setMode") {
