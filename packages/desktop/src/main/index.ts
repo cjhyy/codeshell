@@ -353,7 +353,7 @@ const externalRuntime = createNativeExternalRuntime({
     sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active });
     markSessionTaskDirty(sessionId);
   },
-  continued: userContinuedTask,
+  continued: (id) => userContinuedTask(id),
   notices: () => petNotices,
 });
 const desktopModules = createDesktopModuleRegistry([externalRuntime]);
