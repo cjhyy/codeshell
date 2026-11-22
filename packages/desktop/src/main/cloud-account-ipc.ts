@@ -21,7 +21,7 @@ export function registerCloudAccountIpc(options: {
     | "manageLinks"
     | "cancelSignIn"
     | "logout"
-  >;
+  > & { restoredStatus?: () => Promise<ReturnType<CloudAccountManager["status"]>> };
   withDocument?: (event: IpcMainInvokeEvent, callback: () => unknown) => unknown;
   openExternal?: (url: string) => Promise<void>;
   isMainWindow: (sender: WebContents) => boolean;
@@ -42,7 +42,7 @@ export function registerCloudAccountIpc(options: {
         : listener(event, ...args);
     });
   handle("cloudAccount:status", () => {
-    return options.manager.status();
+    return options.manager.restoredStatus?.() ?? options.manager.status();
   });
   handle("cloudAccount:resume", (event) => {
     return options.manager.resume(() => allowed(event));

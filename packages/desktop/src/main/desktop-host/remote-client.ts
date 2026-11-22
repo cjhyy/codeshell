@@ -7,6 +7,7 @@ import type { CloudEffects } from "./cloud-effects.js";
 import { NativeCloudProjects } from "./cloud-projects-client.js";
 import { NativeAccountDevices } from "./account-devices-client.js";
 export class NativeRemoteClient {
+  constructor(private readonly waitForHost?: (signal: AbortSignal) => Promise<void>) {}
   private devices?: NativeAccountDevices;
   createDevices(deps: ConstructorParameters<typeof NativeAccountDevices>[1]) {
     if (this.devices) throw Error("Account devices already initialized");
@@ -20,7 +21,7 @@ export class NativeRemoteClient {
   private account?: NativeCloudAccount;
   createAccount(effects: CloudEffects) {
     if (this.account) throw Error("Cloud account already initialized");
-    this.account = new NativeCloudAccount(() => this.current(), effects);
+    this.account = new NativeCloudAccount(() => this.current(), effects, this.waitForHost);
     if (this.peer) void this.account.connect().catch(() => {});
     return this.account;
   }

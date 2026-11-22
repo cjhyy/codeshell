@@ -95,7 +95,7 @@ export class HostedCloudAccount {
     return this.scopes.run({ flow, signal: scoped }, async () => {
       switch (action.op) {
         case "initialize":
-          return m.nativeAuthority();
+          return m.restoredAuthority();
         case "resume":
           return m.resume(current);
         case "capabilities":

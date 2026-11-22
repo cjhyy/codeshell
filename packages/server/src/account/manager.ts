@@ -191,13 +191,19 @@ export class CloudAccountManager {
       ...(this.githubConnection ? { githubConnection: { ...this.githubConnection } } : {}),
     };
   }
+  /** Cold reads wait for the OS keyring before describing the persisted account. */
+  async restoredAuthority() {
+    await this.load();
+    return this.nativeAuthority();
+  }
   /** Private process-to-process projection for native consumers of root account leases. */
   nativeAuthority() {
+    const status = this.status();
     return {
       revision: this.nativeRevision,
       generation: this.generation,
       expiresAt: this.saved?.refreshTokenExpiresAt ?? 0,
-      status: this.status(),
+      status,
     };
   }
   onStatus(listener: (status: CloudAccountStatus) => void): () => void {

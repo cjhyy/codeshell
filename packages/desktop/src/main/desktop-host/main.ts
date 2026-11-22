@@ -42,7 +42,7 @@ export function createDesktopHost(
   settingsCommitted?: (effects: SettingsChange) => Promise<void>,
 ) {
   const providerPorts = new ExternalProviderPorts();
-  const remote = new NativeRemoteClient();
+  const remote = new NativeRemoteClient((signal) => supervisor.waitUntilReady(signal));
   let terminals: NativeRemoteTerminals | undefined;
   let worker: DesktopHostWorkerClient | undefined;
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(

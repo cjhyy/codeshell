@@ -7,6 +7,7 @@ export function bindDesktopAccountLifecycle(
   app: Pick<App, "on" | "once" | "whenReady">,
   account: {
     status(): CloudAccountStatus;
+    restoredStatus?(): Promise<CloudAccountStatus>;
     resume(authorized?: () => boolean): Promise<CloudAccountStatus>;
   },
   relay: { relayStatus(): DesktopRelayStatus },
@@ -50,7 +51,9 @@ export function bindDesktopAccountLifecycle(
   void app.whenReady().then(() => {
     if (disposed) return;
     ready = true;
-    void retry(true);
+    // Native ready can precede the utility connection and the first keyring read.
+    if (account.restoredStatus) void account.restoredStatus().then(() => retry(true), () => {});
+    else void retry(true);
     timer = setInterval(() => void retry(), retryDelayMs);
     timer.unref?.();
   });

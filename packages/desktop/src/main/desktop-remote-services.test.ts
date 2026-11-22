@@ -19,7 +19,11 @@ test("remote composition scopes IPC and reads the computer directory without loc
   const sender = { mainFrame: {}, isDestroyed: () => false, send: () => {} };
   const window = { webContents: sender, isDestroyed: () => false };
   const previousFetch = globalThis.fetch;
-  const remote = new NativeRemoteClient();
+  const hostReady = Promise.withResolvers<void>();
+  const unlock = Promise.withResolvers<void>();
+  const decrypting = Promise.withResolvers<void>();
+  let decrypts = 0;
+  const remote = new NativeRemoteClient(() => hostReady.promise);
   let host: ReturnType<typeof bindRemoteServices> | undefined;
   const cipher = fixtureCipher();
   let services: ReturnType<typeof createDesktopRemoteServices> | undefined;
@@ -33,10 +37,12 @@ test("remote composition scopes IPC and reads the computer directory without loc
         isAsyncEncryptionAvailable: async () => true,
         getSelectedStorageBackend: () => "gnome_libsecret",
         encryptStringAsync: async (value) => cipher.encrypt(value),
-        decryptStringAsync: async (bytes) => ({
-          result: cipher.decrypt(bytes),
-          shouldReEncrypt: false,
-        }),
+        decryptStringAsync: async (bytes) => {
+          decrypts++;
+          decrypting.resolve();
+          await unlock.promise;
+          return { result: cipher.decrypt(bytes), shouldReEncrypt: false };
+        },
       },
       openExternal: async () => {
         starts++;
@@ -73,7 +79,12 @@ test("remote composition scopes IPC and reads the computer directory without loc
     expect(handlers.has("cloudAccount:capabilities")).toBe(true);
     expect(handlers.has("cloudAccount:profile")).toBe(true);
     const event = { sender, senderFrame: sender.mainFrame };
-    expect(handlers.get("cloudAccount:status")!(event)).toEqual({ state: "signed-out" });
+    const first = handlers.get("cloudAccount:status")!(event);
+    const second = handlers.get("cloudAccount:status")!(event);
+    let answered = false;
+    void first.then(() => {
+      answered = true;
+    });
     expect(handlers.get("mobileRemote:status")!(event)).toMatchObject({ running: false });
     expect(handlers.get("mobileRemote:relayStatus")!(event)).toMatchObject({ registered: false });
     // Account computer operations report refusals as `{ ok: false }` values instead
@@ -126,13 +137,13 @@ test("remote composition scopes IPC and reads the computer directory without loc
     const { port1, port2 } = new MessageChannel();
     host = bindRemoteServices(nodePrivatePort(port2), root);
     remote.bind(nodePrivatePort(port1));
-    for (let i = 0; i < 200 && services.cloudAccountManager.status().state !== "signed-in"; i++)
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    expect(services.cloudAccountManager.status()).toMatchObject({
-      state: "signed-in",
-      origin,
-      account,
-    });
+    hostReady.resolve();
+    await decrypting.promise;
+    expect(answered).toBe(false);
+    unlock.resolve();
+    for (const status of await Promise.all([first, second]))
+      expect(status).toMatchObject({ state: "signed-in", origin, account });
+    expect(decrypts).toBe(1);
     let directoryReads = 0;
     globalThis.fetch = (async (url: string, init: RequestInit) => {
       expect(url).toBe(`${origin}/api/v1/remote-hosts`);
@@ -158,6 +169,8 @@ test("remote composition scopes IPC and reads the computer directory without loc
     expect(directoryReads).toBe(1);
     expect(starts).toBe(0);
   } finally {
+    hostReady.resolve();
+    unlock.resolve();
     globalThis.fetch = previousFetch;
     services?.accountDeviceService.retireIdentity();
     services?.accountFeatures.dispose();

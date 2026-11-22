@@ -28,9 +28,11 @@ export class NativeCloudAccount {
   private lifetime = new AbortController();
   private authority = new AbortController();
   private view?: CloudAuthority;
+  private bootstrap?: Promise<void>;
   constructor(
     private readonly peer: () => PrivateHostPeer,
     dependencies: CloudEffects,
+    private readonly waitForHost?: (signal: AbortSignal) => Promise<void>,
   ) {
     this.effects = new NativeCloudEffects(dependencies);
   }
@@ -38,12 +40,32 @@ export class NativeCloudAccount {
     signal.throwIfAborted();
     return this.documents.run(signal, callback);
   }
-  async connect() {
+  connect() {
+    if (this.bootstrap) return this.bootstrap;
     const signal = this.lifetime.signal;
-    const state = await this.call<CloudAuthority>({ op: "initialize" });
-    if (!signal.aborted) this.publish(state);
+    // Restoring a shared account belongs to this utility generation. A workbench
+    // may navigate while the OS is unlocking the grant for other windows.
+    const ready = this.documents.exit(async () => {
+      await this.waitForHost?.(signal);
+      signal.throwIfAborted();
+      const state = await this.call<CloudAuthority>({ op: "initialize" });
+      signal.throwIfAborted();
+      this.publish(state);
+    });
+    this.bootstrap = ready;
+    void ready.catch(() => {
+      if (this.bootstrap === ready) this.bootstrap = undefined;
+    });
+    return ready;
+  }
+  async restoredStatus() {
+    const document = this.documents.getStore();
+    await this.connect();
+    document?.throwIfAborted();
+    return this.status();
   }
   disconnect() {
+    this.bootstrap = undefined;
     this.lifetime.abort();
     this.lifetime = new AbortController();
     this.authority.abort();
