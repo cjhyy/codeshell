@@ -26,6 +26,7 @@ import {
   launchCodeShellElectron,
   findCodeShellWindow,
 } from "../packages/desktop/scripts/electron-harness.mjs";
+import { prepareCloudChooserFixture } from "../packages/desktop/scripts/cloud-chooser-fixture.mjs";
 import { verifyNativeLinkUI } from "./verify-native-link-ui.mjs";
 import { verifyCloudLinkBrowserUI } from "./verify-cloud-link-browser-ui.mjs";
 const mode = process.argv[3] ?? "web";
@@ -39,7 +40,7 @@ assert.ok(
   ["web", "electron", "paired", "native"].includes(mode),
   "Expected web, electron, paired or native mode",
 );
-let hub, browser, desktop, localWindow, paired;
+let hub, browser, desktop, localWindow, paired, accountFixture;
 let pairedProject;
 const root = await mkdtemp(join(tmpdir(), "codeshell-link-real-http-"));
 process.env.HOME = join(root, "home");
@@ -130,6 +131,15 @@ try {
   await seedUpstream("admin-two");
   if (mode !== "web") {
     const desktopHome = join(root, "desktop-home");
+    if (mode === "native") {
+      accountFixture = await prepareCloudChooserFixture(
+        resolve("packages/desktop"),
+        {
+          home: join(root, "account-fixture"),
+        },
+        { remoteLinks: true },
+      );
+    }
     const localProjects = [join(desktopHome, "project-a"), join(desktopHome, "project-b")];
     for (const project of localProjects) await mkdir(project, { recursive: true });
     pairedProject = await realpath(localProjects[0]);
@@ -171,7 +181,10 @@ try {
       );
       desktop = await _electron.launch({
         executablePath: join(application, "Contents/MacOS/code-shell"),
-        args: [`--user-data-dir=${join(desktopHome, "electron-user-data")}`],
+        args: [
+          `--user-data-dir=${join(desktopHome, "electron-user-data")}`,
+          ...(process.platform === "darwin" ? ["--use-mock-keychain"] : []),
+        ],
         cwd: localProjects[0],
         timeout: 30000,
         env: {
@@ -183,6 +196,7 @@ try {
           CODE_SHELL_DISABLE_UPDATE_CHECK: "1",
           DISABLE_AUTOUPDATER: "1",
           ...publicConfig,
+          NODE_EXTRA_CA_CERTS: accountFixture.electronEnv.NODE_EXTRA_CA_CERTS,
         },
       });
       assert.equal(await desktop.evaluate(({ app }) => app.isPackaged), true);
@@ -190,6 +204,9 @@ try {
       desktop = await launchCodeShellElectron({
         appDir: resolve("packages/desktop"),
         home: desktopHome,
+        ...(accountFixture && {
+          env: { NODE_EXTRA_CA_CERTS: accountFixture.electronEnv.NODE_EXTRA_CA_CERTS },
+        }),
       });
     }
     localWindow = await findCodeShellWindow(desktop);
@@ -237,6 +254,16 @@ try {
     })
   ).json();
   if (mode === "native") {
+    await localWindow.evaluate(async (origin) => {
+      await window.codeshell.cloudAccount.login({
+        origin,
+        username: "chooser-owner",
+        password: "chooser-synthetic-password",
+      });
+      const features = await window.codeshell.accountFeatures.refresh(origin);
+      if (features["links.remote"].state !== "ready")
+        throw Error("Owned native Link account is not ready");
+    }, accountFixture.accountOrigin);
     await verifyNativeLinkUI({
       desktop,
       win: localWindow,
@@ -627,6 +654,7 @@ try {
       await new Promise((resolve) => child.once("exit", resolve));
     }
   }
+  await accountFixture?.close();
   await hub?.close();
   await app.close();
   await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });

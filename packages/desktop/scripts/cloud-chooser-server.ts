@@ -236,6 +236,12 @@ try {
     checkpoint();
     return result;
   };
+  const accountFeatures = () => ({
+    "cloud.projects": { version: 1, enabled: true, params: { cloudOrigin } },
+    ...(process.env.CODESHELL_CLOUD_CHOOSER_LINKS === "1" && {
+      "links.remote": { version: 1, enabled: true },
+    }),
+  });
   account = own(
     createHttpsServer(
       await tlsFor("account"),
@@ -254,7 +260,7 @@ try {
             registrationAllowed: false,
             githubEnabled: false,
             linkManagementEnabled: false,
-            features: { "cloud.projects": { version: 1, enabled: true, params: { cloudOrigin } } },
+            features: accountFeatures(),
           });
         }
         const value = await body(req);
@@ -282,7 +288,7 @@ try {
           return json(res, 200, {
             account: { id: accountId, username: "chooser-owner", displayName: "Chooser owner" },
             capabilities: { links: false },
-            features: { "cloud.projects": { version: 1, enabled: true, params: { cloudOrigin } } },
+            features: accountFeatures(),
           });
         }
         if (req.method === "POST" && req.url === "/api/v1/account/cloud-management/tickets") {
