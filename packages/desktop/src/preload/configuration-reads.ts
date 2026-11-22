@@ -17,6 +17,18 @@ export function createConfigurationReads(
     return host ? host.readBusiness(name, params, fallback) : fallback();
   }
   return {
+    listProfiles: (target: RendererConfigurationTarget | null) =>
+      read("profiles/list", { target }, () => ipcRenderer.invoke("profiles:list", target)),
+    listProfileCatalog: () =>
+      read("profiles/catalog", {}, () => ipcRenderer.invoke("profiles:catalog")),
+    listProfileRepos: () =>
+      read("profiles/repos", {}, () => ipcRenderer.invoke("profiles:listRepos")),
+    listDigitalHumanTeams: () =>
+      read("profiles/teams", {}, () => ipcRenderer.invoke("digital-human-teams:list")),
+    previewProfileDeletion: (name: string, target: RendererConfigurationTarget | null) =>
+      read("profiles/previewDeletion", { name, target }, () =>
+        ipcRenderer.invoke("profiles:previewDeletion", name, target),
+      ),
     listSessionTitles: () =>
       read("activity/titles", {}, () => ipcRenderer.invoke("sessions:titles")),
     tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>

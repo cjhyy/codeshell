@@ -1,3 +1,5 @@
+import type { ProfileLibraryReads } from "../shared/profile-library.js";
+type WorkerViews = ActivityReads & ProfileLibraryReads;
 import type {
   petSegmentTranscript,
   SegmentClosureInput,
@@ -25,7 +27,7 @@ export interface ActivityHistoryWorkerRequest {
     | "mimiSegmentMessages"
     | "mimiExternalActivity"
     | "flush"
-    | keyof ActivityReads
+    | keyof WorkerViews
     | "activity/setTitle";
   permit?: Int32Array;
   input?: unknown;
@@ -118,10 +120,10 @@ export class ActivityHistoryWorker {
     return this.request("setConfig", patch, permit);
   }
 
-  view<K extends keyof ActivityReads>(
+  view<K extends keyof WorkerViews>(
     method: K,
-    input: ActivityReads[K]["params"],
-  ): Promise<ActivityReads[K]["result"]> {
+    input: WorkerViews[K]["params"],
+  ): Promise<WorkerViews[K]["result"]> {
     return this.request(method, input);
   }
   setTitle(input: { id: string; title: string }, permit: Int32Array): Promise<void> {

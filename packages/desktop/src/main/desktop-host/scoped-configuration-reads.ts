@@ -17,7 +17,7 @@ import { listSkills, readSkillBody } from "../skills-service.js";
 import { businessArguments, scopedBusinessRead, textArgument } from "./business-read.js";
 import { InvalidParams, type DesktopHostMethod } from "./server.js";
 
-function target(value: unknown): RendererConfigurationTarget {
+export function parseConfigurationTarget(value: unknown): RendererConfigurationTarget {
   const keys = businessArguments(value, ["noRepo", "projectId", "sessionId"]);
   if (Object.keys(keys).length === 1) {
     if (keys.noRepo === true) return { noRepo: true };
@@ -27,9 +27,9 @@ function target(value: unknown): RendererConfigurationTarget {
   throw new InvalidParams("Expected a configuration target");
 }
 const scoped = (input: unknown) => ({
-  target: target(businessArguments(input, ["target"]).target),
+  target: parseConfigurationTarget(businessArguments(input, ["target"]).target),
 });
-const maybeTarget = (value: unknown) => (value === null ? null : target(value));
+const maybeTarget = (value: unknown) => (value === null ? null : parseConfigurationTarget(value));
 const optional = (input: unknown) => ({
   target: maybeTarget(businessArguments(input, ["target"]).target),
 });

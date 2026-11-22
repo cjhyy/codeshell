@@ -3367,7 +3367,7 @@ registerProfileSwitchIpc({
     return bridge.withWebConfigurationMutation(cwd, write);
   },
 });
-registerProfileCatalogIpc();
+registerProfileCatalogIpc(desktopHost);
 ipcMain.handle("plugins:list", async (_e, target: RendererConfigurationTarget | null) =>
   listPlugins(await rendererOptionalConfigurationCwd(target, "")),
 );

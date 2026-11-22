@@ -1,3 +1,5 @@
+import { isProfileLibraryChange } from "../../shared/profile-library.js";
+import { changeProfileLibrary } from "../hosted-profile-library.js";
 import { isMemoryCommand, writeHostedMemory } from "../hosted-memory.js";
 import { StoredMimiWorkMemory } from "../../host/composition/mimi-work-memory.js";
 import { dirname, join, isAbsolute } from "node:path";
@@ -51,6 +53,7 @@ installDefaultLinkProviders();
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (isProfileLibraryChange(command)) return changeProfileLibrary(command,payload as Parameters<typeof changeProfileLibrary>[1]);
     if (isMemoryCommand(command))
       return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);
     if (command === "mimi/records" || command === "mimi/workMemory") {

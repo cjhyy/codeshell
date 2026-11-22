@@ -1,5 +1,7 @@
 import { RoomHistoryReader } from "@cjhyy/code-shell-server/mobile-remote";
 import type { RoomHistoryOperations } from "../shared/room-history.js";
+import { isProfileLibraryRead, type ProfileLibraryReads } from "../shared/profile-library.js";
+import { readProfileLibrary } from "./hosted-profile-library.js";
 import { assertSafeSessionId } from "@cjhyy/code-shell-server/storage";
 import {
   petSegmentTranscript,
@@ -38,7 +40,8 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
   tail = tail.then(async () => {
     try {
       let value: unknown;
-      if (method === "activity/titles") value = await listTitles();
+      if (isProfileLibraryRead(method)) value = await readProfileLibrary(method, input as ProfileLibraryReads[typeof method]["params"]);
+      else if (method === "activity/titles") value = await listTitles();
       else if (method === "activity/logTail") {
         const { bucket, lines } = input as ActivityReads["activity/logTail"]["params"];
         value = await tailLog(bucket, lines);

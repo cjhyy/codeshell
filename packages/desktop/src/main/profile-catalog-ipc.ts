@@ -1,4 +1,7 @@
+import { randomUUID } from "node:crypto";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import {
+  type IpcMainInvokeEvent,
   BrowserWindow,
   dialog,
   ipcMain,
@@ -6,34 +9,19 @@ import {
   type SaveDialogOptions,
 } from "electron";
 import { WORKSPACE_PROFILE_NAME_RE } from "@cjhyy/code-shell-core";
-import { dlog } from "./desktop-logger.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import {
   activateProfile,
   addProfileRepo,
   deleteProfile,
   deactivateProfile,
-  exportProfileDefinition,
   exportProfileRepo,
   forceDeleteProfile,
-  importReviewedProfileDefinition,
-  installCatalogProfile,
   installProfileRequirements,
-  listProfileCatalog,
-  listProfileRepos,
-  listProfiles,
-  previewProfileDefinitionImport,
-  previewProfileDeletion,
   previewProfileRequirements,
   removeProfileRepo,
-  saveProfile,
   setSessionWorkspaceProfile,
 } from "./profiles-service.js";
-import {
-  deleteDigitalHumanTeam,
-  listDigitalHumanTeams,
-  saveDigitalHumanTeam,
-} from "./digital-human-team-service.js";
 import { type RendererConfigurationTarget } from "./renderer-configuration-authority.js";
 import {
   rendererConfigurationCwd,
@@ -41,9 +29,21 @@ import {
 } from "./renderer-configuration-helpers.js";
 
 /** Profile catalog, repositories, definition import/export and digital-human team routes. */
-export function registerProfileCatalogIpc() {
-  ipcMain.handle("profiles:list", async (_e, target: RendererConfigurationTarget | null) =>
-    listProfiles(target === null ? undefined : await rendererConfigurationCwd(target)),
+export function registerProfileCatalogIpc(host: {
+  callBusiness: CallShellBusiness;
+  documentSignal(event: IpcMainInvokeEvent): AbortSignal;
+}) {
+  const owners = new WeakMap<AbortSignal, string>();
+  function reviewOwner(signal: AbortSignal) {
+    let id = owners.get(signal);
+    if (!id) {
+      id = randomUUID();
+      owners.set(signal, id);
+    }
+    return id;
+  }
+  ipcMain.handle("profiles:list", (event, target: RendererConfigurationTarget | null) =>
+    host.callBusiness("profiles/list", { target }, host.documentSignal(event)),
   );
   ipcMain.handle(
     "profiles:activate",
@@ -66,12 +66,16 @@ export function registerProfileCatalogIpc() {
     }
     return setSessionWorkspaceProfile(sessionId, profileName);
   });
-  ipcMain.handle("profiles:catalog", async () => listProfileCatalog());
-  ipcMain.handle("profiles:install", async (_e, name: string) => {
+  ipcMain.handle("profiles:catalog", (event) =>
+    host.callBusiness("profiles/catalog", {}, host.documentSignal(event)),
+  );
+  ipcMain.handle("profiles:install", async (event, name: string) => {
     if (typeof name !== "string" || !name) throw new Error("profiles:install requires name");
-    installCatalogProfile(name);
+    return host.callBusiness("profiles/install", { name }, host.documentSignal(event));
   });
-  ipcMain.handle("profiles:listRepos", async () => listProfileRepos());
+  ipcMain.handle("profiles:listRepos", (event) =>
+    host.callBusiness("profiles/repos", {}, host.documentSignal(event)),
+  );
   ipcMain.handle("profiles:addRepo", async (_e, repo: string) => {
     if (typeof repo !== "string" || !repo) throw new Error("profiles:addRepo requires repo");
     return addProfileRepo(repo.trim());
@@ -93,9 +97,10 @@ export function registerProfileCatalogIpc() {
     async (_e, name: string, target: RendererConfigurationTarget | null) => {
       if (typeof name !== "string" || !name)
         throw new Error("profiles:previewDeletion requires name");
-      return previewProfileDeletion(
-        name,
-        target === null ? undefined : await rendererConfigurationCwd(target),
+      return host.callBusiness(
+        "profiles/previewDeletion",
+        { name, target },
+        host.documentSignal(_e),
       );
     },
   );
@@ -125,11 +130,15 @@ export function registerProfileCatalogIpc() {
       if (typeof profile !== "object" || profile === null || Array.isArray(profile)) {
         throw new Error("profiles:save requires profile");
       }
-      const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
-      saveProfile(profile as Parameters<typeof saveProfile>[0], authorizedCwd);
+      return host.callBusiness(
+        "profiles/save",
+        { profile: profile as import("@cjhyy/code-shell-core").WorkspaceProfile, target },
+        host.documentSignal(_e),
+      );
     },
   );
   ipcMain.handle("profiles:pickDefinitionImport", async (event) => {
+    const signal = host.documentSignal(event);
     const options: OpenDialogOptions = {
       title: "Import digital-human profile definition JSON",
       properties: ["openFile"],
@@ -141,7 +150,14 @@ export function registerProfileCatalogIpc() {
       : await dialog.showOpenDialog(options);
     const filePath = result.filePaths[0];
     if (result.canceled || !filePath) return { canceled: true };
-    return { canceled: false, preview: previewProfileDefinitionImport(filePath) };
+    return {
+      canceled: false,
+      preview: await host.callBusiness(
+        "profiles/pickedDefinition",
+        { path: filePath, owner: reviewOwner(signal) },
+        signal,
+      ),
+    };
   });
   ipcMain.handle(
     "profiles:importReviewedDefinition",
@@ -156,17 +172,21 @@ export function registerProfileCatalogIpc() {
       if (candidate.overwrite !== undefined && typeof candidate.overwrite !== "boolean") {
         throw new Error("profiles:importReviewedDefinition overwrite must be a boolean");
       }
-      const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
-      return importReviewedProfileDefinition(
+      const signal = host.documentSignal(_e);
+      return host.callBusiness(
+        "profiles/importDefinition",
         {
+          target,
+          owner: reviewOwner(signal),
           reviewToken: candidate.reviewToken,
-          ...(candidate.overwrite === undefined ? {} : { overwrite: candidate.overwrite }),
+          overwrite: candidate.overwrite,
         },
-        authorizedCwd,
+        signal,
       );
     },
   );
   ipcMain.handle("profiles:exportDefinition", async (event, name: string) => {
+    const signal = host.documentSignal(event);
     if (typeof name !== "string" || !WORKSPACE_PROFILE_NAME_RE.test(name)) {
       throw new Error("profiles:exportDefinition requires a valid profile name");
     }
@@ -180,7 +200,7 @@ export function registerProfileCatalogIpc() {
       ? await dialog.showSaveDialog(win, options)
       : await dialog.showSaveDialog(options);
     if (result.canceled || !result.filePath) return { canceled: true };
-    return exportProfileDefinition(name, result.filePath);
+    return host.callBusiness("profiles/exportDefinition", { name, path: result.filePath }, signal);
   });
   ipcMain.handle("profiles:exportRepo", async (event, names: string[]) => {
     if (!Array.isArray(names) || names.length === 0 || names.some((n) => typeof n !== "string")) {
@@ -234,16 +254,16 @@ export function registerProfileCatalogIpc() {
       });
     },
   );
-  ipcMain.handle("digital-human-teams:list", async () =>
-    listDigitalHumanTeams({
-      onInvalidTeam: (issue) => dlog("main", "digital_human_team.invalid", { ...issue }),
-    }),
+  ipcMain.handle("digital-human-teams:list", (event) =>
+    host.callBusiness("profiles/teams", {}, host.documentSignal(event)),
   );
-  ipcMain.handle("digital-human-teams:save", async (_e, team: unknown) =>
-    saveDigitalHumanTeam(team as Parameters<typeof saveDigitalHumanTeam>[0]),
+  ipcMain.handle(
+    "digital-human-teams:save",
+    (event, team: import("../shared/digital-human-team.js").DigitalHumanTeam) =>
+      host.callBusiness("profiles/saveTeam", { team }, host.documentSignal(event)),
   );
-  ipcMain.handle("digital-human-teams:delete", async (_e, id: string) => {
+  ipcMain.handle("digital-human-teams:delete", (event, id: string) => {
     if (typeof id !== "string" || !id) throw new Error("digital-human-teams:delete requires id");
-    deleteDigitalHumanTeam(id);
+    return host.callBusiness("profiles/deleteTeam", { id }, host.documentSignal(event));
   });
 }

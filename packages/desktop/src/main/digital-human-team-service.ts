@@ -175,7 +175,10 @@ export function listDigitalHumanTeams(options?: {
   return localTeams.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function saveDigitalHumanTeam(input: DigitalHumanTeam): DigitalHumanTeam {
+export function saveDigitalHumanTeam(
+  input: DigitalHumanTeam,
+  beforeCommit?: () => void,
+): DigitalHumanTeam {
   const team = parseDigitalHumanTeam(input);
   const knownProfiles = new Set(listWorkspaceProfiles().map((profile) => profile.name));
   const missing = team.members.find((member) => !knownProfiles.has(member));
@@ -204,6 +207,7 @@ export function saveDigitalHumanTeam(input: DigitalHumanTeam): DigitalHumanTeam 
         mode: 0o600,
         flag: "wx",
       });
+      beforeCommit?.();
       renameSync(tmp, path);
     } finally {
       rmSync(tmp, { force: true });
@@ -214,14 +218,17 @@ export function saveDigitalHumanTeam(input: DigitalHumanTeam): DigitalHumanTeam 
   return team;
 }
 
-export function deleteDigitalHumanTeam(id: string): void {
+export function deleteDigitalHumanTeam(id: string, beforeCommit?: () => void): void {
   if (!DIGITAL_HUMAN_TEAM_ID_RE.test(id)) throw new Error("invalid digital-human team id");
   const root = checkedTeamsRoot();
   if (!root) return;
   const release = acquireFileLock(join(root, ".mutation"));
   try {
     const dir = checkedTeamDirectory(id);
-    if (dir) rmSync(dir, { recursive: true, force: true });
+    if (dir) {
+      beforeCommit?.();
+      rmSync(dir, { recursive: true, force: true });
+    }
   } finally {
     release();
   }

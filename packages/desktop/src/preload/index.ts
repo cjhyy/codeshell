@@ -1147,8 +1147,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("sources:pickAndUploadProject", projectId),
   deleteProjectUpload: (projectId: string, name: string) =>
     ipcRenderer.invoke("sources:deleteProjectUpload", projectId, name),
-  listProfiles: (target: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("profiles:list", target),
   activateProfile: (target: RendererConfigurationTarget, name: string) =>
     ipcRenderer.invoke("profiles:activate", target, name),
   deactivateProfile: (target: RendererConfigurationTarget) =>
@@ -1162,15 +1160,11 @@ contextBridge.exposeInMainWorld("codeshell", {
   ) => ipcRenderer.invoke("profiles:adoptSwitch", target, name, expectedRevision),
   setSessionWorkspaceProfile: (sessionId: string, profileName: string) =>
     ipcRenderer.invoke("profiles:setSession", sessionId, profileName),
-  listProfileCatalog: () => ipcRenderer.invoke("profiles:catalog"),
   installCatalogProfile: (name: string) => ipcRenderer.invoke("profiles:install", name),
-  listProfileRepos: () => ipcRenderer.invoke("profiles:listRepos"),
   addProfileRepo: (repo: string) => ipcRenderer.invoke("profiles:addRepo", repo),
   removeProfileRepo: (repo: string) => ipcRenderer.invoke("profiles:removeRepo", repo),
   forceDeleteProfile: (name: string, target: RendererConfigurationTarget | null) =>
     ipcRenderer.invoke("profiles:forceDelete", name, target),
-  previewProfileDeletion: (name: string, target: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("profiles:previewDeletion", name, target),
   previewProfileRequirements: (name: string, target: RendererConfigurationTarget) =>
     ipcRenderer.invoke("profiles:previewRequirements", name, target),
   installProfileRequirements: (name: string, target: RendererConfigurationTarget) =>
@@ -1190,7 +1184,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     name: string,
     options?: { target?: RendererConfigurationTarget | null; clearActiveProject?: boolean },
   ) => ipcRenderer.invoke("profiles:delete", name, options),
-  listDigitalHumanTeams: () => ipcRenderer.invoke("digital-human-teams:list"),
   saveDigitalHumanTeam: (team: import("../shared/digital-human-team").DigitalHumanTeam) =>
     ipcRenderer.invoke("digital-human-teams:save", team),
   deleteDigitalHumanTeam: (id: string) => ipcRenderer.invoke("digital-human-teams:delete", id),

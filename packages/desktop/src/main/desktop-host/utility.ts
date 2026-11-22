@@ -1,4 +1,5 @@
 import { labFiles } from "../../host/composition/optimization-lab.js";
+import { hostedProfileLibrary } from "../../host/composition/profile-library.js";
 import { configuredMcpProbe } from "../../host/composition/configured-mcp-probe.js";
 import { parseMimiSegmentRange } from "../../shared/mimi-records.js";
 import { hostedMimiSegments } from "../../host/composition/mimi-segments.js";
@@ -123,6 +124,7 @@ const historyWorker = new ActivityHistoryWorker(
     new Worker(new URL("./activity-history-worker.mjs", import.meta.url), { workerData: options }),
 );
 historyWorker.onExternalActivityChanged = () => parent.postMessage({ type: "mimi-external-changed" });
+const profileLibrary = hostedProfileLibrary(storage, historyWorker, (options) => catalog.list(options));
 const activities = hostedActivityHistory(historyWorker);
 const roomReads = ccRoomReads(historyWorker);
 const mediaProtocol = hostedMediaProtocol();
@@ -139,6 +141,7 @@ const business = new HostBusinessCalls({
   "rooms/historyPage": (p) => historyWorker.roomHistory("rooms/historyPage", p),
   ...labFiles,
   ...skills.methods,
+  ...profileLibrary.operations,
   ...configuredMcpProbe,
   ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
   "mimi/externalActivity": (input) => historyWorker.mimiExternalActivity(input),
@@ -327,6 +330,7 @@ parent.on("message", ({ data, ports }) => {
         ...configurationReads,
         ...memoryReads,
         ...activities.reads,
+        ...profileLibrary.reads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
         ...workspaceReads((options) => catalog.list(options)),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),
