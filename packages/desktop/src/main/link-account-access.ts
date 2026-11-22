@@ -9,7 +9,12 @@ export interface LinkAccountAccessLease {
 export type CaptureLinkAccountAccess = () => LinkAccountAccessLease;
 
 export function createLinkAccountAccess(
-  account: Pick<CloudAccountManager, "status" | "captureRootAccount">,
+  account: {
+    status: CloudAccountManager["status"];
+    captureRootAccount(
+      ...args: Parameters<CloudAccountManager["captureRootAccount"]>
+    ): LinkAccountAccessLease;
+  },
   requireFeature?: () => void,
 ): CaptureLinkAccountAccess {
   return () => {

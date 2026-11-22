@@ -138,7 +138,7 @@ export function createSessionTitlesStore(
   function setTitle(
     id: string,
     title: string,
-    expected: { expectedTitle?: string | null } = {},
+    expected: { expectedTitle?: string | null; beforeCommit?: () => void } = {},
   ): Promise<void> {
     if (!validSessionId(id)) throw new Error("invalid session id");
     if (!validTitle(title)) throw new Error("invalid session title");
@@ -178,6 +178,7 @@ export function createSessionTitlesStore(
           }
           map[id] = title;
         } else delete map[id];
+        expected.beforeCommit?.();
         save(target, map);
       } finally {
         release();

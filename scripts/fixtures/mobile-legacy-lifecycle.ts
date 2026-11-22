@@ -1,3 +1,11 @@
+import { randomUUID } from "node:crypto";
+import { getProjectStore } from "../../packages/desktop/src/main/project-store.js";
+import { ccRoomReads } from "../../packages/desktop/src/host/composition/cc-room-reads.js";
+import {
+  externalHistory,
+  externalSessions,
+} from "../../packages/desktop/src/host/composition/cc-room-history.js";
+import { HostBusinessCalls } from "../../packages/desktop/src/host/composition/business-calls.js";
 // Legacy CLI rooms: real authenticated transport, production Main handlers,
 // RoomManager, resident processes, approval bridge and disk transcript follower.
 import assert from "node:assert/strict";
@@ -116,7 +124,15 @@ export async function runLegacyLifecycle(root: string) {
   remote.on("viewer-offline", ({ viewerId }) =>
     transcripts.unsubscribeSubscriber(mobileTranscriptSubscriberId(viewerId)),
   );
+  await getProjectStore().createFromPath(cwd);
+  const reads = new HostBusinessCalls(
+    ccRoomReads({
+      externalSessions: async (input) => externalSessions(input),
+      externalHistory: async (input) => externalHistory(input),
+    }).native,
+  );
   context = {
+    readCcRoom: (method: string, input: unknown) => reads.run(randomUUID(), method, input),
     remote,
     uploads,
     roomManager,

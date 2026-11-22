@@ -1,3 +1,4 @@
+import type { WechatLoginEvent } from "../shared/wechat-login.js";
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
@@ -53,7 +54,6 @@ import {
   gatewayConfigTemplate,
   hasWechatStoredContextToken,
   loadGatewayConfig,
-  loginCodeShellWechat,
 } from "@cjhyy/code-shell-chat/codeshell";
 
 export type ImGatewayChannel =
@@ -159,9 +159,7 @@ export type DingTalkDiscoveryState = "connecting" | "listening" | "stopped" | "e
 
 export type ImGatewayUiEvent =
   | { type: "status-changed"; status: ImGatewayStatus }
-  | { type: "wechat-qr"; loginId: string; url: string }
-  | { type: "wechat-status"; loginId: string; status: string }
-  | { type: "wechat-verification-required"; loginId: string }
+  | WechatLoginEvent
   | {
       type: "dingtalk-discovery-state";
       discoveryId: string;
@@ -245,12 +243,6 @@ export interface ImGatewayOwnerSendOptions {
    * outbound.idempotentSend receive it (as the platform client id); others ignore it.
    */
   idempotencyKey?: string;
-}
-
-interface PendingVerification {
-  loginId: string;
-  resolve: (code: string) => void;
-  reject: (error: Error) => void;
 }
 
 interface ActiveDingTalkDiscovery {
@@ -338,8 +330,6 @@ export class ImGatewayService {
   readonly configPath: string;
   private active?: ActiveGateway;
   private lastError?: string;
-  private login?: { id: string; abort: AbortController };
-  private verification?: PendingVerification;
   private dingtalkDiscovery?: ActiveDingTalkDiscovery;
   private readonly adapterStates = new Map<ImGatewayChannel, AdapterRuntimeState>();
   private readonly recentActivity: ImGatewayActivity[] = [];
@@ -1409,62 +1399,20 @@ export class ImGatewayService {
     return true;
   }
 
-  async loginWechat(): Promise<{ accountId: string; configPath: string }> {
-    if (this.login) throw new Error("个人微信登录正在进行中");
-    const restartAfterLogin = Boolean(this.active);
-    const id = randomUUID();
-    const abort = new AbortController();
-    this.login = { id, abort };
-    try {
-      const result = await loginCodeShellWechat({
-        configPath: this.configPath,
-        signal: abort.signal,
-        onQrCode: (url) => this.emit({ type: "wechat-qr", loginId: id, url }),
-        onStatus: (status) =>
-          this.emit({ type: "wechat-status", loginId: id, status: String(status) }),
-        requestVerificationCode: () => this.requestVerificationCode(id),
-      });
-      this.lastError = undefined;
-      if (restartAfterLogin) {
-        await this.stop();
-        await this.start();
-      } else {
-        this.emitStatus();
-      }
-      return result;
-    } finally {
-      if (this.login?.id === id) this.login = undefined;
-      if (this.verification?.loginId === id) {
-        this.verification.reject(new Error("微信登录已结束"));
-        this.verification = undefined;
-      }
+  async withWechatLogin<T>(login: () => Promise<T>): Promise<T> {
+    const restart = Boolean(this.active);
+    const result = await login();
+    this.lastError = undefined;
+    if (restart && this.active) {
+      await this.stop();
+      await this.start();
+    } else {
+      this.emitStatus();
     }
-  }
-
-  submitWechatVerification(loginId: string, code: string): boolean {
-    const pending = this.verification;
-    const normalized = code.trim();
-    if (!pending || pending.loginId !== loginId || !normalized) return false;
-    this.verification = undefined;
-    pending.resolve(normalized);
-    return true;
-  }
-
-  cancelWechatLogin(): boolean {
-    const login = this.login;
-    if (!login) return false;
-    this.login = undefined;
-    login.abort.abort();
-    if (this.verification?.loginId === login.id) {
-      const pending = this.verification;
-      this.verification = undefined;
-      pending.reject(new Error("微信登录已取消"));
-    }
-    return true;
+    return result;
   }
 
   async dispose(): Promise<void> {
-    this.cancelWechatLogin();
     await this.stopDingTalkDiscovery();
     await this.stop();
     await this.deliveryHandoffTail;
@@ -1508,14 +1456,6 @@ export class ImGatewayService {
           ? error.message
           : String(error)
         : "钉钉发现连接意外结束",
-    });
-  }
-
-  private requestVerificationCode(loginId: string): Promise<string> {
-    if (this.verification) throw new Error("已有微信验证数字等待输入");
-    return new Promise<string>((resolveCode, rejectCode) => {
-      this.verification = { loginId, resolve: resolveCode, reject: rejectCode };
-      this.emit({ type: "wechat-verification-required", loginId });
     });
   }
 
@@ -1862,14 +1802,4 @@ export function registerImGatewayIpc(ipcMain: IpcMain, service: ImGatewayService
   });
   ipcMain.handle("im-gateway:dingtalkStartDiscovery", () => service.startDingTalkDiscovery());
   ipcMain.handle("im-gateway:dingtalkStopDiscovery", () => service.stopDingTalkDiscovery());
-  ipcMain.handle("im-gateway:wechatLogin", () => service.loginWechat());
-  ipcMain.handle("im-gateway:wechatCancelLogin", () => service.cancelWechatLogin());
-  ipcMain.handle("im-gateway:wechatSubmitVerification", (_event, raw: unknown) => {
-    if (!raw || typeof raw !== "object") throw new Error("缺少微信验证参数");
-    const input = raw as Record<string, unknown>;
-    if (typeof input.loginId !== "string" || typeof input.code !== "string") {
-      throw new Error("微信验证参数无效");
-    }
-    return service.submitWechatVerification(input.loginId, input.code);
-  });
 }

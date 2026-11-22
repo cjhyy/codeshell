@@ -69,6 +69,7 @@ export async function loginCodeShellWechat(
     requestVerificationCode: options.requestVerificationCode,
   });
 
+  options.signal?.throwIfAborted();
   let credentials: WechatCredentials | undefined;
   let credentialsChanged = false;
   if (result.connected && result.credentials) {

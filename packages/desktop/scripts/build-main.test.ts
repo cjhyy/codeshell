@@ -89,7 +89,10 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
     expect(history).toBeDefined();
     expect(
       [...externalsOf(history!)].filter(
-        (specifier) => !isBuiltin(specifier) && !/^@cjhyy\/code-shell-core(?:\/|$)/.test(specifier),
+        (specifier) =>
+          !isBuiltin(specifier) &&
+          specifier !== "@cjhyy/code-shell-capability-coding/orchestration" &&
+          !/^@cjhyy\/code-shell-core(?:\/|$)/.test(specifier),
       ),
     ).toEqual([]);
   } finally {

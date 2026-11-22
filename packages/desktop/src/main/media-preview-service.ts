@@ -5,6 +5,7 @@ import { basename, isAbsolute, relative, resolve, sep } from "node:path";
 import {
   MEDIA_PREVIEW_SCHEME,
   mediaTypeForPath,
+  parseMediaPreviewRequest,
   type MediaPreviewRequest,
   type MediaPreviewResult,
 } from "../shared/media-preview.js";
@@ -135,22 +136,8 @@ export class MediaPreviewService {
   async create(ownerId: number, input: unknown): Promise<MediaPreviewResult | null> {
     const ownerEpoch = this.ownerEpochs.get(ownerId) ?? 0;
     try {
-      if (!input || typeof input !== "object" || Array.isArray(input)) return null;
-      const request = input as MediaPreviewRequest;
-      if (
-        Object.keys(request).some((key) => !["sessionId", "path", "rootId"].includes(key)) ||
-        typeof request.sessionId !== "string" ||
-        !/^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,127}$/.test(request.sessionId) ||
-        request.sessionId.includes("..") ||
-        typeof request.path !== "string" ||
-        !request.path ||
-        request.path.length > 16_384 ||
-        request.path.includes("\0") ||
-        (request.rootId !== undefined &&
-          (typeof request.rootId !== "string" || !request.rootId || request.rootId.length > 512)) ||
-        !this.deps.isOwnerAlive(ownerId)
-      )
-        return null;
+      const request = parseMediaPreviewRequest(input);
+      if (!request || !this.deps.isOwnerAlive(ownerId)) return null;
       const type = mediaTypeForPath(request.path);
       if (!type) return null;
       const authority = await this.deps.resolveAuthority(request.sessionId, ownerId);

@@ -5,7 +5,7 @@
  */
 /* global document, window */
 import { execFileSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -207,6 +207,45 @@ try {
     processLog = (processLog + chunk).slice(-20_000);
   });
   win = await findCodeShellWindow(app);
+  const noRepo = join(isolated.codeShellHome, "no-repo");
+  await mkdir(noRepo, { recursive: true });
+  const exportPath = join(isolated.home, "native-export.png");
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showSaveDialog = async (_window, options) => {
+      if (options.defaultPath !== "fixture.png") throw Error("Unexpected export name");
+      return { canceled: false, filePath: path };
+    };
+  }, exportPath);
+  const exported = await win.evaluate(
+    async ({ cwd, id }) => {
+      const api = window.codeshell;
+      const url =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+      const scope = { cwd, sessionId: id };
+      const attachment = await api.stageAttachmentImageDataUrl({
+        ...scope,
+        name: "fixture.png",
+        dataUrl: url,
+        origin: "paste",
+      });
+      await api.markAttachmentsSent({ ...scope, attachments: [attachment] });
+      const recent = await api.inspectAttachments(scope);
+      const image = await api.readImageDataUrl(attachment.absPath, scope);
+      if (image !== url || !recent.some((item) => item.id === attachment.id))
+        throw Error("Staged image was not readable");
+      const path = await api.saveImage(image, { name: "fixture.png" });
+      await api.cleanupAttachments(scope);
+      if ((await api.inspectAttachments(scope)).length)
+        throw Error("Cleaned attachment is still visible");
+      return { path, bytes: url.split(",")[1] };
+    },
+    { cwd: noRepo, id: "native-media-export" },
+  );
+  assert(
+    exported.path === exportPath &&
+      (await readFile(exportPath)).toString("base64") === exported.bytes,
+    "The native-selected image export contains the reviewed attachment bytes",
+  );
   const errors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1280, height: 960 });
   const trust = win.getByRole("button", { name: /仅查看|View only/i });

@@ -1,15 +1,12 @@
-import { ipcMain } from "electron";
+import { stat } from "node:fs/promises";
+import { ipcMain, type IpcMainInvokeEvent } from "electron";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
+import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
 import { requireRendererProjectPath } from "./renderer-project-path.js";
-import {
-  cleanupAttachments,
-  cleanupSessionAttachments,
-  listRecentAttachments,
-  markAttachmentsSent,
-  stageImageDataUrl,
-} from "@cjhyy/code-shell-server/storage";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 
 export interface AttachmentsIpcDeps {
+  host: { callBusiness: CallShellBusiness; documentSignal(event: IpcMainInvokeEvent): AbortSignal };
   quickChatOwnership: QuickChatOwnershipRegistry;
   deleteDesktopSession: (id: string) => Promise<void>;
   assertQuickChatClaim: (id: unknown, claimId: unknown) => asserts id is string;
@@ -17,7 +14,7 @@ export interface AttachmentsIpcDeps {
 
 /** Attachment save/inspect/cleanup routes, including quick-chat claim-bound operations. */
 export function registerAttachmentsIpc(deps: AttachmentsIpcDeps) {
-  const { quickChatOwnership, deleteDesktopSession } = deps;
+  const { quickChatOwnership, deleteDesktopSession, host } = deps;
   const assertQuickChatClaim: AttachmentsIpcDeps["assertQuickChatClaim"] =
     deps.assertQuickChatClaim;
   async function runClaimBoundAttachmentOperation<T>(
@@ -32,6 +29,8 @@ export function registerAttachmentsIpc(deps: AttachmentsIpcDeps) {
     // Missing/stale claims fail before IO; cleanup tombstones the claim and waits
     // for already-started operations to settle before deleting the session.
     assertQuickChatClaim(sessionId, payload.quickChatClaimId);
+    const cwd = payload.cwd!;
+    const directory = await stat(cwd);
     const claimId = payload.quickChatClaimId!;
     if (!quickChatOwnership.beginOperation(sessionId, ownerId, claimId)) {
       throw new Error("quick-chat attachment claim is no longer active");
@@ -50,11 +49,16 @@ export function registerAttachmentsIpc(deps: AttachmentsIpcDeps) {
       claimId,
       async () => {
         await deleteDesktopSession(sessionId);
-        if (payload.cwd) {
-          // Worktree cwd may not be in the project registry scanned by the
-          // generic session cleanup, so remove the exact late-write directory.
-          await cleanupSessionAttachments(payload.cwd, sessionId).catch(() => undefined);
-        }
+        // The project may have been unmounted. Bind late cleanup to the
+        // directory identity already authorized before this claim began.
+        await host
+          .callBusiness("attachments/cleanupQuickChat", {
+            cwd,
+            sessionId,
+            device: directory.dev,
+            inode: directory.ino,
+          })
+          .catch(() => undefined);
       },
     );
     if (operationError) throw operationError;
@@ -78,6 +82,7 @@ export function registerAttachmentsIpc(deps: AttachmentsIpcDeps) {
         quickChatClaimId?: string;
       },
     ) => {
+      const signal = host.documentSignal(event);
       if (!payload || typeof payload !== "object") {
         throw new Error("attachments:stageImageDataUrl requires payload");
       }
@@ -105,41 +110,55 @@ export function registerAttachmentsIpc(deps: AttachmentsIpcDeps) {
           : "paste";
       const authorizedPayload = { ...payload, cwd };
       return runClaimBoundAttachmentOperation(event.sender.id, authorizedPayload, () =>
-        stageImageDataUrl({
-          cwd,
-          sessionId: payload.sessionId!,
-          name: payload.name,
-          mime: payload.mime,
-          dataUrl: payload.dataUrl!,
-          origin,
-        }),
+        host.callBusiness(
+          "attachments/stage",
+          {
+            cwd,
+            sessionId: payload.sessionId!,
+            name: payload.name,
+            mime: payload.mime,
+            dataUrl: payload.dataUrl!,
+            origin,
+          },
+          signal,
+        ),
       );
     },
   );
   ipcMain.handle(
     "attachments:cleanup",
-    async (_e, payload: { cwd?: string; sessionId?: string; now?: number }) => {
+    async (event, payload: { cwd?: string; sessionId?: string; now?: number }) => {
+      const signal = host.documentSignal(event);
       if (!payload || typeof payload.cwd !== "string") {
         throw new Error("attachments:cleanup requires cwd");
       }
       const cwd = await requireRendererProjectPath(payload.cwd);
-      return cleanupAttachments({
-        cwd,
-        sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
-      });
+      return host.callBusiness(
+        "attachments/cleanup",
+        {
+          cwd,
+          sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
+        },
+        signal,
+      );
     },
   );
   ipcMain.handle(
     "attachments:inspect",
-    async (_e, payload: { cwd?: string; sessionId?: string }) => {
+    async (event, payload: { cwd?: string; sessionId?: string }) => {
+      const signal = host.documentSignal(event);
       if (!payload || typeof payload.cwd !== "string") {
         throw new Error("attachments:inspect requires cwd");
       }
       const cwd = await requireRendererProjectPath(payload.cwd);
-      return listRecentAttachments({
-        cwd,
-        sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
-      });
+      return host.callBusiness(
+        "attachments/inspect",
+        {
+          cwd,
+          sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
+        },
+        signal,
+      );
     },
   );
   ipcMain.handle(
@@ -149,10 +168,11 @@ export function registerAttachmentsIpc(deps: AttachmentsIpcDeps) {
       payload: {
         cwd?: string;
         sessionId?: string;
-        attachments?: Array<Parameters<typeof markAttachmentsSent>[2][number]>;
+        attachments?: InputAttachmentMeta[];
         quickChatClaimId?: string;
       },
     ) => {
+      const signal = host.documentSignal(event);
       if (!payload || typeof payload.cwd !== "string" || typeof payload.sessionId !== "string") {
         throw new Error("attachments:markSent requires cwd and sessionId");
       }
@@ -161,7 +181,11 @@ export function registerAttachmentsIpc(deps: AttachmentsIpcDeps) {
       if (attachments.length > 32) throw new Error("too many attachments to mark sent");
       const authorizedPayload = { ...payload, cwd };
       return runClaimBoundAttachmentOperation(event.sender.id, authorizedPayload, async () => {
-        await markAttachmentsSent(cwd, payload.sessionId!, attachments);
+        await host.callBusiness(
+          "attachments/markSent",
+          { cwd, sessionId: payload.sessionId!, attachments },
+          signal,
+        );
         return { ok: true } as const;
       });
     },

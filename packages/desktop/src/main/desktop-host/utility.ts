@@ -1,7 +1,11 @@
+import { wechatLoginOperations } from "../../host/composition/wechat-login.js";
 import { bindExternalProvider } from "../../host/composition/external-provider.js";
 import { electronPrivatePort } from "../../host/native-peer.js";
 import { mimiWorkView, type MimiWorkSnapshot } from "../../shared/mimi-work-memory.js";
 import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
+import { hostedMediaProtocol } from "../../host/composition/media-protocol.js";
+import { attachmentOperations } from "../../host/composition/attachments.js";
+import { hostedActivityHistory } from "../../host/composition/activity-history.js";
 import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
 import { memoryReads } from "./memory-reads.js";
 import { memoryOperations } from "../../host/composition/memory.js";
@@ -80,9 +84,6 @@ const transcripts = new SessionTranscriptCache(
       workerData: options,
     }),
 );
-const roomHistory = new ActivityHistoryWorker({sessionsDir:sessionsRoot()}, options => new Worker(new URL("./activity-history-worker.mjs",import.meta.url),{workerData:options}));
-roomHistory.onExternalActivityChanged = () => parent.postMessage({ type: "mimi-external-changed" });
-const roomReads = ccRoomReads(roomHistory);
 const runKeys = new RunKeyClient((frame) => parent.postMessage(frame));
 const runOperations = new HostRunOperations(
   storage,
@@ -110,11 +111,24 @@ const automation = new HostAutomationRuns({
 const scheduler = new HostScheduler(schedulerPorts.port1, automation);
 // Link-backed source definitions are validated against this process-local registry.
 installDefaultLinkProviders();
+const historyWorker = new ActivityHistoryWorker(
+  { sessionsDir: sessionsRoot() },
+  (options) =>
+    new Worker(new URL("./activity-history-worker.mjs", import.meta.url), { workerData: options }),
+);
+historyWorker.onExternalActivityChanged = () => parent.postMessage({ type: "mimi-external-changed" });
+const activities = hostedActivityHistory(historyWorker);
+const roomReads = ccRoomReads(historyWorker);
+const mediaProtocol = hostedMediaProtocol();
 const business = new HostBusinessCalls({
-  "mimi/externalActivity": (input) => roomHistory.mimiExternalActivity(input),
+  ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
+  "mimi/externalActivity": (input) => historyWorker.mimiExternalActivity(input),
   ...mimiRecordsOperations(storage, (domain) =>
     parent.postMessage({ type: "mimi-records-changed", domain }),
   ),
+  ...mediaProtocol.methods,
+  ...activities.operations,
+  ...attachmentOperations,
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),
   ...roomReads.native,
@@ -194,7 +208,7 @@ parent.on("message", ({ data, ports }) => {
     ports.length === 1 &&
     !remote
   ) {
-    remote = bindRemoteServices(ports[0], join(process.argv[2], "..", "cloud-account", "session.enc"));
+    remote = bindRemoteServices(ports[0], join(process.argv[2], ".."));
     return;
   }
   if (
@@ -240,12 +254,13 @@ parent.on("message", ({ data, ports }) => {
       .then(() =>
         Promise.all([
           index.close(),
-          roomHistory.close(),
+          historyWorker.close(),
           worker?.close(),
           transcripts.close(),
           automation.close(),
           ...[...providers].map((close) => close()),
           remote?.close(),
+          mediaProtocol.close(),
         ]),
       )
       .then(() => output.drain())
@@ -283,6 +298,7 @@ parent.on("message", ({ data, ports }) => {
         ...roomReads.methods,
         ...configurationReads,
         ...memoryReads,
+        ...activities.reads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
         ...workspaceReads((options) => catalog.list(options)),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),

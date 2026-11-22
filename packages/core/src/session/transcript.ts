@@ -23,7 +23,7 @@ import { nanoid } from "nanoid";
 import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from "../types.js";
 import type { EngineResult } from "../engine/types.js";
 import { logger } from "../logging/logger.js";
-import { syncDirectoryAncestors } from "../model-request-boundary/durability.js";
+import { openForDurableRead, syncDirectoryAncestors } from "../model-request-boundary/durability.js";
 import {
   contextMessageMark,
   isContextMessageEvent,
@@ -440,7 +440,7 @@ export class Transcript {
     if (this.dirty) throw new Error("Transcript persistence is incomplete");
     if (!this.persistent || this.writer !== defaultTranscriptWriter) return;
     try {
-      const fd = openSync(this.filePath, "r");
+      const fd = openForDurableRead(this.filePath);
       try {
         fsyncSync(fd);
       } finally {
@@ -499,7 +499,7 @@ export class Transcript {
     // Injected writers own their durability contract (including failure tests).
     if (this.persistent && this.writer === defaultTranscriptWriter) {
       try {
-        const fd = openSync(this.filePath, "r");
+        const fd = openForDurableRead(this.filePath);
         try {
           fsyncSync(fd);
         } finally {

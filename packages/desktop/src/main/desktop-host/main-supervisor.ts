@@ -1,3 +1,4 @@
+import type { WechatLoginEvent } from "../../shared/wechat-login.js";
 import type { AutomationRunNotice } from "../../host/composition/automation-run.js";
 import type { LocalProject } from "../../preload/project-authority-types.js";
 import { isSettingsChange, type SettingsChange } from "../../shared/settings-change.js";
@@ -49,6 +50,7 @@ export class DesktopHostSupervisor {
   private readonly owners = new Map<string, number>();
   private sequence = 0;
   readonly projectRegistryListeners = new Set<(projects: LocalProject[]) => Promise<void>>();
+  wechatEvent?: (event: WechatLoginEvent) => void;
   settingsCommitted?: (effects: SettingsChange) => Promise<void>;
   private readonly reads = new Map<
     string,
@@ -124,6 +126,8 @@ export class DesktopHostSupervisor {
         if (message.error)
           read.reject(Object.assign(new Error(message.error.message), message.error));
         else read.resolve(read.effects ? read.effects.then(() => message.result) : message.result);
+      } else if (message?.type === "wechat-login-event" && this.ready) {
+        this.wechatEvent?.(message.event);
       } else if (
         message?.type === "settings-committed" &&
         this.ready &&
@@ -283,7 +287,7 @@ export class DesktopHostSupervisor {
     // A scheduled Engine turn can span many tool calls. Its scheduler owns cancellation.
     const waitsForRun =
       method === "automation/command" && (input as { method?: string }).method === "cancel";
-    const timeout = waitsForRun || method === "memory/dream" || method === "sources/uploadPicked" ? 0 : method === "ccRoom/sessions" || method === "ccRoom/history" ? 120_000 : 15_000;
+    const timeout = waitsForRun || method === "im/wechatLogin" || method === "memory/dream" || method === "sources/uploadPicked" ? 0 : method === "ccRoom/sessions" || method === "ccRoom/history" ? 120_000 : 15_000;
     const value = await this.request("host/business", { method, input }, timeout, signal);
     signal?.throwIfAborted();
     return value as ShellBusinessOperations[K]["result"];

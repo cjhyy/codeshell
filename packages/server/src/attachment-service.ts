@@ -179,6 +179,7 @@ export function isStageableImageMime(mime: string): boolean {
 
 export async function stageImageDataUrl(
   input: StageImageDataUrlInput,
+  beforeCommit?: () => void,
 ): Promise<InputAttachmentMeta> {
   const parsed = parseDataUrl(input.dataUrl);
   if (!parsed || !ALLOWED_IMAGE_MIMES.has(parsed.mime)) {
@@ -187,7 +188,7 @@ export async function stageImageDataUrl(
   if (input.mime && normalizeMime(input.mime) !== parsed.mime) {
     throw new Error(`data URL MIME ${parsed.mime} does not match declared MIME ${input.mime}`);
   }
-  return stageImageBuffer(input, parsed.mime, parsed.buffer);
+  return stageImageBuffer(input, parsed.mime, parsed.buffer, beforeCommit);
 }
 
 /** Stage already-transferred bytes without expanding them back through base64. */
@@ -239,6 +240,7 @@ async function stageImageBuffer(
   },
   mime: string,
   buffer: Buffer,
+  beforeCommit?: () => void,
 ): Promise<InputAttachmentMeta> {
   assertAttachmentLabels(input);
   const cwd = await resolveExistingDirectory(input.cwd, "cwd");
@@ -250,7 +252,7 @@ async function stageImageBuffer(
   buffer = sanitized.bytes;
   const image = sanitized.image;
 
-  const attachmentsRoot = await ensureAttachmentsRoot(cwd);
+  const attachmentsRoot = await ensureAttachmentsRoot(cwd, beforeCommit);
   const sessionDir = await ensureSessionDir(attachmentsRoot, input.sessionId);
   const sha256 = createHash("sha256").update(buffer).digest("hex");
   const sha16 = sha256.slice(0, 16);
@@ -358,11 +360,15 @@ export async function markAttachmentsSent(
   cwd: string,
   sessionId: string,
   attachments: InputAttachmentMeta[],
+  beforeCommit?: () => void,
 ): Promise<void> {
   if (attachments.length === 0) return;
   const resolvedCwd = await resolveExistingDirectory(cwd, "cwd");
   assertSafeSessionId(sessionId);
-  const sessionDir = await ensureSessionDir(await ensureAttachmentsRoot(resolvedCwd), sessionId);
+  const sessionDir = await ensureSessionDir(
+    await ensureAttachmentsRoot(resolvedCwd, beforeCommit),
+    sessionId,
+  );
   const sentAt = Date.now();
   for (const attachment of attachments) {
     if (attachment.sessionId !== sessionId) continue;
@@ -418,7 +424,10 @@ export async function listRecentAttachments(
     .slice(0, 50);
 }
 
-export async function cleanupAttachments(input: AttachmentCleanupInput): Promise<{
+export async function cleanupAttachments(
+  input: AttachmentCleanupInput,
+  beforeCommit?: () => void,
+): Promise<{
   removed: string[];
   sessionsRemoved: string[];
 }> {
@@ -437,6 +446,7 @@ export async function cleanupAttachments(input: AttachmentCleanupInput): Promise
     const records = await readManifest(sessionDir);
     if (input.sessionId) {
       const files = await manifestFilesInside(records, root);
+      beforeCommit?.();
       for (const file of files) {
         await rm(file, { force: true }).catch(() => undefined);
         removed.push(file);
@@ -463,6 +473,7 @@ export async function cleanupAttachments(input: AttachmentCleanupInput): Promise
       if (expired.length === 0 || !(await pathExistsInside(absPath, root))) continue;
       // Staging deduplicates image bytes across IDs at this same canonical path.
       // Retire expired IDs independently; a live or unknown-age reference keeps the file.
+      beforeCommit?.();
       if (expired.length === references.length) {
         await rm(absPath, { force: true }).catch(() => undefined);
         removed.push(absPath);
@@ -559,9 +570,10 @@ export function assertSafeSessionId(sessionId: unknown): asserts sessionId is st
   }
 }
 
-async function ensureAttachmentsRoot(cwd: string): Promise<string> {
+async function ensureAttachmentsRoot(cwd: string, beforeCommit?: () => void): Promise<string> {
   const codeShellDir = await safeJoin(cwd, CODE_SHELL_DIR, cwd);
   await rejectSymlinkIfExists(codeShellDir, "CodeShell state directory");
+  beforeCommit?.();
   await mkdir(codeShellDir, { recursive: true });
   const codeShellReal = await realDirectoryInside(codeShellDir, cwd, {
     label: "CodeShell state directory",

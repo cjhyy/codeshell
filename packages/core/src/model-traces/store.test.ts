@@ -55,6 +55,12 @@ describe("ModelTraceStore", () => {
       retentionDays: 7,
     });
     const peer = new ModelTraceStore({ storageDir: directory });
+    expect(() =>
+      store.setConfig({ retentionDays: 1 }, () => {
+        throw new Error("revoked");
+      }),
+    ).toThrow("revoked");
+    expect(peer.getConfig().retentionDays).toBe(7);
     store.setConfig({ captureContent: true, includeEphemeral: true, retentionDays: 3 });
     expect(peer.getConfig().captureContent).toBe(true);
     peer.setConfig({ enabled: false });

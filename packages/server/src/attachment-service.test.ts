@@ -51,6 +51,24 @@ describe("attachment-service", () => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
+  test("revoked stage, mark and cleanup operations leave attachment state intact", async () => {
+    const input = { cwd, sessionId: "reviewed", dataUrl: PNG_URL, origin: "paste" as const };
+    const revoked = () => {
+      throw new Error("document revoked");
+    };
+    await expect(stageImageDataUrl(input, revoked)).rejects.toThrow("document revoked");
+    expect(existsSync(join(cwd, ".code-shell"))).toBe(false);
+    const staged = await stageImageDataUrl(input);
+    await expect(markAttachmentsSent(cwd, input.sessionId, [staged], revoked)).rejects.toThrow(
+      "document revoked",
+    );
+    expect(await listRecentAttachments(input)).toEqual([]);
+    await markAttachmentsSent(cwd, input.sessionId, [staged]);
+    await expect(cleanupAttachments(input, revoked)).rejects.toThrow("document revoked");
+    expect(readFileSync(staged.absPath)).toEqual(IMAGE_FIXTURES["image/png"]);
+    expect((await listRecentAttachments(input)).map((entry) => entry.id)).toEqual([staged.id]);
+  });
+
   test("writes a png data URL under .code-shell/attachments/<sessionId>", async () => {
     const meta = await stageImageDataUrl({
       cwd,

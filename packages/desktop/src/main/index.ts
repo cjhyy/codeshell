@@ -1,3 +1,4 @@
+import { registerHostedWechatLogin } from "./desktop-host/wechat-login-client.js";
 import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
 import type { SettingsChange } from "../shared/settings-change.js";
 import {
@@ -229,9 +230,8 @@ import { type ManagedCliInstallResult } from "./link-cli-installer.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
 import { removeOrphanedExternalRuntimePartitions } from "./orphaned-browser-partitions.js";
 import { inspectReadableReplyAttachment } from "./image-read-service.js";
-import { MediaPreviewService } from "./media-preview-service.js";
+import { NativeMediaProtocol } from "./hosted-media-protocol.js";
 import { browserPartitionForBucket } from "./renderer-browser-session-ipc-authority.js";
-import { resolveMediaPreviewAuthority } from "./media-preview-authority.js";
 import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 import {
   guestRecordForId,
@@ -509,21 +509,21 @@ registerNotificationFallback(
     return desktopHost.documentSignal(event);
   },
 );
-const mediaPreviewService = new MediaPreviewService({
-  isOwnerAlive: (ownerId) =>
-    [...mainWindows].some(
-      (window) =>
-        !window.isDestroyed() &&
-        !window.webContents.isDestroyed() &&
-        window.webContents.id === ownerId,
-    ),
-  resolveAuthority: async (sessionId, ownerId) => {
+const mediaPreviewService = new NativeMediaProtocol(
+  desktopHost.callBusiness,
+  (ownerId, sessionId) => {
     const sessionOwner = bridge?.panelOwnerWebContentsId(sessionId);
-    if (sessionOwner !== undefined && sessionOwner !== ownerId)
-      throw new Error("Media task belongs to another window");
-    return resolveMediaPreviewAuthority(sessionId);
+    return (
+      (sessionOwner === undefined || sessionOwner === ownerId) &&
+      [...mainWindows].some(
+        (window) =>
+          !window.isDestroyed() &&
+          !window.webContents.isDestroyed() &&
+          window.webContents.id === ownerId,
+      )
+    );
   },
-});
+);
 /** Deliver to the one live window owning `webContentsId`; other windows never see it. */
 function sendToOwnerWindow(webContentsId: number | undefined, channel: string, payload: unknown) {
   [...mainWindows]
@@ -876,6 +876,7 @@ const imGatewayService = new ImGatewayService({
   },
 });
 registerImGatewayIpc(ipcMain, imGatewayService);
+registerHostedWechatLogin(ipcMain, desktopHost, (work) => imGatewayService.withWechatLogin(work));
 let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ReturnType<typeof nativeMimiExternalActivity> | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
@@ -4142,7 +4143,12 @@ ipcMain.handle("session:content-search", async (_e, ...args: unknown[]) => {
   return searchSessionTranscripts(sessionsRoot(), trimmed, { budgetMs: 5_000 });
 });
 
-registerAttachmentsIpc({ quickChatOwnership, deleteDesktopSession, assertQuickChatClaim });
+registerAttachmentsIpc({
+  host: desktopHost,
+  quickChatOwnership,
+  deleteDesktopSession,
+  assertQuickChatClaim,
+});
 ipcMain.handle(
   "skills:uninstall",
   async (
@@ -4183,7 +4189,7 @@ ipcMain.handle(
     });
   },
 );
-registerAgentsMediaIpc({ mainWindows, mediaPreviewService });
+registerAgentsMediaIpc({ host: desktopHost, mainWindows, mediaPreviewService });
 registerSkillsMcpIpc({ getMcpOAuthService });
 // Read-only list of plugin-provided hooks, for the settings 钩子 page to show
 // alongside hand-written hooks (labelled by owner plugin). Mirrors
@@ -4555,6 +4561,7 @@ ipcMain.handle("agent:subscribe", async (event, sessionId: string, sinceSeq?: nu
 });
 let closeActivityHistory: (() => Promise<void>) | undefined;
 registerDesktopOutputHistoryHost({
+  activityHost: desktopHost,
   ipcMain,
   windows: () => [...mainWindows],
   archive: archiveDiskSession,

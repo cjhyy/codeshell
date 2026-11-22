@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { closeSync, constants, fstatSync, fsyncSync, openSync, readFileSync } from "node:fs";
+import { closeSync, constants, fstatSync, fsyncSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { syncDirectoryAncestors } from "./durability.js";
+import { openForDurableRead, syncDirectoryAncestors } from "./durability.js";
 import type { ModelRequestSubject } from "./types.js";
 
 /** Confirm and commit the Session incarnation before persistent proof or network I/O. */
@@ -17,10 +17,7 @@ export function assertDurableRequestOwner(
   )
     throw new Error("Durable request owner mismatch");
   const directory = join(sessionStorageDir, subject.sessionId);
-  const fd = openSync(
-    join(directory, "state.json"),
-    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
-  );
+  const fd = openForDurableRead(join(directory, "state.json"), constants.O_NOFOLLOW ?? 0);
   try {
     const info = fstatSync(fd);
     if (

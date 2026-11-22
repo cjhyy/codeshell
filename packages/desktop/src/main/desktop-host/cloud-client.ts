@@ -1,7 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import type {
-  CloudAccountManager,
   CloudAccountStatus,
   CloudAccountOverview,
   CloudAccountLogin,
@@ -12,7 +11,6 @@ import type {
   CloudAccountLinksResult,
   CloudAccountCapabilities,
   CloudAccountLogoutResult,
-  CloudManagementTicket,
 } from "@cjhyy/code-shell-server/account";
 import type { PrivateHostPeer } from "../../host/native-peer.js";
 import type {
@@ -133,6 +131,10 @@ export class NativeCloudAccount {
       this.flows.delete(flow);
     }
   }
+  deviceAuthority() {
+    if (!this.view || this.view.status.state !== "signed-in") throw Error("请先登录账号。");
+    return { generation: this.view.generation, status: this.status() };
+  }
   status(): CloudAccountStatus {
     return this.view ? structuredClone(this.view.status) : { state: "signed-out" };
   }
@@ -179,11 +181,7 @@ export class NativeCloudAccount {
     this.authority = new AbortController();
     return this.call<CloudAccountLogoutResult>({ op: "logout" });
   }
-  captureRootAccount(
-    origin: string,
-    accountId: string,
-    authorized: () => boolean,
-  ): ReturnType<CloudAccountManager["captureRootAccount"]> {
+  captureRootAccount(origin: string, accountId: string, authorized: () => boolean) {
     const signal = this.authority.signal;
     const generation = this.view?.generation;
     const current = () => {
@@ -201,36 +199,7 @@ export class NativeCloudAccount {
         throw Error("请先登录此云服务的账号。");
     };
     current();
-    return {
-      current,
-      signal,
-      ticket: async (targetOrigin, installationId) => {
-        current();
-        const result = await this.call<CloudManagementTicket>(
-          {
-            op: "ticket",
-            identity: { origin, accountId },
-            generation: generation!,
-            targetOrigin,
-            installationId,
-          },
-          authorized,
-          signal,
-        );
-        current();
-        return result;
-      },
-    };
-  }
-  async getCredential(origin: string, accountId: string, signal?: AbortSignal) {
-    const lease = this.captureRootAccount(origin, accountId, () => true);
-    const result = await this.call<string>(
-      { op: "credential", identity: { origin, accountId }, generation: this.view!.generation },
-      undefined,
-      signal ? AbortSignal.any([signal, lease.signal]) : lease.signal,
-    );
-    lease.current();
-    return result;
+    return { current, signal };
   }
   dispose() {
     this.disconnect();

@@ -1,11 +1,10 @@
+import type { IpcMainInvokeEvent } from "electron";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import { BrowserWindow, dialog, ipcMain } from "electron";
-import { writeFile } from "node:fs/promises";
 import { requireRendererOrSessionPath } from "./renderer-session-path.js";
-import { readImageDataUrl } from "./image-read-service.js";
-import { MediaPreviewService } from "./media-preview-service.js";
+import type { NativeMediaProtocol } from "./hosted-media-protocol.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
-import { parseDataUrl, suggestImageFilename } from "./image-save.js";
 import { type RendererConfigurationTarget } from "./renderer-configuration-authority.js";
 import {
   rendererConfigurationCwd,
@@ -15,8 +14,9 @@ import {
 } from "./renderer-configuration-helpers.js";
 
 export interface AgentsMediaIpcDeps {
+  host: { callBusiness: CallShellBusiness; documentSignal(event: IpcMainInvokeEvent): AbortSignal };
   mainWindows: Set<BrowserWindow>;
-  mediaPreviewService: MediaPreviewService;
+  mediaPreviewService: NativeMediaProtocol;
 }
 
 /** Agent definition routes plus media preview and image read/save routes. */
@@ -39,7 +39,7 @@ export function registerAgentsMediaIpc(deps: AgentsMediaIpcDeps) {
       )
     )
       return null;
-    return mediaPreviewService.create(event.sender.id, input);
+    return mediaPreviewService.create(event.sender.id, input, deps.host.documentSignal(event));
   });
   ipcMain.handle("media:releasePreview", (event, url: unknown) => {
     if (event.senderFrame === event.sender.mainFrame && typeof url === "string")
@@ -49,17 +49,23 @@ export function registerAgentsMediaIpc(deps: AgentsMediaIpcDeps) {
   ipcMain.handle(
     "images:readDataUrl",
     async (
-      _e,
+      event,
       payload: { absPath?: unknown; cwd?: unknown; sessionId?: unknown },
     ): Promise<string | null> => {
+      const signal = deps.host.documentSignal(event);
       const cwd =
         typeof payload?.cwd === "string" && payload.cwd
           ? await requireRendererOrSessionPath(payload.cwd, payload.sessionId)
           : undefined;
-      return readImageDataUrl(typeof payload?.absPath === "string" ? payload.absPath : "", {
-        cwd,
-        sessionId: typeof payload?.sessionId === "string" ? payload.sessionId : undefined,
-      });
+      return deps.host.callBusiness(
+        "images/read",
+        {
+          path: typeof payload?.absPath === "string" ? payload.absPath : "",
+          cwd,
+          sessionId: typeof payload?.sessionId === "string" ? payload.sessionId : undefined,
+        },
+        signal,
+      );
     },
   );
 
@@ -74,20 +80,23 @@ export function registerAgentsMediaIpc(deps: AgentsMediaIpcDeps) {
       if (src.length > Math.ceil((10 * 1024 * 1024 * 4) / 3) + 1_024) {
         throw new Error("images:save exceeds the encoded size limit");
       }
-      const parsed = parseDataUrl(src);
-      if (!parsed) throw new Error("images:save: src is not a data URL");
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-      const suggested = suggestImageFilename({
-        name: opts?.name ?? null,
-        mime: opts?.mime ?? parsed.mime,
-        stamp,
-      });
+      const signal = deps.host.documentSignal(e);
+      const suggested = await deps.host.callBusiness(
+        "images/exportName",
+        { src, name: opts?.name, mime: opts?.mime },
+        signal,
+      );
+      signal.throwIfAborted();
       const win = BrowserWindow.fromWebContents(e.sender) ?? undefined;
       const result = win
         ? await dialog.showSaveDialog(win, { defaultPath: suggested })
         : await dialog.showSaveDialog({ defaultPath: suggested });
       if (result.canceled || !result.filePath) return null;
-      await writeFile(result.filePath, parsed.buffer);
+      await deps.host.callBusiness(
+        "images/writePicked",
+        { src, filePath: result.filePath },
+        signal,
+      );
       return result.filePath;
     },
   );

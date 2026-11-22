@@ -195,6 +195,10 @@ test.each(["workspace", "session"] as const)(
       },
       windows: () => [window] as any,
       historyWindows: () => [window] as any,
+      activityHost: {
+        documentSignal: () => new AbortController().signal,
+        callBusiness: () => Promise.reject(new Error("unexpected history request")),
+      },
       bridge: () => null,
       external: () => null,
       mobile: {

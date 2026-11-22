@@ -4,7 +4,21 @@ import type { MobileRemoteController } from "./mobile-remote-controller.js";
 
 export function registerDeviceRelayIpc(options: {
   ipcMain: Pick<IpcMain, "handle">;
-  controller: MobileRemoteController;
+  controller: Pick<
+    MobileRemoteController,
+    "status" | "relayStatus" | "stop" | "forget" | "pairingUrl"
+  > & {
+    start(
+      opts?: Parameters<MobileRemoteController["start"]>[0],
+      document?: AbortSignal,
+    ): ReturnType<MobileRemoteController["start"]>;
+    enroll(
+      input: DesktopRelayEnrollment,
+      authorized: () => boolean,
+      document?: AbortSignal,
+    ): ReturnType<MobileRemoteController["enroll"]>;
+  };
+  documentSignal?: (event: IpcMainInvokeEvent) => AbortSignal;
   isMainWindow: (sender: WebContents) => boolean;
 }) {
   const { ipcMain, controller } = options;
@@ -17,7 +31,7 @@ export function registerDeviceRelayIpc(options: {
   };
   ipcMain.handle("mobileRemote:start", (event, input?: { mode?: "lan" | "tunnel" | "relay" }) => {
     requireOwner(event);
-    return controller.start(input);
+    return controller.start(input, options.documentSignal?.(event));
   });
   ipcMain.handle("mobileRemote:stop", (event) => {
     requireOwner(event);
@@ -37,7 +51,7 @@ export function registerDeviceRelayIpc(options: {
   });
   ipcMain.handle("mobileRemote:relayEnroll", (event, input: DesktopRelayEnrollment) => {
     requireOwner(event);
-    return controller.enroll(input, () => allowed(event));
+    return controller.enroll(input, () => allowed(event), options.documentSignal?.(event));
   });
   ipcMain.handle("mobileRemote:relayForget", (event) => {
     requireOwner(event);

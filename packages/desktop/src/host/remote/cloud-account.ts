@@ -20,22 +20,14 @@ export type CloudAction =
   | { op: "github"; input: CloudAccountGitHubLogin }
   | { op: "links"; input: CloudAccountLinksRequest }
   | { op: "profile"; input: CloudAccountProfileRequest }
-  | { op: "overview"; identity: AccountIdentity }
-  | { op: "credential"; identity: AccountIdentity; generation: number }
-  | {
-      op: "ticket";
-      identity: AccountIdentity;
-      generation: number;
-      targetOrigin: string;
-      installationId: string;
-    };
+  | { op: "overview"; identity: AccountIdentity };
 export interface NativeCloudRequest {
   flow: string;
   action: CloudAction;
 }
 
 export class HostedCloudAccount {
-  private readonly manager: CloudAccountManager;
+  readonly manager: CloudAccountManager;
   private readonly scopes = new AsyncLocalStorage<{ flow: string; signal: AbortSignal }>();
   private readonly lifetime = new AbortController();
   constructor(
@@ -88,6 +80,9 @@ export class HostedCloudAccount {
       retireRelay: (identity) => native("retire", identity),
     });
   }
+  captureRootAccount(...args: Parameters<CloudAccountManager["captureRootAccount"]>) {
+    return this.manager.captureRootAccount(...args);
+  }
   run(raw: unknown, signal: AbortSignal) {
     const req = raw as NativeCloudRequest | undefined;
     if (!req || typeof req.flow !== "string" || !/^[a-f0-9-]{36}$/.test(req.flow) || !req.action)
@@ -124,22 +119,6 @@ export class HostedCloudAccount {
           return m.cancelSignIn();
         case "logout":
           return m.logout();
-        case "credential":
-        case "ticket": {
-          if (
-            action.generation !== m.nativeAuthority().generation ||
-            typeof action.identity?.accountId !== "string"
-          )
-            throw Error("账号已变更。");
-          const { origin, accountId } = action.identity;
-          const lease = m.captureRootAccount(origin, accountId, current);
-          const result =
-            action.op === "ticket"
-              ? await lease.ticket(action.targetOrigin, action.installationId)
-              : await m.getCredential(origin, accountId, scoped);
-          lease.current();
-          return result;
-        }
         default:
           throw Error("Unknown account action");
       }

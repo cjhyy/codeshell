@@ -12,6 +12,7 @@ interface Request {
 }
 type Message =
   | Request
+  | { type: "notice"; method: string; input: unknown }
   | { type: "abort"; id: number }
   | { type: "reply"; id: number; value?: unknown; error?: string };
 export class PrivateHostPeer {
@@ -26,6 +27,7 @@ export class PrivateHostPeer {
     private readonly port: PrivatePort,
     private readonly handle: (method: string, input: unknown, signal: AbortSignal) => unknown,
     private readonly onClose?: () => void,
+    private readonly onNotice?: (method: string, input: unknown) => void,
   ) {
     port.listen(
       (message) => {
@@ -47,8 +49,19 @@ export class PrivateHostPeer {
     });
     return result.finally(() => signal?.removeEventListener("abort", abort));
   }
+  notify(method: string, input: unknown) {
+    this.send({ type: "notice", method, input });
+  }
   private async receive(msg: Message) {
-    if (this.closed || !msg || !Number.isSafeInteger(msg.id)) return;
+    if (!this.closed && msg?.type === "notice") {
+      try {
+        this.onNotice?.(msg.method, msg.input);
+      } catch {
+        /* An observer cannot retain a port. */
+      }
+      return;
+    }
+    if (this.closed || !msg || !("id" in msg) || !Number.isSafeInteger(msg.id)) return;
     if (msg.type === "reply") {
       const entry = this.waiting.get(msg.id);
       if (!entry) return;

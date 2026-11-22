@@ -281,15 +281,16 @@ utilityProcess.fork = function (...args) {
   );
   await second.evaluate((id) => window.codeshell.ptyKill(id), terminalId);
   await first.evaluate(
-    (id) => window.codeshell.ptyWrite(id, "echo HOST_TERMINAL_READY\r"),
+    (id) => window.codeshell.ptyWrite(id, "node -p \"['HOST_TERMINAL','READY'].join('_')\"\r"),
     terminalId,
   );
   await first.waitForFunction(() =>
-    /(?:^|[\r\n])HOST_TERMINAL_READY[\r\n]/.test(window.hostTerminalText),
+    window.hostTerminalText.includes("HOST_TERMINAL_READY"),
   );
   await verifyPairedHostTerminal(first, terminalId, started.pid);
   await assert.rejects(first.evaluate((root) => window.codeshell.ccRoom.readHistory(root,"../other",4),mount),/Invalid CLI history request/);
   await assert.rejects(first.evaluate((root) => window.codeshell.ccRoom.listSessions(root),unregistered),/authority was revoked/);
+  await first.evaluate(() => window.codeshell.renameSession("index-visible","Renamed through Host"));
   // Arm a renderer timer before blocking Main. Both timestamps come from the
   // renderer so a response delivered by Main after the pause cannot pass.
   const secondHandle = await application.browserWindow(second);
@@ -315,6 +316,9 @@ utilityProcess.fork = function (...args) {
           const [memories, memory, pending] = await Promise.all([
             api.listMemory("user","user"),api.readMemory("user","user","Host memory smoke"),api.listPendingMemory(),
           ]);
+          const [titles,logs,runs,usage] = await Promise.all([
+            api.listSessionTitles(),api.tailLog("desktop",2),api.listRuns({includeSessions:false}),api.getUsageSummary({scope:"store"}),
+          ]);
           const entries = await api.readProjectDir("host-smoke-project", root.id);
           const entry = entries.find(row => row.name === "host-file.txt");
           const [file, hits, exists, git] = await Promise.all([
@@ -324,6 +328,7 @@ utilityProcess.fork = function (...args) {
             api.getProjectGitStatus("host-smoke-project"),
           ]);
           resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id),
+            activityViews: titles["index-visible"] === "Renamed through Host" && Array.isArray(logs) && Array.isArray(runs) && usage !== null,
             memoryViews: memories.some(row => row.name === "Host memory smoke") && memory?.content.trim() === "memory on the Host" && Array.isArray(pending),
             workspaceViews:file.text === "from-workspace" && exists && hits.some(row => row.rootId === root.id && row.name === entry.name) && Array.isArray(git.entries),
             configurationViews: [projects, recents, sources, models, trust, skills, plugins].every(Array.isArray)
@@ -338,6 +343,7 @@ utilityProcess.fork = function (...args) {
   }, mount);
   await secondHandle.dispose();
   assert.deepEqual(measured.read.ids, catalog);
+  assert.equal(measured.read.activityViews,true,"Activity history answered during the Main pause");
   assert.equal(measured.read.memoryViews,true,"Memory reads finished while Main was paused");
   assert.equal(await first.evaluate(()=>window.codeshell.deleteMemory("user","user","Host memory smoke")),true);
   assert.equal(await second.evaluate(()=>window.codeshell.readMemory("user","user","Host memory smoke")),null);

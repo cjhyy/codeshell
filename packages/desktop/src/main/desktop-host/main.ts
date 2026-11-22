@@ -183,6 +183,7 @@ export function createDesktopHost(
   return {
     callBusiness: supervisor.callBusiness.bind(supervisor),
     documentSignal,
+    onWechatEvent(listener: NonNullable<DesktopHostSupervisor["wechatEvent"]>) { supervisor.wechatEvent = listener; },
     remote,
     setRemoteTerminals(client: NativeRemoteTerminals) { terminals = client; },
     mimiExternalListeners: supervisor.mimiExternalListeners,

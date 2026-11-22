@@ -1,14 +1,11 @@
-import type { BrowserWindow, IpcMain } from "electron";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
+import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import { join } from "node:path";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import { configureModelTracing } from "@cjhyy/code-shell-core/internal";
 import { archiveDiskSession, listSessions } from "@cjhyy/code-shell-server/storage";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { assertDesktopSessionId } from "./session-validation.js";
-import { listTitles, setTitle } from "./session-titles-store.js";
-import { tailLog, type LogBucket } from "./logs-service.js";
-import { ActivityHistoryWorker } from "./activity-history-worker-client.js";
-import { listRunsForUi, getRunHistory } from "./run-history-service.js";
 import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
 import { registerModelTraceIpc } from "./model-trace-ipc.js";
 
@@ -16,53 +13,55 @@ import { registerModelTraceIpc } from "./model-trace-ipc.js";
 export function registerActivityHistoryIpc(
   ipcMain: Pick<IpcMain, "handle" | "removeHandler">,
   windows: () => BrowserWindow[],
-  archive = archiveDiskSession,
+  archive: typeof archiveDiskSession | undefined,
+  host: { callBusiness: CallShellBusiness; documentSignal(event: IpcMainInvokeEvent): AbortSignal },
 ) {
   configureModelTracing({ storageDir: join(sessionsRoot(), ".model-traces"), source: "desktop" });
-  const history = new ActivityHistoryWorker({ sessionsDir: sessionsRoot() });
+  const { callBusiness, documentSignal } = host;
   ipcMain.handle("sessions:setArchived", async (_event, id: string, archived: boolean) => {
     assertDesktopSessionId(id);
     if (typeof archived !== "boolean") throw new Error("archived must be a boolean");
-    await archive(id, archived ? Date.now() : undefined);
+    await (archive ?? archiveDiskSession)(id, archived ? Date.now() : undefined);
     await getSessionCwdIndex().refresh(id);
   });
   ipcMain.handle("sessions:list", async () => listSessions());
-  ipcMain.handle("sessions:titles", async () => listTitles());
-  ipcMain.handle("sessions:rename", async (_e, id: string, title: string) => {
-    assertDesktopSessionId(id);
-    if (typeof title !== "string" || title.length > 1_024 || title.includes("\0")) {
-      throw new Error("title must be a bounded string");
-    }
-    await setTitle(id, title);
-  });
-
-  ipcMain.handle("logs:tail", async (_e, bucket: LogBucket, lines?: number) => {
-    if (bucket !== "ui-ink" && bucket !== "engine" && bucket !== "desktop") {
-      throw new Error("invalid bucket");
-    }
-    const boundedLines =
-      typeof lines === "number" && Number.isSafeInteger(lines) && lines > 0
-        ? Math.min(lines, 10_000)
-        : undefined;
-    return tailLog(bucket, boundedLines);
-  });
-
-  ipcMain.handle("usage:summary", async (_e, query) => history.usage(query));
-
-  ipcMain.handle("runs:list", async (_e, options?: { includeSessions?: boolean }) =>
-    listRunsForUi(options),
+  ipcMain.handle("sessions:titles", (event) =>
+    callBusiness("activity/titles", {}, documentSignal(event)),
   );
-  ipcMain.handle("runs:get", async (_e, runId: string) => {
-    if (typeof runId !== "string") throw new Error("runId required");
-    return getRunHistory(runId);
-  });
+  ipcMain.handle("sessions:rename", (event, id, title) =>
+    callBusiness("activity/setTitle", { id, title }, documentSignal(event)),
+  );
+  ipcMain.handle("logs:tail", (event, bucket, lines) =>
+    callBusiness("activity/logTail", { bucket, lines }, documentSignal(event)),
+  );
+  ipcMain.handle("usage:summary", (event, query) =>
+    callBusiness("activity/usage", { query }, documentSignal(event)),
+  );
+  ipcMain.handle("runs:list", (event, options) =>
+    callBusiness(
+      "activity/runs",
+      { includeSessions: options?.includeSessions },
+      documentSignal(event),
+    ),
+  );
+  ipcMain.handle("runs:get", (event, runId) =>
+    callBusiness("activity/run", { runId }, documentSignal(event)),
+  );
   registerSessionTranscriptIpc(ipcMain);
-  const traces = registerModelTraceIpc(ipcMain, windows, history);
+  const traces = registerModelTraceIpc(ipcMain, windows, (event) => {
+    const signal = documentSignal(event);
+    return {
+      list: (query) => callBusiness("trace/list", query, signal),
+      sessions: (query) => callBusiness("trace/sessions", query, signal),
+      get: (id) => callBusiness("trace/get", id, signal),
+      getConfig: () => callBusiness("trace/config", undefined, signal),
+      setConfig: (patch) => callBusiness("trace/setConfig", patch, signal),
+    };
+  });
   return {
-    dispose: () => {
+    dispose: async () => {
       ipcMain.removeHandler("usage:summary");
       traces.dispose();
-      return history.close();
     },
   };
 }

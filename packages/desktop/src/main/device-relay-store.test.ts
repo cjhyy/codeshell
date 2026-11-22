@@ -6,6 +6,7 @@ import { randomBytes, randomUUID, createCipheriv, createDecipheriv } from "node:
 import { AsyncEncryptedGrantStore } from "@cjhyy/code-shell-core/internal/storage";
 import {
   DeviceRelayStore,
+  relayGrantCustody,
   validRegistration,
   type RelaySecretCipher,
 } from "./device-relay-store.js";
@@ -135,4 +136,19 @@ test("asynchronous keyring restores a legacy grant and delayed encryption cannot
     }),
   ).rejects.toThrow("retired");
   expect(store.load()).toBeUndefined();
+});
+
+test("relay custody discards unrelated fields on OS encryption and legacy-file reads", async () => {
+  const { path, cipher, registration, store } = setup();
+  const custody = relayGrantCustody(path, {
+    available: async () => true,
+    encrypt: async (text) => cipher.encrypt(text),
+    decrypt: async (bytes) => cipher.decrypt(bytes),
+  });
+  const extra = { ...registration, unrelated: { payload: "fixture" } };
+  store.save(extra);
+  expect(await custody.readSaved()).not.toHaveProperty("unrelated");
+  const bytes = await custody.seal(extra);
+  expect(cipher.decrypt(Buffer.from(bytes))).not.toContain("fixture");
+  expect(JSON.parse(cipher.decrypt(Buffer.from(bytes)))).toEqual(registration);
 });
