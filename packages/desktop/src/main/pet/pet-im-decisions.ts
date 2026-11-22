@@ -206,13 +206,15 @@ const UNRECORDED_RETRY_MS = 3_000;
 const UNRECORDED_RETRY_MAX_MS = 60_000;
 
 export interface PetImDecisionsOptions {
-  read: () => ImDecision[];
+  read: () => ImDecision[] | Promise<ImDecision[]>;
   /**
    * Right after a `read`: the decisions it could not see (their source failed
    * to read), or undefined when it saw everything. Missing from that read
    * does not mean ended for them.
    */
-  unreadDecisions?: () => ((sessionId: string, requestId: string) => boolean) | undefined;
+  unreadDecisions?: (
+    items?: ImDecision[],
+  ) => ((sessionId: string, requestId: string) => boolean) | undefined;
   approve: (entry: ImDecision, decision: Decision) => Promise<void>;
   /** Drop a model question's auto-resolve deadline (回答 码 等待). */
   keepWaiting?: (entry: ImDecision) => Promise<void>;
@@ -482,8 +484,8 @@ export class PetImDecisions {
   private async scanOnce(): Promise<void> {
     try {
       await this.router.decisionsLoaded();
-      const entries = this.options.read();
-      const unread = this.options.unreadDecisions?.();
+      const entries = await this.options.read();
+      const unread = this.options.unreadDecisions?.(entries);
       const live = new Set(entries.map((entry) => entry.code));
       // Ended prompts matter only while their expiry notice is still owed.
       const open = (prompt: DecisionPromptRecord["prompt"]) =>
@@ -651,11 +653,11 @@ export class PetImDecisions {
       (entry.delivery.reply && entry.delivery.target.kind === "route"
         ? entry.delivery.target.route.channel
         : undefined);
-    if (channel === undefined) return;
+    if (channel === undefined || this.answering.has(entry.code)) return;
     this.answering.add(entry.code);
     try {
       // Re-read immediately before submitting; cancellation/restart wins.
-      if (!this.options.read().some((item) => item.code === entry.code)) return;
+      if (!(await this.options.read()).some((item) => item.code === entry.code)) return;
       await this.options.approve(entry, {
         approved: false,
         failure: "timed_out",
@@ -910,7 +912,7 @@ export class PetImDecisions {
     const message = request.message.trim();
     if (!message) return undefined;
     await this.router.decisionsLoaded();
-    const { items, expired } = await this.openItems(this.options.read(), request.origin);
+    const { items, expired } = await this.openItems(await this.options.read(), request.origin);
     // A reply to a prompt past its deadline: the timeout backstop runs now.
     if (expired) await this.scan();
     if (items.length === 0) return undefined;
@@ -951,20 +953,25 @@ export class PetImDecisions {
         message,
       });
     }
-    return this.resolveDecision(item.entry, reading);
+    return this.resolveDecision(item.entry, reading, request.origin);
   }
 
   private async resolveDecision(
     offered: ImDecision,
     reading: Extract<ReplyInterpretation, { kind: "resolve" }>,
+    origin: ReplyOrigin | undefined,
   ): Promise<string> {
     const { code } = offered;
-    if (this.answering.has(code)) return "这件事正在处理，请稍等。";
     // The model took a while: the decision may have been answered or ended meanwhile.
-    const entry = this.options.read().find((item) => item.code === code);
+    const entry = (await this.options.read()).find((item) => item.code === code);
     const prompted = this.router.decisionRecord(code);
-    if (!entry || (prompted && isPromptEnded(prompted.prompt.phase)))
+    if (
+      !entry ||
+      !(await this.sameOrigin(entry.delivery.target, origin)) ||
+      (prompted && isPromptEnded(prompted.prompt.phase))
+    )
       return "这件事已经结束了，没有采用这条回答。";
+    if (this.answering.has(code)) return "这件事正在处理，请稍等。";
     if (this.expired(entry)) {
       await this.scan();
       return "这个确认已经超时，没有采用这条回答。";

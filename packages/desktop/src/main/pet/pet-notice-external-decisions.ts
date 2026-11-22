@@ -55,7 +55,7 @@ export interface PetExternalDecisions {
   isExternal(sessionId: string, requestId: string): boolean;
   status(sessionId: string, requestId: string): ExternalDecisionStatus | undefined;
   /** The pending external decisions that have somewhere to be prompted. */
-  read(): ImDecision[];
+  read(): Promise<ImDecision[]>;
   /** Settle the prompt in the router; throws when it is no longer pending. */
   approve(entry: ImDecision, decision: ImAnswer): Promise<void>;
   dispose(): void;
@@ -70,7 +70,7 @@ const CODEX_NATIVE_TOOL = "Codex native tool";
 
 export function createExternalDecisions(deps: {
   source?: ExternalDecisionSource;
-  tasks: () => readonly PetLongTask[];
+  tasks: () => readonly PetLongTask[] | Promise<readonly PetLongTask[]>;
   deliveryFor: ImDecisionDeliveryResolver;
   title: (sessionId: string) => string | undefined;
   /** A prompt appeared or retired (after its outcome is recorded here). */
@@ -120,8 +120,8 @@ export function createExternalDecisions(deps: {
       const resolved = resolutions.get(requestId);
       return resolved?.sessionId === sessionId ? resolved.status : undefined;
     },
-    read() {
-      const tasks = deps.tasks();
+    async read() {
+      const tasks = await deps.tasks();
       const result: ImDecision[] = [];
       for (const item of pending()) {
         const task = tasks.find(
@@ -230,7 +230,8 @@ export function externalDecisionRequest(
  * logged); its own are then unseen, not ended (`unreadDecisions`).
  */
 export function withExternalDecisions(
-  external: Pick<PetExternalDecisions, "read" | "approve" | "isExternal">,
+  external: Pick<PetExternalDecisions, "approve" | "isExternal"> &
+    Pick<PetImDecisionsOptions, "read">,
   native: Pick<PetImDecisionsOptions, "read" | "approve" | "keepWaiting">,
   onReadError?: (source: "native" | "external", error: unknown) => void,
 ): Pick<
@@ -242,11 +243,16 @@ export function withExternalDecisions(
   const keepWaiting = native.keepWaiting;
   /** The sources the last read could not see. */
   let unread = { native: false, external: false };
-  const readSource = (source: "native" | "external", read: () => ImDecision[]) => {
+  const observations = new WeakMap<ImDecision[], typeof unread>();
+  const readSource = async (
+    missed: typeof unread,
+    source: "native" | "external",
+    read: () => ImDecision[] | Promise<ImDecision[]>,
+  ) => {
     try {
-      return read();
+      return await read();
     } catch (error) {
-      unread[source] = true;
+      missed[source] = true;
       try {
         onReadError?.(source, error);
       } catch {
@@ -256,15 +262,20 @@ export function withExternalDecisions(
     }
   };
   return {
-    read: () => {
-      unread = { native: false, external: false };
-      return [
-        ...readSource("native", () => native.read()),
-        ...readSource("external", () => external.read()),
-      ];
+    read: async () => {
+      const missed = { native: false, external: false };
+      const rows = (
+        await Promise.all([
+          readSource(missed, "native", () => native.read()),
+          readSource(missed, "external", () => external.read()),
+        ])
+      ).flat();
+      unread = missed;
+      observations.set(rows, missed);
+      return rows;
     },
-    unreadDecisions: () => {
-      const missed = unread;
+    unreadDecisions: (items) => {
+      const missed = items ? (observations.get(items) ?? unread) : unread;
       if (!missed.native && !missed.external) return undefined;
       return (sessionId, requestId) =>
         external.isExternal(sessionId, requestId) ? missed.external : missed.native;
