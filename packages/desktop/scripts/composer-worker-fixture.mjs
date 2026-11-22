@@ -34,6 +34,9 @@ export function observeComposerWorker({ sessionId, projectPath, origin, ledger }
   };
 
   const deniedFetch = globalThis.fetch;
+  // Node links a Request's derived signal to its caller through a WeakRef.
+  // A real fetch owns its in-flight request until completion; our held response must too.
+  const heldRequests = new Map();
   globalThis.fetch = async (input, init) => {
     const req = new Request(input, init);
     if (req.url !== origin + "/v1/chat/completions" || req.method !== "POST" || !marker)
@@ -53,10 +56,17 @@ export function observeComposerWorker({ sessionId, projectPath, origin, ledger }
     );
     if (body.stream) record({ provider: marker, images });
     if (body.stream && marker.includes("_HOLD_")) {
-      req.signal.throwIfAborted();
-      await new Promise((_, reject) =>
-        req.signal.addEventListener("abort", () => reject(req.signal.reason), { once: true }),
-      );
+      const held = marker;
+      heldRequests.set(req, input);
+      try {
+        req.signal.throwIfAborted();
+        await new Promise((_, reject) =>
+          req.signal.addEventListener("abort", () => reject(req.signal.reason), { once: true }),
+        );
+      } finally {
+        heldRequests.delete(req);
+        if (req.signal.aborted) record({ providerAborted: held });
+      }
     }
     const message = { role: "assistant", content: "Owned controlled completion" };
     const response = {

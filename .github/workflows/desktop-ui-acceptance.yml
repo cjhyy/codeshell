@@ -250,7 +250,7 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/composer-operation-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-process-roles.test.mjs packages/desktop/scripts/packaged-startup-observation.test.mjs packages/desktop/scripts/preference-goal-delete-acceptance.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/operation-evidence-contracts.log"
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/composer-operation-diagnostics.test.mjs packages/desktop/scripts/composer-worker-fixture.test.mjs packages/desktop/scripts/windows-nsis-process-roles.test.mjs packages/desktop/scripts/packaged-startup-observation.test.mjs packages/desktop/scripts/preference-goal-delete-acceptance.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/operation-evidence-contracts.log"
 
       - name: Review first-error and cleanup observation contracts
         timeout-minutes: 2

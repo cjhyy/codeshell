@@ -226,6 +226,7 @@ async function mainState() {
     ...native,
     calls: rows.filter((row) => row.message).map((row) => row.message),
     providers: rows.filter((row) => row.provider),
+    abortedProviders: rows.filter((row) => row.providerAborted).map((row) => row.providerAborted),
     workerPids: [...new Set(rows.map((row) => row.pid))],
   };
 }
@@ -653,6 +654,12 @@ try {
   assert.deepEqual(report.main.guard.unexpected, []);
   assert.equal(report.main.guard.probes.length, 7);
   assert.ok(report.main.guard.probes.every((probe) => probe.blocked));
+  assert.deepEqual(report.main.abortedProviders, [
+    "QUEUE_HOLD_delete",
+    "QUEUE_HOLD_paste-suffix",
+    "FORCE_HOLD_delete",
+    "FORCE_HOLD_suffix",
+  ]);
 
   assert.deepEqual(
     Object.fromEntries(
