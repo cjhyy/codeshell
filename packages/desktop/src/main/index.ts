@@ -1,3 +1,4 @@
+import { registerHostedWechatLogin } from "./desktop-host/wechat-login-client.js";
 import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
 import type { SettingsChange } from "../shared/settings-change.js";
 import {
@@ -877,6 +878,7 @@ const imGatewayService = new ImGatewayService({
   },
 });
 registerImGatewayIpc(ipcMain, imGatewayService);
+registerHostedWechatLogin(ipcMain, desktopHost, (work) => imGatewayService.withWechatLogin(work));
 let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;

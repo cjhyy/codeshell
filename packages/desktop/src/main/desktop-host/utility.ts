@@ -1,3 +1,4 @@
+import { wechatLoginOperations } from "../../host/composition/wechat-login.js";
 import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
 import { hostedActivityHistory } from "../../host/composition/activity-history.js";
 import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
@@ -114,6 +115,7 @@ const historyWorker = new ActivityHistoryWorker(
 const activities = hostedActivityHistory(historyWorker);
 const roomReads = ccRoomReads(historyWorker);
 const business = new HostBusinessCalls({
+  ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
   ...mimiRecordsOperations(storage, (domain) =>
     parent.postMessage({ type: "mimi-records-changed", domain }),
   ),
