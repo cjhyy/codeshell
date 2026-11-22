@@ -1,10 +1,6 @@
-/* Native composer events through the production ChatView, preload and Main.
- * Agent run/control RPCs are captured and answered at Main before the
- * production listener can enter the Worker/Engine; catalog:list returns an
- * owned synthetic model catalog. File search, authorization,
- * attachment staging and session persistence retain their production handlers.
- * Clipboard writes contain only owned fixture bytes/text; no existing clipboard
- * content is read. No React internals, synthetic DOM events or model are used. */
+/* Native ChatView events reach the production workbench port, Host, Main
+ * authorization and stdio worker. Only the worker's model response is synthetic.
+ * Clipboard writes contain owned fixture bytes/text; no existing content is read. */
 /* global Blob, document, window */
 import assert from "node:assert/strict";
 import children, { execFileSync } from "node:child_process";
@@ -29,6 +25,7 @@ import {
   makeIsolatedElectronHome,
   observeElectronDiagnostic,
   seedSessionCatalog,
+  seedOfflinePluginBootstrap,
 } from "./electron-harness.mjs";
 
 assert.ok(process.env.CODE_SHELL_TEST_HOME, "Use run-isolated-node-smoke.mjs");
@@ -71,11 +68,10 @@ const report = {
   sourceHead: execFileSync("git", ["rev-parse", "HEAD"], { cwd: appDir, encoding: "utf8" }).trim(),
   boundary: {
     production:
-      "compiled ChatView/App → real preload → native Main IPC; file search/root authorization, attachment staging and session catalog are production",
+      "Compiled ChatView, preload, Host port, Main authorization, stdio worker and Engine. Requests are observed at worker stdin.",
     controlled:
-      "Main captures agent/run, agent/configure, agent/steer, agent/unsteer and agent/cancel before invoking the production agent listener; run results are synthetic and may be held pending. catalog:list returns an owned synthetic UI model catalog; browser file chooser selection is controlled with an owned path.",
-    excluded:
-      "No Worker, Engine, provider, external network, real credentials or original clipboard reads. This does not prove model execution or attachment consumption by Engine.",
+      "The confined worker receives an in-memory provider response; held requests wait for production cancellation. The native file chooser selects an owned path.",
+    excluded: "External network, live provider credentials and original clipboard contents.",
   },
   cases: [],
   errors: [],
@@ -92,6 +88,7 @@ let electron,
 let confined;
 
 async function prepare() {
+  await seedOfflinePluginBootstrap(isolated.codeShellHome);
   await mkdir(projectPath, { mode: 0o700 });
   await writeFile(filepath, "Owned Unicode and whitespace file reference\n", { mode: 0o600 });
   await writeFile(explicitPath, "Owned explicit picker attachment\n", { mode: 0o600 });
@@ -106,10 +103,23 @@ async function prepare() {
     JSON.stringify({
       autoUpdates: false,
       modelConnections: [
-        { id: "owned-ui-model", catalogId: "owned-ui", tag: "text", model: "owned-ui" },
+        {
+          id: "owned-ui-model",
+          catalogId: "openai",
+          tag: "text",
+          model: "gpt-4o",
+          credentialId: "owned-credential",
+        },
       ],
       defaults: { text: "owned-ui-model" },
-      credentials: [],
+      credentials: [
+        {
+          id: "owned-credential",
+          catalogId: "openai",
+          apiKey: "fixture-only",
+          baseUrl: origin + "/v1",
+        },
+      ],
     }),
     { mode: 0o600 },
   );
@@ -118,10 +128,17 @@ async function prepare() {
     guard,
     `
 await import(${JSON.stringify(new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url).href)});
-const { app, net } = await import("electron");
+const worker = process.argv.some(arg => /agent-server-stdio\\.[cm]?js$/.test(arg));
+const electronMain = process.type === "browser";
+const electron = electronMain ? await import("electron") : undefined;
 const { syncBuiltinESMExports } = await import("node:module");
 const guard = globalThis.__composerGuard = { unexpected: [], probes: [], probing: false };
-const deny = (transport) => { if (!guard.probing) guard.unexpected.push(transport); throw new Error("Owned composer fixture denies network: " + transport); };
+const { appendFileSync } = await import("node:fs");
+const unexpected = (transport) => {
+  guard.unexpected.push(transport);
+  appendFileSync(${JSON.stringify(join(isolated.home, "composer-denied.jsonl"))}, JSON.stringify({pid:process.pid,transport}) + "\\n", {mode:0o600});
+};
+const deny = (transport) => { if (!guard.probing) unexpected(transport); throw new Error("Owned composer fixture denies network: " + transport); };
 globalThis.fetch = async () => deny("fetch");
 for (const name of ["node:http", "node:https"]) {
   const transport = (await import(name)).default;
@@ -131,11 +148,11 @@ for (const [name, methods] of [["node:net", ["connect", "createConnection"]], ["
   const transport = (await import(name)).default;
   for (const method of methods) transport[method] = () => deny(name + "." + method);
 }
-net.fetch = async () => deny("electron.net.fetch");
-net.request = () => deny("electron.net.request");
+if (electronMain) electron.net.fetch = async () => deny("electron.net.fetch");
+if (electronMain) electron.net.request = () => deny("electron.net.request");
 syncBuiltinESMExports();
-app.on("web-contents-created", (_event, contents) => contents.session.webRequest.onBeforeRequest({ urls: ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"] }, (_details, done) => {
-  guard.unexpected.push("chromium"); done({ cancel: true });
+if (electronMain) electron.app.on("web-contents-created", (_event, contents) => contents.session.webRequest.onBeforeRequest({ urls: ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"] }, (_details, done) => {
+  unexpected("chromium"); done({ cancel: true });
 }));
 guard.probing = true;
 for (const [name, probe] of [
@@ -145,7 +162,7 @@ for (const [name, probe] of [
   ["HTTPS external", async () => (await import("node:https")).get("https://example.invalid/blocked")],
   ["raw socket", async () => (await import("node:net")).connect(443, "example.invalid")],
   ["TLS socket", async () => (await import("node:tls")).connect(443, "example.invalid")],
-  ["Electron net", () => net.request("https://example.invalid/blocked")],
+  ...(electronMain ? [["Electron net", () => electron.net.request("https://example.invalid/blocked")]] : []),
 ]) {
   let blocked = false;
   try { await probe(); } catch (error) { blocked = error.message.startsWith("Owned composer fixture denies network:"); }
@@ -153,6 +170,10 @@ for (const [name, probe] of [
   if (!blocked) throw new Error("Network negative probe escaped: " + name);
 }
 guard.probing = false;
+if (worker) {
+  const { observeComposerWorker } = await import(${JSON.stringify(new URL("./composer-worker-fixture.mjs", import.meta.url).href)});
+  observeComposerWorker(${JSON.stringify({ sessionId, projectPath, origin, ledger: join(isolated.home, "composer-worker.jsonl") })});
+}
 `,
     { mode: 0o600 },
   );
@@ -171,42 +192,11 @@ guard.probing = false;
       productionImport,
       `
 const { ipcMain } = await import("electron");
-const fixture = globalThis.__composerReference = { calls: [], stages: [], hold: false, pending: [], workerAttempts: 0, handlerRegistered: false };
-const guardedSpawn = children.spawn;
-children.spawn = function (command, args, options) {
-  if (args?.some(value => String(value).includes("agent-server-stdio"))) {
-    fixture.workerAttempts++;
-    throw new Error("Owned composer fixture forbids Worker/Engine startup");
-  }
-  return guardedSpawn.call(this, command, args, options);
-};
-syncBuiltinESMExports();
+const fixture = globalThis.__composerReference = { stages: [] };
 const handle = ipcMain.handle.bind(ipcMain);
-ipcMain.handle = (channel, listener) => handle(channel, channel === "catalog:list" ? () => [{
-  id: "owned-ui", tag: "text", adapterKind: "openai", displayName: "Owned UI model", description: "No provider exists",
-  defaultBaseUrl: ${JSON.stringify(origin)}, modelPresets: [{ value: "owned-ui", label: "Owned UI model", maxContextTokens: 4096, supportsVision: true }],
-}] : channel === "attachments:stageImageDataUrl" ? async (...args) => {
+ipcMain.handle = (channel, listener) => handle(channel, channel === "attachments:stageImageDataUrl" ? async (...args) => {
   const result = await listener(...args); fixture.stages.push(result); return result;
 } : listener);
-const on = ipcMain.on.bind(ipcMain);
-ipcMain.on = (channel, listener) => {
-  if (channel !== "agent:msg") return on(channel, listener);
-  fixture.handlerRegistered = true;
-  return on(channel, (event, line) => {
-    const message = JSON.parse(line);
-    if (!["agent/run", "agent/configure", "agent/steer", "agent/unsteer", "agent/cancel"].includes(message.method)) return listener(event, line);
-    const params = message.params ?? {};
-    if (params.sessionId !== ${JSON.stringify(sessionId)}) throw new Error("Unexpected owned session");
-    if (message.method === "agent/run" && (params.cwd !== ${JSON.stringify(projectPath)} || !params.task.includes("[OWNED_"))) throw new Error("Unexpected owned run");
-    fixture.calls.push(message);
-    const reply = (result) => event.sender.send("agent:msg", JSON.stringify({ jsonrpc: "2.0", id: message.id, result }));
-    if (message.method === "agent/run" && fixture.hold) fixture.pending.push(() => reply({ reason: "complete", text: "Owned controlled completion" }));
-    else if (message.method === "agent/cancel") {
-      for (const settle of fixture.pending.splice(0)) settle();
-      reply({ cancelled: true });
-    } else reply(message.method === "agent/steer" ? { accepted: true } : message.method === "agent/unsteer" ? { removed: true } : { reason: "complete", text: "Owned controlled completion" });
-  });
-};
 ${productionImport}
 `,
     ),
@@ -216,14 +206,26 @@ ${productionImport}
 
 const composer = () => win.locator('textarea[aria-autocomplete="list"]:visible');
 async function mainState() {
-  return electron.evaluate(() => ({
-    calls: globalThis.__composerReference.calls,
+  const rows = (
+    await readFile(join(isolated.home, "composer-worker.jsonl"), "utf8").catch((error) => {
+      if (error.code === "ENOENT") return "";
+      throw error;
+    })
+  )
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map(JSON.parse);
+  const native = await electron.evaluate(() => ({
     stages: globalThis.__composerReference.stages,
-    pending: globalThis.__composerReference.pending.length,
-    workerAttempts: globalThis.__composerReference.workerAttempts,
-    handlerRegistered: globalThis.__composerReference.handlerRegistered,
     guard: globalThis.__composerGuard,
   }));
+  return {
+    ...native,
+    calls: rows.filter((row) => row.message).map((row) => row.message),
+    providers: rows.filter((row) => row.provider),
+    workerPids: [...new Set(rows.map((row) => row.pid))],
+  };
 }
 async function waitCall(method, previous) {
   const deadline = Date.now() + 8_000;
@@ -308,6 +310,10 @@ async function submit(marker, expectRefs = []) {
   const text = await composer().inputValue();
   assert.ok(text.includes(`[OWNED_${marker}]`));
   await composer().press("Enter");
+  if (previous === 0) {
+    report.confinement = await confined.assertWorker(electron);
+    assert.equal(report.confinement.workerCreated, true);
+  }
   const call = await waitCall("agent/run", previous);
   assert.deepEqual(
     (call.params.attachments ?? []).map((ref) => ({
@@ -324,20 +330,20 @@ async function submit(marker, expectRefs = []) {
   return { text, payload: call };
 }
 async function startHeld(marker) {
-  await electron.evaluate(() => {
-    globalThis.__composerReference.hold = true;
-  });
   const previous = await count("agent/run");
   await composer().focus();
   await win.keyboard.type(`[OWNED_${marker}]`);
   await composer().press("Enter");
   await waitCall("agent/run", previous);
+  const deadline = Date.now() + 10_000;
+  while (!(await mainState()).providers.some((row) => row.provider === marker)) {
+    if (Date.now() > deadline)
+      throw new Error("Held turn did not reach the worker provider: " + marker);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   await win.getByRole("button", { name: /^(停止|Stop)$/ }).waitFor();
 }
 async function stopHeld() {
-  await electron.evaluate(() => {
-    globalThis.__composerReference.hold = false;
-  });
   await win.getByRole("button", { name: /^(停止|Stop)$/ }).click();
   await win.getByRole("button", { name: /^(停止|Stop)$/ }).waitFor({ state: "hidden" });
 }
@@ -456,7 +462,12 @@ try {
   await chooseViewOnlyIfPrompted(win, 2_000);
   diagnostics.phase("composer-worker-guard");
   report.confinement = await confined.assertWorker(electron, { requireWorker: false });
-  assert.equal(report.confinement.workerCreated, false);
+  await win.evaluate(() =>
+    window.codeshell.onDesktopHostStatus((state) => {
+      window.__composerHost = state;
+    }),
+  );
+  await win.waitForFunction(() => window.__composerHost === "ready");
   await composer().waitFor();
   await win.evaluate(() => {
     window.__composerEvents = [];
@@ -518,9 +529,6 @@ try {
     await startHeld(`FORCE_HOLD_${kind}`);
     const edit = await editMention(kind, `FORCE_${kind}`);
     const previous = await count("agent/run");
-    await electron.evaluate(() => {
-      globalThis.__composerReference.hold = false;
-    });
     await win.getByRole("button", { name: /^(引导|Guide)$/ }).click();
     const payload = await waitCall("agent/run", previous);
     assert.deepEqual(payload.params.attachments ?? [], []);
@@ -612,13 +620,34 @@ try {
     report.events.every((event) => event.trusted),
     "All observed composer input events must be native trusted events",
   );
+  await win.getByRole("button", { name: /^(停止|Stop)$/ }).waitFor({ state: "hidden" });
   report.main = await mainState();
-  assert.equal(report.main.handlerRegistered, true);
-  assert.equal(report.main.workerAttempts, 0);
+  assert.ok(
+    report.main.calls.every((call) => String(call.id).startsWith("workbench:")),
+    "Every command must cross the negotiated Host ingress",
+  );
+  assert.deepEqual(
+    report.main.workerPids,
+    report.confinement.spawned.map((row) => row.pid),
+  );
+  assert.ok(report.main.providers.some((row) => row.provider === "VISIBLE"));
+  assert.ok(
+    report.main.providers.some(
+      (row) => row.provider === "EXPLICIT" && row.images.includes(fileSHA256),
+    ),
+    "Engine must send the staged image bytes to the owned vision provider",
+  );
+  const denied = await readFile(join(isolated.home, "composer-denied.jsonl"), "utf8").catch(
+    (error) => {
+      if (error.code === "ENOENT") return "";
+      throw error;
+    },
+  );
+  assert.equal(denied, "", "Every process must remain confined");
   assert.deepEqual(report.main.guard.unexpected, []);
   assert.equal(report.main.guard.probes.length, 7);
   assert.ok(report.main.guard.probes.every((probe) => probe.blocked));
-  assert.equal(report.main.pending, 0);
+
   assert.deepEqual(
     Object.fromEntries(
       ["agent/run", "agent/steer", "agent/unsteer", "agent/cancel"].map((method) => [
