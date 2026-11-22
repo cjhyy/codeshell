@@ -1,5 +1,6 @@
 import type { WechatLoginOperations } from "./wechat-login.js";
 import type { NativeCcRoomReads } from "./cc-room-reads.js";
+import type { AttachmentOperations } from "./attachment-operations.js";
 import type { ActivityOperations } from "./activity-history-contracts.js";
 import type { PrivateMemoryReads, MemoryOperations } from "./memory-contracts.js";
 import type { CronCommand } from "../host/automation/commands.js";
@@ -20,7 +21,7 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
-export interface ShellBusinessOperations extends WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits {
+export interface ShellBusinessOperations extends AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits {
   "mimi/workMemory": {
     input: import("./mimi-work-memory.js").MimiWorkCommand;
     result: import("./mimi-work-memory.js").MimiWorkSnapshot;

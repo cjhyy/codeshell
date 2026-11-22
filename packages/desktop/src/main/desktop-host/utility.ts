@@ -1,5 +1,6 @@
 import { wechatLoginOperations } from "../../host/composition/wechat-login.js";
 import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
+import { attachmentOperations } from "../../host/composition/attachments.js";
 import { hostedActivityHistory } from "../../host/composition/activity-history.js";
 import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
 import { memoryReads } from "./memory-reads.js";
@@ -120,6 +121,7 @@ const business = new HostBusinessCalls({
     parent.postMessage({ type: "mimi-records-changed", domain }),
   ),
   ...activities.operations,
+  ...attachmentOperations,
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),
   ...roomReads.native,

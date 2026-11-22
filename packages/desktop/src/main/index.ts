@@ -4187,7 +4187,12 @@ ipcMain.handle("session:content-search", async (_e, ...args: unknown[]) => {
   return searchSessionTranscripts(sessionsRoot(), trimmed, { budgetMs: 5_000 });
 });
 
-registerAttachmentsIpc({ quickChatOwnership, deleteDesktopSession, assertQuickChatClaim });
+registerAttachmentsIpc({
+  host: desktopHost,
+  quickChatOwnership,
+  deleteDesktopSession,
+  assertQuickChatClaim,
+});
 ipcMain.handle(
   "skills:uninstall",
   async (
@@ -4228,7 +4233,7 @@ ipcMain.handle(
     });
   },
 );
-registerAgentsMediaIpc({ mainWindows, mediaPreviewService });
+registerAgentsMediaIpc({ host: desktopHost, mainWindows, mediaPreviewService });
 registerSkillsMcpIpc({ getMcpOAuthService });
 // Read-only list of plugin-provided hooks, for the settings 钩子 page to show
 // alongside hand-written hooks (labelled by owner plugin). Mirrors
