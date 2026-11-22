@@ -119,7 +119,17 @@ try {
     pid: process.pid,
     electron: process.versions.electron,
   }));
-  await sampleReads(page, 10);
+  const initialReads = await sampleReads(page, 10);
+  const textarea = page.locator('textarea[aria-autocomplete="list"]:visible').last();
+  // The transport can advertise "ready" while the workbench is still mounting
+  // or covered by onboarding. Measure idle reads once the real composer accepts input.
+  await textarea.click();
+  await page.evaluate(async () => {
+    const frame = () => new Promise(requestAnimationFrame);
+    await frame();
+    await frame();
+    await new Promise((resolve) => requestIdleCallback(resolve));
+  });
   const idle = await sampleReads(page, 200);
   const storage = join(isolated.codeShellHome, ".codeshell-state");
   const roots = await readdir(storage);
@@ -144,8 +154,6 @@ try {
         ${old("source_revision")}, ${next("source_revision")}
       ); END`);
   }
-  const textarea = page.locator('textarea[aria-autocomplete="list"]:visible').last();
-  await textarea.click();
   await textarea.fill(prompt);
   await textarea.press("Enter");
   await fixture.assertWorker(app);
@@ -334,6 +342,7 @@ try {
         ),
       ].slice(0, 16),
     })),
+    startingIndexedList: { count: initialReads.length, p99Ms: percentile(initialReads, 0.99) },
     idleIndexedList: { count: idle.length, p99Ms: percentile(idle, 0.99) },
     streamingIndexedList: {
       count: writes.samples.length,
