@@ -133,6 +133,10 @@ export class NativeCloudAccount {
       this.flows.delete(flow);
     }
   }
+  deviceAuthority() {
+    if (!this.view || this.view.status.state !== "signed-in") throw Error("请先登录账号。");
+    return { generation: this.view.generation, status: this.status() };
+  }
   status(): CloudAccountStatus {
     return this.view ? structuredClone(this.view.status) : { state: "signed-out" };
   }

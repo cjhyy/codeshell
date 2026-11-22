@@ -5,7 +5,13 @@ import { NativeCloudAccount } from "./cloud-client.js";
 import type { CloudEffects } from "./cloud-effects.js";
 
 import { NativeCloudProjects } from "./cloud-projects-client.js";
+import { NativeAccountDevices } from "./account-devices-client.js";
 export class NativeRemoteClient {
+  private devices?: NativeAccountDevices;
+  createDevices(deps: ConstructorParameters<typeof NativeAccountDevices>[1]) {
+    if (this.devices) throw Error("Account devices already initialized");
+    return (this.devices = new NativeAccountDevices(() => this.current(), deps));
+  }
   private projects?: NativeCloudProjects;
   createProjects(deps: ConstructorParameters<typeof NativeCloudProjects>[1]) {
     if (this.projects) throw Error("Cloud projects already initialized");
@@ -31,6 +37,8 @@ export class NativeRemoteClient {
       electronPrivatePort(port),
       (method, input, signal) => {
         if (method.startsWith("relay/")) return this.relay.handle(method, input, signal);
+        if (method.startsWith("devices/") && this.devices)
+          return this.devices.handle(method, input, signal);
         if (method.startsWith("projects/") && this.projects)
           return this.projects.handle(method, input, signal);
         if (!this.account) throw Error("Cloud account unavailable");
@@ -40,9 +48,13 @@ export class NativeRemoteClient {
         if (this.peer === peer) {
           this.peer = undefined;
           this.account?.disconnect();
+          this.devices?.disconnect();
           void this.projects?.disconnect().catch(() => {});
           if (this.relay.disconnect()) this.lostRelay?.();
         }
+      },
+      (method, input) => {
+        if (method === "devices/event") this.devices?.notice(input);
       },
     );
     this.peer = peer;

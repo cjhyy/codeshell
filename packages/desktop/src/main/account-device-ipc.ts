@@ -3,7 +3,20 @@ import type { AccountDeviceService } from "./account-device-service.js";
 
 export function registerAccountDeviceIpc(options: {
   ipcMain: Pick<IpcMain, "handle" | "removeHandler">;
-  service: AccountDeviceService;
+  service: Pick<
+    AccountDeviceService,
+    | "setEventSink"
+    | "releaseOwner"
+    | "retireIdentity"
+    | "projects"
+    | "connect"
+    | "resume"
+    | "send"
+    | "approve"
+    | "stop"
+    | "close"
+  > & { list(owner: number): ReturnType<AccountDeviceService["list"]> };
+  documentSignal?: (event: IpcMainInvokeEvent) => AbortSignal;
   windows: () => Iterable<BrowserWindow>;
 }): { dispose(): void } {
   const owners = new Map<number, { windowId: number; frame: Electron.WebFrameMain }>();
@@ -31,13 +44,24 @@ export function registerAccountDeviceIpc(options: {
         watched.delete(event.sender.id);
       });
       event.sender.on("render-process-gone", () => release(event.sender.id));
-      event.sender.on("did-start-navigation", (_event, _url, inPlace, mainFrame) => {
-        if (mainFrame && !inPlace) release(event.sender.id);
-      });
+      if (!options.documentSignal)
+        event.sender.on("did-start-navigation", (navigation) => {
+          if (navigation.isMainFrame && !navigation.isSameDocument) release(event.sender.id);
+        });
     }
     for (const [id, record] of owners)
       if (record.windowId === event.sender.id && record.frame === event.senderFrame) return id;
     const id = ++sequence;
+    const signal = options.documentSignal?.(event);
+    signal?.throwIfAborted();
+    signal?.addEventListener(
+      "abort",
+      () => {
+        options.service.releaseOwner(id);
+        owners.delete(id);
+      },
+      { once: true },
+    );
     owners.set(id, { windowId: event.sender.id, frame: event.senderFrame! });
     return id;
   }
@@ -48,7 +72,7 @@ export function registerAccountDeviceIpc(options: {
       window?.webContents.send("accountDevice:event", event);
   });
   const handlers: Record<string, (owner: number, input: any) => unknown> = {
-    list: () => options.service.list(),
+    list: (id) => options.service.list(id),
     projects: (id, input) => options.service.projects(id, input),
     connect: (id, input) => options.service.connect(id, input),
     resume: (id, input) => options.service.resume(id, input),

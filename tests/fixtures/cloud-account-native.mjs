@@ -1,3 +1,4 @@
+import { deviceAcceptanceServer } from "./account-device-server.mjs";
 import assert from "node:assert/strict";
 import { createServer } from "node:https";
 import { readFile } from "node:fs/promises";
@@ -26,6 +27,10 @@ let origin,
   saved,
   redirectTargetRequests = 0,
   mode = "normal";
+const devices = deviceAcceptanceServer(root, projectId, () => ({
+  origin,
+  token: active?.accessToken,
+}));
 const server = createServer({ cert, key }, async (req, res) => {
   req.on("error", () => {});
   res.on("error", () => {});
@@ -52,6 +57,11 @@ const server = createServer({ cert, key }, async (req, res) => {
     return;
   }
   res.setHeader("Content-Type", "application/json");
+  const deviceReply = devices.response(req, body);
+  if (deviceReply) {
+    res.end(JSON.stringify(deviceReply));
+    return;
+  }
   if (req.url === "/api/v1/cloud-management/capabilities") {
     assert.equal(req.headers.authorization, undefined);
     res.end(
@@ -178,6 +188,7 @@ const server = createServer({ cert, key }, async (req, res) => {
     res.end("{}");
   }
 });
+devices.bind(server);
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 origin = `https://127.0.0.1:${server.address().port}`;
 const transport = createCloudAccountTransport(cert);
@@ -229,6 +240,7 @@ try {
     projectId,
     token: () => active.accessToken,
   });
+  devices.finish();
   mode = "redirect";
   await assert.rejects(transport({ origin, path: "/api/v1/account/login", body: {} }));
   assert.equal(redirectTargetRequests, 0);

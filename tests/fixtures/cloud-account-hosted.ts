@@ -1,3 +1,5 @@
+import { deviceTransports, nativeDevices } from "./account-device-hosted.ts";
+import { HostedAccountDevices } from "../../packages/desktop/src/host/remote/account-devices.js";
 import { HostedCloudProjects } from "../../packages/desktop/src/host/remote/cloud-projects.js";
 import { NativeCloudProjects } from "../../packages/desktop/src/main/desktop-host/cloud-projects-client.js";
 import { createCloudManagementTransport } from "../../packages/desktop/src/main/cloud-management-http.js";
@@ -24,6 +26,11 @@ if (workerData?.kind === "account-fixture") {
       return request(input);
     },
   );
+  const devices = new HostedAccountDevices(
+    () => peer,
+    account.manager,
+    deviceTransports(origin, Buffer.from(ca)),
+  );
   const projectTransport = createCloudManagementTransport(Buffer.from(ca));
   const projects = new HostedCloudProjects(
     () => peer,
@@ -36,6 +43,7 @@ if (workerData?.kind === "account-fixture") {
   const peer: PrivateHostPeer = new PrivateHostPeer(
     nodePrivatePort(port),
     (method, raw, signal) => {
+      if (method.startsWith("devices/")) return devices.run(method, raw, signal);
       if (method.startsWith("projects/")) return projects.run(method, raw, signal);
       assert.equal(method, "cloud/account");
       return account.run(raw, signal);
@@ -102,6 +110,7 @@ export async function exerciseHostedAccount(options: {
         activates++;
       },
     });
+    const { devices, exercise } = nativeDevices(() => peer, account, options.origin);
     const projects = new NativeCloudProjects(() => peer, {
       account,
       requireFeature() {
@@ -124,17 +133,25 @@ export async function exerciseHostedAccount(options: {
     const peer: PrivateHostPeer = new PrivateHostPeer(
       nodePrivatePort(port1),
       (method, raw, signal) =>
-        method.startsWith("projects/")
-          ? projects.handle(method, raw, signal)
-          : account.handle(method, raw, signal),
+        method.startsWith("devices/")
+          ? devices.handle(method, raw, signal)
+          : method.startsWith("projects/")
+            ? projects.handle(method, raw, signal)
+            : account.handle(method, raw, signal),
       () => {
         account.disconnect();
         void projects.disconnect();
+        devices.disconnect();
+      },
+      (method, raw) => {
+        assert.equal(method, "devices/event");
+        devices.notice(raw);
       },
     );
     return {
       account,
       projects,
+      exercise,
       stop: async () => {
         peer.close();
         await worker.terminate();
@@ -158,6 +175,7 @@ export async function exerciseHostedAccount(options: {
     assert.ok(values.every((v) => v === options.token()));
     assert.ok(!JSON.stringify(active.account.status()).includes(options.token()));
     assert.ok(!readFileSync(file).includes(options.token()));
+    await active.exercise(options.projectId);
     const projectRequest = {
       action: "open",
       accountOrigin: login.origin,

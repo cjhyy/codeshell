@@ -35,7 +35,7 @@ export interface NativeCloudRequest {
 }
 
 export class HostedCloudAccount {
-  private readonly manager: CloudAccountManager;
+  readonly manager: CloudAccountManager;
   private readonly scopes = new AsyncLocalStorage<{ flow: string; signal: AbortSignal }>();
   private readonly lifetime = new AbortController();
   constructor(

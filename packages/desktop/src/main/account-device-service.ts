@@ -1,3 +1,4 @@
+import { deviceMessageContent } from "../host/remote/device-message.js";
 import { randomUUID } from "node:crypto";
 import WebSocket from "ws";
 import type { AccountRemoteAuthorization } from "./account-device-passkey.js";
@@ -215,14 +216,18 @@ export class AccountDeviceService {
       };
     });
   }
-  async list(): Promise<AccountExecutionDevice[]> {
+  async list(owner?: number): Promise<AccountExecutionDevice[]> {
     // Browsing the account's computers does not enroll or authorize this
     // computer as an execution source. Those proofs remain dispatch-only.
-    return this.accountOperation("directory", async (ctx) => {
-      const devices = await this.directoryHosts(ctx);
-      ctx.assert();
-      return devices.map(({ publicOrigin: _private, ...device }) => device);
-    });
+    return this.accountOperation(
+      "directory",
+      async (ctx) => {
+        const devices = await this.directoryHosts(ctx);
+        ctx.assert();
+        return devices.map(({ publicOrigin: _private, ...device }) => device);
+      },
+      owner,
+    );
   }
   private async target(
     ctx: AccountExecutionContext,
@@ -657,27 +662,13 @@ export class AccountDeviceService {
       const connection = this.require(owner, input?.connectionId);
       if (connection.submissions.size)
         throw new Error("上一任务的接收结果尚未确认，请先核对原电脑；不会自动重发。");
-      if (typeof input.text !== "string" || !input.text.trim() || input.text.length > 100_000)
-        throw new Error("请输入有效任务。");
-      if (
-        input.attachments &&
-        (!Array.isArray(input.attachments) ||
-          input.attachments.length > 8 ||
-          input.attachments.some(
-            (file) =>
-              file.transport !== "inline" ||
-              !/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(file.dataUrl) ||
-              file.dataUrl.length > 8_000_000,
-          ))
-      )
-        throw new Error("仅支持有界图片附件。");
+      const content = deviceMessageContent(input);
       const clientMessageId = randomUUID();
       const frame = JSON.stringify({
         type: "chat.send",
         sessionId: connection.sessionId,
         clientMessageId,
-        text: input.text,
-        ...(input.attachments?.length ? { attachments: input.attachments } : {}),
+        ...content,
       });
       if (Buffer.byteLength(frame, "utf8") > 1_048_576)
         throw new Error("任务和图片合计超过 1 MiB，请缩小图片后发送。");

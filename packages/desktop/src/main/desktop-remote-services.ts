@@ -14,7 +14,7 @@ import type {
   RemoteHostManager,
   TunnelManager,
 } from "@cjhyy/code-shell-server/mobile-remote";
-import { AccountDeviceService } from "./account-device-service.js";
+import { AccountDeviceService, type AccountDeviceDependencies } from "./account-device-service.js";
 import { createAccountRemoteAuthorizer } from "./account-device-passkey.js";
 import { registerAccountDeviceIpc } from "./account-device-ipc.js";
 import { CloudAccountManager } from "./cloud-account-manager.js";
@@ -159,7 +159,7 @@ export function createDesktopRemoteServices(options: {
     windows: options.windows,
   });
   if (options.app) bindAccountFeatureLifecycle(options.app, accountFeatures, options.windows);
-  const accountDeviceService = new AccountDeviceService({
+  const deviceDeps: AccountDeviceDependencies = {
     authorizeTarget: createAccountRemoteAuthorizer({ openExternal: options.openExternal }),
     identity: () => {
       const status = cloudAccountManager.status();
@@ -180,10 +180,20 @@ export function createDesktopRemoteServices(options: {
         throw new Error("当前账号服务不支持设备协作，请升级服务。");
       return capabilities.relay.directoryOrigin;
     },
-  });
+  };
+  const accountDeviceService =
+    (hosted &&
+      options.remote?.createDevices({
+        account: hosted,
+        openExternal: options.openExternal,
+        sourceProof: deviceDeps.sourceProof,
+        relayOrigin: deviceDeps.relayOrigin,
+      })) ??
+    new AccountDeviceService(deviceDeps);
   registerAccountDeviceIpc({
     ipcMain: options.ipcMain,
     service: accountDeviceService,
+    documentSignal: options.documentSignal,
     windows: options.windows,
   });
   const isMainWindow = (contents: WebContents) =>
