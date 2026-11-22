@@ -281,11 +281,11 @@ utilityProcess.fork = function (...args) {
   );
   await second.evaluate((id) => window.codeshell.ptyKill(id), terminalId);
   await first.evaluate(
-    (id) => window.codeshell.ptyWrite(id, "echo HOST_TERMINAL_READY\r"),
+    (id) => window.codeshell.ptyWrite(id, "node -p \"['HOST_TERMINAL','READY'].join('_')\"\r"),
     terminalId,
   );
   await first.waitForFunction(() =>
-    /(?:^|[\r\n])HOST_TERMINAL_READY[\r\n]/.test(window.hostTerminalText),
+    window.hostTerminalText.includes("HOST_TERMINAL_READY"),
   );
   await verifyPairedHostTerminal(first, terminalId, started.pid);
   await assert.rejects(first.evaluate((root) => window.codeshell.ccRoom.readHistory(root,"../other",4),mount),/Invalid CLI history request/);

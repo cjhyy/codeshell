@@ -56,12 +56,12 @@ export async function verifyPairedHostTerminal(page, terminalId, pid) {
     assert.equal(opened.terminal.pid, pid);
     assert.match(opened.replay, /HOST_TERMINAL_READY/);
     await page.waitForFunction(() => window.hostRemoteViewers.at(-1) === 1);
-    send({ type: "terminal.input", terminalId, data: "echo PAIRED_SHELL_ECHO\r" });
+    send({ type: "terminal.input", terminalId, data: "node -p \"['PAIRED_SHELL','ECHO'].join('_')\"\r" });
     await page.waitForFunction(() =>
-      /(?:^|[\r\n])PAIRED_SHELL_ECHO[\r\n]/.test(window.hostTerminalText),
+      window.hostTerminalText.includes("PAIRED_SHELL_ECHO"),
     );
     let output = "";
-    while (!/(?:^|[\r\n])PAIRED_SHELL_ECHO[\r\n]/.test(output))
+    while (!output.includes("PAIRED_SHELL_ECHO"))
       output += (await receive("terminal.data", (event) => event.terminalId === terminalId)).data;
     await page.evaluate(() => window.codeshell.mobileRemote.setTerminalAccess(false));
     await receive("terminal.list.ok", (event) => !event.enabled);

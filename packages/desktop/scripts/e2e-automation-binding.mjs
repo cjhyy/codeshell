@@ -168,7 +168,7 @@ async function checkStartupReminder(reminder) {
     "Reminder waking creates no Work Session or long task",
   );
   await win.waitForFunction(({ title, text }) => {
-    const rows = JSON.parse(sessionStorage.getItem("codeshell.notificationHistory.v1") ?? "[]");
+    const rows = JSON.parse(window.sessionStorage.getItem("codeshell.notificationHistory.v1") ?? "[]");
     return rows.filter((row) => row.message === title && row.detail?.includes(text)).length === 1;
   }, reminder.then);
   console.log(
