@@ -1,5 +1,6 @@
 import { ExternalProviderPorts, externalProviderFactories, inferExternalMemory } from "./native-external-provider.js";
 import { electronPrivatePort } from "../../host/native-peer.js";
+import { NativeImGateway } from "./im-gateway-client.js";
 import { NativeRemoteClient } from "./remote-client.js";
 import type { NativeRemoteTerminals } from "../mobile-remote/native-terminals.js";
 import { NativeAutomationClient } from "./main-automation.js";
@@ -43,6 +44,7 @@ export function createDesktopHost(
 ) {
   const providerPorts = new ExternalProviderPorts();
   const remote = new NativeRemoteClient((signal) => supervisor.waitUntilReady(signal));
+  const im = new NativeImGateway((signal) => supervisor.waitUntilReady(signal));
   let terminals: NativeRemoteTerminals | undefined;
   let worker: DesktopHostWorkerClient | undefined;
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
@@ -61,12 +63,20 @@ export function createDesktopHost(
           port1.close();
           port2.close();
         }
+        const imPorts = new MessageChannelMain();
+        if (supervisor.post({ type: "im-gateway-port" }, [imPorts.port2])) {
+          im.bind(electronPrivatePort(imPorts.port1));
+        } else {
+          imPorts.port1.close();
+          imPorts.port2.close();
+        }
         bindTerminals();
       } else {
         providerPorts.disconnect();
         worker?.disconnect();
         automation.disconnect();
         remote.disconnect();
+        im.disconnect();
         terminals?.disconnect();
       }
       workbenches.setStatus(status);
@@ -185,6 +195,7 @@ export function createDesktopHost(
     documentSignal,
     onWechatEvent(listener: NonNullable<DesktopHostSupervisor["wechatEvent"]>) { supervisor.wechatEvent = listener; },
     remote,
+    im,
     setRemoteTerminals(client: NativeRemoteTerminals) { terminals = client; },
     mimiExternalListeners: supervisor.mimiExternalListeners,
     mimiRecordListeners: supervisor.mimiRecordListeners,
@@ -340,6 +351,7 @@ export function createDesktopHost(
       return supervisor.dispose().finally(() => {
         automation.close();
         remote.disconnect();
+        im.disconnect();
       });
     },
   };

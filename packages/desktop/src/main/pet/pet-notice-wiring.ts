@@ -202,6 +202,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     getSystemIdleTimeSec: () => deps.presence.getSystemIdleTimeSec(),
     presenceIdleSec: () => settings.settings().presenceIdleSec,
     ownerChannels: outlets.ownerChannels,
+    liveOwnerIsDirect: deps.gateway.liveOwnerChannel
+      ? async (channel) => (await deps.gateway.liveOwnerChannel!(channel))?.target.isDirect === true
+      : undefined,
     isOwnerConversation: (channel, target) => deps.gateway.isOwnerConversation(channel, target),
     ...(deps.longTasks.subscribe
       ? { subscribeTasks: (listener: () => void) => deps.longTasks.subscribe!(listener) }

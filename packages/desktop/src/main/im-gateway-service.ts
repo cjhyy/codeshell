@@ -15,7 +15,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import type { IpcMain } from "electron";
+import { uniqueTrimmedStrings, MAX_SETUP_VALUE_CHARS } from "./im-gateway-setup-input.js";
+import {
+  dingTalkCredential,
+  dingTalkCredentialSecret,
+  DINGTALK_CREDENTIAL_ID,
+} from "./im-dingtalk-credential.js";
+export { registerImGatewayIpc } from "./im-gateway-ipc.js";
 import { CredentialStore, type Credential } from "@cjhyy/code-shell-core";
 import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
 import {
@@ -252,10 +258,7 @@ interface ActiveDingTalkDiscovery {
   conversations: Map<string, DingTalkDiscoveredConversation>;
 }
 
-const DINGTALK_CREDENTIAL_ID = "im-gateway-dingtalk";
 const MAX_GATEWAY_CONFIG_BYTES = 4 * 1024 * 1024;
-const MAX_SETUP_LIST_ITEMS = 1_000;
-const MAX_SETUP_VALUE_CHARS = 4_096;
 const MAX_SETUP_SECRET_CHARS = 64 * 1024;
 /** Sidecar next to the gateway config remembering the owner's last inbound channel. */
 const OWNER_INBOUND_STATE_FILE = "owner-inbound.json";
@@ -278,16 +281,7 @@ function readDingTalkCredentialSecret(
   credentialStore?: ImGatewayCredentialStore,
 ): string | undefined {
   const credential = resolveCredentialStore(credentialStore).resolve(DINGTALK_CREDENTIAL_ID);
-  if (!credential?.secret) return undefined;
-  try {
-    const parsed = JSON.parse(credential.secret) as { clientSecret?: unknown };
-    return typeof parsed.clientSecret === "string" && parsed.clientSecret.trim()
-      ? parsed.clientSecret.trim()
-      : undefined;
-  } catch {
-    if (credential.secret.startsWith("enc:")) return undefined;
-    return credential.secret.trim() || undefined;
-  }
+  return dingTalkCredentialSecret(credential);
 }
 
 function resolveDingTalkClientSecret(
@@ -316,13 +310,7 @@ function saveDingTalkCredential(
   clientId: string,
   clientSecret: string,
 ): void {
-  resolveCredentialStore(credentialStore).save("user", {
-    id: DINGTALK_CREDENTIAL_ID,
-    type: "link",
-    label: "DingTalk Chat Gateway",
-    secret: JSON.stringify({ version: 1, clientSecret }),
-    meta: { platform: "dingtalk", clientId },
-  });
+  resolveCredentialStore(credentialStore).save("user", dingTalkCredential(clientId, clientSecret));
 }
 
 /** Desktop-owned lifecycle for the reusable chat package. */
@@ -1239,7 +1227,13 @@ export class ImGatewayService {
     };
   }
 
+  /** A native async keyring must finish before committing or scrubbing the visible config. */
   saveDingTalkSetup(input: DingTalkSetupInput): DingTalkSetup {
+    const { secret, clientId, commit } = this.prepareDingTalkSetup(input);
+    if (secret) saveDingTalkCredential(this.options.credentialStore, clientId, secret);
+    return commit();
+  }
+  prepareDingTalkSetup(input: DingTalkSetupInput) {
     const enabled = Boolean(input.enabled);
     const clientId = input.clientId.trim();
     const incomingSecret = input.clientSecret?.trim();
@@ -1269,9 +1263,6 @@ export class ImGatewayService {
     // created. Treat the visible config value as an explicit update before
     // scrubbing it so the form never silently restores an older vault value.
     const secretToStore = incomingSecret || legacySecret;
-    if (secretToStore) {
-      saveDingTalkCredential(this.options.credentialStore, clientId, secretToStore);
-    }
 
     const nextSection: Record<string, unknown> = {
       ...previous,
@@ -1281,16 +1272,32 @@ export class ImGatewayService {
       allowedUserIds,
     };
     delete nextSection.clientSecret;
-    mutateGatewayConfigRecord(this.configPath, (current) => {
-      current.dingtalk = { ...readRecord(current.dingtalk), ...nextSection };
-      delete readRecord(current.dingtalk).clientSecret;
-      return current;
-    });
-    this.lastError = undefined;
-    this.emitStatus();
-    return this.getDingTalkSetup();
+    const check = (section: unknown) => {
+      if (JSON.stringify(readRecord(section)) !== JSON.stringify(previous))
+        throw Error("钉钉配置已更改，请重新读取后再保存。");
+    };
+    return {
+      assertUnchanged: () => check(readGatewayConfigRecord(this.configPath).dingtalk),
+      clientId,
+      secret: secretToStore,
+      commit: (assertCurrent?: () => void) => {
+        mutateGatewayConfigRecord(this.configPath, (current) => {
+          assertCurrent?.();
+          check(current.dingtalk);
+          current.dingtalk = { ...readRecord(current.dingtalk), ...nextSection };
+          delete readRecord(current.dingtalk).clientSecret;
+          return current;
+        });
+        this.lastError = undefined;
+        this.emitStatus();
+        return this.getDingTalkSetup();
+      },
+    };
   }
-
+  usesDingTalkSetup() {
+    const section = readGatewayConfigRecord(this.configPath).dingtalk;
+    return !!section && readRecord(section).enabled !== false;
+  }
   async startDingTalkDiscovery(): Promise<{ discoveryId: string }> {
     if (this.dingtalkDiscovery) return { discoveryId: this.dingtalkDiscovery.id };
     if (this.active?.channels.includes("dingtalk")) {
@@ -1402,6 +1409,11 @@ export class ImGatewayService {
   async withWechatLogin<T>(login: () => Promise<T>): Promise<T> {
     const restart = Boolean(this.active);
     const result = await login();
+    await this.afterWechatLogin(restart);
+    return result;
+  }
+
+  async afterWechatLogin(restart: boolean): Promise<void> {
     this.lastError = undefined;
     if (restart && this.active) {
       await this.stop();
@@ -1409,7 +1421,6 @@ export class ImGatewayService {
     } else {
       this.emitStatus();
     }
-    return result;
   }
 
   async dispose(): Promise<void> {
@@ -1742,21 +1753,6 @@ function readUniqueStringList(value: unknown): string[] {
   return Array.isArray(value) ? uniqueTrimmedStrings(value) : [];
 }
 
-function uniqueTrimmedStrings(values: readonly unknown[]): string[] {
-  if (values.length > MAX_SETUP_LIST_ITEMS) {
-    throw new Error(`白名单最多包含 ${MAX_SETUP_LIST_ITEMS} 项`);
-  }
-  return [
-    ...new Set(
-      values.flatMap((value) =>
-        typeof value === "string" && value.trim() && value.length <= MAX_SETUP_VALUE_CHARS
-          ? [value.trim()]
-          : [],
-      ),
-    ),
-  ];
-}
-
 function isImGatewayChannel(value: string): value is ImGatewayChannel {
   return (IM_GATEWAY_CHANNELS as readonly string[]).includes(value);
 }
@@ -1770,36 +1766,4 @@ function readEnabledChannels(configPath: string): Set<ImGatewayChannel> {
     if ((section as Record<string, unknown>).enabled !== false) enabled.add(channel);
   }
   return enabled;
-}
-
-export function registerImGatewayIpc(ipcMain: IpcMain, service: ImGatewayService): void {
-  ipcMain.handle("im-gateway:status", () => service.status());
-  ipcMain.handle("im-gateway:start", () => service.start());
-  ipcMain.handle("im-gateway:stop", () => service.stop());
-  ipcMain.handle("im-gateway:ensureConfig", () => service.ensureConfig());
-  ipcMain.handle("im-gateway:dingtalkGetSetup", () => service.getDingTalkSetup());
-  ipcMain.handle("im-gateway:dingtalkSaveSetup", (_event, raw: unknown) => {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-      throw new Error("缺少钉钉配置参数");
-    }
-    const input = raw as Record<string, unknown>;
-    if (typeof input.enabled !== "boolean" || typeof input.clientId !== "string") {
-      throw new Error("钉钉配置参数无效");
-    }
-    if (input.clientSecret !== undefined && typeof input.clientSecret !== "string") {
-      throw new Error("钉钉 Client Secret 参数无效");
-    }
-    if (!Array.isArray(input.allowedConversationIds) || !Array.isArray(input.allowedUserIds)) {
-      throw new Error("钉钉白名单参数无效");
-    }
-    return service.saveDingTalkSetup({
-      enabled: input.enabled,
-      clientId: input.clientId,
-      ...(typeof input.clientSecret === "string" ? { clientSecret: input.clientSecret } : {}),
-      allowedConversationIds: uniqueTrimmedStrings(input.allowedConversationIds),
-      allowedUserIds: uniqueTrimmedStrings(input.allowedUserIds),
-    });
-  });
-  ipcMain.handle("im-gateway:dingtalkStartDiscovery", () => service.startDingTalkDiscovery());
-  ipcMain.handle("im-gateway:dingtalkStopDiscovery", () => service.stopDingTalkDiscovery());
 }

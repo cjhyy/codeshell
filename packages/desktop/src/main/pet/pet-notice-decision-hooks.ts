@@ -55,7 +55,7 @@ export interface PetDecisionNoticeHooks {
    */
   onAwayChange(listener: () => void): () => void;
   /** The owner target the router would use on this channel is a confirmed private chat. */
-  ownerChannelIsDirect(channel: string): boolean;
+  ownerChannelIsDirect(channel: string): boolean | Promise<boolean>;
   /**
    * A decision's status; undefined once it is gone. A worker request's comes
    * from the projection, a desktop external runtime's from its approval router.
@@ -77,6 +77,7 @@ export interface PetDecisionHooksDeps {
   getSystemIdleTimeSec(): number;
   presenceIdleSec(): number;
   ownerChannels(): ImGatewayOwnerChannel[];
+  liveOwnerIsDirect?(channel: string): Promise<boolean>;
   isOwnerConversation(channel: string, target: string): boolean | Promise<boolean>;
   /** Tasks changed (an IM-started task may now own where a prompt goes). */
   subscribeTasks?: (listener: () => void) => () => void;
@@ -222,8 +223,9 @@ export function createDecisionHooks(deps: PetDecisionHooksDeps): PetDecisionHook
         if (awayListeners.size === 0) checkPresence();
       };
     },
-    ownerChannelIsDirect(channel) {
+    async ownerChannelIsDirect(channel) {
       try {
+        if (deps.liveOwnerIsDirect) return await deps.liveOwnerIsDirect(channel);
         return deps.ownerChannels().some((entry) => entry.id === channel && entry.isDirect);
       } catch {
         return false;

@@ -286,14 +286,12 @@ import {
 } from "./mobile-remote-orchestrator.js";
 import { createDesktopRoomModeAuthority } from "./cc-room/room-mode-ipc.js";
 import {
-  GatewayControlServer,
   type GatewayControlEventAttachment,
-  type GatewayControlEvent,
   type GatewayControlEventInput,
   type PetChatControlRequest,
   type PetChatControlResult,
 } from "./im-gateway-control-server.js";
-import { ImGatewayService, registerImGatewayIpc } from "./im-gateway-service.js";
+import { registerImGatewayIpc } from "./im-gateway-ipc.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { createRoomTranscriptSubscriptions } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
@@ -855,18 +853,12 @@ ipcMain.handle("panel-apps:open-window", async (event, target) => {
   }
   await panelAppWindows.open(event.sender, target);
 });
-const imGatewayService = new ImGatewayService({
-  ensureDesktopControl: async () => {
-    if (!gatewayControlServer) throw new Error("Desktop 消息桥接尚未启动");
-    await gatewayControlServer.start();
-  },
-  emit: (event) => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      if (!window.isDestroyed()) window.webContents.send("im-gateway:event", event);
-    }
-  },
-});
-registerImGatewayIpc(ipcMain, imGatewayService);
+const imGatewayService = desktopHost.im;
+registerImGatewayIpc(ipcMain, imGatewayService, (event, work) =>
+  desktopHost.withDocumentCaller(event, () =>
+    imGatewayService.withDocument(desktopHost.documentSignal(event), work),
+  ),
+);
 registerHostedWechatLogin(ipcMain, desktopHost, (work) => imGatewayService.withWechatLogin(work));
 let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ReturnType<typeof nativeMimiExternalActivity> | null = null;
@@ -1078,59 +1070,10 @@ setDefaultCredentialAccess({
       linkAccountExecutionOptions(captureLinkAccount, options),
     ),
 });
-let gatewayControlServer: GatewayControlServer | undefined;
 let sessionBridge: SessionBridgeWiring | undefined;
 
-/**
- * Publish once, then opportunistically hand the same event to the standalone
- * direct sender. When the live Gateway owns the stream the hand-off is a no-op;
- * when stopped, direct-capable adapters deliver it without task-layer coupling.
- */
-async function publishGatewayControlEvent(event: GatewayControlEventInput): Promise<void> {
-  const gateway = gatewayControlServer;
-  if (!gateway) throw new Error("IM Gateway notification outbox is unavailable");
-  handOffDirectDelivery(gateway, await gateway.publish(event));
-}
-
-/**
- * While the polling Gateway is stopped, direct-capable adapters deliver an
- * outbox event (a new one, or a retry copy the outbox appended) and report
- * its result like the live watcher does. Undefined: not handled here; the
- * event waits for the watcher. A send failure is reported so the outbox
- * retries or gives up; any other error leaves the event waiting, as before.
- */
-function handOffDirectDelivery(
-  gateway: GatewayControlServer,
-  published: GatewayControlEvent,
-): void {
-  const context = gateway.eventContext();
-  if (!context) return;
-  const report = (
-    result: Omit<Parameters<GatewayControlServer["reportEventResult"]>[0], "streamId" | "eventId">,
-  ) => gateway.reportEventResult({ streamId: context.streamId, eventId: published.id, ...result });
-  void imGatewayService
-    .deliverPublishedNotification(published, {
-      ...context,
-      isLive: async () => gateway.isEventLive(context.streamId, published.id),
-    })
-    .then(async (delivery) => {
-      if (delivery) await report({ outcome: delivery.outcome });
-    })
-    .catch(async (error: unknown) => {
-      dlog("main", "im_gateway.notification_direct.failed", {
-        eventId: published.id,
-        type: published.type,
-        error: String(error),
-      });
-      const failure = error as { attempted?: unknown; idempotent?: unknown };
-      if (typeof failure?.attempted !== "boolean") return;
-      await report({
-        outcome: "failed",
-        attempted: failure.attempted,
-        idempotent: failure.idempotent === true,
-        error: String(error).slice(0, 500),
-      }).catch(() => undefined);
-    });
+function publishGatewayControlEvent(event: GatewayControlEventInput): Promise<void> {
+  return imGatewayService.publish(event);
 }
 
 function publishGatewayControlEventBestEffort(event: GatewayControlEventInput): void {
@@ -1689,13 +1632,9 @@ async function createWindow(): Promise<BrowserWindow> {
       sessionRoutes: () => sessionBridge?.routes,
       gateway: imGatewayService,
       outbox: {
-        publish: publishGatewayControlEvent,
-        revoke: async (deliveryKey) => {
-          const gateway = gatewayControlServer;
-          if (!gateway) throw new Error("IM Gateway notification outbox is unavailable");
-          await gateway.revokeDelivery(deliveryKey, "notice-revoked");
-        },
-        state: (deliveryKey) => gatewayControlServer?.deliveryState(deliveryKey),
+        publish: (event, owner) => imGatewayService.publish(event, owner),
+        revoke: (deliveryKey) => imGatewayService.revoke(deliveryKey),
+        state: (deliveryKey) => imGatewayService.deliveryState(deliveryKey),
       },
       notifyDesktop: async (input) => desktopNotifier?.notify(input),
       readSettings: () => new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
@@ -3179,9 +3118,13 @@ app.whenReady().then(async () => {
     detail: String(error),
   }));
 
-  gatewayControlServer = new GatewayControlServer({
-    descriptorPath: join(userHome(), ".code-shell", "im-gateway", "desktop-control.json"),
-    legacyDesktopGatewayLockPath: imGatewayService.configuredGatewayLockPath(),
+  await imGatewayService.boot({
+    event: (event) => {
+      for (const window of BrowserWindow.getAllWindows())
+        if (!window.isDestroyed()) window.webContents.send("im-gateway:event", event);
+    },
+    outcome: (result) => { void petNotices?.outboxResult(result); },
+    ready: () => { void petNotices?.outboxReady(); },
     open: () => startMobileRemote({ mode: "tunnel" }),
     close: () => stopMobileRemote(),
     status: () => getMobileRemoteGatewayStatus(),
@@ -3194,29 +3137,7 @@ app.whenReady().then(async () => {
       bridge: () => sessionBridge,
       replyToSession: async (request) => petImDecisions?.replyToSession(request),
     }),
-  });
-  // Delivery results settle the notices that made them; retry copies the
-  // outbox appends get the same direct hand-off as a fresh publication.
-  const controlServer = gatewayControlServer;
-  controlServer.onEventResult((result) => void petNotices?.outboxResult(result));
-  controlServer.onEventAppended((event) => handOffDirectDelivery(controlServer, event));
-  await gatewayControlServer
-    .start()
-    // Notices recovered before the outbox could answer are settled now.
-    .then(() => void petNotices?.outboxReady())
-    .catch((error) => {
-      dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
-    });
-
-  // A configured Chat Gateway is part of the Desktop runtime, not a panel
-  // toggle. Start it on every owning app launch after the authenticated local
-  // control server is ready, so targeted Mimi completion receipts can flow
-  // even when the Link page is never opened. Invalid/fresh configs are a safe
-  // no-op; adapter/login failures are surfaced in status and logs without
-  // preventing the main window from opening.
-  await imGatewayService.startConfiguredAtLaunch().catch((error) => {
-    dlog("main", "im_gateway.autostart_failed", { error: String(error) });
-  });
+  }).catch((error) => dlog("main", "im_gateway.start_failed", { error: String(error) }));
 
   const staleQuickChats = await runOwnedQuickChatStartupCleanup(
     ownsDesktopInstance,
@@ -4254,10 +4175,8 @@ registerDesktopShutdown(app, {
       desktopHostShutdown,
       closeActivityHistory?.(),
       mimiPresenceShutdown,
-      imGatewayService.dispose(),
       mobileRemoteController.dispose(),
       cloudManagementManager.dispose(),
-      gatewayControlServer?.stop(),
       petWorkInboxFlush,
       petLongTaskFlush,
       petNoticeFlush,
@@ -4268,7 +4187,6 @@ registerDesktopShutdown(app, {
       cuaDriverShutdown,
       closeComputerUse(),
     ]);
-    gatewayControlServer = undefined;
     await mobileUploads.dispose();
   },
   finalize: () => sessionCatalogIpc.close(),

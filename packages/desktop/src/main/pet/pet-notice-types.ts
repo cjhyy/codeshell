@@ -323,7 +323,9 @@ export interface NoticeOutlets {
   /** Withdraw an enqueued delivery; it is never sent after this resolves. Throws when it could not be. */
   revoke?(deliveryKey: string): Promise<void>;
   /** Where an enqueued delivery stands in the outbox (startup recovery). */
-  outboxState?(deliveryKey: string): NoticeOutboxState | undefined;
+  outboxState?(
+    deliveryKey: string,
+  ): NoticeOutboxState | undefined | Promise<NoticeOutboxState | undefined>;
 }
 
 /** The ledger surface the router uses; `PetNoticeLedger` satisfies it. */

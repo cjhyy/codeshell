@@ -1282,7 +1282,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const notice = noticeFromRecord(record);
     // The outbox is the only resender: a send it took is settled from its
     // state, never written again.
-    const state = channel && body ? this.outboxState(record) : undefined;
+    const state = channel && body ? await this.outboxState(record) : undefined;
     if (state === "not-ready") {
       // The outbox is still starting: decide once it can answer (recheckOutbox).
       this.awaitingOutbox.add(record.id);
@@ -1324,9 +1324,9 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     this.showDesktop(notice, `可能已发送：${body || composeNoticeBody(notice.kind, notice.facts)}`);
   }
 
-  private outboxState(record: NoticeRecord): NoticeOutboxState | undefined {
+  private async outboxState(record: NoticeRecord): Promise<NoticeOutboxState | undefined> {
     try {
-      return this.options.outlets?.outboxState?.(this.deliveryKeyOf(record));
+      return await this.options.outlets?.outboxState?.(this.deliveryKeyOf(record));
     } catch (error) {
       this.log("pet.notice.outbox_state_failed", { error: errorText(error) });
       return undefined;
@@ -1342,7 +1342,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const ledger = this.options.ledger!;
     if (!this.options.outlets?.outboxState) return;
     for (const record of ledger.enqueued()) {
-      const state = this.outboxState(record);
+      const state = await this.outboxState(record);
       // Still starting: nothing is known yet, so nothing is lost either.
       if (state === "pending" || state === "not-ready") continue;
       if (state) await this.settleFromOutbox(record, state.outcome, state.error);

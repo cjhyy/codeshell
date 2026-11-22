@@ -12,6 +12,7 @@ import { hostedActivityHistory } from "../../host/composition/activity-history.j
 import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
 import { memoryReads } from "./memory-reads.js";
 import { memoryOperations } from "../../host/composition/memory.js";
+import { bindImGateway } from "../../host/im/gateway.js";
 import { bindRemoteServices } from "../../host/remote/service.js";
 import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
@@ -166,6 +167,7 @@ const terminals = hostedTerminals(
   (options) => catalog.list(options),
 );
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
+let im: ReturnType<typeof bindImGateway> | undefined;
 let remote: ReturnType<typeof bindRemoteServices> | undefined;
 let stopping = false;
 const providers = new Set<() => Promise<void>>();
@@ -191,6 +193,10 @@ const output = new HostOutput(
 parent.on("message", ({ data, ports }) => {
   if (stopping) {
     for (const port of ports) port.close();
+    return;
+  }
+  if (isDesktopHostControl(data) && data.type === "im-gateway-port" && server && ports.length === 1 && !im) {
+    im = bindImGateway(electronPrivatePort(ports[0]));
     return;
   }
   if (isDesktopHostControl(data) && data.type === "external-provider-port" && server && ports.length === 1) {
@@ -272,6 +278,7 @@ parent.on("message", ({ data, ports }) => {
           automation.close(),
           ...[...providers].map((close) => close()),
           remote?.close(),
+          im?.close(),
           mediaProtocol.close(),
         ]),
       )

@@ -229,7 +229,7 @@ export interface PetImDecisionsOptions {
     senderId?: string;
   }) => boolean | Promise<boolean>;
   /** The owner target on this channel is a confirmed private chat. */
-  ownerChannelIsDirect?: (channel: string) => boolean;
+  ownerChannelIsDirect?: (channel: string) => boolean | Promise<boolean>;
   /** The owner left the computer: a prompt kept on the desktop may now go to IM. */
   isAway?: () => boolean;
   /** The projection's status of a decision ("expired" = Core's deadline fired). */
@@ -456,8 +456,8 @@ export class PetImDecisions {
    * An owner target that is not a confirmed private chat got the generic
    * text: nothing there is answerable.
    */
-  private answerableOn(target: NoticeTarget, channel: string): boolean {
-    return target.kind !== "owner" || this.options.ownerChannelIsDirect?.(channel) === true;
+  private async answerableOn(target: NoticeTarget, channel: string): Promise<boolean> {
+    return target.kind !== "owner" || (await this.options.ownerChannelIsDirect?.(channel)) === true;
   }
 
   /** Look over every decision; a call during a look runs one more afterwards. */
@@ -587,7 +587,7 @@ export class PetImDecisions {
     if (
       channel !== undefined &&
       result.sent === "accepted" &&
-      this.answerableOn(entry.delivery.target, channel)
+      (await this.answerableOn(entry.delivery.target, channel))
     ) {
       await this.router.updateDecision(entry.code, {
         ...patch,
@@ -611,7 +611,7 @@ export class PetImDecisions {
       // Enqueued: the gateway outbox has it and delivers it, like an accepted send.
       if ((copy.status !== "accepted" && copy.status !== "enqueued") || copy.channel === undefined)
         continue;
-      if (!this.answerableOn(entry.delivery.target, copy.channel)) continue;
+      if (!(await this.answerableOn(entry.delivery.target, copy.channel))) continue;
       const patch = { phase: "im" as const, channel: copy.channel, imAt: this.now() };
       return (
         (await this.router.updateDecision(entry.code, patch)) ?? {
