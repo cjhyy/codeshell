@@ -273,7 +273,7 @@ export async function getGitBranches(cwd: string): Promise<GitBranches> {
   return { isRepo: true, current, branches };
 }
 
-export async function switchGitBranch(cwd: string, branch: string): Promise<GitBranches> {
+export async function switchGitBranch(cwd: string, branch: string, beforeChange?: () => Promise<void>): Promise<GitBranches> {
   const trimmed = branch.trim();
   if (!trimmed) throw new Error("Branch is required");
 
@@ -281,11 +281,12 @@ export async function switchGitBranch(cwd: string, branch: string): Promise<GitB
   if (!before.isRepo) throw new Error("Not a Git repository");
   if (!before.branches.includes(trimmed)) throw new Error(`Local branch not found: ${trimmed}`);
 
+  await beforeChange?.();
   await gitRun(cwd, ["switch", trimmed]);
   return getGitBranches(cwd);
 }
 
-export async function stashAndSwitchGitBranch(cwd: string, branch: string): Promise<GitBranches> {
+export async function stashAndSwitchGitBranch(cwd: string, branch: string, beforeChange?: () => Promise<void>): Promise<GitBranches> {
   const trimmed = branch.trim();
   if (!trimmed) throw new Error("Branch is required");
 
@@ -293,6 +294,7 @@ export async function stashAndSwitchGitBranch(cwd: string, branch: string): Prom
   if (!before.isRepo) throw new Error("Not a Git repository");
   if (!before.branches.includes(trimmed)) throw new Error(`Local branch not found: ${trimmed}`);
 
+  await beforeChange?.();
   await gitRun(cwd, [
     "stash",
     "push",

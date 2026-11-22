@@ -139,9 +139,6 @@ describe("desktop IPC contract", () => {
       "workspace:gitStatus",
       "workspace:gitBranches",
       "workspace:profiles",
-      "review:status",
-      "review:diff",
-      "review:recentCommits",
       "fsSession:readDir",
       "fsSession:readFile",
       "fsSession:exists",
@@ -150,6 +147,19 @@ describe("desktop IPC contract", () => {
     for (const channel of channels) {
       expect(preloadInvokes).toContain(channel);
       expect(mainHandles).toContain(channel);
+    }
+  });
+
+  test("Git review uses scoped Host methods and has no legacy Main reads", () => {
+    const main = registeredMainHandleChannels(sourceFiles("src/main"));
+    const preload = readFileSync(join(desktopRoot, "src/preload/project-authority-api.ts"), "utf8");
+    for (const [oldChannel, method] of [
+      ["git:projectStatus", "git/projectStatus"], ["git:projectBranches", "git/projectBranches"],
+      ["review:status", "review/status"], ["review:diff", "review/diff"],
+      ["review:recentCommits", "review/commits"], ["review:preparePrompt", "review/prompt"],
+    ]) {
+      expect(main).not.toContain(oldChannel);
+      expect(preload).toContain(`read("${method}"`);
     }
   });
 

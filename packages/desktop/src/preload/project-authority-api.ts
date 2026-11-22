@@ -4,14 +4,7 @@ import type { ExternalGitBlobRef, SessionWorkspace } from "@cjhyy/code-shell-cor
 import type { LocalProject } from "./project-authority-types";
 import type { FileVersionResult } from "../shared/file-version.js";
 import type { IpcRenderer, IpcRendererEvent } from "electron";
-import type {
-  ReviewAiPromptRequest,
-  ReviewAiPromptResult,
-  ReviewGitCommit,
-  ReviewGitDiffRequest,
-  ReviewGitDiffResult,
-  ReviewGitStatusResult,
-} from "../shared/review";
+import type { ReviewAiPromptRequest, ReviewGitDiffRequest } from "../shared/review";
 
 type ProjectAuthorityIpcRenderer = Pick<IpcRenderer, "invoke" | "on" | "removeListener">;
 
@@ -24,9 +17,11 @@ export function createProjectAuthorityApi(
   function read<K extends keyof WorkspaceReadContracts>(
     name: K,
     params: WorkspaceReadContracts[K]["params"],
-    fallback: () => Promise<WorkspaceReadContracts[K]["result"]>,
+    fallback?: () => Promise<WorkspaceReadContracts[K]["result"]>,
   ) {
-    return host ? host.readBusiness(name, params, fallback) : fallback();
+    if (host) return host.readBusiness(name, params, fallback);
+    if (fallback) return fallback();
+    return Promise.reject(new Error("Git review requires the workbench Host"));
   }
   return {
     searchProjectFiles: (projectId: string, query: string, rootId?: string) =>
@@ -35,14 +30,8 @@ export function createProjectAuthorityApi(
           ? ipcRenderer.invoke("files:searchProject", projectId, query)
           : ipcRenderer.invoke("files:searchProject", projectId, query, rootId),
       ),
-    getProjectGitStatus: (projectId: string) =>
-      read("git/projectStatus", { projectId }, () =>
-        ipcRenderer.invoke("git:projectStatus", projectId),
-      ),
-    getProjectGitBranches: (projectId: string) =>
-      read("git/projectBranches", { projectId }, () =>
-        ipcRenderer.invoke("git:projectBranches", projectId),
-      ),
+    getProjectGitStatus: (projectId: string) => read("git/projectStatus", { projectId }),
+    getProjectGitBranches: (projectId: string) => read("git/projectBranches", { projectId }),
     switchProjectGitBranch: (projectId: string, branch: string) =>
       ipcRenderer.invoke("git:projectSwitchBranch", projectId, branch),
     stashAndSwitchProjectGitBranch: (projectId: string, branch: string) =>
@@ -55,38 +44,13 @@ export function createProjectAuthorityApi(
       ipcRenderer.invoke("workspace:gitStatus", sessionId),
     getSessionGitBranches: (sessionId: string) =>
       ipcRenderer.invoke("workspace:gitBranches", sessionId),
-    getReviewStatus: (sessionId: string) =>
-      read(
-        "review/status",
-        { sessionId },
-        () => ipcRenderer.invoke("review:status", sessionId) as Promise<ReviewGitStatusResult>,
-      ),
+    getReviewStatus: (sessionId: string) => read("review/status", { sessionId }),
     getReviewDiff: (sessionId: string, request: ReviewGitDiffRequest) =>
-      read(
-        "review/diff",
-        { sessionId, request },
-        () => ipcRenderer.invoke("review:diff", sessionId, request) as Promise<ReviewGitDiffResult>,
-      ),
+      read("review/diff", { sessionId, request }),
     prepareReviewPrompt: (sessionId: string, request: ReviewAiPromptRequest) =>
-      read(
-        "review/prompt",
-        { sessionId, request },
-        () =>
-          ipcRenderer.invoke(
-            "review:preparePrompt",
-            sessionId,
-            request,
-          ) as Promise<ReviewAiPromptResult>,
-      ),
+      read("review/prompt", { sessionId, request }),
     getReviewRecentCommits: (sessionId: string, limit?: number) =>
-      read(
-        "review/commits",
-        { sessionId, limit },
-        () =>
-          ipcRenderer.invoke("review:recentCommits", sessionId, limit) as Promise<
-            ReviewGitCommit[]
-          >,
-      ),
+      read("review/commits", { sessionId, limit }),
     listSessionProfiles: (sessionId: string) => ipcRenderer.invoke("workspace:profiles", sessionId),
     listSessionWorktrees: (sessionId: string, cwd: string) =>
       ipcRenderer.invoke("workspace:list", sessionId, cwd),

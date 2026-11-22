@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { afterEach, expect, test } from "bun:test";
 import { DesktopHostClient, routeLocalProviders } from "./desktop-host-client";
 import type { DesktopHostStatus } from "./types";
@@ -287,7 +288,7 @@ test("approval resume uses its own epoch and version and retains only external a
   ]);
   const since = { since: { epoch: "worker-1", stateVersion: 9 } };
   expect(await respond(since, { epoch: "worker-1", stateVersion: 9 })).toEqual([native, external]);
-  await expect(respond(since, { epoch: "worker-2", stateVersion: 1 })).rejects.toThrow("snapshot");
+  await assert.rejects(respond(since, { epoch: "worker-2", stateVersion: 1 }), /snapshot/);
   expect(await respond(since, { epoch: "worker-2", stateVersion: 1, pending: [] })).toEqual([
     external,
   ]);

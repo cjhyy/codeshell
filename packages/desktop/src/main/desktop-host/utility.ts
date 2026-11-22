@@ -1,3 +1,4 @@
+import { gitOperations } from "../../host/composition/git.js";
 import { labFiles } from "../../host/composition/optimization-lab.js";
 import { hostedProfileLibrary } from "../../host/composition/profile-library.js";
 import { configuredMcpProbe } from "../../host/composition/configured-mcp-probe.js";
@@ -139,6 +140,7 @@ const business = new HostBusinessCalls({
   ...segments,
   "rooms/messages": (p) => historyWorker.roomHistory("rooms/messages", p),
   "rooms/historyPage": (p) => historyWorker.roomHistory("rooms/historyPage", p),
+  ...gitOperations(),
   ...labFiles,
   ...skills.methods,
   ...profileLibrary.operations,

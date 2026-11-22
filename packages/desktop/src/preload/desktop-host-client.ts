@@ -399,8 +399,9 @@ export class DesktopHostClient {
   async readBusiness<K extends keyof DesktopBusinessReads>(
     method: K,
     params: DesktopBusinessReads[K]["params"],
-    fallback: () => Promise<DesktopBusinessReads[K]["result"]>,
+    fallback?: () => Promise<DesktopBusinessReads[K]["result"]>,
   ): Promise<DesktopBusinessReads[K]["result"]> {
+    if (!fallback && this.initialPort) await this.initialPort;
     if (this.status === "ready" && this.port && this.methods.has(method))
       return (await this.request(
         this.port,
@@ -408,7 +409,7 @@ export class DesktopHostClient {
         params,
         serviceDeadlines.has(method) ? 0 : this.timeoutMs,
       )) as DesktopBusinessReads[K]["result"];
-    if (this.negotiatedMethods.has(method))
+    if (!fallback || this.negotiatedMethods.has(method))
       throw rpcError(DesktopHostErrors.reconnecting, `Desktop Host ${this.status}`);
     return fallback();
   }

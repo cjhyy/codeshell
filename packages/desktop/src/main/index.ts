@@ -3789,7 +3789,7 @@ const { externalRuntimeModelService } = registerExternalRuntimeIpc({
   externalRuntimeService: () => externalRuntime.service,
   externalRuntimeApprovals: () => externalRuntime.approvals,
 });
-const { sweepStaleWorktrees } = registerGitReviewIpc({ knownGitRoots });
+const { sweepStaleWorktrees } = registerGitReviewIpc({ knownGitRoots, business: desktopHost.callBusiness, documentSignal: desktopHost.documentSignal });
 registerWorkspaceFilesIpc({ appRendererNavigation, mainWindows, assertRendererSessionAccess });
 // Authoritative no-repo conversation cwd (~/.code-shell/no-repo). The renderer
 // is a thin client and must NOT recompute homedir() itself; it asks main so the

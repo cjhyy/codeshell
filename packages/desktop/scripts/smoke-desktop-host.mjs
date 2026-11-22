@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 /* global window */
 import { verifyPairedHostTerminal } from "./paired-host-terminal.mjs";
 import assert from "node:assert/strict";
@@ -44,7 +45,15 @@ try {
   const cliProject = join(isolated.home,".claude","projects",mount.replace(/[^A-Za-z0-9]/g,"-"));
   await mkdir(cliProject,{recursive:true});
   await writeFile(join(cliProject,"host-cli-fixture.jsonl"),JSON.stringify({type:"user",cwd:mount,sessionId:"host-cli-fixture",message:{role:"user",content:"Host CLI transcript"}})+"\n");
+  const git = (...args) => execFileSync("git", ["-c", "commit.gpgSign=false", "-c", "user.name=Fixture",
+    "-c", "user.email=fixture@example.invalid", ...args], {
+    cwd: mount, encoding: "utf8", env: { ...process.env, GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: join(isolated.home, "gitconfig") },
+  }).trim();
+  git("init", "--initial-branch=main", "--template=");
   await writeFile(join(mount, "host-file.txt"), "from-workspace");
+  git("add", "host-file.txt");
+  git("commit", "-m", "fixture");
+  git("branch", "review-fixture");
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
   await writeFile(
     join(isolated.codeShellHome, "desktop", "projects.json"),
@@ -141,6 +150,14 @@ utilityProcess.fork = function (...args) {
   await first.evaluate(() => window.codeshell.newWindow());
   const second = await secondOpened;
   await observeHost(second);
+  const projectId = "host-smoke-project";
+  await first.evaluate((id) => window.codeshell.switchProjectGitBranch(id, "review-fixture"), projectId);
+  assert.equal(git("branch", "--show-current"), "review-fixture");
+  await writeFile(join(mount, "stash-fixture.txt"), "synthetic pending change");
+  await second.evaluate((id) => window.codeshell.stashAndSwitchProjectGitBranch(id, "main"), projectId);
+  assert.equal(git("branch", "--show-current"), "main");
+  assert.match(git("stash", "list"), /auto-stash before switching to main/);
+
   assert.deepEqual(await readCatalog(second), catalog);
   const skillSource = join(isolated.home, "owned-skill-directory");
   const skillBody = "---\nname: host-smoke-skill\ndescription: Owned directory import\n---\nOwned body.\n";
