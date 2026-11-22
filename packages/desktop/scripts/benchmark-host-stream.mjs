@@ -22,6 +22,30 @@ assert.equal(process.argv.length, 3, "Pass a new evidence directory");
 const evidence = resolve(process.argv[2]);
 await mkdir(evidence, { mode: 0o700 });
 const appDir = fileURLToPath(new URL("../", import.meta.url));
+// Pin the exact executable JS, preload and renderer bytes used by this run.
+async function buildIdentity() {
+  const graph = [];
+  async function inventory(dir) {
+    for (const entry of await readdir(join(appDir, dir), { withFileTypes: true })) {
+      const name = dir + "/" + entry.name;
+      if (entry.isDirectory()) await inventory(name);
+      else if (entry.isFile()) {
+        const bytes = await readFile(join(appDir, name));
+        graph.push([name, createHash("sha256").update(bytes).digest("hex")]);
+      } else throw Error("Unexpected non-regular build entry: " + name);
+    }
+  }
+  for (const dir of ["out/main", "out/preload", "out/renderer"]) await inventory(dir);
+  graph.sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+  const git = (...args) => execFileSync("git", args, { cwd: appDir, encoding: "utf8" }).trim();
+  return {
+    checkout: git("rev-parse", "HEAD"),
+    trackedFilesDirty: Boolean(git("status", "--porcelain", "--untracked-files=no")),
+    buildFiles: graph.length,
+    buildSha256: createHash("sha256").update(JSON.stringify(graph)).digest("hex"),
+  };
+}
+const build = await buildIdentity();
 const isolated = await makeIsolatedElectronHome("codeshell-stream-benchmark-");
 const startStream = Promise.withResolvers();
 const releaseStream = Promise.withResolvers();
@@ -302,7 +326,7 @@ try {
   const gaps = stamps.slice(1).map((x, i) => x - stamps[i]);
   assert(gaps.length > 100 && emitted >= 500 && Math.max(...stamps) - Math.min(...stamps) > 19000);
   const result = {
-    checkout: execFileSync("git", ["rev-parse", "HEAD"], { cwd: appDir, encoding: "utf8" }).trim(),
+    ...build,
     electron,
     kernel: release(),
     traceSha256: createHash("sha256").update(traceBytes).digest("hex"),
