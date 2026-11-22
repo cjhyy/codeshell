@@ -24,7 +24,7 @@ import { createDesktopModuleRegistry, registerDesktopShutdown } from "./desktop-
 import { createExternalRuntimeModule } from "./external-runtime-module.js";
 import { externalRuntimeMimiHost } from "./external-runtime-mimi-tools.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
-import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
+import { registerProfileSwitchIpc, hostedProfileSwitch } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
 import { openSourceCollectionOperation } from "./source-collections-host.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
@@ -2824,6 +2824,8 @@ registerLinkedFileSourceIpc({
 registerSourceCatalogIpc(ipcMain, desktopHost, (options) => dialog.showOpenDialog(options));
 registerProfileSwitchIpc({
   ipcMain,
+  ...hostedProfileSwitch(desktopHost),
+  documentSignal: (event) => desktopHost.documentSignal(event),
   resolveTarget: resolveRendererConfigurationTarget,
   withMutation: (cwd, write) => {
     if (!bridge) throw new Error("桌面运行时尚未就绪，请稍后重试。");

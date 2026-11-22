@@ -1,5 +1,10 @@
 import type { WorkspaceProfile } from "@cjhyy/code-shell-core";
 import type { CodeshellApi } from "../preload/types.js";
+import type {
+  ProfileSwitchTarget,
+  ProfileCredentialQuestion,
+  ProfileCredentialAnswers,
+} from "./profile-switch-authority.js";
 import type { DigitalHumanTeam } from "./digital-human-team.js";
 import type { RendererConfigurationTarget } from "./renderer-configuration.js";
 import type {
@@ -47,7 +52,34 @@ export interface ProfilePackageOperations {
     result: Result<"installProfileRequirements">;
   };
 }
+/** Native-owned inputs never enter the workbench capability list. */
+export type ProfileWorkerReads = ProfileLibraryReads & {
+  "profiles/switchSourceQuestions": {
+    params: { target: ProfileSwitchTarget };
+    result: ProfileCredentialQuestion[];
+  };
+  "profiles/previewSwitch": {
+    params: { target: ProfileSwitchTarget; name: string | null; answers: ProfileCredentialAnswers };
+    result: { status: "ready"; preview: Result<"previewProfileSwitch"> } | { status: "changed" };
+  };
+};
+export function isProfileWorkerRead(name: string): name is keyof ProfileWorkerReads {
+  return (
+    isProfileLibraryRead(name) ||
+    name === "profiles/switchSourceQuestions" ||
+    name === "profiles/previewSwitch"
+  );
+}
 export interface ProfileLibraryChanges {
+  "profiles/adoptSwitch": {
+    input: {
+      target: ProfileSwitchTarget;
+      name: string | null;
+      answers: ProfileCredentialAnswers;
+      expectedRevision: string;
+    };
+    result: Result<"adoptProfileSwitch">;
+  };
   "profiles/activate": {
     input: { target: RendererConfigurationTarget; name: string };
     result: void;
@@ -88,6 +120,7 @@ export interface ProfileLibraryChanges {
   };
 }
 export const profileLibraryChanges = [
+  "profiles/adoptSwitch",
   "profiles/activate",
   "profiles/deactivate",
   "profiles/setSession",
@@ -108,8 +141,8 @@ export function isProfileLibraryChange(name: string): name is keyof ProfileLibra
 }
 export type ProfileLibraryOperations = ProfilePackageOperations &
   ProfileLibraryChanges & {
-    [K in keyof ProfileLibraryReads]: {
-      input: ProfileLibraryReads[K]["params"];
-      result: ProfileLibraryReads[K]["result"];
+    [K in keyof ProfileWorkerReads]: {
+      input: ProfileWorkerReads[K]["params"];
+      result: ProfileWorkerReads[K]["result"];
     };
   };

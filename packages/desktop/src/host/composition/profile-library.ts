@@ -1,6 +1,6 @@
 import type { StateStorage } from "@cjhyy/code-shell-core/internal/storage";
 import type { ActivityHistoryWorker } from "../../main/activity-history-worker-client.js";
-import type { ProfileLibraryChanges, ProfileLibraryReads } from "../../shared/profile-library.js";
+import type { ProfileLibraryChanges, ProfileWorkerReads } from "../../shared/profile-library.js";
 import type { BusinessGrant, BusinessMethods } from "./business-calls.js";
 import {
   businessArguments,
@@ -23,8 +23,8 @@ export function hostedProfileLibrary(
   const empty = <K extends "profiles/catalog" | "profiles/repos" | "profiles/teams">(key: K) =>
     businessRead(key, noBusinessArguments, () => worker.view(key, {}));
   const view =
-    <K extends keyof ProfileLibraryReads>(key: K) =>
-    (input: ProfileLibraryReads[K]["params"]) =>
+    <K extends keyof ProfileWorkerReads>(key: K) =>
+    (input: ProfileWorkerReads[K]["params"]) =>
       worker.view(key, input);
   function change<K extends keyof ProfileLibraryChanges>(key: K) {
     return async (input: ProfileLibraryChanges[K]["input"], grant: BusinessGrant) => {
@@ -67,6 +67,9 @@ export function hostedProfileLibrary(
       "profiles/teams": view("profiles/teams"),
       "profiles/list": view("profiles/list"),
       "profiles/previewDeletion": view("profiles/previewDeletion"),
+      "profiles/switchSourceQuestions": view("profiles/switchSourceQuestions"),
+      "profiles/previewSwitch": view("profiles/previewSwitch"),
+      "profiles/adoptSwitch": change("profiles/adoptSwitch"),
       "profiles/activate": change("profiles/activate"),
       "profiles/deactivate": change("profiles/deactivate"),
       "profiles/setSession": change("profiles/setSession"),
@@ -81,6 +84,6 @@ export function hostedProfileLibrary(
       "profiles/pickedDefinition": change("profiles/pickedDefinition"),
       "profiles/importDefinition": change("profiles/importDefinition"),
       "profiles/exportDefinition": change("profiles/exportDefinition"),
-    } satisfies Pick<BusinessMethods, keyof ProfileLibraryReads | keyof ProfileLibraryChanges>,
+    } satisfies Pick<BusinessMethods, keyof ProfileWorkerReads | keyof ProfileLibraryChanges>,
   };
 }

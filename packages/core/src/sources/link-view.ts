@@ -1,7 +1,11 @@
 import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { z } from "zod";
 import { createHash } from "node:crypto";
-import { credentialAccessScope, getCredentialAccess } from "../credentials/access.js";
+import {
+  credentialAccessScope,
+  getCredentialAccess,
+  type CredentialMetadata,
+} from "../credentials/access.js";
 import { getLocalLinkProvider } from "../links/providers.js";
 import { isRemoteLinkCredential } from "../links/remote.js";
 import { savedLinkConnectionStatus } from "../links/status.js";
@@ -47,34 +51,7 @@ export function isLinkSourceAvailable(
       definition.credentialRef!,
       credentialAccessScope(context?.settingsScope),
     );
-    if (!credential || !credential.hasSecret || credential.meta?.linkProvider !== view.providerId)
-      return false;
-    const remote = isRemoteLinkCredential(credential);
-    if (
-      !remote &&
-      (credential.type !== "link" ||
-        linkConnectionMetadata(credential.meta).linkExecutionRuntime !== "local")
-    )
-      return false;
-    if (remote && credential.meta?.linkRemoteState !== "connected") return false;
-    if (savedLinkConnectionStatus(credential).state !== "ready") return false;
-    if (
-      remote &&
-      credential.oauthStatus?.state !== "valid" &&
-      credential.oauthStatus?.state !== "expired"
-    )
-      return false;
-    if (
-      linkConnectionMetadata(credential.meta).linkAuthSource === "browser-oauth" &&
-      (!credential.meta.linkCapabilityIds?.length ||
-        !(
-          credential.oauthStatus?.state === "valid" ||
-          (credential.oauthStatus?.state === "expired" &&
-            credential.oauthStatus.canRefresh === true)
-        ))
-    )
-      return false;
-    return allowsLinkAction(credential, view.providerId, view.action);
+    return allowsSourceView(credential, view);
   } catch {
     return false;
   }
@@ -94,4 +71,37 @@ export function linkSourceAuthorityRevision(
     );
   if (!credential) return undefined;
   return createHash("sha256").update(linkAuthoritySnapshot(credential)).digest("hex");
+}
+
+export function allowsSourceView(
+  credential: CredentialMetadata | undefined,
+  view: { providerId: string; action: string },
+): boolean {
+  if (!credential || !credential.hasSecret || credential.meta?.linkProvider !== view.providerId)
+    return false;
+  const remote = isRemoteLinkCredential(credential);
+  if (
+    !remote &&
+    (credential.type !== "link" ||
+      linkConnectionMetadata(credential.meta).linkExecutionRuntime !== "local")
+  )
+    return false;
+  if (remote && credential.meta?.linkRemoteState !== "connected") return false;
+  if (savedLinkConnectionStatus(credential).state !== "ready") return false;
+  if (
+    remote &&
+    credential.oauthStatus?.state !== "valid" &&
+    credential.oauthStatus?.state !== "expired"
+  )
+    return false;
+  if (
+    linkConnectionMetadata(credential.meta).linkAuthSource === "browser-oauth" &&
+    (!credential.meta.linkCapabilityIds?.length ||
+      !(
+        credential.oauthStatus?.state === "valid" ||
+        (credential.oauthStatus?.state === "expired" && credential.oauthStatus.canRefresh === true)
+      ))
+  )
+    return false;
+  return allowsLinkAction(credential, view.providerId, view.action);
 }

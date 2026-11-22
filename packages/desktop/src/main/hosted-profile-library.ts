@@ -1,4 +1,4 @@
-import type { ProfileLibraryChanges, ProfileLibraryReads } from "../shared/profile-library.js";
+import type { ProfileLibraryChanges, ProfileWorkerReads } from "../shared/profile-library.js";
 import { claimBusinessCommit } from "../host/composition/business-calls.js";
 import {
   deleteDigitalHumanTeam,
@@ -23,17 +23,35 @@ import {
   previewProfileDeletion,
   saveProfile,
 } from "./profiles-service.js";
+import { adoptProfileSwitch, previewProfileSwitch } from "./profile-switch-service.js";
+import { profileCredentialQuestions, ProfileSourceChanged } from "./profile-switch-authority.js";
+import { resolveRendererConfigurationTarget } from "./renderer-configuration-authority.js";
+import type { ProfileSwitchTarget } from "../shared/profile-switch-authority.js";
 import { rendererConfigurationCwd } from "./renderer-configuration-helpers.js";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration.js";
 const cwd = (target: RendererConfigurationTarget | null) =>
   target === null ? undefined : rendererConfigurationCwd(target);
 
 type Views = {
-  [K in keyof ProfileLibraryReads]: (
-    input: ProfileLibraryReads[K]["params"],
-  ) => ProfileLibraryReads[K]["result"] | Promise<ProfileLibraryReads[K]["result"]>;
+  [K in keyof ProfileWorkerReads]: (
+    input: ProfileWorkerReads[K]["params"],
+  ) => ProfileWorkerReads[K]["result"] | Promise<ProfileWorkerReads[K]["result"]>;
 };
 const views: Views = {
+  "profiles/switchSourceQuestions": async ({ target }) => {
+    if (!(await targetStillCurrent(target))) throw Error("Profile target changed during review");
+    return profileCredentialQuestions(target.cwd);
+  },
+  "profiles/previewSwitch": async ({ target, name, answers }) => {
+    if (!(await targetStillCurrent(target))) return { status: "changed" };
+    try {
+      return { status: "ready", preview: previewProfileSwitch(target, name, answers) };
+    } catch (error) {
+      if (error instanceof ProfileSourceChanged) return { status: "changed" };
+      throw error;
+    }
+  },
+
   "profiles/list": async ({ target }) => listProfiles(await cwd(target)),
   "profiles/catalog": listProfileCatalog,
   "profiles/repos": listProfileRepos,
@@ -47,7 +65,7 @@ const views: Views = {
 };
 export function readProfileLibrary<K extends keyof Views>(
   method: K,
-  input: ProfileLibraryReads[K]["params"],
+  input: ProfileWorkerReads[K]["params"],
 ) {
   return views[method](input);
 }
@@ -58,7 +76,17 @@ type Mutations = {
     claim: () => void,
   ) => ProfileLibraryChanges[K]["result"] | Promise<ProfileLibraryChanges[K]["result"]>;
 };
+async function targetStillCurrent(target: ProfileSwitchTarget) {
+  const fresh = await resolveRendererConfigurationTarget(
+    target.kind === "project" ? { projectId: target.projectId } : { sessionId: target.sessionId },
+  );
+  return JSON.stringify(fresh) === JSON.stringify(target);
+}
 const mutations: Mutations = {
+  "profiles/adoptSwitch": async ({ target, name, answers, expectedRevision }, claim) => {
+    if (!(await targetStillCurrent(target))) return { status: "stale" };
+    return adoptProfileSwitch(target, name, expectedRevision, answers, claim);
+  },
   "profiles/activate": async ({ target, name }, claim) =>
     activateProfile(await rendererConfigurationCwd(target), name, claim),
   "profiles/deactivate": async ({ target }, claim) =>

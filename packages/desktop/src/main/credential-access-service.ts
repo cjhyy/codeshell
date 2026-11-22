@@ -1,4 +1,11 @@
-import { runDesktopCredentialOperation } from "./credential-file-client.js";
+import { installDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
+import { decideSourceCredential } from "@cjhyy/code-shell-core/internal";
+import type { ProfileCredentialRevisions } from "@cjhyy/code-shell-core/internal/storage";
+import type {
+  ProfileCredentialQuestion,
+  ProfileCredentialAnswers,
+} from "../shared/profile-switch-authority.js";
+import { credentialFiles, runDesktopCredentialOperation } from "./credential-file-client.js";
 import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import {
   CredentialStore,
@@ -210,4 +217,55 @@ function toMetadata(cred: Credential, approvalIdentity: string): CredentialMetad
       ? { oauthStatus: summarizeOAuthCredentialSecret(secret) }
       : {}),
   };
+}
+
+/** Only a bound source's availability and opaque Link authority leave Main. */
+export async function answerProfileCredentialQuestions(
+  cwd: string,
+  questions: ProfileCredentialQuestion[],
+  assertCurrent: () => void,
+): Promise<ProfileCredentialAnswers> {
+  if (!questions.length) return { decisions: [] };
+  if (questions.some((q) => q.link)) installDefaultLinkProviders();
+  const refs = new Set(questions.map((q) => q.ref));
+  const files = credentialFiles();
+  const revisions: Partial<ProfileCredentialRevisions> = {};
+  const scopedFiles = {
+    ...files,
+    async read(address: Parameters<typeof files.read>[0]) {
+      assertCurrent();
+      const image = await files.read(address);
+      assertCurrent();
+      revisions[address.scope] = image.revision;
+      return {
+        ...image,
+        file: {
+          ...image.file,
+          credentials: image.file.credentials.filter((record) => record && refs.has(record.id)),
+        },
+      };
+    },
+  };
+  const decisions = await new CredentialStore(cwd).withAsyncCipher(
+    scopedFiles,
+    ["user", "project"],
+    undefined,
+    (store) => {
+      assertCurrent();
+      const credentials = new Map(
+        store
+          .listWithSources("full")
+          .credentials.map(({ credential, source }) => [
+            credential.id,
+            toMetadata(credential, store.approvalIdentity(source, credential)),
+          ]),
+      );
+      return questions.map((q) => ({
+        key: JSON.stringify(q),
+        ...decideSourceCredential(q, credentials.get(q.ref)),
+      }));
+    },
+  );
+  if (!revisions.user || !revisions.project) throw Error("Missing profile credential revisions");
+  return { decisions, revisions: { user: revisions.user, project: revisions.project } };
 }

@@ -1,7 +1,7 @@
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { readPetSummaryInput } from "./pet/pet-summary-input.js";
 import type { RoomHistoryOperations } from "../shared/room-history.js";
-import { isProfileLibraryRead, type ProfileLibraryReads } from "../shared/profile-library.js";
+import { isProfileWorkerRead, type ProfileWorkerReads } from "../shared/profile-library.js";
 import { readProfileLibrary } from "./hosted-profile-library.js";
 import { assertSafeSessionId, RoomHistoryReader } from "@cjhyy/code-shell-server/storage";
 import {
@@ -41,7 +41,7 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
   tail = tail.then(async () => {
     try {
       let value: unknown;
-      if (isProfileLibraryRead(method)) value = await readProfileLibrary(method, input as ProfileLibraryReads[typeof method]["params"]);
+      if (isProfileWorkerRead(method)) value = await readProfileLibrary(method, input as ProfileWorkerReads[typeof method]["params"]);
       else if (method === "activity/searchTranscripts") {
         const { query } = input as ActivityReads["activity/searchTranscripts"]["params"];
         value = await searchSessionTranscripts(options.sessionsDir, query, { budgetMs: 5000 });

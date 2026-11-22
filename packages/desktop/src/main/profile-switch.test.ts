@@ -13,11 +13,22 @@ const fetchGuard = spyOn(globalThis, "fetch").mockImplementation(async () => {
 const spawnGuard = spyOn(childProcess, "spawnSync").mockImplementation(() => {
   throw new Error("Profile switch preview must not probe or install binaries");
 });
-const { SettingsManager, setDefaultCredentialAccess } = await import("@cjhyy/code-shell-core");
+const { SettingsManager, setDefaultCredentialAccess, CredentialStore } =
+  await import("@cjhyy/code-shell-core");
 const { saveWorkspaceProfile, saveSourceDefinition, bindSource } =
   await import("@cjhyy/code-shell-core/internal");
 const { previewProfileSwitch, adoptProfileSwitch } = await import("./profile-switch-service.js");
 const { registerProfileSwitchIpc } = await import("./profile-switch-ipc.js");
+const localSwitch = {
+  documentSignal: () => new AbortController().signal,
+  adopt: (
+    target: Parameters<typeof adoptProfileSwitch>[0],
+    name: string | null,
+    revision: string,
+  ) => adoptProfileSwitch(target, name, revision),
+  preview: (target: Parameters<typeof previewProfileSwitch>[0], name: string | null) =>
+    previewProfileSwitch(target, name),
+};
 const { resolveRendererConfigurationTarget } =
   await import("./renderer-configuration-authority.js");
 const { WebConfigurationGate } = await import("./web-configuration-gate.js");
@@ -103,6 +114,7 @@ describe("reviewed Desktop Profile switch", () => {
     const handlers = new Map<string, (...args: any[]) => any>();
     let reloads = 0;
     registerProfileSwitchIpc({
+      ...localSwitch,
       ipcMain: {
         handle: (channel, listener) => {
           handlers.set(channel, listener);
@@ -229,6 +241,7 @@ describe("reviewed Desktop Profile switch", () => {
     let admissions = 0;
     let reloads = 0;
     registerProfileSwitchIpc({
+      ...localSwitch,
       ipcMain: { handle: (channel, listener) => handlers.set(channel, listener) },
       resolveTarget: async () => target,
       withMutation: (_cwd, write) => {
@@ -315,6 +328,125 @@ describe("reviewed Desktop Profile switch", () => {
     },
   );
 
+  test("Host adoption checks both credential file revisions inside the profile write and claims the live document only once", async () => {
+    const { answerProfileCredentialQuestions } = await import("./credential-access-service.js");
+    const { profileCredentialQuestions } = await import("./profile-switch-authority.js");
+    saveSourceDefinition({
+      id: "reports",
+      label: "Reports",
+      kind: "mock",
+      enabled: true,
+      credentialRef: "report-auth",
+      adapterConfig: { privateParam: "sensitive-config" },
+    });
+    bindSource(new SettingsManager(target.cwd, "full"), target.cwd, {
+      sourceId: "reports",
+      scopes: ["summary"],
+      readPolicy: "ask",
+    });
+    const store = new CredentialStore(target.cwd);
+    const record = {
+      id: "report-auth",
+      type: "token" as const,
+      label: "Private label",
+      exposeAsEnv: "REPORT_TOKEN",
+      secret: "token-unavailable-to-host",
+    };
+    store.save("user", record);
+    const questions = profileCredentialQuestions(target.cwd);
+    expect(questions).toEqual([{ ref: record.id }]);
+    const capture = () => answerProfileCredentialQuestions(target.cwd, questions, () => {});
+    const answers = await capture();
+    expect(answers.decisions).toEqual([{ key: JSON.stringify(questions[0]), available: true }]);
+    for (const privateText of [record.secret, record.label, record.exposeAsEnv, "sensitive-config"])
+      expect(JSON.stringify(answers)).not.toContain(privateText);
+    const review = previewProfileSwitch(target, "next", answers);
+    let claims = 0;
+    const claim = () => {
+      claims++;
+    };
+    for (const scope of ["user", "project"] as const) {
+      const before = await capture();
+      store.save(scope, { ...record, secret: `rotated-${scope}` });
+      expect(adoptProfileSwitch(target, "next", review.revision, before, claim)).toEqual({
+        status: "stale",
+      });
+      expect(claims).toBe(0);
+    }
+    const fresh = await capture();
+    expect(previewProfileSwitch(target, "next", fresh).revision).toBe(review.revision);
+    expect(() =>
+      adoptProfileSwitch(target, "next", review.revision, fresh, () => {
+        throw Error("Document revoked");
+      }),
+    ).toThrow("Document revoked");
+    expect(previewProfileSwitch(target, "next", fresh).before?.name).toBe("old");
+    expect(adoptProfileSwitch(target, "next", review.revision, fresh, claim)).toEqual({
+      status: "adopted",
+    });
+    expect(claims).toBe(1);
+  });
+
+  test("reviewed Link account and grant are pinned while token rotation keeps the same review", async () => {
+    const { answerProfileCredentialQuestions } = await import("./credential-access-service.js");
+    const { profileCredentialQuestions } = await import("./profile-switch-authority.js");
+    const { installDefaultLinkProviders } = await import("@cjhyy/code-shell-server/links");
+    installDefaultLinkProviders();
+    const ref = "review-oauth";
+    saveSourceDefinition({
+      id: "repository",
+      kind: "link",
+      label: "Repository",
+      enabled: true,
+      credentialRef: ref,
+      adapterConfig: { providerId: "github", action: "list_repositories", params: { limit: 1 } },
+    });
+    bindSource(new SettingsManager(target.cwd, "full"), target.cwd, {
+      sourceId: "repository",
+      scopes: ["github:list_repositories"],
+      readPolicy: "ask",
+    });
+    const store = new CredentialStore(target.cwd);
+    const write = (token: string, account: string, grant: string) =>
+      store.save("project", {
+        id: ref,
+        type: "oauth",
+        label: "Private account",
+        secret: JSON.stringify({ accessToken: token, expiresAt: "2099-01-01T00:00:00Z" }),
+        meta: {
+          linkAccountId: account,
+          linkProvider: "github",
+          linkExecutionRuntime: "server",
+          linkExecutionBackend: "remote",
+          linkRemoteState: "connected",
+          linkRemoteGrantId: grant,
+          linkCapabilityIds: ["github.list_repositories"],
+          linkLastVerifiedAt: "2026-10-09T00:00:00Z",
+        },
+      });
+    const read = () =>
+      answerProfileCredentialQuestions(
+        target.cwd,
+        profileCredentialQuestions(target.cwd),
+        () => {},
+      );
+    write("first-bearer", "account-alpha", "grant-alpha");
+    const first = await read();
+    expect(first.decisions[0]?.available).toBe(true);
+    expect(JSON.stringify(first)).not.toMatch(/first-bearer|account-alpha|grant-alpha/);
+    const review = previewProfileSwitch(target, "next", first);
+    write("rotated-bearer", "account-alpha", "grant-alpha");
+    expect(previewProfileSwitch(target, "next", await read()).revision).toBe(review.revision);
+    for (const [account, grant] of [
+      ["account-beta", "grant-alpha"],
+      ["account-alpha", "grant-beta"],
+    ]) {
+      write("rotated-bearer", account!, grant!);
+      expect(adoptProfileSwitch(target, "next", review.revision, await read())).toEqual({
+        status: "stale",
+      });
+    }
+  });
   test("source access preview uses the existing binding intersection without leaking definitions or credentials", () => {
     let metadataReads = 0;
     const forbid = () => {
@@ -434,6 +566,7 @@ describe("reviewed Desktop Profile switch", () => {
       },
     };
     registerProfileSwitchIpc({
+      ...localSwitch,
       ipcMain: {
         handle: (channel, listener) => {
           handlers.set(channel, listener);
@@ -511,6 +644,7 @@ describe("reviewed Desktop Profile switch", () => {
       const originalCwd = target.cwd;
       const original = { ...target };
       registerProfileSwitchIpc({
+        ...localSwitch,
         ipcMain: {
           handle: (channel, listener) => {
             handlers.set(channel, listener);

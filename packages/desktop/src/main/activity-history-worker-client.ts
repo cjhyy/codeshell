@@ -1,5 +1,5 @@
-import type { ProfileLibraryReads } from "../shared/profile-library.js";
-type WorkerViews = ActivityReads & ProfileLibraryReads;
+import type { ProfileWorkerReads } from "../shared/profile-library.js";
+type WorkerViews = ActivityReads & ProfileWorkerReads;
 import type {
   petSegmentTranscript,
   SegmentClosureInput,

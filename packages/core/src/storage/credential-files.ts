@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { lstatSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join } from "node:path";
-import { mutateJsonFile } from "../utils/file-mutex.js";
+import { isAbsolute, join } from "node:path";
+import { acquireFileLock, mutateJsonFile, readBoundedJsonFile } from "../utils/file-mutex.js";
 import type { CredentialStoreFile } from "../credentials/types.js";
 
 export const credentialCommands = ["credentials/read", "credentials/commit"] as const;
@@ -29,6 +29,11 @@ function checkedFile(value: unknown): CredentialStoreFile {
     throw new Error("Invalid credential store");
   return file;
 }
+function revisionOf(raw: string | undefined): string {
+  return createHash("sha256")
+    .update(raw === undefined ? "missing" : "file:" + raw)
+    .digest("hex");
+}
 function image(raw: string | undefined): CredentialFileSnapshot {
   let file: CredentialStoreFile;
   try {
@@ -36,10 +41,7 @@ function image(raw: string | undefined): CredentialFileSnapshot {
   } catch {
     throw new Error("Invalid credential store");
   }
-  const revision = createHash("sha256")
-    .update(raw === undefined ? "missing" : "file:" + raw)
-    .digest("hex");
-  return { file, revision };
+  return { file, revision: revisionOf(raw) };
 }
 function assertPermit(value: unknown): void {
   if (
@@ -71,22 +73,14 @@ export function credentialFileCommand(
       : ["scope", "cwd", "expectedRevision", "file"];
   if (Object.keys(p).some((k) => !allowed.includes(k)))
     throw new Error("Invalid credential request");
-  let base: string;
-  if (p.scope === "user" && p.cwd === undefined)
-    base = userDir ?? join(process.env.HOME ?? homedir(), ".code-shell");
-  else if (
-    p.scope === "project" &&
-    typeof p.cwd === "string" &&
-    isAbsolute(p.cwd) &&
-    !p.cwd.includes("\0")
-  )
-    base = join(p.cwd, ".code-shell");
-  else throw new Error("Invalid credential scope");
+  const base = credentialDirectory(userDir, p);
   const path = join(base, "credentials.json");
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  const parent = lstatSync(dirname(path));
-  if (parent.isSymbolicLink() || !parent.isDirectory())
-    throw new Error("Credential parent must be a real directory");
+  if (command === "credentials/read" && !checkCredentialDirectory(base)) {
+    assertPermit(permit);
+    return image(undefined);
+  }
+  mkdirSync(base, { recursive: true, mode: 0o700 });
+  checkCredentialDirectory(base);
   if (command === "credentials/read")
     return mutateJsonFile<string | undefined, CredentialFileSnapshot>(path, {
       maxBytes,
@@ -116,4 +110,60 @@ export function credentialFileCommand(
       return { value: serialized, result: true };
     },
   })!;
+}
+
+function credentialDirectory(
+  userDir: string | undefined,
+  p: Partial<CredentialFileAddress>,
+): string {
+  let base: string;
+  if (p.scope === "user" && p.cwd === undefined)
+    base = userDir ?? join(process.env.HOME ?? homedir(), ".code-shell");
+  else if (
+    p.scope === "project" &&
+    typeof p.cwd === "string" &&
+    isAbsolute(p.cwd) &&
+    !p.cwd.includes("\0")
+  )
+    base = join(p.cwd, ".code-shell");
+  else throw new Error("Invalid credential scope");
+  return base;
+}
+function checkCredentialDirectory(base: string) {
+  const parent = lstatSync(base, { bigint: true, throwIfNoEntry: false });
+  if (parent && (parent.isSymbolicLink() || !parent.isDirectory()))
+    throw Error("Credential parent must be a real directory");
+  return parent;
+}
+
+export type ProfileCredentialRevisions = Record<"user" | "project", string>;
+/** Profile adoption already owns the project settings directory lock in its mutation.
+ * Taking the user directory first pins both credential layers through the settings rename. */
+export function withProfileCredentialRevisions<T>(
+  cwd: string,
+  expected: ProfileCredentialRevisions,
+  write: (areCurrent: () => boolean) => T,
+): T {
+  const user = credentialDirectory(undefined, { scope: "user" });
+  const project = credentialDirectory(undefined, { scope: "project", cwd });
+  mkdirSync(user, { recursive: true, mode: 0o700 });
+  const userInfo = checkCredentialDirectory(user)!;
+  const projectInfo = checkCredentialDirectory(project);
+  const sameDirectory =
+    projectInfo && projectInfo.dev === userInfo.dev && projectInfo.ino === userInfo.ino;
+  const release = sameDirectory ? undefined : acquireFileLock(join(user, "credentials.json"));
+  try {
+    return write(() => {
+      checkCredentialDirectory(user);
+      checkCredentialDirectory(project);
+      return (
+        revisionOf(readBoundedJsonFile(join(user, "credentials.json"), maxBytes)) ===
+          expected.user &&
+        revisionOf(readBoundedJsonFile(join(project, "credentials.json"), maxBytes)) ===
+          expected.project
+      );
+    });
+  } finally {
+    release?.();
+  }
 }

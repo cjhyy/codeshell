@@ -272,6 +272,90 @@ async function checkResponsiveLayouts(id, heading) {
   console.log(`PASS: ${id} light/dark layouts at 1280, 820, and 390px`);
 }
 
+async function checkReviewedLinkSource() {
+  const projectRoot = await realpath(fixtureProjectPath);
+  const target = await win.evaluate(async (path) => {
+    const project = (await window.codeshell.projectRegistry.list()).find((p) =>
+      p.roots.some((r) => r.path === path),
+    );
+    if (!project) throw Error("Missing owned Link fixture project");
+    return { projectId: project.id };
+  }, projectRoot);
+  const id = "fixture-repositories",
+    ref = "owned-link-review";
+  const source = {
+    id,
+    kind: "link",
+    enabled: true,
+    label: "Owned repositories",
+    credentialRef: ref,
+    adapterConfig: { providerId: "github", action: "list_repositories", params: { limit: 1 } },
+  };
+  await writeFile(
+    join(isolated.codeShellHome, "sources.json"),
+    JSON.stringify({ version: 1, sources: [source] }),
+    { mode: 0o600 },
+  );
+  const settings = JSON.parse((await projectSettingsBytes()) ?? "{}");
+  settings.sources = [{ sourceId: id, scopes: ["github:list_repositories"], readPolicy: "ask" }];
+  await writeFile(projectSettingsPath, JSON.stringify(settings), { mode: 0o600 });
+  const save = async (grant, token) => {
+    const secret = JSON.stringify({ accessToken: token, expiresAt: "2099-01-01T00:00:00Z" });
+    await writeFile(
+      join(dirname(projectSettingsPath), "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: ref,
+            type: "oauth",
+            label: "Owned link",
+            secret: "plain:" + secret,
+            meta: {
+              linkProvider: "github",
+              linkExecutionRuntime: "server",
+              linkExecutionBackend: "remote",
+              linkRemoteState: "connected",
+              linkRemoteGrantId: grant,
+              linkCapabilityIds: ["github.list_repositories"],
+              linkLastVerifiedAt: "2026-10-09T00:00:00Z",
+            },
+          },
+        ],
+      }),
+      { mode: 0o600 },
+    );
+  };
+  const preview = () =>
+    win.evaluate((request) => window.codeshell.previewProfileSwitch(request, null), target);
+  await save("fixture-grant-alpha", "synthetic-bearer-alpha");
+  const reviewed = await preview();
+  assert(
+    reviewed.sources.after.some((s) => s.sourceId === id && s.status === "ok"),
+    "Host preview lost its approved Link action",
+  );
+  assert(
+    !/fixture-grant|synthetic-bearer|owned-link-review/.test(JSON.stringify(reviewed)),
+    "Host preview disclosed internal credential data",
+  );
+  await save("fixture-grant-alpha", "synthetic-bearer-beta");
+  assert(
+    (await preview()).revision === reviewed.revision,
+    "Bearer rotation invalidated an unchanged Link grant",
+  );
+  await save("fixture-grant-beta", "synthetic-bearer-beta");
+  const prior = await projectSettingsBytes();
+  const adoption = await win.evaluate(
+    ({ target, revision }) => window.codeshell.adoptProfileSwitch(target, null, revision),
+    { target, revision: reviewed.revision },
+  );
+  assert(
+    adoption.status === "stale" && (await projectSettingsBytes()) === prior,
+    "Changed Link grant applied an old review",
+  );
+  console.log("PASS: Host Link source preview and grant revision with native credential authority");
+}
+
 async function checkProjectConfiguration(projectButton) {
   const target = await win.evaluate(
     async (paths) => {
@@ -1348,6 +1432,7 @@ require("node:module").syncBuiltinESMExports();
 
   assert(rendererErrors.length === 0, `renderer emitted ${rendererErrors.length} page error(s)`);
   await assertOfflinePluginBootstrapHeld(isolated.codeShellHome);
+  await checkReviewedLinkSource();
   console.log("CodeShell Electron digital-human E2E: passed");
 } catch (error) {
   if (win) {

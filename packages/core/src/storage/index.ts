@@ -8,6 +8,8 @@ export type { SqlValue, StorageDatabase, StorageStatement } from "./driver.js";
 export {
   credentialCommands,
   credentialFileCommand,
+  withProfileCredentialRevisions,
+  type ProfileCredentialRevisions,
   type CredentialFileAddress,
   type CredentialFileCommand,
   type CredentialFileSnapshot,

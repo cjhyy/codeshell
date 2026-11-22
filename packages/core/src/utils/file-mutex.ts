@@ -172,26 +172,7 @@ export function mutateJsonFile<T, R = void>(
   }
   const release = acquireFileLock(file);
   try {
-    let raw: string | undefined;
-    try {
-      const pathInfo = lstatSync(file);
-      if (pathInfo.isSymbolicLink() || !pathInfo.isFile() || pathInfo.size > maxBytes) {
-        throw new Error(`JSON state is not a bounded regular file: ${file}`);
-      }
-      const descriptor = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-      try {
-        const opened = fstatSync(descriptor);
-        if (!opened.isFile() || opened.size > maxBytes) {
-          throw new Error(`JSON state is not a bounded regular file: ${file}`);
-        }
-        raw = readFileSync(descriptor, "utf-8");
-      } finally {
-        closeSync(descriptor);
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-      raw = undefined;
-    }
+    const raw = readBoundedJsonFile(file, maxBytes);
     const current = options.parse(raw);
     const { value, result } = options.mutation(current);
     if (value !== undefined) {
@@ -205,4 +186,29 @@ export function mutateJsonFile<T, R = void>(
   } finally {
     release();
   }
+}
+
+/** Read the same bounded, no-symlink image used by JSON CAS. The caller owns locking. */
+export function readBoundedJsonFile(file: string, maxBytes: number): string | undefined {
+  let raw: string | undefined;
+  try {
+    const pathInfo = lstatSync(file);
+    if (pathInfo.isSymbolicLink() || !pathInfo.isFile() || pathInfo.size > maxBytes) {
+      throw new Error(`JSON state is not a bounded regular file: ${file}`);
+    }
+    const descriptor = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    try {
+      const opened = fstatSync(descriptor);
+      if (!opened.isFile() || opened.size > maxBytes) {
+        throw new Error(`JSON state is not a bounded regular file: ${file}`);
+      }
+      raw = readFileSync(descriptor, "utf-8");
+    } finally {
+      closeSync(descriptor);
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    raw = undefined;
+  }
+  return raw;
 }
