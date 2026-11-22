@@ -48,6 +48,23 @@ export interface ProfilePackageOperations {
   };
 }
 export interface ProfileLibraryChanges {
+  "profiles/activate": {
+    input: { target: RendererConfigurationTarget; name: string };
+    result: void;
+  };
+  "profiles/deactivate": { input: { target: RendererConfigurationTarget }; result: void };
+  "profiles/setSession": {
+    input: { sessionId: string; profileName: string };
+    result: { persisted: boolean };
+  };
+  "profiles/forceDelete": {
+    input: Target & { name: string };
+    result: Result<"forceDeleteProfile">;
+  };
+  "profiles/delete": {
+    input: Target & { name: string; clearActiveProject?: boolean };
+    result: void;
+  };
   "profiles/removeRepo": { input: { repo: string }; result: void };
   "profiles/exportRepo": {
     input: { names: string[]; path: string };
@@ -71,6 +88,11 @@ export interface ProfileLibraryChanges {
   };
 }
 export const profileLibraryChanges = [
+  "profiles/activate",
+  "profiles/deactivate",
+  "profiles/setSession",
+  "profiles/forceDelete",
+  "profiles/delete",
   "profiles/removeRepo",
   "profiles/exportRepo",
   "profiles/saveTeam",

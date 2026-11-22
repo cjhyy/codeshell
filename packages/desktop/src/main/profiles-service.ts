@@ -367,7 +367,7 @@ export function listProfiles(cwd?: string): ProfileListEntry[] {
   }));
 }
 
-export function activateProfile(cwd: string, name: string): void {
+export function activateProfile(cwd: string, name: string, beforeCommit?: () => void): void {
   const settings = new SettingsManager(cwd, "full");
   // Only an exclusive profile needs the inventory (to know what to switch off),
   // and scanning costs a disk walk — so skip it for the union default.
@@ -375,12 +375,12 @@ export function activateProfile(cwd: string, name: string): void {
   const installed = profile?.exclusiveCapabilities
     ? { skills: scanSkills(cwd).map((skill) => skill.name) }
     : undefined;
-  activateWorkspaceProfile(settings, name, cwd, installed);
+  activateWorkspaceProfile(settings, name, cwd, installed, beforeCommit);
 }
 
-export function deactivateProfile(cwd: string): void {
+export function deactivateProfile(cwd: string, beforeCommit?: () => void): void {
   const settings = new SettingsManager(cwd, "full");
-  deactivateWorkspaceProfile(settings, cwd);
+  deactivateWorkspaceProfile(settings, cwd, beforeCommit);
 }
 
 /**
@@ -392,6 +392,7 @@ export function deactivateProfile(cwd: string): void {
 export function setSessionWorkspaceProfile(
   sessionId: string,
   profileName: string,
+  beforeCommit?: () => void,
 ): { persisted: boolean } {
   // Empty string = unbind. Binding was one-way before: once a Session had a
   // digital human you could only swap it for another, never go back to the
@@ -407,10 +408,7 @@ export function setSessionWorkspaceProfile(
   if (!sessions.exists(sessionId)) return { persisted: false };
   const state = sessions.readSessionState(sessionId);
   if (!state) return { persisted: false };
-  const persisted = sessions.saveStateOrUpdateFields(state, {
-    workspaceProfile: clearing ? undefined : profileName,
-  });
-  if (!persisted) throw new Error(`Could not switch digital human for Session ${sessionId}`);
+  sessions.setSessionWorkspaceProfile(sessionId, clearing ? undefined : profileName, beforeCommit);
   return { persisted: true };
 }
 
@@ -703,6 +701,7 @@ export interface ForceDeleteProfileResult {
 export async function forceDeleteProfile(
   name: string,
   options: DeleteProfileOptions = {},
+  beforeCommit?: () => void,
 ): Promise<ForceDeleteProfileResult> {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   if (!readWorkspaceProfile(name)) {
@@ -721,7 +720,7 @@ export async function forceDeleteProfile(
   for await (const sessionId of sessions.iterateSessionIdsByWorkspaceProfile(name)) {
     // Persistence errors propagate before teams/settings/the definition are
     // changed. A concurrently selected different profile is left untouched.
-    if (sessions.clearSessionWorkspaceProfile(sessionId, name)) {
+    if (sessions.clearSessionWorkspaceProfile(sessionId, name, beforeCommit)) {
       unboundSessions.push(sessionId);
     }
   }
@@ -736,24 +735,27 @@ export async function forceDeleteProfile(
     if (!team.members.includes(name)) continue;
     const members = team.members.filter((member) => member !== name);
     if (members.length < 2) {
-      deleteDigitalHumanTeam(team.id);
+      deleteDigitalHumanTeam(team.id, beforeCommit);
       removedTeams.push(team.name);
       continue;
     }
     const { lead: _previousLead, ...rest } = team;
     try {
-      saveDigitalHumanTeam({
-        ...rest,
-        members,
-        // Drop a lead that was this profile; keep it when it was someone else.
-        ...(team.lead && team.lead !== name ? { lead: team.lead } : {}),
-      });
+      saveDigitalHumanTeam(
+        {
+          ...rest,
+          members,
+          // Drop a lead that was this profile; keep it when it was someone else.
+          ...(team.lead && team.lead !== name ? { lead: team.lead } : {}),
+        },
+        beforeCommit,
+      );
       updatedTeams.push(team.name);
     } catch {
       // saveDigitalHumanTeam rejects any member that is not in the library, so a
       // team that already carried a dangling member cannot be rewritten. Removing
       // it beats aborting the deletion the user already confirmed.
-      deleteDigitalHumanTeam(team.id);
+      deleteDigitalHumanTeam(team.id, beforeCommit);
       removedTeams.push(team.name);
     }
   }
@@ -763,7 +765,7 @@ export async function forceDeleteProfile(
     try {
       const settings = new SettingsManager(options.cwd, "full");
       if (resolveActiveWorkspaceProfile({ cwd: options.cwd, settings })?.name === name) {
-        deactivateWorkspaceProfile(settings, options.cwd);
+        deactivateWorkspaceProfile(settings, options.cwd, beforeCommit);
         clearedProjectDefault = true;
       }
     } catch {
@@ -774,7 +776,7 @@ export async function forceDeleteProfile(
   for await (const _sessionId of sessions.iterateSessionIdsByWorkspaceProfile(name)) {
     throw new Error(`Session bindings changed; profile ${name} was preserved`);
   }
-  deleteWorkspaceProfile(name);
+  deleteWorkspaceProfile(name, beforeCommit);
   return { unboundSessions, updatedTeams, removedTeams, clearedProjectDefault };
 }
 
@@ -850,7 +852,11 @@ export function previewProfileDeletion(name: string, cwd?: string): ProfileDelet
   };
 }
 
-export function deleteProfile(name: string, options: DeleteProfileOptions = {}): void {
+export function deleteProfile(
+  name: string,
+  options: DeleteProfileOptions = {},
+  beforeCommit?: () => void,
+): void {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   if (!readWorkspaceProfile(name)) return;
 
@@ -883,9 +889,9 @@ export function deleteProfile(name: string, options: DeleteProfileOptions = {}):
       if (!options.clearActiveProject) {
         throw new Error(`Digital human "${name}" is the active project default`);
       }
-      deactivateWorkspaceProfile(settings, options.cwd);
+      deactivateWorkspaceProfile(settings, options.cwd, beforeCommit);
     }
   }
 
-  deleteWorkspaceProfile(name);
+  deleteWorkspaceProfile(name, beforeCommit);
 }

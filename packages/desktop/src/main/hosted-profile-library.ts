@@ -6,6 +6,11 @@ import {
   saveDigitalHumanTeam,
 } from "./digital-human-team-service.js";
 import {
+  activateProfile,
+  deactivateProfile,
+  setSessionWorkspaceProfile,
+  deleteProfile,
+  forceDeleteProfile,
   exportProfileDefinition,
   exportProfileRepo,
   removeProfileRepo,
@@ -54,6 +59,16 @@ type Mutations = {
   ) => ProfileLibraryChanges[K]["result"] | Promise<ProfileLibraryChanges[K]["result"]>;
 };
 const mutations: Mutations = {
+  "profiles/activate": async ({ target, name }, claim) =>
+    activateProfile(await rendererConfigurationCwd(target), name, claim),
+  "profiles/deactivate": async ({ target }, claim) =>
+    deactivateProfile(await rendererConfigurationCwd(target), claim),
+  "profiles/setSession": ({ sessionId, profileName }, claim) =>
+    setSessionWorkspaceProfile(sessionId, profileName, claim),
+  "profiles/delete": async ({ name, target, clearActiveProject }, claim) =>
+    deleteProfile(name, { cwd: await cwd(target), clearActiveProject }, claim),
+  "profiles/forceDelete": async ({ name, target }, claim) =>
+    forceDeleteProfile(name, { cwd: await cwd(target) }, claim),
   "profiles/removeRepo": ({ repo }, claim) => removeProfileRepo(repo, claim),
   "profiles/exportRepo": ({ names, path }, claim) => exportProfileRepo(names, path, claim),
   "profiles/saveTeam": ({ team }, claim) => saveDigitalHumanTeam(team, claim),
@@ -71,5 +86,13 @@ export function changeProfileLibrary<K extends keyof Mutations>(
   method: K,
   { input, permit }: { input: ProfileLibraryChanges[K]["input"]; permit: Int32Array },
 ) {
-  return mutations[method](input, () => claimBusinessCommit(permit));
+  // A confirmed cascade owns its subsequent cleanups as soon as its first durable
+  // change wins the document permit. A stale document can never start a cascade.
+  let claimed = false;
+  return mutations[method](input, () => {
+    if (!claimed) {
+      claimBusinessCommit(permit);
+      claimed = true;
+    }
+  });
 }

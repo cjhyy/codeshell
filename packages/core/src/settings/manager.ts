@@ -545,8 +545,12 @@ export class SettingsManager {
    * live — project overlays never touch the global user file. Atomic write +
    * cache invalidation mirror saveUserSetting.
    */
-  saveProjectSetting(key: string, value: unknown, cwd: string): void {
-    this.updateProjectSettings(cwd, (current) => setDottedSetting(current, key, value));
+  saveProjectSetting(key: string, value: unknown, cwd: string, beforeCommit?: () => void): void {
+    this.updateProjectSettings(
+      cwd,
+      (current) => setDottedSetting(current, key, value),
+      beforeCommit,
+    );
   }
 
   /** Merge domain updates from the current project file under its inter-process lock. */
@@ -635,9 +639,9 @@ export class SettingsManager {
    * express "inherit" — we don't persist the literal "inherit"; we remove the
    * override key. No-ops if the file or any intermediate segment is absent.
    */
-  deleteProjectSetting(key: string, cwd: string): void {
+  deleteProjectSetting(key: string, cwd: string, beforeCommit?: () => void): void {
     const path = this.projectSettingsPath(cwd);
-    this.deleteSettingFromFile(path, key);
+    this.deleteSettingFromFile(path, key, beforeCommit);
   }
 
   /** Delete one dotted key from the machine-private project settings layer. */
@@ -652,7 +656,7 @@ export class SettingsManager {
     this.deleteSettingFromFile(path, key);
   }
 
-  private deleteSettingFromFile(path: string, key: string): void {
+  private deleteSettingFromFile(path: string, key: string, beforeCommit?: () => void): void {
     this.clearHookOrigins();
     // Must be YAML-aware, symmetric with saveProjectSetting: a project with only
     // settings.yaml has no .json, so the old `existsSync(path)` guard returned
@@ -672,6 +676,7 @@ export class SettingsManager {
         target = target[seg] as Record<string, unknown>;
       }
       if (target) delete target[parts[parts.length - 1]!];
+      beforeCommit?.();
       return true;
     });
     this.invalidate();

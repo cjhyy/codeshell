@@ -75,13 +75,14 @@ export function activateWorkspaceProfile(
   name: string,
   cwd: string,
   installed?: InstalledCapabilityNames,
+  beforeCommit?: () => void,
 ): WorkspaceProfile {
   const profile = readWorkspaceProfile(name);
   if (!profile) {
     throw new Error(`Workspace profile "${name}" not found in the global library`);
   }
   const subtree = workspaceProfileActivationSubtree(profile, installed);
-  settings.saveProjectSetting("profile", subtree, cwd);
+  settings.saveProjectSetting("profile", subtree, cwd, beforeCommit);
   return profile;
 }
 
@@ -100,6 +101,10 @@ export function workspaceProfileActivationSubtree(
   };
 }
 
-export function deactivateWorkspaceProfile(settings: SettingsManager, cwd: string): void {
-  settings.deleteProjectSetting("profile", cwd);
+export function deactivateWorkspaceProfile(
+  settings: SettingsManager,
+  cwd: string,
+  beforeCommit?: () => void,
+): void {
+  settings.deleteProjectSetting("profile", cwd, beforeCommit);
 }

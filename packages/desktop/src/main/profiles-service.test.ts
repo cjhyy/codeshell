@@ -161,6 +161,24 @@ describe("desktop profiles service", () => {
     expect(listProfiles()[0]).toMatchObject({ name: "seedance", active: false });
   });
 
+  test("revoked activation, session rebinding, and cascade cannot change durable references", async () => {
+    const revoked = () => {
+      throw Error("revoked");
+    };
+    const sessions = new SessionManager();
+    sessions.create(cwd, "model", "provider", "profile-lease");
+    expect(() => activateProfile(cwd, "seedance", revoked)).toThrow(/revoked/);
+    expect(listProfiles(cwd)[0]?.active).toBe(false);
+    expect(() => setSessionWorkspaceProfile("profile-lease", "seedance", revoked)).toThrow(
+      /revoked/,
+    );
+    expect(sessions.readSessionWorkspaceProfile("profile-lease")).toBeUndefined();
+    setSessionWorkspaceProfile("profile-lease", "seedance");
+    await expect(forceDeleteProfile("seedance", { cwd }, revoked)).rejects.toThrow(/revoked/);
+    expect(sessions.readSessionWorkspaceProfile("profile-lease")).toBe("seedance");
+    expect(readWorkspaceProfile("seedance")?.name).toBe("seedance");
+  });
+
   test("switches an existing Session digital human and tolerates a planned Session", () => {
     const sessions = new SessionManager();
     sessions.create(cwd, "test-model", "test-provider", "switchable-session");

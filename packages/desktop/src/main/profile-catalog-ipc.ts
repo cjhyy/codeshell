@@ -10,18 +10,8 @@ import {
 } from "electron";
 import { WORKSPACE_PROFILE_NAME_RE } from "@cjhyy/code-shell-core";
 import { assertDesktopSessionId } from "./session-validation.js";
-import {
-  activateProfile,
-  deleteProfile,
-  deactivateProfile,
-  forceDeleteProfile,
-  setSessionWorkspaceProfile,
-} from "./profiles-service.js";
 import { type RendererConfigurationTarget } from "./renderer-configuration-authority.js";
-import {
-  rendererConfigurationCwd,
-  rejectUnexpectedRendererKeys,
-} from "./renderer-configuration-helpers.js";
+import { rejectUnexpectedRendererKeys } from "./renderer-configuration-helpers.js";
 
 /** Profile catalog, repositories, definition import/export and digital-human team routes. */
 export function registerProfileCatalogIpc(host: {
@@ -43,14 +33,12 @@ export function registerProfileCatalogIpc(host: {
   ipcMain.handle(
     "profiles:activate",
     async (_e, target: RendererConfigurationTarget, name: string) => {
-      const cwd = await rendererConfigurationCwd(target);
       if (typeof name !== "string" || !name) throw new Error("profiles:activate requires name");
-      activateProfile(cwd, name);
+      return host.callBusiness("profiles/activate", { target, name }, host.documentSignal(_e));
     },
   );
   ipcMain.handle("profiles:deactivate", async (_e, target: RendererConfigurationTarget) => {
-    const cwd = await rendererConfigurationCwd(target);
-    deactivateProfile(cwd);
+    return host.callBusiness("profiles/deactivate", { target }, host.documentSignal(_e));
   });
   ipcMain.handle("profiles:setSession", async (_e, sessionId: unknown, profileName: unknown) => {
     assertDesktopSessionId(sessionId);
@@ -59,7 +47,11 @@ export function registerProfileCatalogIpc(host: {
     if (typeof profileName !== "string") {
       throw new Error("profiles:setSession requires profileName");
     }
-    return setSessionWorkspaceProfile(sessionId, profileName);
+    return host.callBusiness(
+      "profiles/setSession",
+      { sessionId, profileName },
+      host.documentSignal(_e),
+    );
   });
   ipcMain.handle("profiles:catalog", (event) =>
     host.callBusiness("profiles/catalog", {}, host.documentSignal(event)),
@@ -83,8 +75,7 @@ export function registerProfileCatalogIpc(host: {
     "profiles:forceDelete",
     async (_e, name: string, target: RendererConfigurationTarget | null) => {
       if (typeof name !== "string" || !name) throw new Error("profiles:forceDelete requires name");
-      const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
-      return forceDeleteProfile(name, authorizedCwd ? { cwd: authorizedCwd } : {});
+      return host.callBusiness("profiles/forceDelete", { name, target }, host.documentSignal(_e));
     },
   );
   ipcMain.handle(
@@ -246,14 +237,11 @@ export function registerProfileCatalogIpc(host: {
       ) {
         throw new Error("profiles:delete clearActiveProject must be a boolean");
       }
-      const cwd =
-        options?.target == null ? undefined : await rendererConfigurationCwd(options.target);
-      deleteProfile(name, {
-        ...(cwd ? { cwd } : {}),
-        ...(options?.clearActiveProject === undefined
-          ? {}
-          : { clearActiveProject: options.clearActiveProject }),
-      });
+      return host.callBusiness(
+        "profiles/delete",
+        { name, target: options?.target ?? null, clearActiveProject: options?.clearActiveProject },
+        host.documentSignal(_e),
+      );
     },
   );
   ipcMain.handle("digital-human-teams:list", (event) =>

@@ -177,7 +177,10 @@ export function listWorkspaceProfiles(): WorkspaceProfile[] {
  * 让调用方必须手写它们，也会在 schema 新增带 default 的字段时把所有调用方一起
  * 弄红——尽管运行时完全没变。
  */
-export function saveWorkspaceProfile(profile: WorkspaceProfileInput, beforeCommit?: () => void): void {
+export function saveWorkspaceProfile(
+  profile: WorkspaceProfileInput,
+  beforeCommit?: () => void,
+): void {
   const parsed = WorkspaceProfileSchema.parse(profile);
   const dir = checkedProfileDirectory(parsed.name, true);
   if (!dir) throw new Error(`Could not create workspace profile directory for "${parsed.name}"`);
@@ -208,10 +211,11 @@ export function saveWorkspaceProfile(profile: WorkspaceProfileInput, beforeCommi
 }
 
 /** 删除前再次执行目录 containment 校验；不会跟随 profile 目录 symlink。 */
-export function deleteWorkspaceProfile(name: string): boolean {
+export function deleteWorkspaceProfile(name: string, beforeCommit?: () => void): boolean {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) return false;
   const dir = checkedProfileDirectory(name);
   if (!dir) return false;
+  beforeCommit?.();
   rmSync(dir, { recursive: true, force: true });
   return true;
 }
