@@ -363,7 +363,7 @@ import {appendFileSync} from "node:fs";
 import {syncBuiltinESMExports} from "node:module";
 await import(${JSON.stringify(new URL("./runtime-cost-gui-guard.mjs", import.meta.url).href)});
 await import(${JSON.stringify(new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url).href)});
-const {app,ipcMain,net,safeStorage,shell} = await import("electron");
+const { observeReviewPort, observeNativeReviewDrafts } = await import(${JSON.stringify(new URL("./review-host-observer.mjs", import.meta.url).href)});
 const {createReviewDraftResponseGate} = await import(${JSON.stringify(new URL("./review-draft-response-gate.mjs", import.meta.url).href)});
 let ipcBytes=0;const ipcFile=${JSON.stringify(join(isolated.home, "review-draft-ipc.jsonl"))};
 const recordReviewIpc=(row)=>{const line=JSON.stringify(row)+"\\n";ipcBytes+=Buffer.byteLength(line);if(ipcBytes>512*1024)throw Error("Review IPC ledger cap");appendFileSync(ipcFile,line,{mode:0o600});};
@@ -372,18 +372,30 @@ const deny = (kind,metadata={}) => { if(!state.probing) {state.unexpected.push(k
 globalThis.fetch=()=>deny("fetch");
 for(const name of ["node:http","node:https"]) {const transport=(await import(name)).default;for(const method of ["get","request"])transport[method]=()=>deny(name+"."+method);}
 for(const [name,methods]of [["node:net",["connect","createConnection"]],["node:tls",["connect"]]]) {const transport=(await import(name)).default;for(const method of methods)transport[method]=()=>deny(name+"."+method);}
+const spawn=children.spawn;children.spawn=function(command,args,options){if(args?.some(arg=>String(arg).includes("agent-server-stdio")))return deny("Worker");return spawn.call(this,command,args,options);};
+syncBuiltinESMExports();
+if (process.type === "utility") {
+  const { createReviewAgentGuard } = await import(${JSON.stringify(new URL("./review-draft-readonly-rpc-guard.mjs", import.meta.url).href)});
+  const admit = createReviewAgentGuard(${JSON.stringify(sessions.map((s) => s.id))},
+    metadata => {
+      recordReviewIpc({kind:"readonly-agent-rpc", ...metadata});
+      process.parentPort.postMessage({type:"fixture-review-agent-read",metadata});
+    },
+    metadata => deny("agent:port",metadata));
+  observeReviewPort(process.parentPort, { method: "review/prompt", checkAgent: request => admit(JSON.stringify(request)) });
+  process.parentPort.postMessage({type:"fixture-review-registered"});
+}
+if (process.type === "browser") {
+const {app,ipcMain,net,safeStorage,shell,utilityProcess} = await import("electron");
+observeNativeReviewDrafts(utilityProcess,state);
 net.fetch=net.request=()=>deny("electron.net");
 for(const name of ["isEncryptionAvailable","getSelectedStorageBackend","encryptString","decryptString"])if(typeof safeStorage[name]==="function")safeStorage[name]=()=>deny("crypto");
 for(const name of ["openPath","openExternal","showItemInFolder"])shell[name]=()=>deny("OS-open");
-const spawn=children.spawn;children.spawn=function(command,args,options){if(args?.some(arg=>String(arg).includes("agent-server-stdio")))return deny("Worker");return spawn.call(this,command,args,options);};
-syncBuiltinESMExports();
 app.on("web-contents-created",(_event,contents)=>contents.session.webRequest.onBeforeRequest({urls:["http://*/*","https://*/*","ws://*/*","wss://*/*"]},(_details,done)=>{state.unexpected.push("chromium-network");appendFileSync(${JSON.stringify(join(isolated.home, "denied-attempts.jsonl"))},JSON.stringify({pid:process.pid,kind:"chromium-network"})+"\\n",{mode:0o600});done({cancel:true});}));
 const handle=ipcMain.handle.bind(ipcMain);
 ipcMain.handle=(channel,listener)=>{
  if(channel==="catalog:list")return handle(channel,()=>{state.catalogCalls++;return [{id:"owned-review-ui",tag:"text",adapterKind:"openai",displayName:"Owned Review UI model",description:"No provider exists",defaultBaseUrl:"http://127.0.0.1:9",modelPresets:[{value:"owned-review-ui",label:"Owned Review UI model",maxContextTokens:4096}]}];});
- if(channel!=="review:preparePrompt")return handle(channel,listener);
- state.registered++;if(state.registered!==1)throw Error("Duplicate Review production listener");
- return handle(channel,(...args)=>state.gate.invoke(listener,args));
+ return handle(channel,listener);
 };
 ${reviewDraftReadonlyRpcGuardSource(sessions.map((session) => session.id))}
 state.probing=true;
@@ -397,6 +409,7 @@ for(const[name,probe]of [
  ["Electron net",()=>net.request("https://example.invalid/blocked")],
 ]){let blocked=false;try{await probe();}catch(error){blocked=error.message.startsWith("Owned Review draft denied ");}state.probes.push({name,blocked});if(!blocked)throw Error("Review guard probe escaped");}
 state.probing=false;
+}
 `,
   );
   fixture = await prepareConfinedElectronFixture({

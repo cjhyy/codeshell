@@ -221,7 +221,8 @@ test("native driver keeps actual IPC, early custody, complete operations and fin
     "utf8",
   ).replace(/\r\n?/g, "\n");
   const compact = source.replace(/\s+/g, "");
-  assert.ok(source.includes("state.gate.invoke(listener,args)"));
+  assert.ok(source.includes('method: "review/prompt"'));
+  assert.ok(source.includes("observeNativeReviewDrafts(utilityProcess,state)"));
   assert.ok(
     source.includes("reviewDraftReadonlyRpcGuardSource(sessions.map((session) => session.id))"),
   );
