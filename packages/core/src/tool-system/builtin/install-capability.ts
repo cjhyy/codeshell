@@ -217,7 +217,11 @@ async function previewMarketplacePlugin(
 
   const known = readKnownMarketplaces()[marketplace];
   if (!known) return { error: `marketplace "${marketplace}" is not registered.` };
-  await gitSparseCheckoutAdd(known.installLocation, entry.source.replace(/^\.\//, ""));
+  const checkout = await gitSparseCheckoutAdd(
+    known.installLocation,
+    entry.source.replace(/^\.\//, ""),
+  );
+  if (!checkout.ok) return { error: checkout.error };
   const contained = resolveContainedPluginSubpath(
     known.installLocation,
     entry.source,

@@ -15,6 +15,8 @@
  * classification. See docs/architecture/17 for the trust framing.
  */
 
+import { lstatSync, existsSync } from "node:fs";
+import { join } from "node:path";
 import { safeSpawn } from "../runtime/safe-spawn.js";
 import { resolveGit, isGitAvailable } from "../utils/exec.js";
 
@@ -157,10 +159,14 @@ export async function gitClone(
 
 /**
  * Expand a sparse-checkout to include an additional path (a plugin subdir),
- * materializing its blobs. Best-effort: if the repo isn't sparse this errors
- * harmlessly and the caller proceeds (the files are already present).
+ * materializing its blobs. A plain directory or full checkout already has its files.
  */
 export async function gitSparseCheckoutAdd(repoDir: string, relPath: string): Promise<GitResult> {
+  const gitDir = join(repoDir, ".git");
+  const gitEntry = lstatSync(gitDir, { throwIfNoEntry: false });
+  if (!gitEntry || (gitEntry.isDirectory() && !existsSync(join(gitDir, "info", "sparse-checkout"))))
+    return { ok: true, stdout: "" };
+  // For linked worktrees Git resolves its own administrative directory.
   return runGit(["sparse-checkout", "add", "--", relPath], repoDir);
 }
 

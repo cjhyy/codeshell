@@ -277,15 +277,14 @@ async function materialize(
     if (invalid) return { ok: false, error: invalid };
     // The marketplace was cloned sparse (only the manifest dirs are on disk),
     // so a local-path plugin's tree may not be checked out yet. Expand the
-    // sparse-checkout to include it before reading. Best-effort: on a
-    // non-sparse (full) clone this errors harmlessly and the files are already
-    // present, so we ignore the result and let materializePath report a real
-    // missing-path error if the subdir truly isn't there.
+    // sparse-checkout to include it before reading; untracked or already materialized
+    // siblings do not make a partially populated checkout safe to publish.
     // Strip a leading "./" — in non-cone sparse mode the literal "./" prefix
     // doesn't match repo paths (which are stored without it), so the
     // expand would silently no-op and the tree would stay un-materialized.
     const sparseRel = source.replace(/^\.\//, "");
-    await gitSparseCheckoutAdd(marketplaceInstallLocation, sparseRel);
+    const expanded = await gitSparseCheckoutAdd(marketplaceInstallLocation, sparseRel);
+    if (!expanded.ok) return expanded;
     const r = await materializePath(marketplaceInstallLocation, source, placeholder);
     if (!r.ok) return r;
     const finalDir = pluginCacheDir(marketplace, plugin, "local");

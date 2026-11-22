@@ -1,5 +1,5 @@
 import { withLocalPluginMutation } from "./mutation-lock.js";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, lstatSync, rmSync } from "node:fs";
 import { detachPluginDirectory, removeDetachedPluginDirectories } from "./removeDirectory.js";
 import { pluginInstallDir, assertSafePluginName } from "./paths.js";
 import { removeInstallEntries, pluginInstallKey } from "../installedPlugins.js";
@@ -30,10 +30,16 @@ export async function uninstallPluginByNameAsync(
   name: string,
   beforeCommit?: () => void,
 ): Promise<void> {
+  const dir = pluginInstallDir(name);
+  const original = lstatSync(dir, { bigint: true, throwIfNoEntry: false });
+  if (!original) throw new PluginInstallError(`no plugin named '${name}'`);
   const cleanup: string[] = [];
   try {
     await withLocalPluginMutation(name, async () => {
       uninstallLocal(name, (dir) => {
+        const current = lstatSync(dir, { bigint: true });
+        if (original.dev !== current.dev || original.ino !== current.ino)
+          throw new PluginInstallError(`plugin '${name}' changed while waiting for removal`);
         beforeCommit?.();
         cleanup.push(detachPluginDirectory(dir));
       });
