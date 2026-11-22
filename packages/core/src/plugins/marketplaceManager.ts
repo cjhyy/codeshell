@@ -7,6 +7,7 @@
  */
 
 import { existsSync, readFileSync, rmSync, mkdirSync, renameSync, mkdtempSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { marketplaceLifetime, gitClone, githubRepoToCloneUrl } from "./gitOps.js";
@@ -186,7 +187,15 @@ export async function addMarketplace(
     return { ok: true, name, marketplace: manifest.value, replaced: !!previous };
   } finally {
     // Keep an intact last-known checkout if a filesystem fault prevented rollback.
-    if (committed || !existsSync(backup)) rmSync(staging, { recursive: true, force: true });
+    if (committed || !existsSync(backup)) {
+      // Git for Windows may leave a read-only pack or a briefly busy checkout.
+      await rm(staging, { recursive: true, force: true, maxRetries: 4, retryDelay: 40 }).catch(
+        (error) => {
+          marketplaceLifetime.getStore()?.recordCleanupFailure(String(error));
+          throw error;
+        },
+      );
+    }
   }
 }
 
