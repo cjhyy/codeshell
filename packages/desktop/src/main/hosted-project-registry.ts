@@ -1,3 +1,4 @@
+import type { StorageDatabase } from "@cjhyy/code-shell-core/internal/storage";
 import { claimBusinessCommit } from "../host/composition/business-calls.js";
 import type {
   ProjectRegistryCommand,
@@ -14,8 +15,23 @@ type ProjectEdits = {
   ) => Promise<ProjectRegistryOperations[K]["result"]>;
 };
 
-export function projectRegistryEdits(store: ProjectStore, trust = getTrust): ProjectEdits {
+export function projectRegistryEdits(
+  store: ProjectStore,
+  trust = getTrust,
+  db?: StorageDatabase | null,
+): ProjectEdits {
   return {
+    "projects/restoreHistoricalCwd": ({ cwd }, commit) => {
+      const candidates = db?.all<{ id: string }>(
+        "SELECT id FROM sessions WHERE cwd = ? ORDER BY dir_mtime DESC, id LIMIT 8",
+        [cwd],
+      );
+      return store.restoreHistoricalCwd(
+        cwd,
+        commit,
+        candidates?.map((row) => row.id),
+      );
+    },
     "projects/remove": ({ projectId }, commit) => store.remove(projectId, commit),
     "projects/removeRoot": ({ projectId, rootId, path, observedIds }, commit) =>
       store.removeRoot(projectId, rootId, commit, { path, ids: observedIds }),
@@ -37,9 +53,10 @@ export function projectRegistryEdits(store: ProjectStore, trust = getTrust): Pro
 export async function writeHostedProjectRegistry<K extends ProjectRegistryCommand>(
   command: K,
   payload: { input: ProjectRegistryOperations[K]["input"]; permit: Int32Array },
+  db?: StorageDatabase | null,
 ) {
   const store = getProjectStore();
-  const result = await projectRegistryEdits(store)[command](payload.input, () =>
+  const result = await projectRegistryEdits(store, getTrust, db)[command](payload.input, () =>
     claimBusinessCommit(payload.permit),
   );
   return { result, projects: await store.list() };

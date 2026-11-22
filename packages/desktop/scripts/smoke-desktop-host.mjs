@@ -110,6 +110,13 @@ try {
       }),
     );
   }
+  const legacyProject = join(isolated.home, "persisted-legacy-project");
+  const legacySessionDir = join(isolated.codeShellHome, "sessions", "legacy-cwd-witness");
+  await mkdir(legacyProject);
+  await mkdir(legacySessionDir);
+  await writeFile(join(legacySessionDir, "state.json"), JSON.stringify({
+    sessionId: "legacy-cwd-witness", cwd: legacyProject, origin: "desktop", title: "Legacy cwd",
+  }));
   const directory = join(isolated.codeShellHome, "sessions", "index-visible");
   await mkdir(directory, { recursive: true });
   await writeFile(
@@ -192,6 +199,12 @@ const goalIds = new Set(${JSON.stringify(coldGoals)});
 const fs = require("node:fs");
 const goalFiles = new Set(${JSON.stringify(coldStateFiles)});
 globalThis.goalReceipt = { requests: 0, reads: 0 };
+globalThis.coldSessionReads = 0;
+const readAsync = fs.promises.readFile;
+fs.promises.readFile = function (path, ...args) {
+  if (goalFiles.has(String(path))) globalThis.coldSessionReads++;
+  return readAsync.call(this, path, ...args);
+};
 app.whenReady().then(() => {
   const channel = new MessageChannelMain();
   const port = Object.getPrototypeOf(channel.port1);
@@ -210,7 +223,10 @@ app.whenReady().then(() => {
 });
 const read = fs.readFileSync;
 fs.readFileSync = function (path, ...args) {
-  if (goalScope.getStore() && goalFiles.has(String(path))) globalThis.goalReceipt.reads++;
+  if (goalFiles.has(String(path))) {
+    globalThis.coldSessionReads++;
+    if (goalScope.getStore()) globalThis.goalReceipt.reads++;
+  }
   return read.call(this, path, ...args);
 };
 // Exercise the registered compatibility handlers with this fixture's real frames.
@@ -268,6 +284,8 @@ utilityProcess.fork = function (...args) {
   }
   const first = await findCodeShellWindow(application);
   await first.waitForFunction(() => performance.getEntriesByName("first-contentful-paint", "paint").length > 0);
+  assert.equal(await application.evaluate(() => globalThis.coldSessionReads), 0,
+    "Painting a workbench must not open unrelated persisted sessions in Electron Main");
   const claimId = "new-workbench";
   assert.equal(await first.evaluate(async ([id, claim]) => {
     window.startupQuickChatClaim = window.codeshell.claimQuickChatSession(id, claim);
@@ -281,6 +299,14 @@ utilityProcess.fork = function (...args) {
   await assert.rejects(stat(staleDirectory), { code: "ENOENT" });
   await fixture.assertWorker(application, { requireWorker: false });
   await observeHost(first);
+  const readsBeforeResolve = await application.evaluate(() => globalThis.coldSessionReads);
+  const [known, legacy, missing] = await first.evaluate((paths) =>
+    window.codeshell.projectRegistry.resolveForCwdBatch(paths, "disk-rebuild"), [mount, legacyProject, unregistered]);
+  assert.equal(known.projectId, "host-smoke-project");
+  assert.ok(legacy?.projectId, "A persisted legacy session restores its project");
+  assert.equal(missing, null, "An unregistered directory without a session has no authority");
+  assert.equal(await application.evaluate(() => globalThis.coldSessionReads), readsBeforeResolve,
+    "Rebuilding project ownership must not scan the session catalog in Main");
   const goals = await first.evaluate(
     (ids) => Promise.all(ids.map((id) => window.codeshell.goalGet(id))),
     coldGoals,

@@ -641,26 +641,16 @@ describe("ProjectStore", () => {
     const secondary = dir("secondary");
     const legacy = dir("legacy");
     const noRepo = dir("no-repo");
-    const sessionIndex = new SessionCwdIndex({
-      sessionsRoot: join(fixtureRoot, "sessions"),
-      fs: {
-        async readdir() {
-          return [];
-        },
-        async readFile() {
-          throw new Error("missing");
-        },
-        async stat() {
-          throw new Error("missing");
-        },
-      },
-    });
-    await sessionIndex.ensureLoaded();
-    sessionIndex.upsert("legacy-session", { cwd: legacy });
+    const sessions = join(fixtureRoot, "sessions");
+    const sessionIndex = new SessionCwdIndex({ sessionsRoot: sessions });
+    new SessionManager(sessions).create(legacy, "model", "provider", "legacy-session");
     const projects = store({ index: sessionIndex, noRepoPath: noRepo });
     const project = await projects.createFromPath(primary);
     await projects.addRoot(project.id, secondary);
 
+    const known = await projects.resolveProjectForCwdBatch([primary, secondary, noRepo], "live");
+    expect(known).toHaveLength(3);
+    expect(sessionIndex.lookupCached("legacy-session")).toBeUndefined();
     const resolved = await projects.resolveProjectForCwdBatch(
       [primary, secondary, noRepo, legacy, dir("unknown")],
       "disk-rebuild",
@@ -690,7 +680,7 @@ describe("ProjectStore", () => {
 
     const restartedIndex = new SessionCwdIndex({ sessionsRoot: sessionsDir });
     const restarted = store({ index: restartedIndex, sessionManager });
-    await restarted.warm();
+    await restartedIndex.ensureLoaded();
     expect(
       restartedIndex
         .confirmedEntries()
@@ -815,7 +805,6 @@ describe("ProjectStore", () => {
       sessionsRoot: join(fixtureRoot, "sessions"),
       fs: fakeEmptySessionFs(),
     });
-    await index.ensureLoaded();
     const projects = store({ index });
     const project = await projects.createFromPath(primary);
     const updated = (await projects.addRoot(project.id, secondary)).project;

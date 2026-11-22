@@ -129,6 +129,7 @@ await serveSessionIndexWorker({
       return writeHostedProjectRegistry(
         command,
         payload as Parameters<typeof writeHostedProjectRegistry>[1],
+        ctx.db,
       );
     if (command === "trust/set")
       return writeHostedProjectTrust(payload as Parameters<typeof writeHostedProjectTrust>[0]);

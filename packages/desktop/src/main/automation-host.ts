@@ -67,17 +67,17 @@ export interface AutomationWorkspaceDeps {
     projectId: string,
     rootId: string,
   ) => { cwd: string; trustCwd: string; workspaceContext: WorkspaceContext } | undefined;
-  hasPersistedSessionCwd: (cwd: string) => boolean;
+  hasPersistedSessionCwd: (cwd: string) => boolean | Promise<boolean>;
   validatePersistedRoot?: (cwd: string) => void;
   isProjectTrusted: (cwd: string) => boolean;
   isNoRepoCwd: (cwd: string) => boolean;
   isDirectory: (cwd: string) => boolean;
 }
 
-export function resolveAutomationWorkspace(
+export async function resolveAutomationWorkspace(
   job: Pick<CronJob, "cwd" | "projectId" | "rootId">,
   deps: AutomationWorkspaceDeps,
-): AutomationWorkspaceResolution | null {
+): Promise<AutomationWorkspaceResolution | null> {
   const hasStableId = job.projectId !== undefined || job.rootId !== undefined;
   if (hasStableId) {
     if (!job.projectId || !job.rootId) return null;
@@ -117,7 +117,7 @@ export function resolveAutomationWorkspace(
       workspaceContext: project.workspaceContext,
     };
   }
-  if (deps.hasPersistedSessionCwd(cwd)) {
+  if (await deps.hasPersistedSessionCwd(cwd)) {
     return { cwd, projectTrusted: deps.isProjectTrusted(cwd) };
   }
   return null;
@@ -152,8 +152,8 @@ async function resolveDesktopAutomationWorkspace(
         return undefined;
       }
     },
-    hasPersistedSessionCwd: (candidate) =>
-      getSessionCwdIndex().resolveConfirmedCwds([candidate])[0] === true,
+    hasPersistedSessionCwd: async (candidate) =>
+      (await getSessionCwdIndex().findPersistedCwdWitness(candidate)) !== undefined,
     validatePersistedRoot: (candidate) => {
       const validation = getProjectStore().validateRegisteredRootPathSync(candidate);
       if (validation && validation.status !== "ok") {

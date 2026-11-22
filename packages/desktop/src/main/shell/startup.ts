@@ -8,7 +8,6 @@ import { DesktopNotifier } from "../desktop-notifier.js";
 import { showSystemNotification } from "../system-notification.js";
 import { SafeStorageCipher } from "../credential-cipher.js";
 import { migrateKnownCredentialStores } from "../credential-migration.js";
-import { getProjectStore } from "../project-store.js";
 import type { createDesktopHost } from "../desktop-host/main.js";
 import { installThemeAssetProtocol } from "../theme-asset-protocol.js";
 import { MEDIA_PREVIEW_SCHEME } from "../../shared/media-preview.js";
@@ -66,8 +65,6 @@ export function registerNativeStartup(options: NativeStartup) {
         show: (input) => showSystemNotification(input, revealSessionWindow),
       }),
     );
-    await getProjectStore().warm();
-    if (stopping) return;
     void desktopHost.callBusiness("startup/settingsSchema", {}).catch(() => undefined);
     void desktopHost
       .callBusiness("startup/cleanupAttachments", {})

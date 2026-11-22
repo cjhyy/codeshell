@@ -11,7 +11,7 @@ import type { LocalProject } from "./project-store.js";
 import type { AgentBridge } from "./agent-bridge.js";
 import type { ExternalRuntimeService } from "./external-runtime-service.js";
 import { createLegacyProjectMigrationService } from "./legacy-project-migration.js";
-import type { ProjectStore } from "./project-store.js";
+import type { ProjectStore, ProjectResolveSource } from "./project-store.js";
 import { requireRendererProjectRoot } from "./renderer-project-path.js";
 import {
   cleanupSessionWorktreeForUi,
@@ -252,30 +252,31 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
   deps.ipcMain.handle("projectRegistry:remove", (event, projectId: string) =>
     edits(event)("projects/remove", { projectId }),
   );
+  async function resolveCwds(
+    event: IpcMainInvokeEvent,
+    cwds: string[],
+    source: ProjectResolveSource,
+  ) {
+    const host = deps.host;
+    const signal = host?.documentSignal(event);
+    const resolutions = await deps.projectStore.resolveProjectForCwdBatch(
+      cwds,
+      source,
+      host
+        ? (cwd) => host.callBusiness("projects/restoreHistoricalCwd", { cwd }, signal)
+        : undefined,
+    );
+    if (!host && resolutions.some((row) => row && "created" in row && row.created)) {
+      await broadcastProjectRegistry();
+    }
+    return resolutions;
+  }
   deps.ipcMain.handle(
     "projectRegistry:resolveForCwd",
-    async (_event, cwd: string, source: "disk-rebuild" | "automation-import" | "live") => {
-      const resolution = await deps.projectStore.resolveProjectForCwd(cwd, source);
-      if (resolution && "created" in resolution && resolution.created) {
-        await broadcastProjectRegistry();
-      }
-      return resolution;
-    },
+    async (event, cwd: string, source: ProjectResolveSource) =>
+      (await resolveCwds(event, [cwd], source))[0] ?? null,
   );
-  deps.ipcMain.handle(
-    "projectRegistry:resolveForCwdBatch",
-    async (_event, cwds: string[], source: "disk-rebuild" | "automation-import" | "live") => {
-      const resolutions = await deps.projectStore.resolveProjectForCwdBatch(cwds, source);
-      if (
-        resolutions.some(
-          (resolution) => resolution && "created" in resolution && resolution.created,
-        )
-      ) {
-        await broadcastProjectRegistry();
-      }
-      return resolutions;
-    },
-  );
+  deps.ipcMain.handle("projectRegistry:resolveForCwdBatch", resolveCwds);
   deps.ipcMain.handle("projectRegistry:beginLegacyMigration", async (_event, paths: string[]) =>
     legacyProjectMigration.begin(paths),
   );

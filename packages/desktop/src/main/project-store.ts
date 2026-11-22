@@ -186,11 +186,6 @@ export class ProjectStore {
     return () => this.listeners.delete(listener);
   }
 
-  async warm(): Promise<void> {
-    this.ensureInitialized();
-    await this.sessionIndex.ensureLoaded();
-  }
-
   async sessionMainRoots(projectId: string): Promise<Record<string, string[]>> {
     const project = (await this.list()).find((candidate) => candidate.id === projectId);
     if (!project) throw new Error("project not found");
@@ -588,40 +583,57 @@ export class ProjectStore {
   async resolveProjectForCwdBatch(
     cwds: readonly string[],
     _source: ProjectResolveSource = "live",
+    restoreHistorical = (cwd: string) => this.restoreHistoricalCwd(cwd),
   ): Promise<ProjectCwdResolution[]> {
     this.ensureInitialized();
-    await this.sessionIndex.ensureLoaded();
     const registry = readRegistryFile(this.file);
     const noRepoKey = canonicalKey(this.noRepoPath);
     const normalized = cwds.map((cwd) => checkedComparablePath(cwd));
-    const confirmed = this.sessionIndex.resolveConfirmedCwds(normalized.map((entry) => entry.path));
     const results: ProjectCwdResolution[] = [];
 
-    for (let index = 0; index < normalized.length; index += 1) {
-      const candidate = normalized[index]!;
+    for (const candidate of normalized) {
       const found = findRoot(registry.projects, candidate.path);
-      if (found?.project.deletedAt !== undefined) {
-        results.push(null);
-      } else if (found && validateMountedProjectRoot(found.root).status === "ok") {
-        results.push({ projectId: found.project.id, rootId: found.root.id, created: false });
-      } else if (candidate.key === noRepoKey) {
-        results.push({ noRepo: true });
-      } else if (confirmed[index]) {
-        const registered = await this.registerFromPath(candidate.path, false);
+      if (found) {
         results.push(
-          registered
-            ? {
-                projectId: registered.project.id,
-                rootId: registered.project.primaryRootId,
-                created: registered.created,
-              }
+          found.project.deletedAt === undefined &&
+            validateMountedProjectRoot(found.root).status === "ok"
+            ? { projectId: found.project.id, rootId: found.root.id, created: false }
             : null,
         );
+      } else if (candidate.key === noRepoKey) {
+        results.push({ noRepo: true });
       } else {
-        results.push(null);
+        results.push(await restoreHistorical(candidate.path));
       }
     }
     return results;
+  }
+
+  /** Restore an unregistered legacy project only with a persisted Session witness. */
+  async restoreHistoricalCwd(
+    cwd: string,
+    commit?: () => void,
+    indexedIds?: readonly string[],
+  ): Promise<ProjectCwdResolution> {
+    const candidate = checkedComparablePath(cwd);
+    const registeredRoot = this.validateRegisteredRootPathSync(candidate.path);
+    if (registeredRoot && registeredRoot.status !== "ok") return null;
+    const witness = await this.sessionIndex.findPersistedCwdWitness(candidate.path, indexedIds);
+    if (!witness) return null;
+    const registered = await this.registerFromPath(candidate.path, false, () => {
+      const latest = this.sessionIndex.refreshSync(witness);
+      if (!latest || canonicalKey(latest.cwd) !== candidate.key) {
+        throw new Error("Persisted Session workspace changed during project recovery");
+      }
+      commit?.();
+    });
+    return registered
+      ? {
+          projectId: registered.project.id,
+          rootId: registered.project.primaryRootId,
+          created: registered.created,
+        }
+      : null;
   }
 
   isLegacyMigrationComplete(): boolean {
@@ -677,9 +689,6 @@ export class ProjectStore {
     requestedRootId?: string,
   ): ProjectRunResolution {
     this.ensureInitialized();
-    if (!this.sessionIndex.isLoaded()) {
-      throw new Error("session cwd index is not ready");
-    }
     const registry = readRegistryFile(this.file);
     const project = registry.projects.find(
       (candidate) => candidate.id === projectId && candidate.deletedAt === undefined,

@@ -1,6 +1,7 @@
-import type { LocalProject } from "../preload/project-authority-types.js";
+import type { LocalProject, ProjectCwdResolution } from "../preload/project-authority-types.js";
 
 export interface ProjectRegistryOperations {
+  "projects/restoreHistoricalCwd": { input: { cwd: string }; result: ProjectCwdResolution };
   "projects/remove": { input: { projectId: string }; result: void };
   "projects/removeRoot": {
     input: { projectId: string; rootId: string; path: string; observedIds: string[] };
@@ -17,6 +18,7 @@ export interface ProjectRegistryOperations {
 }
 export type ProjectRegistryCommand = keyof ProjectRegistryOperations;
 export const projectRegistryCommands = [
+  "projects/restoreHistoricalCwd",
   "projects/remove",
   "projects/removeRoot",
   "projects/createPicked",

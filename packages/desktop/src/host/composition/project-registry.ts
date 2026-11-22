@@ -25,7 +25,15 @@ export function projectRegistryOperations(
         projects: LocalProject[];
       }>(command, { input, permit: grant.permit });
       if (!receipt) throw new Error("Project registry storage unavailable");
-      changed(grant.requestId, receipt.projects);
+      if (
+        command !== "projects/restoreHistoricalCwd" ||
+        (receipt.result &&
+          typeof receipt.result === "object" &&
+          "created" in receipt.result &&
+          receipt.result.created)
+      ) {
+        changed(grant.requestId, receipt.projects);
+      }
       return receipt.result;
     };
   }
@@ -46,6 +54,7 @@ export function projectRegistryOperations(
     "projects/settleMigration": migration("projects/settleMigration"),
     "projects/releaseMigration": migration("projects/releaseMigration"),
     "projects/removalPath": migration("projects/removalPath"),
+    "projects/restoreHistoricalCwd": route("projects/restoreHistoricalCwd"),
     "projects/remove": route("projects/remove"),
     async "projects/removeRoot"(input, grant) {
       // Other processes may have added a Session since either Desktop index was warmed.
