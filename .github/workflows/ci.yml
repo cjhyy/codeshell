@@ -679,9 +679,13 @@ jobs:
       - name: exercise worker, Desktop Web Panel task and CUA proxy with Electron Node
         timeout-minutes: 3
         run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-electron-runtime.mjs
+      - name: Install the private desktop keyring and native display tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools weston
       - name: desktop Host across windows, Main stalls and utility restart
         timeout-minutes: 3
-        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-desktop-host.mjs
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/smoke-desktop-host.mjs
       - name: encrypted operation ledger through the real stdio worker
         run: ELECTRON_RUN_AS_NODE=1 packages/desktop/node_modules/electron/dist/electron scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-run-operation-ledger.mjs
       - name: real Electron isolated PDF with verified managed Node
@@ -691,10 +695,7 @@ jobs:
           bun run --cwd packages/desktop predist
           bun run --cwd packages/desktop test:upload-asar
       - name: Native Account Cloud project chooser with private SecretService
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools weston
-          xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench
+        run: xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench
       - name: direct worker streaming and approval recovery in a reloaded workbench
         timeout-minutes: 4
         run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-desktop-host-stream.mjs
