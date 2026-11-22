@@ -15,6 +15,7 @@ import { createPanelOperationDiagnostics } from "./panel-operation-diagnostics.m
 import {
   assertSourceElectronTransportSettled,
   chooseViewOnlyIfPrompted,
+  seedViewOnlyWorkbench,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -153,6 +154,7 @@ async function navigate(url, expectedTitle) {
   return browser;
 }
 async function seed() {
+  await seedViewOnlyWorkbench(isolated);
   await mkdir(join(projectPath, "nested"), { recursive: true });
   await mkdir(dirname(generatedPath), { recursive: true });
   await writeFile(generatedPath, ownedImage, { mode: 0o600 });

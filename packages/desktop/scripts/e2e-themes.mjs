@@ -20,6 +20,7 @@ import {
   assert,
   captureRendererErrors,
   chooseViewOnlyIfPrompted,
+  seedViewOnlyWorkbench,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -454,6 +455,7 @@ async function sampleChatPixel(bytes) {
 
 try {
   if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
+  await seedViewOnlyWorkbench(isolated);
   await mkdir(isolated.codeShellHome, { recursive: true });
   await writeFile(
     join(isolated.codeShellHome, "settings.json"),

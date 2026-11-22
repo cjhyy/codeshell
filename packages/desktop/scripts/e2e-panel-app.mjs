@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { PanelRuntimeServices } from "@cjhyy/code-shell-server/panels";
 import {
   chooseViewOnlyIfPrompted,
+  seedViewOnlyWorkbench,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
@@ -255,6 +256,7 @@ try {
   );
   const desktopStateDirectory = join(home, ".code-shell", "desktop");
   await mkdir(desktopStateDirectory, { recursive: true });
+  await seedViewOnlyWorkbench(isolated, [projectDir]);
   await writeFile(
     join(desktopStateDirectory, "recents.json"),
     `${JSON.stringify(

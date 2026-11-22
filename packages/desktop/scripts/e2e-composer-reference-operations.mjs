@@ -19,6 +19,7 @@ import {
 import {
   assertSourceElectronTransportSettled,
   chooseViewOnlyIfPrompted,
+  seedViewOnlyWorkbench,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -89,6 +90,7 @@ let confined;
 
 async function prepare() {
   await seedOfflinePluginBootstrap(isolated.codeShellHome);
+  await seedViewOnlyWorkbench(isolated);
   await mkdir(projectPath, { mode: 0o700 });
   await writeFile(filepath, "Owned Unicode and whitespace file reference\n", { mode: 0o600 });
   await writeFile(explicitPath, "Owned explicit picker attachment\n", { mode: 0o600 });

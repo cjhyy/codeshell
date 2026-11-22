@@ -604,6 +604,21 @@ export async function findCodeShellWindow(app, options = {}) {
   throw new Error("CodeShell renderer window was not found");
 }
 
+/** A fresh workbench first opens no-repo. Seed its view-only decision before UI fixtures navigate. */
+export async function seedViewOnlyWorkbench(isolated, otherReadOnlyPaths = []) {
+  const desktop = join(isolated.codeShellHome, "desktop");
+  await mkdir(desktop, { recursive: true, mode: 0o700 });
+  const paths = [join(isolated.codeShellHome, "no-repo"), ...otherReadOnlyPaths];
+  await writeFile(
+    join(desktop, "trust.json"),
+    JSON.stringify(Object.fromEntries(paths.map((path) => [path, "untrusted"]))),
+    {
+      flag: "wx",
+      mode: 0o600,
+    },
+  );
+}
+
 /** Finish the optional workspace decision before a fixture switches sessions or reloads. */
 export async function chooseViewOnlyIfPrompted(page, timeout = 1500) {
   const view = page.getByRole("button", { name: /^(仅查看|View only)/ });
