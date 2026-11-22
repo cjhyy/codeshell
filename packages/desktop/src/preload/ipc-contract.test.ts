@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { registerCloudAccountIpc } from "../main/cloud-account-ipc.js";
+import { registerAccountDeviceIpc } from "../main/account-device-ipc.js";
+
 const desktopRoot = resolve(import.meta.dir, "../..");
 
 function sourceFiles(relativeRoot: string): string[] {
@@ -20,11 +23,63 @@ function literalChannels(files: string[], expression: RegExp): Set<string> {
   return channels;
 }
 
+function registeredAccountChannels(): Set<string> {
+  const channels = new Set<string>();
+  const ipcMain = {
+    handle(channel: string) {
+      if (channels.has(channel)) throw Error(`IPC channel already registered: ${channel}`);
+      channels.add(channel);
+    },
+    removeHandler(channel: string) {
+      channels.delete(channel);
+    },
+  };
+  const unused = (): never => {
+    throw Error("Registering IPC handlers must not access an account");
+  };
+  registerCloudAccountIpc({
+    ipcMain,
+    isMainWindow: () => false,
+    manager: {
+      status: unused,
+      resume: unused,
+      capabilities: unused,
+      signIn: unused,
+      signInWithBrowser: unused,
+      signInWithGitHub: unused,
+      linkGitHub: unused,
+      profile: unused,
+      manageLinks: unused,
+      cancelSignIn: unused,
+      logout: unused,
+    },
+  });
+  registerAccountDeviceIpc({
+    ipcMain,
+    windows: () => [],
+    service: {
+      setEventSink: () => {},
+      releaseOwner: unused,
+      retireIdentity: unused,
+      list: unused,
+      projects: unused,
+      connect: unused,
+      resume: unused,
+      send: unused,
+      approve: unused,
+      stop: unused,
+      close: unused,
+    },
+  });
+  return channels;
+}
+
 function registeredMainHandleChannels(files: string[]): Set<string> {
   const channels = literalChannels(
     files,
     /(?:ipcMain|options\.ipcMain)\.handle\(\s*["']([^"']+)["']/g,
   );
+  for (const channel of registeredAccountChannels()) channels.add(channel);
   for (const file of files) {
     const source = readFileSync(file, "utf8");
     const constants = new Map<string, string>();
@@ -52,6 +107,22 @@ describe("desktop IPC contract", () => {
 
     expect(missing).toEqual([]);
     expect(preloadInvokes.size).toBeGreaterThan(300);
+  });
+
+  test("account and device preload methods match the channels registered with Electron", () => {
+    const cloudInvokes = literalChannels(
+      sourceFiles("src/preload"),
+      /ipcRenderer\.invoke\(\s*["'](cloudAccount:[^"']+)["']/g,
+    );
+    const deviceMethods = literalChannels(
+      [join(desktopRoot, "src/preload/account-device-api.ts")],
+      /\binvoke(?:Raw)?\(\s*["']([^"']+)["']/g,
+    );
+    const preload = [
+      ...cloudInvokes,
+      ...[...deviceMethods].map((method) => `accountDevice:${method}`),
+    ];
+    expect(preload.sort()).toEqual([...registeredAccountChannels()].sort());
   });
 
   test("exposes Session-authoritative workspace, git/profile, and file APIs end to end", () => {
