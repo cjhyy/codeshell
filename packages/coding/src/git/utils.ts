@@ -82,7 +82,7 @@ const execGitAsync = promisify(execFile);
 
 /** Nonblocking project-boundary resolution for UI hosts. */
 export async function resolveProjectRootAsync(cwd: string): Promise<string> {
-  let realCwd = cwd;
+  let realCwd: string;
   try {
     realCwd = await realpath(cwd);
   } catch {

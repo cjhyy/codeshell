@@ -37,14 +37,9 @@ export interface DesktopSessionSummary {
 
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
 const QUICK_CHAT_SESSION_PREFIX = "qchat-";
-const PANEL_TASK_SESSION_PREFIX = "panel-task-";
 
 function isQuickChatSessionId(id: string): boolean {
   return id.startsWith(QUICK_CHAT_SESSION_PREFIX);
-}
-
-function isInternalEphemeralSessionId(id: string): boolean {
-  return isQuickChatSessionId(id) || id.startsWith(PANEL_TASK_SESSION_PREFIX);
 }
 
 export async function listSessions(
