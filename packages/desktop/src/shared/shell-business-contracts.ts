@@ -69,6 +69,7 @@ export interface ShellBusinessOperations extends GoalRecoveryOperations, Project
     result: ExternalRuntimeModelKind[];
   };
   "external-runtime/models": { input: { searchPath: string }; result: ExternalRuntimeModelEntry[] };
+  "panels/taskModels": { input: { cwd: string; trustedAtDispatch: boolean }; result: import("@cjhyy/code-shell-server/panels").PanelAgentTaskModelCatalog };
   "transcripts/context": { input: { sessionId: string; kind: "handoff" | "lastUserMessage" }; result: string | undefined };
   "transcripts/read": Operation<SessionCatalogApi["readTranscript"]>;
   "transcripts/write": Operation<SessionCatalogApi["writeTranscript"]>;

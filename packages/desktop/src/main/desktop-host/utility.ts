@@ -1,3 +1,4 @@
+import { readPanelTaskModels } from "../panel-app-agent-task-models.js";
 import { transcriptContextOperation } from "../../host/composition/transcript-context.js";
 import { sessionFileOperations } from "../../host/composition/session-files.js";
 import { goalRecoveryOperations } from "../../host/composition/goal-recovery.js";
@@ -253,6 +254,7 @@ function reportGitRoot(root: string) {
 }
 const business = new HostBusinessCalls({
   ...startupOperations,
+  "panels/taskModels": readPanelTaskModels,
   "terminal/command": (call, grant) => {
     if (!server) throw Error("Terminal Host unavailable");
     return server.runWorkbenchTerminal(call, grant.signal);

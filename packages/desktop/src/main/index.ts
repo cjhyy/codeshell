@@ -48,7 +48,7 @@ import { fileURLToPath,pathToFileURL } from "node:url";
 import { AppRendererNavigation } from "./app-renderer-navigation.js";
 import { dirname,resolve,isAbsolute,join } from "node:path";
 import {
-	SettingsManager,userHome,
+	userHome,
 	codeShellHome,
 	setDefaultCredentialAccess,
 	localCredentialAccess,
@@ -61,7 +61,6 @@ import {
 } from "@cjhyy/code-shell-core";
 import {
 	agentNotificationBus,
-	getMergedCatalog,
 	isGitAvailable,
 	resolveGitPath,
 	describeTranscribe,
@@ -113,7 +112,6 @@ import { registerOptimizationLabHost } from "./optimization-lab-host.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { invalidatePanelAppBindingGuard,isPanelAppBoundToProject } from "./panel-apps-service.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
-import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
 	gitDownloadUrl,
 	gitInstallGuidance,
@@ -284,11 +282,13 @@ const panelAppBridge = new PanelAppBridge({
   getExternalRuntimeService: () => externalRuntime.service,
   externalRuntimeInitialContext: (sessionId) =>
     desktopHost.callBusiness("transcripts/context", { sessionId, kind: "handoff" }),
-  agentTaskModels: (cwd) =>
-    buildPanelAgentTaskModelCatalog(
-      new SettingsManager(cwd, "full", getTrustCachedSync(cwd) === "trusted").get(),
-      getMergedCatalog(),
-    ),
+  agentTaskModels: async (cwd) => {
+    const trustedAtDispatch = getTrustCachedSync(cwd) === "trusted";
+    const models = await desktopHost.callBusiness("panels/taskModels", { cwd, trustedAtDispatch });
+    if (trustedAtDispatch && getTrustCachedSync(cwd) !== "trusted")
+      throw Error("Panel workspace trust changed while reading models");
+    return models;
+  },
   showNotification: showSystemNotification,
   cookieCredentials: createPanelCookieAdapter((cwd) => bridge?.pushCredentialSnapshot(cwd)),
   automations: {

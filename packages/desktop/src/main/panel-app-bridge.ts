@@ -1720,9 +1720,14 @@ export class PanelAppBridge {
           this.agentTaskOwner(binding),
           (params ?? {}) as PanelAgentTaskStartInput,
         );
-      case "agent.task.models":
+      case "agent.task.models": {
         this.requirePermission(binding, "agent.task");
-        return this.options.agentTaskModels?.(binding.cwd ?? binding.projectPath) ?? { models: [] };
+        const cwd = binding.cwd ?? binding.projectPath;
+        const catalog = await this.options.agentTaskModels?.(cwd);
+        this.assertLiveProjectBinding(binding);
+        if (cwd !== (binding.cwd ?? binding.projectPath)) throw new Error("Panel workspace changed while reading models");
+        return catalog ?? { models: [] };
+      }
       case "agent.task.list":
         this.requirePermission(binding, "agent.task");
         return this.agentTaskService.list(this.agentTaskOwner(binding));
