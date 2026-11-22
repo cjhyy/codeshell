@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createSessionIndex } from "./session-index.js";
+import { openStateStorage } from "@cjhyy/code-shell-core/internal/storage";
 import { listSessions } from "./sessions-service.js";
 
 test("history preserves flat files, directory precedence and private sessions across reconciliation and restart", async () => {
@@ -47,3 +48,40 @@ test("history preserves flat files, directory precedence and private sessions ac
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+  "an unreadable session leaves the other indexed rows available and returns once readable",
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), "codeshell-history-permissions-"));
+    const hidden = join(root, "private");
+    const storage = openStateStorage(root, {
+      workerUrl: new URL("./session-index-worker.ts", import.meta.url),
+    });
+    const catalog = createSessionIndex(root, { storage });
+    try {
+      for (const id of ["private", "readable"]) {
+        await mkdir(join(root, id));
+        await writeFile(join(root, id, "state.json"), JSON.stringify({ title: id }));
+      }
+      const db = await storage;
+      expect(db.mode).toBe("sqlite");
+      await catalog.reconcile();
+      await chmod(hidden, 0);
+      await catalog.reconcile();
+      const ids = () =>
+        db
+          .read<{ id: string }>("SELECT id FROM session_history WHERE file IS NOT NULL ORDER BY id")
+          ?.map((row) => row.id);
+      expect(ids()).toEqual(["readable"]);
+      expect((await catalog.history()).map((row) => row.id)).toEqual(["readable"]);
+      await chmod(hidden, 0o700);
+      await catalog.changed("private");
+      expect(ids()).toEqual(["private", "readable"]);
+    } finally {
+      await chmod(hidden, 0o700).catch(() => {});
+      await catalog.close();
+      await (await storage).close();
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);

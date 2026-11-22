@@ -65,7 +65,11 @@ function stamp(file: string) {
     const info = lstatSync(file, { bigint: true });
     if (info.isFile()) return { ns: info.mtimeNs.toString(), size: Number(info.size) };
   } catch (error) {
-    if (!missing(error)) throw error;
+    if (
+      !missing(error) &&
+      !["EACCES", "EPERM"].includes((error as NodeJS.ErrnoException).code ?? "")
+    )
+      throw error;
   }
   return { ns: null, size: null };
 }

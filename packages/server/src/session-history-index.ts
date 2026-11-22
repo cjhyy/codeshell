@@ -9,7 +9,10 @@ function info(path: string) {
   try {
     return lstatSync(path);
   } catch (error) {
-    if (["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) return;
+    if (
+      ["ENOENT", "ENOTDIR", "EACCES", "EPERM"].includes((error as NodeJS.ErrnoException).code ?? "")
+    )
+      return;
     throw error;
   }
 }
