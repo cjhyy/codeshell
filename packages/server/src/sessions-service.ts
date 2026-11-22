@@ -226,10 +226,8 @@ export async function listDiskSessions(
 ): Promise<ListDiskSessionsResult> {
   checkListIds(opts);
   baseDir = path.resolve(baseDir);
-  const dirs = (await scanSessionDirectories(baseDir))
-    .filter(
-      ({ id }) => isListDirectory(id) && (opts.sessionId === undefined || id === opts.sessionId),
-    )
+  const dirs = (await scanSessionDirectories(baseDir, opts.sessionId))
+    .filter(({ id }) => isListDirectory(id))
     .sort(comparePositions);
   const cursor = decodeCursor(opts.cursor);
   if (cursor === null) return { sessions: [], nextCursor: null };

@@ -238,23 +238,23 @@ export function scanSessionDirectoriesSync(
 
 export async function scanSessionDirectories(
   root = resolve(sessionsRoot()),
+  onlyId?: string,
 ): Promise<{ id: string; mtime: number }[]> {
   if (!isAbsolute(root))
     throw new SessionFileError("invalid_path", "Session root must be absolute");
   try {
+    const position = async (id: string) => {
+      try {
+        assertSessionFileId(id);
+        const info = directory(await fsp.lstat(join(root, id)));
+        return [{ id, mtime: info.mtimeMs }];
+      } catch {
+        return [];
+      }
+    };
+    if (onlyId !== undefined) return position(onlyId);
     const entries = await fsp.readdir(root, { withFileTypes: true });
-    const candidates = await Promise.all(
-      entries.map(async (entry) => {
-        try {
-          if (!entry.isDirectory()) return [];
-          assertSessionFileId(entry.name);
-          const info = directory(await fsp.lstat(join(root, entry.name)));
-          return [{ id: entry.name, mtime: info.mtimeMs }];
-        } catch {
-          return [];
-        }
-      }),
-    );
+    const candidates = await Promise.all(entries.filter(entry => entry.isDirectory()).map(entry => position(entry.name)));
     return candidates.flat();
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];

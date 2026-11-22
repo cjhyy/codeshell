@@ -121,7 +121,15 @@ export function createSessionIndex(
         !(options.sessionId && dirty.has(options.sessionId))
       ) {
         const page = await listIndexedDiskSessions(db, options);
-        if (page) return page;
+        if (page) {
+          if (!options.sessionId || page.sessions.length || options.cursor) return page;
+          // A legacy writer can create its directory, allow the watcher to run,
+          // then atomically publish state.json. Recover this ID without scanning
+          // other Sessions or waiting for the next minute-long reconciliation.
+          const current = await listDiskSessions(options, sessionsRoot);
+          if (current.sessions.length) void changed(options.sessionId);
+          return current;
+        }
       }
       return listDiskSessions(options, sessionsRoot);
     },

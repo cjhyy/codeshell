@@ -517,6 +517,13 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
 } catch (error) {
   diagnostics.error(error, captured);
   failures.push({ message: error.message, stack: error.stack });
+  if (win) {
+    report.sessionAtFailure = await bounded(win.evaluate(async id => {
+      const page = await window.codeshell.listDiskSessions({ sessionId: id, limit: 1 });
+      const status = await window.codeshell.getReviewStatus(id);
+      return { sessionIds: page.sessions.map(row => row.id), status };
+    }, sessionId), 1500, "Session diagnostics timed out").catch(e => ({ error: e.message }));
+  }
   await win?.screenshot({ path: join(evidence, "failure.png"), timeout: 2000 }).catch(() => {});
 } finally {
   if (failures.length) diagnostics.error(new Error(failures[0].message), captured);

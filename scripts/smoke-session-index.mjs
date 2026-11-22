@@ -43,6 +43,14 @@ async function fixture() {
     await set("b");
     await set("legacy-tui", { origin: "tui" });
     index = createSessionIndex(root);
+    const late = "directory-before-state";
+    await mkdir(join(root, late));
+    await index.changed(late);
+    assert.deepEqual((await index.list({ limit: 1, sessionId: late })).sessions, []);
+    await set(late);
+    assert.equal((await index.list({ limit: 1, sessionId: late })).sessions[0]?.title, late);
+    await rm(join(root, late), { recursive: true });
+    await index.changed(late);
     assert.deepEqual(await index.list(options), await listDiskSessions(options, root));
     const base = join(owned, ".codeshell-state");
     const [key] = await readdir(base);
