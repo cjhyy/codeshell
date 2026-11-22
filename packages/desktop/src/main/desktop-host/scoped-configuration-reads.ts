@@ -5,7 +5,7 @@ import { listMergedMcpServers } from "../mcp-config-view.js";
 import { checkSkillUpdateEntry } from "../skill-update-entry.js";
 import { listCapabilities } from "../capabilities-service.js";
 import { resolveNoRepoCwd } from "../no-repo-cwd.js";
-import { listPluginCommands } from "../plugin-command-service.js";
+import { expandPluginCommand, listPluginCommands } from "../plugin-command-service.js";
 import { listPlugins } from "../plugins-service.js";
 import {
   rendererConfigurationCwd,
@@ -117,6 +117,27 @@ export function scopedConfigurationReads(list: ListSessions) {
     ),
     register("plugins/commands", scoped, async ({ target }) =>
       listPluginCommands(await rendererConfigurationCwd(target)),
+    ),
+    register(
+      "plugins/expandCommand",
+      (input) => {
+        const { target, name, rawArguments } = businessArguments(input, [
+          "target",
+          "name",
+          "rawArguments",
+        ]);
+        if (
+          typeof name !== "string" ||
+          !name ||
+          name.length > 512 ||
+          typeof rawArguments !== "string" ||
+          rawArguments.length > 512 * 1024
+        )
+          throw new InvalidParams();
+        return { target: parseConfigurationTarget(target), name, rawArguments };
+      },
+      async ({ target, name, rawArguments }) =>
+        expandPluginCommand(await rendererConfigurationCwd(target), name, rawArguments),
     ),
     register("capabilities/list", optional, async ({ target }) =>
       listCapabilities(await rendererOptionalConfigurationCwd(target, "")),

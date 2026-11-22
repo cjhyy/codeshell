@@ -171,6 +171,26 @@ describe("desktop IPC contract", () => {
     }
   });
 
+  test("plugin, skill and model configuration reads use only the negotiated Host methods", () => {
+    const main = registeredMainHandleChannels(sourceFiles("src/main"));
+    const preload = sourceFiles("src/preload").map(file => readFileSync(file, "utf8")).join("\n");
+    const oldToNew = {
+      "skills:list": "skills/list", "skills:read": "skills/body", "skills:checkUpdate": "skills/checkUpdate",
+      "capabilities:list": "capabilities/list", "plugins:list": "plugins/list",
+      "plugins:detail": "plugins/detail", "plugins:media": "plugins/media",
+      "plugin-commands:list": "plugins/commands", "plugin-commands:expand": "plugins/expandCommand",
+      "hooks:listPlugin": "plugins/hooks", "mcp:listPluginTrust": "mcp/pluginTrust",
+      "catalog:list": "models/catalog", "catalog:origins": "models/catalogOrigins",
+      "models:list": "models/provider", "models:resolve-meta": "models/meta",
+      "models:reasoning-control": "models/reasoning",
+    };
+    for (const [channel, method] of Object.entries(oldToNew)) {
+      expect(main).not.toContain(channel);
+      expect(preload).not.toContain(JSON.stringify(channel));
+      expect(preload).toContain(`read("${method}"`);
+    }
+  });
+
   test("native cloud environments replace the remote project window bridge", () => {
     const main = sourceFiles("src/main")
       .map((file) => readFileSync(file, "utf8"))

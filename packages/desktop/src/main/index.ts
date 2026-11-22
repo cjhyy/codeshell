@@ -244,14 +244,7 @@ import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { createLinkService } from "@cjhyy/code-shell-server/links";
-import { listSkills, readSkillBody } from "./skills-service.js";
-import {
-  listPlugins,
-  getPluginDetail,
-} from "./plugins-service.js";
 import { invalidatePanelAppBindingGuard, isPanelAppBoundToProject } from "./panel-apps-service.js";
-import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
-import { getPluginMedia } from "./plugin-media-service.js";
 import {
   registerPanelAppSchemePrivileges,
 } from "./panel-app-protocol.js";
@@ -262,11 +255,7 @@ import {
   gitDownloadUrl,
   gitInstallGuidance,
 } from "./marketplace-service.js";
-import {
-  listCapabilities,
-} from "./capabilities-service.js";
 import { registerSourceCatalogIpc } from "./source-catalog-ipc.js";
-import { checkSkillUpdateEntry } from "./skill-update-entry.js";
 import { listRuns } from "./runs-service.js";
 import {
   initUpdater,
@@ -300,11 +289,6 @@ import {
   resolveRendererConfigurationTarget,
   type RendererConfigurationTarget,
 } from "./renderer-configuration-authority.js";
-import {
-  rendererConfigurationCwd,
-  rendererOptionalConfigurationCwd,
-  requireRendererListedSkillPath,
-} from "./renderer-configuration-helpers.js";
 import { registerProfileCatalogIpc } from "./profile-catalog-ipc.js";
 import { registerLinkCredentialIpc } from "./link-credentials-ipc.js";
 import { registerBrowserSessionIpc } from "./browser-session-ipc.js";
@@ -2341,17 +2325,6 @@ app.whenReady().then(async () => {
   setTimeout(() => void sweepStaleWorktrees("startup"), 5_000);
   setInterval(() => void sweepStaleWorktrees("interval"), 60 * 60_000);
 });
-
-ipcMain.handle(
-  "skills:list",
-  async (_e, target: RendererConfigurationTarget | null, opts?: { includeDisabled?: boolean }) =>
-    listSkills(await rendererOptionalConfigurationCwd(target, resolveNoRepoCwd()), {
-      includeDisabled: opts?.includeDisabled === true,
-    }),
-);
-ipcMain.handle("capabilities:list", async (_e, target: RendererConfigurationTarget | null) =>
-  listCapabilities(await rendererOptionalConfigurationCwd(target, "")),
-);
 ipcMain.handle(
   "capabilities:setEnabled",
   async (
@@ -2412,34 +2385,6 @@ registerProfileSwitchIpc({
   },
 });
 registerProfileCatalogIpc(desktopHost);
-ipcMain.handle("plugins:list", async (_e, target: RendererConfigurationTarget | null) =>
-  listPlugins(await rendererOptionalConfigurationCwd(target, "")),
-);
-ipcMain.handle("plugins:media", async (_e, installKey: string, includeScreenshots?: boolean) => {
-  if (typeof installKey !== "string" || !installKey) {
-    throw new Error("plugins:media requires installKey");
-  }
-  if (includeScreenshots !== undefined && typeof includeScreenshots !== "boolean") {
-    throw new Error("plugins:media includeScreenshots must be boolean");
-  }
-  return getPluginMedia(installKey, includeScreenshots === true);
-});
-ipcMain.handle("plugin-commands:list", async (_e, target: RendererConfigurationTarget) =>
-  listPluginCommands(await rendererConfigurationCwd(target)),
-);
-ipcMain.handle(
-  "plugin-commands:expand",
-  async (_e, target: RendererConfigurationTarget, name: string, rawArguments: string) => {
-    const cwd = await rendererConfigurationCwd(target);
-    if (typeof name !== "string" || !name || name.length > 512) {
-      throw new Error("plugin-commands:expand requires name");
-    }
-    if (typeof rawArguments !== "string" || rawArguments.length > 512 * 1024) {
-      throw new Error("plugin-commands:expand requires rawArguments");
-    }
-    return expandPluginCommand(cwd, name, rawArguments);
-  },
-);
 registerProjectPanelIpc({
   ipcMain,
   requireRendererProjectPath,
@@ -2475,12 +2420,6 @@ const { assertRendererSessionAccess, deletingBrowserSessions, rendererBrowserSes
     bridge: () => bridge,
     chromeNativeRegistration: () => chromeNativeRegistration,
   });
-ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
-  if (typeof installKey !== "string" || !installKey) {
-    throw new Error("plugins:detail requires installKey");
-  }
-  return getPluginDetail(installKey);
-});
 ipcMain.handle(
   "plugins:createAutomationFromTemplate",
   async (_e, installKey: string, templateId: string, expectedRevision: string, cwd?: string) => {
@@ -2575,16 +2514,6 @@ ipcMain.handle("themes:uninstall", async (_e, id: string) => {
   }
   return { ok: true };
 });
-ipcMain.handle(
-  "skills:read",
-  async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
-    readSkillBody(await requireRendererListedSkillPath(target, filePath)),
-);
-ipcMain.handle(
-  "skills:checkUpdate",
-  async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
-    checkSkillUpdateEntry(await requireRendererListedSkillPath(target, filePath)),
-);
 
 
 
@@ -2596,15 +2525,6 @@ registerAttachmentsIpc({
 });
 registerAgentsMediaIpc({ host: desktopHost, mainWindows, mediaPreviewService });
 registerSkillsMcpIpc({ host: desktopHost, getMcpOAuthService });
-// Read-only list of plugin-provided hooks, for the settings 钩子 page to show
-// alongside hand-written hooks (labelled by owner plugin). Mirrors
-// mcp:listMerged's disabledPlugins handling. (#钩子设置页改造)
-ipcMain.handle("hooks:listPlugin", async (event, rawDisabledPlugins?: unknown) => {
-  const disabledPlugins = Array.isArray(rawDisabledPlugins)
-    ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
-    : [];
-  return desktopHost.callBusiness("plugins/hooks",{disabledPlugins},desktopHost.documentSignal(event));
-});
 ipcMain.handle("hooks:approvePlugin", async (event, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {
     throw new Error("hooks:approvePlugin requires installKey");
@@ -2617,7 +2537,6 @@ ipcMain.handle("hooks:revokePlugin", async (event, installKey: string) => {
   }
   return desktopHost.callBusiness("plugins/revokeHooks", {installKey}, desktopHost.documentSignal(event));
 });
-ipcMain.handle("mcp:listPluginTrust", (event) => desktopHost.callBusiness("mcp/pluginTrust",{},desktopHost.documentSignal(event)));
 ipcMain.handle("mcp:approvePlugin", async (event, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {
     throw new Error("mcp:approvePlugin requires installKey");

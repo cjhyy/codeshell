@@ -12,9 +12,11 @@ export function createConfigurationReads(
   function read<K extends keyof DesktopBusinessReads>(
     name: K,
     params: DesktopBusinessReads[K]["params"],
-    fallback: () => Promise<DesktopBusinessReads[K]["result"]>,
+    fallback?: () => Promise<DesktopBusinessReads[K]["result"]>,
   ) {
-    return host ? host.readBusiness(name, params, fallback) : fallback();
+    if (host) return host.readBusiness(name, params, fallback);
+    if (fallback) return fallback();
+    return Promise.reject(new Error("Configuration reads require the workbench Host"));
   }
   return {
     listMarketplaces: () =>
@@ -71,25 +73,13 @@ export function createConfigurationReads(
     listPendingMemory: () =>
       read("memory/pending", {}, () => ipcRenderer.invoke("memory:pending:list")),
     resolveModelMeta: (models: unknown, providers: unknown) =>
-      read("models/meta", { models, providers }, () =>
-        ipcRenderer.invoke("models:resolve-meta", models, providers),
-      ),
-    reasoningControl: (kind: string, model: string) =>
-      read("models/reasoning", { kind, model }, () =>
-        ipcRenderer.invoke("models:reasoning-control", kind, model),
-      ),
+      read("models/meta", { models, providers }),
+    reasoningControl: (kind: string, model: string) => read("models/reasoning", { kind, model }),
     listModels: (provider: unknown, refresh?: boolean) =>
-      read("models/provider", { provider, refresh }, () =>
-        ipcRenderer.invoke("models:list", provider, refresh),
-      ),
-    listPluginHooks: (disabledPlugins?: string[]) =>
-      read("plugins/hooks", { disabledPlugins }, () =>
-        ipcRenderer.invoke("hooks:listPlugin", disabledPlugins),
-      ),
+      read("models/provider", { provider, refresh }),
+    listPluginHooks: (disabledPlugins?: string[]) => read("plugins/hooks", { disabledPlugins }),
     checkSkillUpdate: (target: RendererConfigurationTarget | null, filePath: string) =>
-      read("skills/checkUpdate", { target, filePath }, () =>
-        ipcRenderer.invoke("skills:checkUpdate", target, filePath),
-      ),
+      read("skills/checkUpdate", { target, filePath }),
     listMergedMcpServers: (
       base: Record<string, unknown>,
       disabledPlugins?: string[],
@@ -105,22 +95,19 @@ export function createConfigurationReads(
     listSkills: (
       target: RendererConfigurationTarget | null,
       opts?: { includeDisabled?: boolean },
-    ) =>
-      read("skills/list", { target, includeDisabled: opts?.includeDisabled }, () =>
-        ipcRenderer.invoke("skills:list", target, opts),
-      ),
+    ) => read("skills/list", { target, includeDisabled: opts?.includeDisabled }),
     readSkillBody: (target: RendererConfigurationTarget | null, filePath: string) =>
-      read("skills/body", { target, filePath }, () =>
-        ipcRenderer.invoke("skills:read", target, filePath),
-      ),
-    listPlugins: (target: RendererConfigurationTarget | null) =>
-      read("plugins/list", { target }, () => ipcRenderer.invoke("plugins:list", target)),
+      read("skills/body", { target, filePath }),
+    listPlugins: (target: RendererConfigurationTarget | null) => read("plugins/list", { target }),
     listPluginCommands: (target: RendererConfigurationTarget) =>
-      read("plugins/commands", { target }, () =>
-        ipcRenderer.invoke("plugin-commands:list", target),
-      ),
+      read("plugins/commands", { target }),
+    expandPluginCommand: (
+      target: RendererConfigurationTarget,
+      name: string,
+      rawArguments: string,
+    ) => read("plugins/expandCommand", { target, name, rawArguments }),
     listCapabilities: (target: RendererConfigurationTarget | null) =>
-      read("capabilities/list", { target }, () => ipcRenderer.invoke("capabilities:list", target)),
+      read("capabilities/list", { target }),
     listProjects: (fallback: () => Promise<DesktopBusinessReads["projects/list"]["result"]>) =>
       read("projects/list", {}, fallback),
     recents: () => read("projects/recents", {}, () => ipcRenderer.invoke("recents:list")),
@@ -140,18 +127,11 @@ export function createConfigurationReads(
       read("sources/scopes", { sourceId }, () =>
         ipcRenderer.invoke("sources:listScopes", sourceId),
       ),
-    getPluginDetail: (installKey: string) =>
-      read("plugins/detail", { installKey }, () =>
-        ipcRenderer.invoke("plugins:detail", installKey),
-      ),
+    getPluginDetail: (installKey: string) => read("plugins/detail", { installKey }),
     getPluginMedia: (installKey: string, includeScreenshots?: boolean) =>
-      read("plugins/media", { installKey, includeScreenshots }, () =>
-        ipcRenderer.invoke("plugins:media", installKey, includeScreenshots),
-      ),
-    listPluginMcpTrust: () =>
-      read("mcp/pluginTrust", {}, () => ipcRenderer.invoke("mcp:listPluginTrust")),
-    getModelCatalog: () => read("models/catalog", {}, () => ipcRenderer.invoke("catalog:list")),
-    getCatalogOrigins: () =>
-      read("models/catalogOrigins", {}, () => ipcRenderer.invoke("catalog:origins")),
+      read("plugins/media", { installKey, includeScreenshots }),
+    listPluginMcpTrust: () => read("mcp/pluginTrust", {}),
+    getModelCatalog: () => read("models/catalog", {}),
+    getCatalogOrigins: () => read("models/catalogOrigins", {}),
   };
 }

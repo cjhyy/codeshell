@@ -65,7 +65,6 @@ import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identit
 import { rpcResult } from "./rpc-result";
 import { createGoalControlApi } from "./goal-control-api";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
-import type { ExpandedPluginCommand } from "../shared/plugin-commands";
 
 import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-preview";
 import type { InstalledThemePack, ThemeImportKind, ThemePickPreview } from "../shared/theme-packs";
@@ -1058,12 +1057,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   searchSessionContent: (query: string): Promise<SessionContentSearchResult> =>
     configurationHost?.readBusiness("activity/searchTranscripts", { query }) ??
     Promise.reject(new Error("Session search requires the workbench Host")),
-  expandPluginCommand: (
-    target: RendererConfigurationTarget,
-    name: string,
-    rawArguments: string,
-  ): Promise<ExpandedPluginCommand> =>
-    ipcRenderer.invoke("plugin-commands:expand", target, name, rawArguments),
   onPluginCommandsChanged: (cb: () => void) => {
     const handler = () => cb();
     ipcRenderer.on("plugin-commands:changed", handler);

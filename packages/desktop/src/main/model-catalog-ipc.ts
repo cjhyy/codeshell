@@ -1,8 +1,6 @@
 import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import type { IpcMainInvokeEvent } from "electron";
 import { ipcMain } from "electron";
-import { getMergedCatalog, catalogEntryOrigins } from "@cjhyy/code-shell-core/internal";
-import { modelMetadata, modelReasoning, providerModels } from "./model-provider-views.js";
 import { invalidateMcpProbeCache } from "./mcp-probe-service.js";
 import { probeSearch, type SearchProbeInput } from "./search-probe-service.js";
 import { probeImage, type ImageProbeInput } from "./image-probe-service.js";
@@ -38,23 +36,10 @@ export function registerModelCatalogIpc(host: {
     return probeImage(r);
   });
 
-  ipcMain.handle("catalog:list", async () => getMergedCatalog());
-
   ipcMain.handle("catalog:save", (event, entry: unknown) =>
     host.callBusiness("models/saveEntry", { entry }, host.documentSignal(event)),
   );
   ipcMain.handle("catalog:delete", (event, id: string) =>
     host.callBusiness("models/deleteEntry", { id }, host.documentSignal(event)),
-  );
-  ipcMain.handle("catalog:origins", async () => catalogEntryOrigins());
-
-  ipcMain.handle("models:resolve-meta", (_event, models: unknown, providers: unknown) =>
-    modelMetadata(models, providers),
-  );
-  ipcMain.handle("models:reasoning-control", (_event, kind: unknown, model: unknown) =>
-    modelReasoning(kind, model),
-  );
-  ipcMain.handle("models:list", (_event, provider: unknown, refresh?: boolean) =>
-    providerModels(provider, refresh),
   );
 }

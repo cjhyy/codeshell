@@ -26,6 +26,10 @@ export interface ConfigurationReadContracts {
   "skills/list": View<"listSkills", OptionalTarget & { includeDisabled?: boolean }>;
   "skills/body": View<"readSkillBody", OptionalTarget & { filePath: string }>;
   "plugins/list": View<"listPlugins", OptionalTarget>;
+  "plugins/expandCommand": View<
+    "expandPluginCommand",
+    Target & { name: string; rawArguments: string }
+  >;
   "plugins/commands": View<"listPluginCommands", Target>;
   "capabilities/list": View<"listCapabilities", OptionalTarget>;
 
