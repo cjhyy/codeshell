@@ -2,10 +2,11 @@ import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createHash, randomUUID } from "node:crypto";
 import type { Credential } from "./types.js";
 import type { EncryptionCipher } from "./cipher.js";
+import { retirementRecordType as TYPE } from "../storage/credential-file-records.js";
+export { retirementCount } from "../storage/credential-file-records.js";
 
 // Unknown credential kinds are preserved verbatim by older stores. They are never listed,
 // resolved, exported to an agent, or treated as ordinary credentials.
-const TYPE = "remote-link-retirement";
 interface Entry {
   type: typeof TYPE;
   version: 1;
@@ -145,7 +146,4 @@ export function finishRetirement(
     delete value.leaseUntil;
   }
   return true;
-}
-export function retirementCount(records: unknown[]): number {
-  return records.filter((v) => (v as Entry | undefined)?.type === TYPE).length;
 }

@@ -9,7 +9,7 @@ import {
   readBoundedJsonFile,
   writeFileAtomic,
 } from "../utils/file-mutex.js";
-import { retirementCount } from "../credentials/remote-link-retirement.js";
+import { retirementCount } from "./credential-file-records.js";
 import type { CredentialStoreFile } from "../credentials/types.js";
 
 export const credentialCommands = [

@@ -17,3 +17,8 @@ export interface CookieFileOperations {
   "cookies/inspect": { input: { secrets: string[] }; result: CookieInspection[] };
   "cookies/sweep": { input: Record<string, never>; result: true };
 }
+
+export type CallCookieFile = <K extends keyof CookieFileOperations>(
+  method: K,
+  input: CookieFileOperations[K]["input"],
+) => Promise<CookieFileOperations[K]["result"]>;
