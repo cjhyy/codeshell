@@ -553,10 +553,10 @@ jobs:
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins
       - name: test core session in its own Bun process
         if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/*.privacy.test.ts' packages/core/src/session
-      - name: test context privacy export boundary
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/*.privacy.test.ts' --path-ignore-patterns '**/src/session/session-state-file.test.ts' packages/core/src/session
+      - name: test durable session publication and context privacy
         if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session/context-messages.privacy.test.ts
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session/context-messages.privacy.test.ts packages/core/src/session/session-state-file.test.ts
       - name: Compiled isolated instruction adoption lifecycle
         if: matrix.shard == 'rest'
         run: |
