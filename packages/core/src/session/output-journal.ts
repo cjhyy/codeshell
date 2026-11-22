@@ -50,7 +50,7 @@ import {
 } from "./output-journal-binding.js";
 import { capturePersistentFileIdentity } from "./persistent-file-identity.js";
 import { hasHistoricalOutputGap } from "./output-history-gap.js";
-import { replaceSessionStateFile } from "./session-state-file.js";
+import { replaceFileAtomically } from "../utils/file-mutex.js";
 
 const MAX_JOURNAL_BYTES = 128 * 1024 * 1024;
 const MAX_RECORD_BYTES = 256 * 1024;
@@ -1326,7 +1326,7 @@ export class SessionOutputJournal {
       fsyncSync(fd);
       closeSync(fd);
       fd = undefined;
-      replaceSessionStateFile(temporary, this.location.statePath);
+      replaceFileAtomically(temporary, this.location.statePath);
       if (process.platform !== "win32") {
         const dir = openSync(this.location.directory, constants.O_RDONLY);
         try {

@@ -134,6 +134,30 @@ function acquireLockOn(target: string, timeoutMs: number, checkWait?: () => void
   }
 }
 
+// A Windows reader or filesystem filter can briefly deny delete sharing.
+// Retry only the rename so callers keep their lock and commit their mutation once.
+export function replaceFileAtomically(tmp: string, target: string): void {
+  let delay = 10;
+  const deadline = performance.now() + 1_000;
+  for (;;) {
+    try {
+      renameSync(tmp, target);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      const remaining = deadline - performance.now();
+      if (
+        process.platform !== "win32" ||
+        (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY") ||
+        remaining <= 0
+      )
+        throw error;
+      sleepSync(Math.min(delay, remaining));
+      delay = Math.min(100, delay * 2);
+    }
+  }
+}
+
 /** Stage to a unique temp file, then rename — never a partially written target. */
 export function writeFileAtomic(file: string, contents: string, mode?: number): void {
   mkdirSync(dirname(file), { recursive: true });
@@ -142,7 +166,7 @@ export function writeFileAtomic(file: string, contents: string, mode?: number): 
   const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
   try {
     writeFileSync(tmp, contents, mode === undefined ? "utf-8" : { encoding: "utf-8", mode });
-    renameSync(tmp, file);
+    replaceFileAtomically(tmp, file);
   } finally {
     rmSync(tmp, { force: true });
   }

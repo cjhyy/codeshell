@@ -12,11 +12,12 @@ import type { Stats } from "node:fs";
 
 import { channel } from "node:diagnostics_channel";
 import { basename, dirname } from "node:path";
-import { existsSync, lstatSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, rmSync, writeFileSync } from "node:fs";
 import { nanoid } from "nanoid";
 import type { SessionState } from "../types.js";
 import { preserveOutputCoverage } from "./output-coverage-state.js";
 import { isLockHeldInProcess, lockSync } from "../utils/lockfile.js";
+import { replaceFileAtomically } from "../utils/file-mutex.js";
 
 const stateCommitted = channel("codeshell.session.state-committed");
 const SESSION_STATE_LOCK_STALE_MS = 10_000;
@@ -40,31 +41,6 @@ function sleepSync(ms: number): void {
   Atomics.wait(syncSleepCell, 0, 0, ms);
 }
 
-// Windows can deny replacement while a reader or filesystem filter briefly
-// holds the destination without delete sharing. Retry the same atomic rename
-// with the Session lease still held. A lasting denial preserves the old state.
-export function replaceSessionStateFile(tmp: string, target: string): void {
-  let delay = 10;
-  const deadline = performance.now() + 1_000;
-  for (;;) {
-    try {
-      renameSync(tmp, target);
-      return;
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      const remaining = deadline - performance.now();
-      if (
-        process.platform !== "win32" ||
-        (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY") ||
-        remaining <= 0
-      )
-        throw error;
-      sleepSync(Math.min(delay, remaining));
-      delay = Math.min(100, delay * 2);
-    }
-  }
-}
-
 export function writeStateAtomically(target: string, state: SessionState, label = "state"): void {
   const tmp = `${target}.${process.pid}.${nanoid(8)}.${label}.tmp`;
   try {
@@ -72,7 +48,7 @@ export function writeStateAtomically(target: string, state: SessionState, label 
       encoding: "utf-8",
       mode: 0o600,
     });
-    replaceSessionStateFile(tmp, target);
+    replaceFileAtomically(tmp, target);
     if (stateCommitted.hasSubscribers) {
       const directory = dirname(target);
       stateCommitted.publish({ root: dirname(directory), id: basename(directory) });

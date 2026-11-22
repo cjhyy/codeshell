@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import {
   existsSync,
   mkdtempSync,
@@ -30,6 +31,58 @@ afterEach(() => {
 });
 
 describe("SessionCatalogStore", () => {
+  for (const persistent of [false, true])
+    test(`a ${persistent ? "lasting" : "temporary"} Windows sharing violation keeps the previous catalog readable`, async () => {
+      const { file, directory, store } = fixture();
+      const first = await store.apply({
+        projectKey: "p",
+        upserts: [{ id: "s", values: row("s") }],
+      });
+      const previous = readFileSync(file);
+      const revisions: number[] = [];
+      store.onChanged((snapshot) => revisions.push(snapshot.revision));
+      const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+      const original = fs.renameSync;
+      const staged = new Set<fs.PathLike>();
+      let attempts = 0;
+      let claims = 0;
+      const rename = spyOn(fs, "renameSync").mockImplementation((source, target) => {
+        expect(target).toBe(file);
+        expect(existsSync(directory + ".lock")).toBe(true);
+        expect(readFileSync(file)).toEqual(previous);
+        staged.add(source);
+        attempts++;
+        if (attempts === 1 || persistent)
+          throw Object.assign(new Error("Sharing violation"), { code: "EPERM" });
+        original(source, target);
+      });
+      try {
+        Object.defineProperty(process, "platform", { ...platform, value: "win32" });
+        const apply = store.commitPatch(
+          { projectKey: "p", upserts: [{ id: "s", values: { title: "Second send" } }] },
+          () => {
+            claims++;
+          },
+        );
+        if (persistent) {
+          await expect(apply).rejects.toThrow("Sharing violation");
+          expect(store.snapshotSync()).toEqual(first);
+          expect(revisions).toEqual([]);
+        } else {
+          expect((await apply).indices.p.sessions[0].title).toBe("Second send");
+          expect(store.snapshotSync().revision).toBe(first.revision + 1);
+          expect(revisions).toEqual([first.revision + 1]);
+        }
+        expect(attempts).toBeGreaterThan(1);
+        expect(claims).toBe(1);
+        expect(staged.size).toBe(1);
+        expect(fs.readdirSync(directory)).toEqual(["session-catalog.json"]);
+      } finally {
+        Object.defineProperty(process, "platform", platform);
+        rename.mockRestore();
+      }
+    });
+
   test("snapshotSync does not create files and sees external commits and deletion", async () => {
     const { file, store } = fixture();
     expect(store.snapshotSync()).toEqual({ revision: 0, indices: {} });
