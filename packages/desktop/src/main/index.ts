@@ -1187,7 +1187,7 @@ async function createWindow(): Promise<BrowserWindow> {
       log: (event, data) => dlog("main", event, data),
     });
     // Follow-ups are schedule rules; the old follow-ups.json is deleted, not migrated.
-    const followUpRuntime = await createPetFollowUpRules({
+    const followUpRuntime = createPetFollowUpRules({
       fireSystem: () => petProactive.fire,
       rules: notices.ruleStore,
       makeScheduler: (fire) => nativeMimiScheduler.configure(fire),
@@ -1202,7 +1202,6 @@ async function createWindow(): Promise<BrowserWindow> {
     });
     const { petFollowUps, followUpHost } = followUpRuntime;
     petRuleScheduler = followUpRuntime.coordinator;
-    void petProactive.start();
     // Entering a Work Session from a chat: the store, bridge, bind executor
     // and reply delivery are composed in session-bridge-wiring.ts so this
     // root only names the collaborators it already owns.
@@ -1231,7 +1230,7 @@ async function createWindow(): Promise<BrowserWindow> {
           error: String(error),
         }),
     });
-    await sessionBridge.recoverOnStartup().catch(() => undefined);
+    const sessionRoutesReady = sessionBridge.recoverOnStartup().catch(() => undefined);
     petDispatchService = desktopHost.mimiDispatch.configure({
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
@@ -1462,6 +1461,8 @@ async function createWindow(): Promise<BrowserWindow> {
       }
     });
     const petInitialization = (async () => {
+      await Promise.all([followUpRuntime.ready, sessionRoutesReady]);
+      void petProactive.start();
       await aggregator.start();
       await reconcileSources();
       await Promise.all([
@@ -2350,6 +2351,9 @@ function assertQuickChatClaim(id: unknown, claimId: unknown): asserts id is stri
 
 ipcMain.handle("quickChat:claimSession", async (event, id: unknown, claimId: unknown) => {
   assertQuickChatClaim(id, claimId);
+  const document = desktopHost.documentSignal(event);
+  await nativeStartup.quickChatsReady;
+  document.throwIfAborted();
   const ownerId = event.sender.id;
   quickChatOwnership.claim(id, ownerId, claimId as string);
   if (!quickChatOwnerCleanupRegistered.has(ownerId)) {

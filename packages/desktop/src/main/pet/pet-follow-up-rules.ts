@@ -262,7 +262,7 @@ export type PetFollowUpRulesDeps = FollowUpViews &
   };
 
 /** Compose follow-ups on the rule table; Desktop supplies lifecycle, routing and authority. */
-export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
+export function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
   const { rules } = deps;
   const now = deps.now ?? Date.now;
   const followUpRules = async () => (await rules.list()).filter(isFollowUpRule);
@@ -467,12 +467,13 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
         });
   // Not fatal: a rule table this build cannot write (or read) leaves
   // follow-ups off, logged, while the rest of Mimi and the bridge start.
-  await coordinator.prepare().catch((error) => {
+  const ready = coordinator.prepare().catch((error) => {
     deps.log?.("pet.followUp.prepare_failed", { error: String(error) });
     deps.onError(error);
   });
 
   return {
+    ready,
     petFollowUps,
     followUpHost,
     coordinator,

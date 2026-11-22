@@ -241,7 +241,7 @@ describe("Mimi registered follow-up host integration", () => {
   test("host slot identity survives register replay after a later cancel", async () => {
     const path = await root();
     const store = new PetRuleStore({ path: join(path, "rules.json") });
-    const { followUpHost: host } = await createPetFollowUpRules({
+    const { followUpHost: host, ready } = createPetFollowUpRules({
       rules: store,
       sessions: () => [],
       summaryStore: {
@@ -267,6 +267,7 @@ describe("Mimi registered follow-up host integration", () => {
       dispatch: () => null,
       onError: () => undefined,
     });
+    await ready;
     const payload = {
       action: "register",
       title: "提醒",

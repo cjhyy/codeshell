@@ -64,7 +64,7 @@ async function setup(
   const submitted: NoticeSubmission[] = [];
   const wakes: PetFollowUpWake[] = [];
   const tasks = options.tasks ?? [];
-  const runtime = await createPetFollowUpRules({
+  const runtime = createPetFollowUpRules({
     rules,
     sessions: () => options.sessions ?? [],
     summaryStore: {
@@ -123,6 +123,7 @@ async function setup(
     now: () => clock,
     onError: () => undefined,
   });
+  await runtime.ready;
   return { rules, runtime, jobs, submitted, wakes, host: runtime.followUpHost };
 }
 

@@ -121,6 +121,10 @@ try {
     }),
     { mode: 0o600 },
   );
+  const staleQuickChat = "qchat-startup-smoke";
+  const staleDirectory = join(isolated.codeShellHome, "sessions", staleQuickChat);
+  await mkdir(staleDirectory, { recursive: true });
+  await writeFile(join(staleDirectory, "transcript.jsonl"), "previous process");
   const fixture = await prepareConfinedElectronFixture({
     appDir,
     isolated,
@@ -169,7 +173,23 @@ require("node:module").syncBuiltinESMExports();
 const fork = utilityProcess.fork;
 utilityProcess.fork = function (...args) {
   const child = fork.apply(this, args);
-  if (args[2]?.serviceName === "CodeShell Desktop Host") globalThis.smokeHostChild = child;
+  if (args[2]?.serviceName === "CodeShell Desktop Host") {
+    // Hold the first Host handshake until its real workbench paints and asks for a Quick Chat.
+    if (!globalThis.smokeHostChild) {
+      const emit = child.emit;
+      let ready;
+      child.emit = function (event, ...args) {
+        if (event !== "message" || args[0]?.type !== "ready") return emit.call(this, event, ...args);
+        ready = args;
+        return true;
+      };
+      globalThis.releaseStartupHost = () => {
+        child.emit = emit;
+        if (ready) emit.call(child, "message", ...ready);
+      };
+    }
+    globalThis.smokeHostChild = child;
+  }
   return child;
 };
 `,
@@ -184,6 +204,18 @@ utilityProcess.fork = function (...args) {
     runtimeTimeoutMs: 90_000,
   });
   const first = await findCodeShellWindow(application);
+  await first.waitForFunction(() => performance.getEntriesByName("first-contentful-paint", "paint").length > 0);
+  const claimId = "new-workbench";
+  assert.equal(await first.evaluate(async ([id, claim]) => {
+    window.startupQuickChatClaim = window.codeshell.claimQuickChatSession(id, claim);
+    return window.codeshell.isQuickChatClaimActive(id, claim);
+  }, [staleQuickChat, claimId]), false, "A new claim must wait for startup cleanup");
+  assert.equal(await readFile(join(staleDirectory, "transcript.jsonl"), "utf8"), "previous process");
+  await application.evaluate(() => globalThis.releaseStartupHost());
+  await first.evaluate(() => window.startupQuickChatClaim);
+  assert.equal(await first.evaluate(([id, claim]) => window.codeshell.isQuickChatClaimActive(id, claim),
+    [staleQuickChat, claimId]), true);
+  await assert.rejects(stat(staleDirectory), { code: "ENOENT" });
   await fixture.assertWorker(application, { requireWorker: false });
   await observeHost(first);
   const catalog = await readCatalog(first);

@@ -45,10 +45,20 @@ export function registerNativeStartup(options: NativeStartup) {
   let firstSweep: ReturnType<typeof setTimeout> | undefined;
   let recurringSweep: ReturnType<typeof setInterval> | undefined;
   let stopping = false;
+  const quickChatsReady = app.whenReady().then(async () => {
+    if (!options.ownsDesktopInstance || stopping) return;
+    options.desktopHost.start(prepareDesktopRuntimePath());
+    const removed = await runOwnedQuickChatStartupCleanup(options.ownsDesktopInstance, () =>
+      options.desktopHost.callBusiness("startup/quickChats", {}),
+    ).catch((error) => {
+      dlog("main", "quick_chat.startup_cleanup_failed", { error: String(error) });
+      return [];
+    });
+    if (removed.length) dlog("main", "quick_chat.startup_cleanup_done", { sessionIds: removed });
+  });
   void app.whenReady().then(async () => {
     const { ownsDesktopInstance, desktopHost, revealSessionWindow, restoreMainWindow } = options;
     if (!ownsDesktopInstance || stopping) return;
-    desktopHost.start(prepareDesktopRuntimePath());
     options.notifierReady(
       new DesktopNotifier(resolve(app.getPath("userData"), "notifications", "delivered.json"), {
         hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
@@ -90,21 +100,10 @@ export function registerNativeStartup(options: NativeStartup) {
     }));
 
     if (stopping) return;
-    await options.startGateway();
-    if (stopping) return;
-    const staleQuickChats = await runOwnedQuickChatStartupCleanup(ownsDesktopInstance, () =>
-      desktopHost.callBusiness("startup/quickChats", {}),
-    ).catch((error) => {
-      dlog("main", "quick_chat.startup_cleanup_failed", { error: String(error) });
-      return [];
-    });
-    if (stopping) return;
-    if (staleQuickChats.length > 0) {
-      dlog("main", "quick_chat.startup_cleanup_done", { sessionIds: staleQuickChats });
-    }
-
     // Electron safeStorage and migration of existing credentials use the native cipher.
     setDefaultCredentialCipher(new SafeStorageCipher());
+    // IM operations await their gateway boot. Opening an ordinary workbench does not need it.
+    void options.startGateway();
     // Retired Link grants must resume cleanup even if no credentials page is opened.
     const linkCleanup = createLinkService();
     app.once("will-quit", () => linkCleanup.close());
@@ -163,6 +162,7 @@ export function registerNativeStartup(options: NativeStartup) {
     recurringSweep = setInterval(() => void options.sweepWorktrees("interval"), 60 * 60_000);
   });
   return {
+    quickChatsReady,
     chromeRegistration: () => chromeRegistration,
     stop() {
       stopping = true;

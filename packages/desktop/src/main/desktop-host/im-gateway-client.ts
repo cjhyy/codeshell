@@ -110,6 +110,11 @@ export class NativeImGateway {
     const document = this.scope.getStore(),
       lifecycle = this.lifetime.signal;
     const signal = document ? AbortSignal.any([lifecycle, document]) : lifecycle;
+    if (action.op !== "boot" && this.bootstrapping) {
+      // Preserve boot-before-command ordering while workbench startup proceeds independently.
+      // On failure the gateway settings must remain available for repair.
+      await this.bootstrapping.catch(() => {});
+    }
     if (!this.peer) await this.waitForHost(signal);
     signal.throwIfAborted();
     if (!this.peer) throw Error("IM Host is unavailable");
