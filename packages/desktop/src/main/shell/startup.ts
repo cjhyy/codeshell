@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Notification, session, webContents } from "electron";
 import { join, resolve } from "node:path";
 import { setDefaultCredentialCipher, sweepStaleCredentialCookies } from "@cjhyy/code-shell-core";
-import { createLinkService } from "@cjhyy/code-shell-server/links";
+import { createDesktopLinkService } from "../desktop-link-service.js";
 import { prepareDesktopRuntimePath } from "./runtime-path.js";
 import { dlog } from "../desktop-logger.js";
 import { DesktopNotifier } from "../desktop-notifier.js";
@@ -102,7 +102,7 @@ export function registerNativeStartup(options: NativeStartup) {
     // IM operations await their gateway boot. Opening an ordinary workbench does not need it.
     void options.startGateway();
     // Retired Link grants must resume cleanup even if no credentials page is opened.
-    const linkCleanup = createLinkService();
+    const linkCleanup = createDesktopLinkService();
     app.once("will-quit", () => linkCleanup.close());
     void desktopHost
       .callBusiness("startup/workspaces", {})

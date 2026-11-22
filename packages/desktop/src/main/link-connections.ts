@@ -1,3 +1,4 @@
+import { createDesktopLinkService } from "./desktop-link-service.js";
 import {
   connectCliLink,
   validateLocalLinkToken,
@@ -5,7 +6,6 @@ import {
   type CredentialStore,
 } from "@cjhyy/code-shell-core";
 import {
-  createLinkService,
   type LinkConnectionInput,
   type LocalBrowserAuthToken,
 } from "@cjhyy/code-shell-server/links";
@@ -26,11 +26,13 @@ interface Options {
 
 /** Desktop owns interactive login; the shared service owns the credential transaction. */
 export function createDesktopLinkConnections(options: Options) {
-  const service = createLinkService(options);
+  const service = createDesktopLinkService(options);
   const context = { ownerId: "desktop-main", authorize: () => true };
-  function reviewed(input: ConnectionInput): LinkConnectionInput {
+  async function reviewed(input: ConnectionInput): Promise<LinkConnectionInput> {
     const prior = input.existingId
-      ? service.snapshot().connections.find((connection) => connection.id === input.existingId)
+      ? (await service.snapshotAsync()).connections.find(
+          (connection) => connection.id === input.existingId,
+        )
       : undefined;
     if (
       input.existingId &&
@@ -55,7 +57,7 @@ export function createDesktopLinkConnections(options: Options) {
       },
     ) {
       // Capture the CAS revision before touching the provider, never afterwards.
-      const request = reviewed(input);
+      const request = await reviewed(input);
       const validation = await (options.validateToken ?? validateLocalLinkToken)(
         input.providerId,
         input.token,
@@ -73,8 +75,10 @@ export function createDesktopLinkConnections(options: Options) {
     async connectCli(
       input: ConnectionInput & { providerId: CliLinkProviderId; loginIfNeeded: boolean },
     ) {
-      const request = reviewed(input);
-      const provider = service.snapshot().providers.find((entry) => entry.id === input.providerId);
+      const request = await reviewed(input);
+      const provider = (await service.snapshotAsync()).providers.find(
+        (entry) => entry.id === input.providerId,
+      );
       if (!provider?.connectionMethods.find((method) => method.id === input.methodId)?.quickAuth)
         throw new Error("This Link connection method does not support a CLI session");
       const validation = await (options.connectCli ?? connectCliLink)(input.providerId, {

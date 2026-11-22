@@ -1,3 +1,4 @@
+import { createDesktopLinkService } from "./desktop-link-service.js";
 import {
   app,
   BrowserWindow,
@@ -8,7 +9,6 @@ import {
 } from "electron";
 import { randomUUID } from "node:crypto";
 import {
-  createLinkService,
   type LinkConnectionInput,
   type LinkAuthorizationResponse,
   type LinkAuthorizationDiagnosticSink,
@@ -51,7 +51,7 @@ export function registerRemoteLinkIpc(deps: {
   };
   const prepareGitHubLink = createAccountGitHubLinkPreparer({
     createService: () =>
-      createLinkService({
+      createDesktopLinkService({
         onAuthorizationDiagnostic: logAuthorizationDiagnostic,
         remoteLink: () => desktopRemoteLinkConfiguration(process.env, app.isPackaged),
         reuseRemoteConnection: true,
@@ -184,7 +184,7 @@ export function registerRemoteLinkIpc(deps: {
     if (!manager) {
       if (owner.managers.size >= 64) throw new Error("打开的 Link 工作区过多，请重新打开窗口。");
       manager = createNativeRemoteLinkManager({
-        service: createLinkService({
+        service: createDesktopLinkService({
           onAuthorizationDiagnostic: logAuthorizationDiagnostic,
           cwd: cwd || undefined,
           remoteLink: () =>
@@ -227,7 +227,9 @@ export function registerRemoteLinkIpc(deps: {
     if (accountAvailable())
       await manager.service.refreshRemoteCatalog(context, forceCatalog === true);
     await manager.service.assertAuthorized(context);
-    return manager.service.snapshot();
+    const snapshot = await manager.service.snapshotAsync();
+    await manager.service.assertAuthorized(context);
+    return snapshot;
   });
   ipcMain.handle(
     "links:authorizationStart",
