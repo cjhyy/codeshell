@@ -40,7 +40,6 @@ async function until(ok: () => boolean) {
   throw Error("room fixture timeout: " + observed());
 }
 if (process.argv[3] === "utility") {
-  let rooms: ReturnType<typeof hostedRooms>;
   const peer = new PrivateHostPeer(
     port(process),
     (method, input, signal) => rooms.run(method, input, signal),
@@ -50,7 +49,7 @@ if (process.argv[3] === "utility") {
     },
     (method, key) => rooms.notice(method, key),
   );
-  rooms = hostedRooms(() => peer, root, {
+  const rooms: ReturnType<typeof hostedRooms> = hostedRooms(() => peer, root, {
     models: async () => [],
     read: () => async () => {
       throw Error("Unexpected external read");

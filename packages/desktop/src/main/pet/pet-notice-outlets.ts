@@ -3,7 +3,7 @@ import type { DesktopNotificationInput } from "../desktop-notifier.js";
 import type { ImNoticeOwner } from "../../host/im/private-notices.js";
 import type { GatewayControlEventInput } from "../im-gateway-control-server.js";
 import type { ImGatewayOwnerChannel, ImGatewayOwnerTarget } from "../im-gateway-service.js";
-import type { ImReadiness } from "./pet-notice-policy.js";
+import { usesP0Budget, type ImReadiness } from "./pet-notice-policy.js";
 import {
   errorText,
   noticeDeliveryKey,
@@ -151,7 +151,8 @@ export function createNoticeOutlets(deps: PetNoticeOutletDeps): PetNoticeOutletS
         title: text.title,
         // Clicking opens the Session, where the files are.
         body: files > 0 ? `${text.body}\n（含 ${files} 个附件，打开会话查看）` : text.body,
-        ...(notice.priority === "P0" ? { urgent: true } : {}),
+        // A reminder requested for this moment must also reach a focused workbench.
+        ...(usesP0Budget(notice) ? { urgent: true } : {}),
         ...(notice.sessionId ? { sessionId: notice.sessionId } : {}),
       }),
     ).catch((error) =>

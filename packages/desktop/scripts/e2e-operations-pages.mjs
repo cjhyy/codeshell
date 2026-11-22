@@ -5,6 +5,7 @@
  * CODESHELL_OPERATIONS_SCREENSHOT_DIR enables optional local preview images.
  */
 /* global document, getComputedStyle, window */
+import { installWorkbenchReadFixture } from "./workbench-read-fixture.mjs";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -208,8 +209,8 @@ async function seedMetadata() {
         updatedAt: now - index * 3_600_000,
       }));
     });
-    replace("sessions:titles", () => ({ ...fixture.titles }));
-    replace("logs:tail", (_event, bucket, limit) => {
+    globalThis.__workbenchFixtureReads.set("activity/titles", () => ({ ...fixture.titles }));
+    globalThis.__workbenchFixtureReads.set("activity/logTail", ({ bucket, lines: limit }) => {
       if (limit !== 500) throw new Error("Unexpected log preview limit");
       if (fixture.logsFail) throw new Error("synthetic log read failure");
       if (bucket === "desktop")
@@ -738,6 +739,7 @@ try {
       .catch(() => false)
   )
     await trust.click();
+  await app.evaluate(installWorkbenchReadFixture);
   await seedMetadata();
   const fixtureNow = Date.now();
   await seedSessionCatalog(win, {

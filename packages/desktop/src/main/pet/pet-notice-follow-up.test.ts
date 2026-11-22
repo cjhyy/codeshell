@@ -83,7 +83,7 @@ describe("follow-up reminders go through the notice router", () => {
     expect(current.outbox.events).toHaveLength(0);
     // Shown as the owner wrote it: their title, their text.
     expect(current.desktop).toEqual([
-      expect.objectContaining({ title: "看一下发布", body: "检查 0.10.1 的发布结果" }),
+      expect.objectContaining({ title: "看一下发布", body: "检查 0.10.1 的发布结果", urgent: true }),
     ]);
   });
 
