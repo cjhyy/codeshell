@@ -11,9 +11,11 @@ import { preparePackagedAppImageRuntime } from "./packaged-appimage-runtime.mjs"
 import { inventoryAppTree } from "./packaged-app-integrity.mjs";
 import { settlePackagedPet } from "./packaged-pet-shutdown.mjs";
 import {
+  assertOfflinePluginBootstrapHeld,
   findCodeShellWindow,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedOfflinePluginBootstrap,
   seedViewOnlyWorkbench,
 } from "./electron-harness.mjs";
 import {
@@ -327,6 +329,7 @@ try {
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
   const origin = `http://127.0.0.1:${server.address().port}`;
   await seedViewOnlyWorkbench(isolated);
+  await seedOfflinePluginBootstrap(isolated.codeShellHome);
   await put("inventory-before.json", await inventoryAppTree(packagedApp));
   if (options.has("--appimage-build-receipt"))
     appImageRuntime = await preparePackagedAppImageRuntime({
@@ -403,6 +406,7 @@ const settled = await settlePackagedPet({
       "Worker creation requires retaining private HOME",
     );
     assert.deepEqual(errors, [], "Renderer/feed failure requires retaining private HOME");
+    await assertOfflinePluginBootstrapHeld(isolated.codeShellHome);
     assert.deepEqual(failures, [], "Failed updater expectations require retaining private HOME");
     assert.equal(
       errorDetailsAcceptance.status,
