@@ -17,6 +17,8 @@ export function catalogEdits(storage: Promise<StateStorage>) {
     };
   }
   return {
+    "capabilities/setEnabled": route("capabilities/setEnabled"),
+    "capabilities/setOverride": route("capabilities/setOverride"),
     "models/saveEntry": route("models/saveEntry"),
     "models/deleteEntry": route("models/deleteEntry"),
     "sources/save": route("sources/save"),

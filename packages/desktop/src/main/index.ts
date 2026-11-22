@@ -288,8 +288,6 @@ import {
 } from "./marketplace-service.js";
 import {
   listCapabilities,
-  setCapabilityEnabled,
-  setCapabilityOverride,
 } from "./capabilities-service.js";
 import { registerSourceCatalogIpc } from "./source-catalog-ipc.js";
 import { checkSkillUpdateEntry } from "./skill-update-entry.js";
@@ -2742,7 +2740,7 @@ ipcMain.handle("capabilities:list", async (_e, target: RendererConfigurationTarg
 ipcMain.handle(
   "capabilities:setEnabled",
   async (
-    _e,
+    event,
     target: RendererConfigurationTarget | null,
     id: string,
     on: boolean,
@@ -2758,19 +2756,20 @@ ipcMain.handle(
     if (scope === "project" && target === null) {
       throw new Error("project capability changes require stable authority");
     }
-    const resolvedCwd = await rendererOptionalConfigurationCwd(target, "");
     if (typeof id !== "string") throw new Error("capabilities:setEnabled requires id");
-    setCapabilityEnabled(resolvedCwd, id, Boolean(on), { scope });
+    const input = target === null
+      ? { scope: "user" as const, target, id, on: Boolean(on) }
+      : { scope: "project" as const, target, id, on: Boolean(on) };
+    return desktopHost.callBusiness("capabilities/setEnabled", input, desktopHost.documentSignal(event));
   },
 );
 ipcMain.handle(
   "capabilities:setOverride",
-  async (_e, target: RendererConfigurationTarget, id: string, state: "inherit" | "on" | "off") => {
-    const cwd = await rendererConfigurationCwd(target);
+  async (event, target: RendererConfigurationTarget, id: string, state: "inherit" | "on" | "off") => {
     if (typeof id !== "string") throw new Error("capabilities:setOverride requires id");
     if (state !== "inherit" && state !== "on" && state !== "off")
       throw new Error("capabilities:setOverride requires state inherit|on|off");
-    setCapabilityOverride(cwd, id, state);
+    return desktopHost.callBusiness("capabilities/setOverride", { target, id, state }, desktopHost.documentSignal(event));
   },
 );
 registerSourceCollectionIpc({

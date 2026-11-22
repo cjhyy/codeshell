@@ -1,6 +1,18 @@
+import type { RendererConfigurationTarget } from "./renderer-configuration.js";
 import type { CodeshellApi } from "../preload/types.js";
 import type { SourceDefinition, WorkspaceSourceBinding } from "@cjhyy/code-shell-core";
 export interface CatalogEdits {
+  "capabilities/setEnabled": {
+    input: (
+      | { scope: "user"; target: null }
+      | { scope: "project"; target: RendererConfigurationTarget }
+    ) & { id: string; on: boolean };
+    result: void;
+  };
+  "capabilities/setOverride": {
+    input: { target: RendererConfigurationTarget; id: string; state: "inherit" | "on" | "off" };
+    result: void;
+  };
   "models/saveEntry": {
     input: { entry: unknown };
     result: Awaited<ReturnType<CodeshellApi["saveCatalogEntry"]>>;
@@ -19,6 +31,8 @@ export interface CatalogEdits {
 export type CatalogEdit = keyof CatalogEdits;
 export type StoredCatalogEdit = Exclude<CatalogEdit, "sources/uploadPicked">;
 const commands: ReadonlySet<string> = new Set([
+  "capabilities/setEnabled",
+  "capabilities/setOverride",
   "models/saveEntry",
   "models/deleteEntry",
   "sources/save",

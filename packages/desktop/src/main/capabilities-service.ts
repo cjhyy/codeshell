@@ -19,6 +19,7 @@ import {
   SettingsManager,
   ToolRegistry,
   scanSkills,
+  invalidateSkillCache,
   readInstalledPlugins,
   compileComposition,
   compositionToolCatalog,
@@ -106,15 +107,22 @@ export function setCapabilityEnabled(
   cwd: string,
   id: string,
   on: boolean,
-  opts?: { scope?: "user" | "project" },
+  opts?: { scope?: "user" | "project"; beforeCommit?: () => void },
 ): void {
-  makeService(cwd).setEnabled(id, on, { scope: opts?.scope ?? "user", cwd });
+  invalidateSkillCache();
+  makeService(cwd, true).setEnabled(id, on, {
+    scope: opts?.scope ?? "user",
+    beforeCommit: opts?.beforeCommit,
+    cwd,
+  });
 }
 
 export function setCapabilityOverride(
   cwd: string,
   id: string,
   state: "inherit" | "on" | "off",
+  beforeCommit?: () => void,
 ): void {
-  makeService(cwd).setOverride(id, state, { scope: "project", cwd });
+  invalidateSkillCache();
+  makeService(cwd, true).setOverride(id, state, { scope: "project", cwd, beforeCommit });
 }

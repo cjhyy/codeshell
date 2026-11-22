@@ -1,3 +1,5 @@
+import { setCapabilityOverride, setCapabilityEnabled } from "./capabilities-service.js";
+import { rendererConfigurationCwd } from "./renderer-configuration-helpers.js";
 import {
   saveCatalogEntry,
   deleteUserCatalogEntry,
@@ -27,6 +29,20 @@ const catalogFile = (beforeCommit: () => void) => ({
   beforeCommit,
 });
 const operations: Operations = {
+  "capabilities/setEnabled": async ({ scope, target, id, on }, commit) => {
+    if (
+      (scope === "user" && target !== null) ||
+      (scope === "project" && !target) ||
+      !["project", "user"].includes(scope)
+    )
+      throw Error("Invalid capability scope");
+    return setCapabilityEnabled(target ? await rendererConfigurationCwd(target) : "", id, on, {
+      scope,
+      beforeCommit: commit,
+    });
+  },
+  "capabilities/setOverride": async ({ target, id, state }, commit) =>
+    setCapabilityOverride(await rendererConfigurationCwd(target), id, state, commit),
   "models/saveEntry": ({ entry }, commit) => saveCatalogEntry(entry, catalogFile(commit)),
   "models/deleteEntry": ({ id }, commit) => deleteUserCatalogEntry(id, catalogFile(commit)),
   "sources/save": ({ definition }, commit) => catalogSave(definition, commit),

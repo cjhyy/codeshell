@@ -4,8 +4,7 @@ import { CapabilityNotFoundError } from "./types.js";
 
 /**
  * In-memory fake of the bits of SettingsManager the service touches. get()
- * returns a live object; saveUserSetting applies the dotted-path write back so
- * a subsequent get() reflects it (mirrors the real atomic-write + invalidate).
+ * returns the state produced by the most recent settings mutation.
  */
 function fakes(initial: Record<string, unknown> = {}) {
   const s: any = {
@@ -17,12 +16,11 @@ function fakes(initial: Record<string, unknown> = {}) {
   };
   const settings = {
     get: () => s,
-    saveUserSetting: (k: string, v: unknown) => {
-      const parts = k.split(".");
-      let t: any = s;
-      for (let i = 0; i < parts.length - 1; i++) t = t[parts[i]!] ??= {};
-      t[parts[parts.length - 1]!] = v;
-    },
+    mutateSettingsForScope: (
+      _scope: string,
+      _cwd: string,
+      mutate: (current: Record<string, unknown>) => boolean | void,
+    ) => mutate(s),
   };
   const registry = { listToolsDetailed: () => [] as any[] };
   const emptyPlugins = () => ({ version: 2 as const, plugins: {} });
@@ -215,18 +213,12 @@ function fakesWithProject(initial: Record<string, unknown> = {}) {
   const projectMutations: Array<["user" | "project" | "local", string]> = [];
   const settings = {
     get: () => s,
-    saveUserSetting: (k: string, v: unknown) => {
-      const parts = k.split(".");
-      let t: any = s;
-      for (let i = 0; i < parts.length - 1; i++) t = t[parts[i]!] ??= {};
-      t[parts[parts.length - 1]!] = v;
-    },
     mutateSettingsForScope: (
       scope: "user" | "project" | "local",
       cwd: string,
       mutate: (current: Record<string, unknown>) => boolean | void,
     ) => {
-      projectMutations.push([scope, cwd]);
+      if (scope === "project") projectMutations.push([scope, cwd]);
       mutate(s);
     },
     getForScope: (_scope: "user" | "project", _cwd?: string) => ({
@@ -271,6 +263,18 @@ describe("CapabilityService project scope", () => {
     svcFor(f).setOverride("skill:a", "inherit", { scope: "project", cwd: "/proj" });
     expect(f.projectMutations).toEqual([["project", "/proj"]]);
     expect(f.get().capabilityOverrides.skills).toEqual({});
+  });
+
+  test("a global toggle merges with another update already committed when the lock opens", () => {
+    const f = fakesWithProject();
+    const mutate = f.settings.mutateSettingsForScope;
+    f.settings.mutateSettingsForScope = (scope, cwd, work) =>
+      mutate(scope, cwd, (current) => {
+        current.disabledSkills = ["already-disabled"];
+        return work(current);
+      });
+    svcFor(f).setEnabled("skill:a", false);
+    expect(f.get().disabledSkills).toEqual(["already-disabled", "a"]);
   });
 
   test("setEnabled with scope:user keeps old global behavior", () => {
