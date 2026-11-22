@@ -31,6 +31,12 @@
 
 ---
 
+### 0.12 的工作台连接
+
+工作台 preload 通过窗口自己的 MessagePort 查询会话、任务和活动历史，订阅输出并发送运行请求。刷新会撤销旧文档的连接和写入资格。Host 重启后客户端重新握手，按输出游标补齐事件，并按宿主状态版本恢复待审批请求。[工作台端口](../../packages/desktop/src/main/desktop-host/main-workbenches.ts) · [preload 客户端](../../packages/desktop/src/preload/desktop-host-client.ts)
+
+配对设备通过 Desktop 的原生授权边界访问共享终端。Host 持有 PTY，桌面和手机能够看到同一个进程的回放及后续输出。关闭远程终端权限时，当前设备的订阅一并撤销。[原生终端授权](../../packages/desktop/src/main/mobile-remote/native-terminals.ts) · [Host 终端](../../packages/desktop/src/host/composition/remote-terminals.ts)
+
 ## 1. 定位与依赖
 
 ### 1.1 构建配置

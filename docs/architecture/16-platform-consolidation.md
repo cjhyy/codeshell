@@ -46,6 +46,12 @@ W1 和 W2 是交织的，不是先后关系。步骤级依赖见第 9.1 节。�
 
 ---
 
+### 0.12 Desktop 接入进度
+
+Desktop 已将会话输出、worker 生命周期、索引和任务投影接入本地 Host。工作台直连 Host，已配对的手机继续走带设备身份的网关。两种客户端分别验证已有权限，输出续传沿用同一套 Session 和 Turn 标识。[Desktop Host 接入](../../packages/desktop/src/main/desktop-host/utility.ts) · [输出订阅](../../packages/desktop/src/main/desktop-host/output-methods.ts)
+
+账号和中继的连接、票据轮换及失效回收由同一代 Host 持有。需要解密本机保存的账号时，Main 调用系统钥匙环，冷启动的首次账号读取等待恢复完成。各阶段其余迁移与验收见[第 17 章](17-host-process-and-storage.md)。
+
 ## 1. 现状事实（2026-10-14 据源码核对）
 
 ### 1.1 宿主

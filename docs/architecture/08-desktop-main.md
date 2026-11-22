@@ -19,6 +19,12 @@ Desktop main 是一个**组合根（composition root）+ 权限中介**：
 
 ---
 
+### 0.12 集成分支的进程归属
+
+每个 Desktop 实例创建一个 Electron utility process。Main 在应用窗口完成导航后交付经身份校验的端口。Host 管理 stdio worker、PTY、外部 Claude/Codex 子进程和存储线程。Main 负责窗口、系统钥匙环和原生授权对话框。最后一个工作台关闭后 Host 继续运行，显式退出时等待 Host 完成清理。[Main 监督器](../../packages/desktop/src/main/desktop-host/main-supervisor.ts) · [Host 入口](../../packages/desktop/src/main/desktop-host/utility.ts)
+
+工作台的创建、渲染器加载和窗口位置在 `main/shell/workbench-window.ts`。浏览器面板和独立弹窗共用 guest 安全设置与分区检查，弹窗的锚点回到创建它的工作台。[工作台窗口](../../packages/desktop/src/main/shell/workbench-window.ts) · [浏览器窗口](../../packages/desktop/src/main/shell/browser-windows.ts)
+
 ## 1. 进程模型
 
 ### 1.1 进程 / 执行上下文清单
