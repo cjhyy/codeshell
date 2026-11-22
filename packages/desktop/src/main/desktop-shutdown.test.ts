@@ -237,9 +237,13 @@ test("the external runtime pilot retains first-window start and the existing shu
   expect(source).not.toContain("await desktopModules.start()");
   const cleanup = source.slice(source.indexOf("registerDesktopShutdown(app,"));
   expect(cleanup.match(/desktopModules\.dispose\(\)/g)).toHaveLength(1);
-  expect(cleanup.indexOf("roomManager.closeAll();")).toBeLessThan(
-    cleanup.indexOf("desktopModules.dispose()"),
-  );
+  // Host owns room subprocesses and transcript watchers. Start its disposal
+  // before disposing captured local runtimes, then wait for its completion.
+  const stopHost = cleanup.indexOf("const desktopHostShutdown = desktopHost.dispose()");
+  expect(stopHost).toBeGreaterThanOrEqual(0);
+  expect(stopHost).toBeLessThan(cleanup.indexOf("desktopModules.dispose()"));
+  expect(cleanup).toMatch(/await Promise\.allSettled\(\[\s*desktopHostShutdown,/);
+
   expect(cleanup.indexOf("desktopModules.dispose()")).toBeLessThan(
     cleanup.indexOf("getCuaDriverHost()?.stop()"),
   );
