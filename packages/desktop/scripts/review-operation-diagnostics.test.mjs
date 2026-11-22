@@ -483,7 +483,8 @@ test("eleven Review operations retain the verified Host receipt, assertions and 
     digest(
       JSON.stringify(withoutDiagnosticStatements(parse(`async function proof(){\n${setup}\n}`))),
     ),
-    "515185eeb81c8f059eb3ac5f42e329352418d9751851dbf53a11ee640ddbb5dc",
+    // Includes the persisted view-only decision for both owned Review paths.
+    "4a7802a0ba1da05f83f38c14b1b4b1237279d7f87cb2013efb049a62ff216a30",
   );
   const assertions = [];
   const visit = (node) => {
