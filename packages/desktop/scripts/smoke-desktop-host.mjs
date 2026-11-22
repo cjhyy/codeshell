@@ -125,7 +125,17 @@ try {
   const bootstrap = join(isolated.home, "observe-host.cjs");
   await writeFile(
     bootstrap,
-    `const { utilityProcess } = require("electron");
+    `const { utilityProcess, ipcMain } = require("electron");
+// Exercise the registered compatibility handlers with this fixture's real frames.
+const register = ipcMain.handle;
+const terminals = new Map();
+ipcMain.handle = function (name, handler) {
+  if (["pty:start", "pty:write", "pty:resize", "pty:kill"].includes(name)) terminals.set(name, handler);
+  return register.call(this, name, handler);
+};
+globalThis.smokeTerminalFallback = (win, method, args) =>
+  terminals.get(method)({ sender: win.webContents, senderFrame: win.webContents.mainFrame }, ...args);
+
 // Advertise only loopback to this isolated Desktop's real LAN gateway.
 require("node:os").networkInterfaces = () => ({});
 require("node:module").syncBuiltinESMExports();
@@ -381,6 +391,22 @@ utilityProcess.fork = function (...args) {
   await first.waitForFunction(() =>
     window.hostTerminalText.includes("HOST_TERMINAL_READY"),
   );
+  const ownerWindow = await application.browserWindow(first);
+  const otherWindow = await application.browserWindow(second);
+  const fallback = (window, method, ...args) => window.evaluate(
+    (win, request) => globalThis.smokeTerminalFallback(win, request.method, request.args),
+    { method, args },
+  );
+  try {
+    assert.equal((await fallback(ownerWindow, "pty:start", { cwd: mount, sessionId: terminalId })).pid, started.pid);
+    assert.equal((await fallback(otherWindow, "pty:start", { cwd: mount, sessionId: terminalId })).ok, false);
+    await fallback(ownerWindow, "pty:resize", terminalId, 90, 28);
+    await fallback(ownerWindow, "pty:write", terminalId, 'node -p "String.fromCodePoint(32456,31471,0x1f60a)"\r');
+    await first.waitForFunction(() => window.hostTerminalText.includes("终端😊"));
+  } finally {
+    await ownerWindow.dispose();
+    await otherWindow.dispose();
+  }
   await verifyPairedHostTerminal(first, terminalId, started.pid);
   await assert.rejects(first.evaluate((root) => window.codeshell.ccRoom.readHistory(root,"../other",4),mount),/Invalid CLI history request/);
   await assert.rejects(first.evaluate((root) => window.codeshell.ccRoom.listSessions(root),unregistered),/authority was revoked/);
@@ -506,6 +532,14 @@ utilityProcess.fork = function (...args) {
   assert.deepEqual((await first.evaluate(() => window.codeshell.configure({}))).result, {
     ok: true,
   });
+  const lifetimePty = await first.evaluate(async (cwd) => {
+    window.hostTerminalLost = false;
+    window.codeshell.onPtyExit((event) => {
+      if (event.sessionId === "term:host-lifetime") window.hostTerminalLost = true;
+    });
+    return window.codeshell.ptyStart({ cwd, sessionId: "term:host-lifetime" });
+  }, mount);
+  assert.ok(lifetimePty.ok, lifetimePty.detail);
   const oldPid = await application.evaluate(() => {
     const child = globalThis.smokeHostChild;
     const pid = child?.pid;
@@ -514,21 +548,26 @@ utilityProcess.fork = function (...args) {
   });
   assert.equal(receipt.spawned[0].ppid, oldPid);
   assert.notEqual(oldPid, receipt.mainPid);
-  const deadline = Date.now() + 15_000;
-  while (Date.now() < deadline) {
-    try {
-      process.kill(receipt.spawned[0].pid, 0);
-    } catch (error) {
-      if (error.code === "ESRCH") break;
-      throw error;
+  for (const [pid, label] of [
+    [receipt.spawned[0].pid, "stdio worker"],
+    [lifetimePty.pid, "terminal shell"],
+  ]) {
+    const deadline = Date.now() + 15_000;
+    while (Date.now() < deadline) {
+      try {
+        process.kill(pid, 0);
+      } catch (error) {
+        if (error.code === "ESRCH") break;
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.throws(
+      () => process.kill(pid, 0),
+      { code: "ESRCH" },
+      "Original " + label + " must exit when its Host disappears",
+    );
   }
-  assert.throws(
-    () => process.kill(receipt.spawned[0].pid, 0),
-    { code: "ESRCH" },
-    "Original stdio worker must exit when its Host disappears",
-  );
   for (const page of [first, second]) {
     await page.waitForFunction(
       () =>
@@ -537,6 +576,7 @@ utilityProcess.fork = function (...args) {
     );
     assert.deepEqual(await readCatalog(page), catalog);
   }
+  await first.waitForFunction(() => window.hostTerminalLost);
   const nextPid = await application.evaluate(() => globalThis.smokeHostChild.pid);
   assert.ok(nextPid && nextPid !== oldPid, "Expected a fresh Host process");
 

@@ -22,3 +22,14 @@ export interface TerminalEvents {
   "pty/remoteViewers": { sessionId: string; count: number };
   "pty/exit": { sessionId: string; exitCode: number; signal?: number };
 }
+
+export function isTerminalCommand(value: unknown): value is keyof TerminalCommands {
+  return (
+    value === "pty/start" || value === "pty/write" || value === "pty/resize" || value === "pty/kill"
+  );
+}
+export interface NativeTerminalCommand {
+  caller: import("./desktop-host-protocol.js").DesktopHostIdentity;
+  method: keyof TerminalCommands;
+  params: Record<string, unknown>;
+}

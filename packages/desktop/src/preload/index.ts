@@ -2,6 +2,7 @@ import { createCcRoomReads } from "./cc-room-reads.js";
 import { createConfigurationReads } from "./configuration-reads.js";
 import { DesktopHostIpc } from "../shared/desktop-host-protocol";
 import { isDesktopAgentMethod } from "../shared/desktop-agent-methods";
+import type { TerminalCommands } from "../shared/pty.js";
 import { DesktopHostClient, desktopHostRoutes, routeLocalProviders } from "./desktop-host-client";
 import { accountFeaturesApi } from "./account-features-api.js";
 import { createOperationBatchApi } from "./operation-batch-api.js";
@@ -538,13 +539,21 @@ ipcRenderer.on("externalRuntime:approvalResolved", (_e, payload: { requestId?: u
 });
 
 const desktopHost =
-  process.isMainFrame &&
-  process.argv.includes("--codeshell-desktop-host") &&
-  Object.values(desktopHostRoutes).includes("host")
+  process.isMainFrame && process.argv.includes("--codeshell-desktop-host")
     ? new DesktopHostClient()
     : undefined;
 
 const configurationHost = desktopHostRoutes.configuration === "host" ? desktopHost : undefined;
+function routeTerminal<K extends keyof TerminalCommands>(
+  method: K,
+  params: TerminalCommands[K]["input"],
+  legacy: () => Promise<TerminalCommands[K]["result"]>,
+) {
+  return desktopHost
+    ? desktopHost.terminal(method, params, configurationHost ? undefined : legacy)
+    : legacy();
+}
+
 const { listProjects, ...configurationReads } = createConfigurationReads(
   ipcRenderer,
   configurationHost,
@@ -1419,26 +1428,21 @@ contextBridge.exposeInMainWorld("codeshell", {
    * its pid is a stable per-window discriminator for the window's lifetime.
    */
   windowToken: String(process.pid),
-  ptyStart: (opts: Parameters<CodeshellApi["ptyStart"]>[0]) =>
-    configurationHost
-      ? configurationHost.terminal("pty/start", opts)
-      : (ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>),
-  ptyWrite: (sessionId: string, data: string, reply?: boolean) =>
-    configurationHost
-      ? configurationHost.terminal("pty/write", { sessionId, data, reply: reply === true })
-      : ipcRenderer.invoke("pty:write", sessionId, data, reply === true),
-  ptyResize: (sessionId: string, cols: number, rows: number) =>
-    configurationHost
-      ? configurationHost.terminal("pty/resize", { sessionId, cols, rows })
-      : ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
-  ptyKill: (sessionId: string) =>
-    configurationHost
-      ? configurationHost.terminal("pty/kill", { sessionId })
-      : ipcRenderer.invoke("pty:kill", sessionId),
+  ptyStart: (opts) => routeTerminal("pty/start", opts, () => ipcRenderer.invoke("pty:start", opts)),
+  ptyWrite: (sessionId, data, reply) =>
+    routeTerminal("pty/write", { sessionId, data, reply: reply === true }, () =>
+      ipcRenderer.invoke("pty:write", sessionId, data, reply === true),
+    ),
+  ptyResize: (sessionId, cols, rows) =>
+    routeTerminal("pty/resize", { sessionId, cols, rows }, () =>
+      ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
+    ),
+  ptyKill: (sessionId) =>
+    routeTerminal("pty/kill", { sessionId }, () => ipcRenderer.invoke("pty:kill", sessionId)),
   onPtyData: (
     cb: (msg: { sessionId: string; data: string; replay?: boolean }) => void,
   ): (() => void) => {
-    if (configurationHost) return configurationHost.onTerminalData(cb);
+    if (desktopHost) return desktopHost.onTerminalData(cb);
     const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string; replay?: boolean }) =>
       cb(msg);
     ipcRenderer.on("pty:data", h);
@@ -1447,7 +1451,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   onPtyExit: (
     cb: (msg: { sessionId: string; exitCode: number; signal?: number }) => void,
   ): (() => void) => {
-    if (configurationHost) return configurationHost.onTerminalExit(cb);
+    if (desktopHost) return desktopHost.onTerminalExit(cb);
     const h = (
       _e: IpcRendererEvent,
       msg: { sessionId: string; exitCode: number; signal?: number },
@@ -1456,7 +1460,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     return () => ipcRenderer.removeListener("pty:exit", h);
   },
   onPtyRemoteViewers: (cb: (msg: { sessionId: string; count: number }) => void): (() => void) => {
-    if (configurationHost) return configurationHost.onTerminalViewers(cb);
+    if (desktopHost) return desktopHost.onTerminalViewers(cb);
     const h = (_e: IpcRendererEvent, msg: { sessionId: string; count: number }) => cb(msg);
     ipcRenderer.on("pty:remoteViewers", h);
     return () => ipcRenderer.removeListener("pty:remoteViewers", h);

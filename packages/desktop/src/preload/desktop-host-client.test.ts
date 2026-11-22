@@ -424,3 +424,36 @@ test("provider discovery keeps its own network deadline and remains bound to its
   client.disconnect("reconnecting");
   await expect(pending).rejects.toThrow("-32011");
 });
+
+test("IPC compatibility keeps the same port generation, never replays input, and ends live terminal panels once", async () => {
+  const { client } = clientWithStatus();
+  await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "pty/start", "pty/write"],
+  });
+  const exits: string[] = [];
+  client.onTerminalExit((event) => exits.push(event.sessionId));
+  const sessionId = "term:compat";
+  expect(
+    await client.terminal("pty/start", { sessionId }, async () => ({ ok: true, pid: 123 })),
+  ).toEqual({ ok: true, pid: 123 });
+  let submitted = 0,
+    finish!: () => void;
+  const write = client.terminal("pty/write", { sessionId, data: "终端😊", reply: true }, () => {
+    submitted++;
+    return new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+  });
+  client.disconnect("reconnecting");
+  finish();
+  await expect(write).rejects.toMatchObject({ code: DesktopHostErrors.revoked });
+  await expect(
+    client.terminal("pty/write", { sessionId, data: "x" }, async () => {
+      submitted++;
+    }),
+  ).rejects.toThrow();
+  client.disconnect("unavailable");
+  expect(exits).toEqual([sessionId]);
+  expect(submitted).toBe(1);
+});

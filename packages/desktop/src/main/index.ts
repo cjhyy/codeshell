@@ -215,7 +215,6 @@ import { registerNotificationFallback, showSystemNotification } from "./system-n
 import * as desktopNotifications from "./desktop-notification-routes.js";
 import type { CreateAutomationInput } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
-import { ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
 import { sweepStaleLeases } from "./credentials-service.js";
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 import { isBrowserPartition } from "../shared/browser-partition.js";
@@ -344,7 +343,7 @@ import { registerSkillsMcpIpc } from "./skills-mcp-ipc.js";
 import { registerModelCatalogIpc } from "./model-catalog-ipc.js";
 import { registerMobileRemoteIpc } from "./mobile-remote-ipc.js";
 import { NativeRemoteTerminals } from "./mobile-remote/native-terminals.js";
-import { RemoteTerminalPolicy } from "./mobile-remote/remote-terminals.js";
+import { RemoteTerminalPolicy } from "./mobile-remote/remote-terminal-policy.js";
 import { registerRoomsIpc } from "./rooms-ipc.js";
 import { registerDialogPickerIpc } from "./dialog-picker-ipc.js";
 import { registerExternalRuntimeIpc } from "./external-runtime-ipc.js";
@@ -974,9 +973,6 @@ async function createWindow(): Promise<BrowserWindow> {
       desktopHost.trackWorkbench(contents);
     },
   });
-  // macOS keeps the app alive after the last window closes, so ptys whose
-  // window is gone would otherwise leak until quit. Reap them once the
-  // webContents is actually torn down (next tick after `closed`).
   const ownerWebContentsId = win.webContents.id;
   const releaseDocumentAccess = () => {
     mediaPreviewService.releaseOwner(ownerWebContentsId);
@@ -1000,7 +996,6 @@ async function createWindow(): Promise<BrowserWindow> {
     if (process.platform !== "darwin" && mainWindows.size === 0) {
       browserRuntime.closeAll();
     }
-    setImmediate(ptyReapDestroyed);
   });
 
   if (!bridge) {
@@ -3096,7 +3091,14 @@ const { externalRuntimeModelService } = registerExternalRuntimeIpc({
   externalRuntimeApprovals: () => externalRuntime.approvals,
 });
 const { sweepStaleWorktrees } = registerGitReviewIpc({ knownGitRoots, business: desktopHost.callBusiness, documentSignal: desktopHost.documentSignal });
-registerWorkspaceFilesIpc({ appRendererNavigation, mainWindows, assertRendererSessionAccess, business: desktopHost.callBusiness, documentSignal: desktopHost.documentSignal });
+registerWorkspaceFilesIpc({
+  appRendererNavigation,
+  mainWindows,
+  assertRendererSessionAccess,
+  business: desktopHost.callBusiness,
+  documentSignal: desktopHost.documentSignal,
+  terminal: desktopHost.workbenchTerminal,
+});
 // Authoritative no-repo conversation cwd (~/.code-shell/no-repo). The renderer
 // is a thin client and must NOT recompute homedir() itself; it asks main so the
 // path it writes capabilityOverrides to is byte-identical to the worker cwd.
@@ -3446,8 +3448,6 @@ registerDesktopShutdown(app, {
 
     disposePetIpc?.();
     disposePetIpc = null;
-
-    ptyKillAll();
 
     // Stop captured external runtimes explicitly; their child processes can survive Windows exit.
     const externalRuntimeShutdown = desktopModules.dispose();

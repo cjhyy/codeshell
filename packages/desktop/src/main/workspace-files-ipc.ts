@@ -2,10 +2,8 @@ import { BrowserWindow, dialog, ipcMain } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
 import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import { AppRendererNavigation } from "./app-renderer-navigation.js";
-import { resolveNoRepoCwd } from "./agent-bridge.js";
 import { requireRendererProjectPath } from "./renderer-project-path.js";
-import { requireRendererOrSessionPath, type PtyStartRequest } from "./renderer-session-path.js";
-import { ptyStart, ptyWrite, ptyResize, ptyKill, assertValidPtySessionId } from "./pty-service.js";
+import type { PtyStartRequest, TerminalCommands } from "../shared/pty.js";
 import { registerLocalFilePreviewIpc } from "./local-file-preview-ipc.js";
 import { registerProfilePluginExportIpc } from "./profile-plugin-export-ipc.js";
 import {
@@ -18,6 +16,11 @@ import { turnUndoState, undoTurn, redoTurn } from "./file-history-service.js";
 import { resolveRendererConfigurationTarget } from "./renderer-configuration-authority.js";
 
 export interface WorkspaceFilesIpcDeps {
+  terminal(
+    event: Electron.IpcMainInvokeEvent,
+    method: keyof TerminalCommands,
+    params: Record<string, unknown>,
+  ): Promise<unknown>;
   appRendererNavigation: AppRendererNavigation;
   mainWindows: Set<BrowserWindow>;
   business: CallShellBusiness;
@@ -76,33 +79,19 @@ export function registerWorkspaceFilesIpc(deps: WorkspaceFilesIpcDeps) {
     return redoTurn(assertRendererSessionAccess(sessionId, event.sender.id));
   });
 
-  // ── Terminal (pty) — interactive shell panel ───────────────────────────────
-  // Output streams back to the requesting webContents via "pty:data"/"pty:exit".
-  ipcMain.handle("pty:start", async (e, opts: PtyStartRequest) => {
-    if (!opts) throw new Error("pty:start requires sessionId");
-    assertValidPtySessionId(opts.sessionId);
-    // A Session's managed worktree is authorized only through that Session.
-    const cwd = await requireRendererOrSessionPath(
-      opts.cwd ?? resolveNoRepoCwd(),
-      opts.engineSessionId,
-    );
-    return ptyStart(e.sender, { ...opts, cwd });
+  // Older/prefer-IPC workbenches still use the single Host-owned PTY registry.
+  ipcMain.handle("pty:start", (event, input: PtyStartRequest) => {
+    if (!input || typeof input !== "object" || Array.isArray(input))
+      throw Error("Invalid terminal options");
+    return deps.terminal(event, "pty/start", { ...input });
   });
-  ipcMain.handle("pty:write", (e, sessionId: string, data: string, reply?: unknown) => {
-    assertValidPtySessionId(sessionId);
-    if (typeof data !== "string" || data.length > 1024 * 1024) {
-      throw new Error("invalid pty input");
-    }
-    ptyWrite(e.sender, sessionId, data, reply === true);
-  });
-  ipcMain.handle("pty:resize", (e, sessionId: string, cols: number, rows: number) => {
-    assertValidPtySessionId(sessionId);
-    ptyResize(e.sender, sessionId, cols, rows);
-  });
-  ipcMain.handle("pty:kill", (e, sessionId: string) => {
-    assertValidPtySessionId(sessionId);
-    ptyKill(e.sender, sessionId);
-  });
+  ipcMain.handle("pty:write", (event, sessionId, data, reply) =>
+    deps.terminal(event, "pty/write", { sessionId, data, reply: reply === true }),
+  );
+  ipcMain.handle("pty:resize", (event, sessionId, cols, rows) =>
+    deps.terminal(event, "pty/resize", { sessionId, cols, rows }),
+  );
+  ipcMain.handle("pty:kill", (event, sessionId) => deps.terminal(event, "pty/kill", { sessionId }));
 
   // ── Filesystem reads — file-browser panel ──────────────────────────────────
   registerLocalFilePreviewIpc(ipcMain, (sender) =>

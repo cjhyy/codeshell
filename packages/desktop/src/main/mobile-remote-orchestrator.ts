@@ -16,7 +16,8 @@ import { readMobileSnapshot } from "./mobile-remote/read-snapshot.js";
 
 import { Methods, sessionsRoot } from "@cjhyy/code-shell-core";
 import { MobilePermissionModes } from "./mobile-remote/permission-modes.js";
-import { isRemoteTerminalEvent, type RemoteTerminals } from "./mobile-remote/remote-terminals.js";
+import { isRemoteTerminalEvent } from "./mobile-remote/terminal-port.js";
+import type { RemoteTerminals } from "./mobile-remote/remote-terminals.js";
 import { MobileNativeSubmissions } from "./mobile-remote/native-submissions.js";
 import { MobileOutputRecovery } from "./mobile-remote/output-recovery.js";
 import {

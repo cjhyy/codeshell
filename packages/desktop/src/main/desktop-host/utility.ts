@@ -208,6 +208,10 @@ function reportGitRoot(root: string) {
   reportedGitRoots.add(root);
 }
 const business = new HostBusinessCalls({
+  "terminal/command": (call, grant) => {
+    if (!server) throw Error("Terminal Host unavailable");
+    return server.runWorkbenchTerminal(call, grant.signal);
+  },
   ...approvals.native,
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
   ...segments,

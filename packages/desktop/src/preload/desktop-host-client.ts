@@ -87,7 +87,10 @@ export class DesktopHostClient {
   private approvalRead = 0;
   private approvals?: { epoch: string; stateVersion: number; pending: ApprovalRequestEnvelope[] };
   private readonly terminalData = new Set<(message: TerminalEvents["pty/data"]) => void>();
-  private readonly terminalViewers = new Set<(message: TerminalEvents["pty/remoteViewers"]) => void>();
+  private readonly terminalViewers = new Set<
+    (message: TerminalEvents["pty/remoteViewers"]) => void
+  >();
+  private readonly terminals = new Map<string, { live: boolean; pending: number }>();
   private readonly terminalExit = new Set<(message: TerminalEvents["pty/exit"]) => void>();
   private readonly streams = new Set<(envelope: StreamEventEnvelope) => void>();
   private status: DesktopHostStatus = "connecting";
@@ -145,6 +148,7 @@ export class DesktopHostClient {
           return;
         }
         if (data.method === "pty/exit" && "exitCode" in p && typeof p.exitCode === "number") {
+          this.terminals.delete(data.params.sessionId);
           for (const cb of this.terminalExit)
             cb({
               sessionId: data.params.sessionId,
@@ -213,6 +217,20 @@ export class DesktopHostClient {
       port.removeEventListener("close", this.onPortLost);
       port.removeEventListener("messageerror", this.onPortLost);
       port.close();
+    }
+    if (port && code !== DesktopHostErrors.revoked) {
+      // The utility owns these PTYs. Ending the dead generation clears the
+      // terminal panel without replaying keystrokes into a replacement shell.
+      const ended = [...this.terminals].filter(([, slot]) => slot.live);
+      this.terminals.clear();
+      for (const [sessionId] of ended)
+        for (const cb of this.terminalExit) {
+          try {
+            cb({ sessionId, exitCode: 1 });
+          } catch {
+            /* The transport still retires the other panels. */
+          }
+        }
     }
     const error = rpcError(code, `Desktop Host ${status}: connection closed`);
     for (const request of this.pending.values()) {
@@ -285,11 +303,35 @@ export class DesktopHostClient {
   async terminal<K extends keyof TerminalCommands>(
     method: K,
     params: TerminalCommands[K]["input"],
+    legacy?: () => Promise<TerminalCommands[K]["result"]>,
   ): Promise<TerminalCommands[K]["result"]> {
     if (this.initialPort) await this.initialPort;
-    if (this.status !== "ready" || !this.port || !this.methods.has(method))
+    const port = this.port;
+    if (this.status !== "ready" || !port || !this.methods.has(method))
       throw rpcError(DesktopHostErrors.reconnecting, "Terminal Host unavailable");
-    return (await this.request(this.port, method, { ...params })) as TerminalCommands[K]["result"];
+    const { sessionId } = params;
+    const slot =
+      method === "pty/start"
+        ? (this.terminals.get(sessionId) ?? { live: false, pending: 0 })
+        : undefined;
+    if (slot) {
+      slot.pending++;
+      this.terminals.set(sessionId, slot);
+    }
+    try {
+      const result = legacy
+        ? await legacy()
+        : ((await this.request(port, method, { ...params })) as TerminalCommands[K]["result"]);
+      if (this.port !== port) throw rpcError(DesktopHostErrors.revoked, "Terminal Host changed");
+      if (slot && result?.ok && this.terminals.get(sessionId) === slot) slot.live = true;
+      return result;
+    } finally {
+      if (slot) {
+        slot.pending--;
+        if (slot.pending === 0 && !slot.live && this.terminals.get(sessionId) === slot)
+          this.terminals.delete(sessionId);
+      }
+    }
   }
 
   onStreamEvent(listener: (envelope: StreamEventEnvelope) => void): () => void {

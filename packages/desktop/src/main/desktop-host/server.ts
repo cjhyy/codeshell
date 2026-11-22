@@ -1,5 +1,6 @@
 import { isDesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
 import { rendererDiskSessionQuery, type ListSessions } from "../../shared/disk-session-query.js";
+import { isTerminalCommand } from "../../shared/pty.js";
 import { CONTRACTS } from "@cjhyy/code-shell-core/contracts";
 import {
   DesktopHostErrors,
@@ -210,12 +211,28 @@ export class DesktopHostServer {
   allows(sessionId: string, owner: number): boolean {
     return this.sessions.allows(sessionId, owner);
   }
+  async runWorkbenchTerminal(
+    call: import("../../shared/pty.js").NativeTerminalCommand,
+    signal: AbortSignal,
+  ) {
+    if (!isTerminalCommand(call.method)) throw new InvalidParams();
+    return this.invokeWorkbench(call.caller, call.params, call.method, signal);
+  }
   async readWorkbenchOutput(
     identity: DesktopHostIdentity,
     params: Record<string, unknown>,
     method = "agent/subscribe",
   ): Promise<unknown> {
     if (method !== "agent/subscribe" && !isDesktopAgentMethod(method)) throw new InvalidParams();
+    return this.invokeWorkbench(identity, params, method);
+  }
+  private async invokeWorkbench(
+    identity: DesktopHostIdentity,
+    params: Record<string, unknown>,
+    method: string,
+    signal?: AbortSignal,
+  ) {
+    signal?.throwIfAborted();
     const connection = this.windows.get(identity.webContentsId);
     const bound = connection?.authority.identity;
     const handler = this.methods.get(method);
@@ -227,7 +244,7 @@ export class DesktopHostServer {
     )
       throw new HostRevokedError();
     const sessionId = handler.sessionId?.(params);
-    if (!sessionId && !handler.admission) throw new InvalidParams();
+    if (!sessionId && !handler.admission && !isTerminalCommand(method)) throw new InvalidParams();
     if (connection.pending.size + connection.compatibilityReads >= 128)
       throw new Error("Too many pending Desktop Host requests");
     const guard = sessionId
@@ -238,8 +255,18 @@ export class DesktopHostServer {
       : connection.authority.capture();
     connection.compatibilityReads++;
     try {
-      const result = await handler.run(guard, params);
-      guard.assertCurrent();
+      const context = signal
+        ? {
+            ...guard,
+            assertCurrent: () => {
+              signal.throwIfAborted();
+              guard.assertCurrent();
+            },
+          }
+        : guard;
+      context.assertCurrent();
+      const result = await handler.run(context, params);
+      context.assertCurrent();
       return result;
     } finally {
       guard.release?.();

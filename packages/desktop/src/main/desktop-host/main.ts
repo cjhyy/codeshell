@@ -4,6 +4,7 @@ import { NativeMimiTasks } from "./mimi-task-client.js";
 import { ExternalProviderPorts, externalProviderFactories, inferExternalMemory } from "./native-external-provider.js";
 import { electronPrivatePort } from "../../host/native-peer.js";
 import { NativeImGateway } from "./im-gateway-client.js";
+import type { TerminalCommands } from "../../shared/pty.js";
 import { NativeRemoteClient } from "./remote-client.js";
 import type { NativeRemoteTerminals } from "../mobile-remote/native-terminals.js";
 import { NativeAutomationClient } from "./main-automation.js";
@@ -237,6 +238,24 @@ export function createDesktopHost(
   };
   return {
     callBusiness: supervisor.callBusiness.bind(supervisor),
+    async workbenchTerminal(
+      event: Pick<IpcMainEvent, "sender" | "senderFrame">,
+      method: keyof TerminalCommands,
+      params: Record<string, unknown>,
+    ) {
+      const signal = documentSignal(event);
+      await supervisor.waitUntilReady(signal);
+      signal.throwIfAborted();
+      const caller = workbenches.identity(event);
+      const result = await supervisor.callBusiness(
+        "terminal/command",
+        { caller, method, params },
+        signal,
+      );
+      signal.throwIfAborted();
+      workbenches.assertIdentity(caller);
+      return result;
+    },
     documentSignal,
     onPluginJobsChanged(listener:NonNullable<DesktopHostSupervisor["pluginJobsChanged"]>){supervisor.pluginJobsChanged=listener;},
     onWechatEvent(listener: NonNullable<DesktopHostSupervisor["wechatEvent"]>) { supervisor.wechatEvent = listener; },
