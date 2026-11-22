@@ -14,6 +14,7 @@ import {
   findCodeShellWindow,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedViewOnlyWorkbench,
 } from "./electron-harness.mjs";
 import {
   bindPrivateKeychainContext,
@@ -179,14 +180,6 @@ async function launch() {
   assert.ok(win);
   win.setDefaultTimeout(8_000);
   win.on("pageerror", (error) => errors.push(error.message));
-  const view = win.getByRole("button", { name: /^(仅查看|View only)/ });
-  if (
-    await view.waitFor({ state: "visible", timeout: 1_500 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await view.click();
   const general = win.locator('[data-settings-module="general"]:visible');
   // The real shell restores the Settings route across these app restarts.
   // Only open its account menu when the Settings navigation is absent.
@@ -333,6 +326,7 @@ try {
   });
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
   const origin = `http://127.0.0.1:${server.address().port}`;
+  await seedViewOnlyWorkbench(isolated);
   await put("inventory-before.json", await inventoryAppTree(packagedApp));
   if (options.has("--appimage-build-receipt"))
     appImageRuntime = await preparePackagedAppImageRuntime({
