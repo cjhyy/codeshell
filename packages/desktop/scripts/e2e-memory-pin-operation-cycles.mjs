@@ -254,8 +254,11 @@ children.spawn = function (command, args, options) {
   return spawn.call(this, command, args, options);
 };
 syncBuiltinESMExports();
+const { observeMemoryPort, observeNativeMemoryReads } = await import(${JSON.stringify(new URL("./memory-pin-host-guard.mjs", import.meta.url).href)});
+if (process.type === "utility") observeMemoryPort(process.parentPort);
 if (process.type === "browser") {
-const { app, ipcMain, net } = await import("electron");
+const { app, ipcMain, net, utilityProcess } = await import("electron");
+observeNativeMemoryReads(utilityProcess,state);
 net.request = deny; net.fetch = deny;
 app.on("web-contents-created", (_event, contents) => contents.session.webRequest.onBeforeRequest({urls:["http://*/*", "https://*/*"]}, (_details, done) => { state.networkAttempts++; done({cancel:true}); }));
 const handle = ipcMain.handle.bind(ipcMain);
@@ -432,6 +435,12 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
       assert.ok(found && /^[a-z0-9_-]+\.md$/.test(found.fileName));
       return [key, join(memoryRoot, scope, found.fileName)];
     }),
+  );
+  assert.ok(
+    (await mainState()).calls.some(
+      (call) => call.channel === "memory:list" && call.route === "workbench-port",
+    ),
+    "The negotiated Host port must read the seeded memory list",
   );
   receipt.seedWrites = (await mainState()).calls.filter(
     (call) => call.channel === "memory:save" && call.status === "committed",
