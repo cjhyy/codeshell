@@ -567,15 +567,21 @@ export async function run(root: string, port: number) {
           (event as any).page.status === "unavailable",
       ),
     );
+    // The reply above is observed at the server before its WebSocket bytes reach
+    // the phone. Submit only after the mobile view has applied the recovery result.
+    await until(() => hook.result.current.activeSessionId === "external-first-mobile" &&
+      !hook.result.current.loading.sessionHistory && !hook.result.current.outputHistoryFailed);
     assert.equal(turns(), beforeFirstInput);
     let firstMobileAccepted = false;
+    let rejection: string | undefined;
     await act(async () => {
       firstMobileAccepted = await hook.result.current.sendChat({
         text: "first mobile input",
+        onRejected: (reason) => { rejection = reason; },
         attachments: [],
       });
     });
-    assert(firstMobileAccepted);
+    assert(firstMobileAccepted, rejection ?? hook.result.current.notice ?? "Mobile input was not accepted");
     await until(() => text() === part(0) && hook.result.current.chat.run === "completed");
     assert.equal(turns(), beforeFirstInput + 1);
     assert.equal(nativeStarts, 0);

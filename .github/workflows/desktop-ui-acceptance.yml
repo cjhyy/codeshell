@@ -305,6 +305,10 @@ jobs:
           set -euo pipefail
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/commands/builtin/branch-command.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/branch-command.log"
 
+      - name: Host IM gateway restart, delivery authority and private notices
+        timeout-minutes: 3
+        run: node scripts/run-bun-test-shard.mjs --timeout 60000 packages/desktop/src/host/im/gateway.native.test.ts packages/desktop/src/host/im/private-notices.test.ts
+
       - name: project capability literal-key regressions
         timeout-minutes: 2
         run: |

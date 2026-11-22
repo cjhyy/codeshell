@@ -214,18 +214,34 @@ try {
   })();
   // A real Chromium wheel sequence goes through its input router while the
   // visible conversation consumes the same stream the user would see.
-  let dispatched = 0;
+  const sentAt = [];
+  const pending = new Set();
+  let inputError;
   while (performance.now() - started < 20000) {
-    await client.send("Input.dispatchMouseEvent", {
-      type: "mouseWheel",
-      x: 320,
-      y: 320,
-      deltaX: 0,
-      deltaY: dispatched % 2 ? 4 : -4,
-    });
-    dispatched++;
-    await delay(Math.max(0, started + dispatched * 16 - performance.now()));
+    if (inputError) throw inputError;
+    if (pending.size >= 4) await Promise.race(pending);
+    const now = performance.now();
+    sentAt.push(now);
+    const request = client
+      .send("Input.dispatchMouseEvent", {
+        type: "mouseWheel",
+        x: 320,
+        y: 320,
+        deltaX: 0,
+        deltaY: sentAt.length % 2 ? 4 : -4,
+      })
+      .catch((error) => {
+        inputError = error;
+      })
+      .finally(() => pending.delete(request));
+    pending.add(request);
+    // A mouse keeps sampling while Chromium consumes previous events. Waiting
+    // for a compositor acknowledgment here would put harness latency in the input.
+    const nextTick = started + (Math.floor((now - started) / 16) + 1) * 16;
+    await delay(Math.max(1, Math.ceil(nextTick - performance.now())));
   }
+  await Promise.all(pending);
+  if (inputError) throw inputError;
   const traceDuration = performance.now() - started;
   const writes = await contended;
   const stamps = await page.evaluate(() => window.benchmarkInput);
@@ -273,7 +289,8 @@ try {
     trace: basename(await realpath(tracePath)),
     traceDurationMs: traceDuration,
     input: {
-      dispatched,
+      dispatched: sentAt.length,
+      maxDispatchGapMs: Math.max(...sentAt.slice(1).map((at, i) => at - sentAt[i])),
       delivered: stamps.length,
       maxGapMs: Math.max(...gaps),
       p99GapMs: percentile(gaps, 0.99),
