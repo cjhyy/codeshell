@@ -17,6 +17,7 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
       "desktop-host",
       "index",
       "link-provider-module",
+      "marketplace-worker",
       "session-index-worker",
       "session-transcript-cache-worker",
       "skill-worker",
