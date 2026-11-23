@@ -56,7 +56,7 @@ export function PanelTabStrip({
       role="tablist"
       aria-label={label}
       aria-orientation="horizontal"
-      className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 py-1 [scrollbar-width:thin]"
+      className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 py-1"
     >
       {tabs.map((tab, index) => {
         const active = tab.id === activeId;
