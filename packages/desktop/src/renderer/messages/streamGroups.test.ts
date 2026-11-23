@@ -470,6 +470,16 @@ describe("buildStreamItems", () => {
     expect(grouped[0]!.id).toBe(single[0]!.id);
   });
 
+  test("a replayed turn keeps its process identity when the lead-in gets new message IDs", () => {
+    const read = tool("Read");
+    const replay = () => buildStreamItems([user(), thinking(), assistant("Checking files."), read]);
+    const [before] = processGroups(replay());
+    const [after] = processGroups(replay());
+
+    expect(after!.items[0]!.id).not.toBe(before!.items[0]!.id);
+    expect(after!.id).toBe(before!.id);
+  });
+
   test("keeps thinking transparent between adjacent tools", () => {
     const messages: Message[] = [user(), tool("Read", 10, 20), thinking(), tool("Grep", 21, 30)];
 

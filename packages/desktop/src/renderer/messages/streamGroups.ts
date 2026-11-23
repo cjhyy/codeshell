@@ -355,10 +355,6 @@ export function reconcileStreamItems(prev: StreamItem[], next: StreamItem[]): St
 
 // ── Level 1: adjacent tools → ToolGroup ───────────────────────────────
 
-function isToolish(item: Message | ToolGroup): boolean {
-  return item.kind === "tool" || item.kind === "tool_group";
-}
-
 /**
  * Scan forward from `from` (exclusive) until we hit a tool or a hard
  * break, allowing only transparent items in between. Returns true if
@@ -520,9 +516,15 @@ function foldTurnProcess(items: Array<Message | ToolGroup>, liveTurnActive: bool
     // toolish items (e.g. a trailing UpdateAutomationMemory) are skipped so
     // they don't anchor the card's tail and swallow the report text that
     // precedes them — that text then stays inline after the real last tool.
+    let firstToolId: string | undefined;
     let lastTool = -1;
     for (let i = start + 1; i < end; i++) {
-      if (isToolish(items[i]!) && !isBookkeepingToolish(items[i]!)) lastTool = i;
+      const item = items[i]!;
+      if (item.kind !== "tool" && item.kind !== "tool_group") continue;
+      // Tool call IDs survive transcript replay and grouping. Lead-in text and
+      // thinking get fresh IDs when a subagent transcript is read again.
+      firstToolId ??= item.kind === "tool_group" ? item.items[0]!.id : item.id;
+      if (!isBookkeepingToolish(item)) lastTool = i;
     }
 
     if (lastTool < 0) {
@@ -548,7 +550,7 @@ function foldTurnProcess(items: Array<Message | ToolGroup>, liveTurnActive: bool
     // actual tool span. Replayed transcripts carry no stamps → tool span only.
     out.push({
       kind: "turn_process_group",
-      id: `process-${anchorId(innerItems[0]!)}`,
+      id: `process-${firstToolId}`,
       durationMs: isLive ? 0 : (validStamp(timing?.durationMs) ?? turnSpanMs(turnItems)),
       startedAt: validToolStamp(timing?.startedAt) ?? turnStartMs(turnItems),
       firstToolStartedAt: firstToolStart(innerItems),
@@ -624,12 +626,6 @@ function firstToolStart(items: Array<Message | ToolGroup>): number {
     if (validToolStamp(t.startedAt) !== undefined && t.startedAt < earliest) earliest = t.startedAt;
   });
   return isFinite(earliest) ? earliest : 0;
-}
-
-function anchorId(item: Message | ToolGroup): string {
-  // A first tool can become a ToolGroup as streaming appends its next sibling.
-  // Keep the outer process card mounted so its disclosure state is preserved.
-  return item.kind === "tool_group" ? (item.items[0]?.id ?? item.id) : item.id;
 }
 
 function countToolsRecursive(items: Array<Message | ToolGroup>): number {

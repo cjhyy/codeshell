@@ -300,7 +300,12 @@ export function SubagentSessionDetail({
         </div>
       ) : (
         <SubagentDetailActiveContext.Provider value={detailActive}>
-          <MessageStream messages={transcript.messages} engineSessionId={selectedId} readOnly />
+          <MessageStream
+            key={selectedId}
+            messages={transcript.messages}
+            engineSessionId={selectedId}
+            readOnly
+          />
         </SubagentDetailActiveContext.Provider>
       )}
     </section>
