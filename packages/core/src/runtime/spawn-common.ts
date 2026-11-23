@@ -396,6 +396,7 @@ export function killProcessGroup(pgid: number, opts: { graceMs?: number } = {}):
     }
 
     const start = Date.now();
+    let killedAt: number | undefined;
     // Poll for graceful exit so we can resolve early (and skip SIGKILL) when
     // the group honors SIGTERM. Cheap: a `kill(-pgid, 0)` probe every 50ms.
     const tick = (): void => {
@@ -403,16 +404,20 @@ export function killProcessGroup(pgid: number, opts: { graceMs?: number } = {}):
         resolve();
         return;
       }
-      if (Date.now() - start >= grace) {
+      if (killedAt !== undefined && Date.now() - killedAt >= 500) {
+        // Process-tree cleanup is best-effort if the OS cannot reap a group
+        // (for example, an orphaned zombie with an unresponsive init).
+        resolve();
+        return;
+      }
+      if (killedAt === undefined && Date.now() - start >= grace) {
+        killedAt = Date.now();
         try {
           process.kill(-pgid, "SIGKILL");
         } catch {
           // Race: exited between the probe and here. Fine.
         }
-        // Give the OS a beat to tear the group down before resolving so
-        // callers that immediately probe see ESRCH.
-        setTimeout(resolve, 50);
-        return;
+        // A successful signal only queues delivery. Probe the group again before releasing its owner.
       }
       setTimeout(tick, 50);
     };

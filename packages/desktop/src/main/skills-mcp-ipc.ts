@@ -1,34 +1,42 @@
-import { ipcMain } from "electron";
-import { mergePluginMcpServers, SettingsManager } from "@cjhyy/code-shell-core";
-import { computeEffectiveDisabledLists } from "@cjhyy/code-shell-core/internal";
+import { ipcMain, type IpcMainInvokeEvent } from "electron";
+import { invalidateSkillCache } from "@cjhyy/code-shell-core";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import { resolveNoRepoCwd } from "./agent-bridge.js";
 import { McpOAuthService } from "./mcp-oauth-service.js";
-import { readSettings } from "./settings-service.js";
-import { installSkillFromDirectory } from "./skills-service.js";
-import {
-  inspectRepo,
-  installFromGithub,
-  type InstallFromGithubInput,
-} from "./github-skill-service.js";
+import { listMergedMcpServers } from "./mcp-config-view.js";
+import type { InstallFromGithubInput } from "./github-skill-service.js";
 import { GithubSkillReviewStore } from "./github-skill-review.js";
-import { probeMcpServers, type McpServerConfig } from "./mcp-probe-service.js";
+import {
+  mcpProbeDigest,
+  probeMcpServer,
+  probeMcpServers,
+  type McpServerConfig,
+} from "./mcp-probe-service.js";
 import { type RendererConfigurationTarget } from "./renderer-configuration-authority.js";
 import {
-  rendererConfigurationCwd,
   rendererOptionalConfigurationCwd,
   rejectUnexpectedRendererKeys,
 } from "./renderer-configuration-helpers.js";
 
 export interface SkillsMcpIpcDeps {
+  host: { callBusiness: CallShellBusiness; documentSignal(event: IpcMainInvokeEvent): AbortSignal };
   getMcpOAuthService: () => McpOAuthService;
+}
+
+function skillScope(scope: unknown, target: unknown) {
+  if (scope === "project" && target && typeof target === "object")
+    return { scope, target: target as RendererConfigurationTarget } as const;
+  if (scope === "user" && target == null) return { scope, target: null } as const;
+  throw new Error("Invalid Skill scope or configuration target");
 }
 
 /** GitHub/local skill installation plus MCP probe and merged-config routes. */
 export function registerSkillsMcpIpc(deps: SkillsMcpIpcDeps) {
-  const { getMcpOAuthService } = deps;
+  const { getMcpOAuthService, host } = deps;
   const githubSkillReviews = new GithubSkillReviewStore();
 
   ipcMain.handle("skills:inspectGithub", async (event, url: string, existingNames?: unknown) => {
+    const signal = host.documentSignal(event);
     if (typeof url !== "string" || !url || url.length > 8_192 || url.includes("\0")) {
       throw new Error("skills:inspectGithub requires url");
     }
@@ -42,10 +50,16 @@ export function registerSkillsMcpIpc(deps: SkillsMcpIpcDeps) {
     ) {
       throw new Error("skills:inspectGithub existingNames are invalid");
     }
-    return githubSkillReviews.issue(event.sender.id, await inspectRepo(url, names as string[]));
+    const inspected = await host.callBusiness(
+      "skills/inspectGithub",
+      { url, existingNames: names as string[] },
+      signal,
+    );
+    return githubSkillReviews.issue(signal, inspected);
   });
 
   ipcMain.handle("skills:installFromGithub", async (event, input: unknown) => {
+    const signal = host.documentSignal(event);
     if (!input || typeof input !== "object") {
       throw new Error("skills:installFromGithub requires { inspection, selected, scope }");
     }
@@ -67,22 +81,16 @@ export function registerSkillsMcpIpc(deps: SkillsMcpIpcDeps) {
     ) {
       throw new Error("invalid skill install name");
     }
-    if (i.scope === "project" && !i.target) {
-      throw new Error("project skill install requires stable authority");
-    }
-    if (i.scope === "user" && i.target) {
-      throw new Error("user skill install does not accept project authority");
-    }
-    const cwd = i.target ? await rendererConfigurationCwd(i.target) : undefined;
+    const scope = skillScope(i.scope, i.target);
     const reviewToken = (i.inspection as { reviewToken?: unknown }).reviewToken;
-    const reviewed = githubSkillReviews.consume(event.sender.id, reviewToken, i.selected);
-    const { target: _target, ...installInput } = i;
-    return installFromGithub({
-      ...installInput,
-      inspection: reviewed.inspection,
-      selected: reviewed.selected,
-      cwd,
-    });
+    const reviewed = githubSkillReviews.consume(signal, reviewToken, i.selected);
+    const installed = await host.callBusiness(
+      "skills/installGithub",
+      { ...scope, ...reviewed, installName: i.installName },
+      signal,
+    );
+    invalidateSkillCache();
+    return installed;
   });
 
   ipcMain.handle(
@@ -94,34 +102,106 @@ export function registerSkillsMcpIpc(deps: SkillsMcpIpcDeps) {
       target: RendererConfigurationTarget | null,
       name?: string,
     ) => {
-      if (typeof sourceDir !== "string" || !sourceDir) {
+      const signal = host.documentSignal(_e);
+      if (
+        typeof sourceDir !== "string" ||
+        !sourceDir ||
+        sourceDir.length > 32768 ||
+        sourceDir.includes("\0")
+      ) {
         throw new Error("skills:installLocal requires sourceDir");
       }
-      if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-      if (scope === "project" && target === null) {
-        throw new Error("project skill install requires stable authority");
-      }
-      if (scope === "user" && target !== null) {
-        throw new Error("user skill install does not accept project authority");
-      }
-      const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
-      return installSkillFromDirectory(sourceDir, scope, authorizedCwd, name);
+      if (
+        name !== undefined &&
+        (typeof name !== "string" || name.length > 512 || name.includes("\0"))
+      )
+        throw new Error("Invalid Skill name");
+      const installed = await host.callBusiness(
+        "skills/installLocal",
+        { ...skillScope(scope, target), sourceDir, name },
+        signal,
+      );
+      invalidateSkillCache();
+      return installed;
     },
   );
 
   ipcMain.handle(
+    "skills:update",
+    async (event, target: RendererConfigurationTarget | null, filePath: unknown) => {
+      const signal = host.documentSignal(event);
+      if (typeof filePath !== "string" || !filePath) throw new Error("Skill filePath is required");
+      const result = await host.callBusiness("skills/update", { target, filePath }, signal);
+      if (result.updated) invalidateSkillCache();
+      return result;
+    },
+  );
+
+  ipcMain.handle("skills:uninstall", async (event, input: unknown) => {
+    const signal = host.documentSignal(event);
+    if (!input || typeof input !== "object" || Array.isArray(input))
+      throw new Error("Invalid Skill removal");
+    const fields = input as Record<string, unknown>;
+    rejectUnexpectedRendererKeys(fields, ["scope", "target", "skillName"], "skills:uninstall");
+    if (typeof fields.skillName !== "string")
+      throw new Error("skills:uninstall requires skillName");
+    await host.callBusiness(
+      "skills/uninstall",
+      { ...skillScope(fields.scope, fields.target), skillName: fields.skillName },
+      signal,
+    );
+    invalidateSkillCache();
+  });
+
+  ipcMain.handle(
     "mcp:probe",
-    async (_e, raw: unknown, force?: boolean, target?: RendererConfigurationTarget | null) => {
+    async (
+      event,
+      raw: unknown,
+      force?: boolean,
+      target?: RendererConfigurationTarget | null,
+      scope?: "user" | "project",
+    ) => {
+      const signal = host.documentSignal(event);
       if (!Array.isArray(raw)) return [];
       const configs = raw.filter(
         (x): x is McpServerConfig =>
           !!x && typeof x === "object" && typeof (x as McpServerConfig).name === "string",
       );
-      return probeMcpServers(configs, {
+      if (scope !== undefined && scope !== "user" && scope !== "project")
+        throw new Error("Invalid MCP settings scope");
+      const cwd = await rendererOptionalConfigurationCwd(target ?? null, resolveNoRepoCwd());
+      signal.throwIfAborted();
+      const nativeOptions = () => ({
         force: Boolean(force),
-        cwd: await rendererOptionalConfigurationCwd(target ?? null, resolveNoRepoCwd()),
+        cwd,
+        signal,
         oauthService: getMcpOAuthService(),
       });
+      if (scope === undefined) return probeMcpServers(configs, nativeOptions());
+      const checked = await host.callBusiness(
+        "mcp/probeConfigured",
+        {
+          scope,
+          target: target ?? null,
+          force: Boolean(force),
+          servers: configs.map((config) => ({ name: config.name, digest: mcpProbeDigest(config) })),
+        },
+        signal,
+      );
+      signal.throwIfAborted();
+      return Promise.all(
+        checked.map((reply, i) => {
+          if (reply.route === "host") return reply.result;
+          if (reply.route === "native") return probeMcpServer(configs[i], nativeOptions());
+          return {
+            name: configs[i].name,
+            status: "error",
+            transport: configs[i].transport ?? (configs[i].url ? "streamable-http" : "stdio"),
+            errorMessage: "MCP 配置已更改，请刷新后重试",
+          };
+        }),
+      );
     },
   );
 
@@ -133,52 +213,7 @@ export function registerSkillsMcpIpc(deps: SkillsMcpIpcDeps) {
       rawDisabledPlugins?: unknown,
       target?: RendererConfigurationTarget | null,
     ) => {
-      const base =
-        rawBase && typeof rawBase === "object" ? (rawBase as Record<string, McpServerConfig>) : {};
-      const rawList = Array.isArray(rawDisabledPlugins)
-        ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
-        : [];
-      // Fold project capabilityOverrides over the renderer's raw global list when
-      // a cwd is known — the pluginDisabled flag must reflect the EFFECTIVE state
-      // (能力总览 project "on" overrides global off), matching the engine's merge.
-      const cwd = target == null ? undefined : await rendererConfigurationCwd(target);
-      const disabledPlugins = cwd
-        ? computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd).disabledPlugins
-        : rawList;
-      // Merge with ALL plugins (no disabled filter): an installed plugin's MCP
-      // should be VISIBLE in the settings page even while the plugin is disabled
-      // (feedback: 装了就该展示,而不是打开插件才出现). The engine's own connect
-      // path still filters disabledPlugins, so a disabled plugin's server is
-      // listed-but-inert; we mark it `pluginDisabled` for the UI.
-      const disabledSet = new Set(disabledPlugins);
-      // Plugin-MCP overrides live globally (user scope), independent of the active
-      // settings scope — read them here and let the merge layer them onto plugin
-      // servers so the listed env/credential reflects the EFFECTIVE connect config.
-      const userSettings = ((await readSettings("user").catch(() => null)) ?? {}) as {
-        mcpServerOverrides?: Record<string, McpServerConfig>;
-      };
-      const overrides = (userSettings.mcpServerOverrides ?? {}) as Record<string, McpServerConfig>;
-      const merged = mergePluginMcpServers(base, [], overrides);
-      return Object.fromEntries(
-        Object.entries(merged).map(([name, cfg]) => {
-          const fromSettings = Object.prototype.hasOwnProperty.call(base, name);
-          const colon = name.indexOf(":");
-          const owner = !fromSettings && colon > 0 ? name.slice(0, colon) : undefined;
-          return [
-            name,
-            {
-              ...cfg,
-              name,
-              source: fromSettings ? "settings" : "plugin",
-              editable: fromSettings,
-              pluginDisabled: owner !== undefined && disabledSet.has(owner),
-              // Flag a plugin server that currently carries a user override so the
-              // UI can badge it. (User-added servers never use the override layer.)
-              hasOverride: !fromSettings && Object.prototype.hasOwnProperty.call(overrides, name),
-            },
-          ];
-        }),
-      );
+      return listMergedMcpServers(rawBase, rawDisabledPlugins, target);
     },
   );
 }

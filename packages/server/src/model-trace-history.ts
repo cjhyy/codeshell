@@ -235,8 +235,8 @@ export function createModelTraceHistory(options: {
     getConfig(): ModelTraceConfig {
       return store.getConfig();
     },
-    setConfig(patch: unknown): ModelTraceConfig {
-      return store.setConfig(validateModelTraceConfigPatch(patch));
+    setConfig(patch: unknown, beforeCommit?: () => void): ModelTraceConfig {
+      return store.setConfig(validateModelTraceConfigPatch(patch), beforeCommit);
     },
   };
 }

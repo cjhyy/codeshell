@@ -251,6 +251,7 @@ function updateRegistry(
  */
 export async function addHumanRepo(
   repo: string,
+  beforeCommit?: () => void,
 ): Promise<{ ok: true; entry: HumanRepoListEntry } | { ok: false; error: string }> {
   if (!CATALOG_REPO_RE.test(repo)) {
     return { ok: false, error: `"${repo}" 不是合法的仓库地址（应为 owner/repo）` };
@@ -295,6 +296,7 @@ export async function addHumanRepo(
       }
       // Move a legacy-layout cache into place first so the swap below retires
       // it like any previous tree instead of leaving it orphaned.
+      beforeCommit?.();
       adoptLegacyRepoDir(repo, current);
       promoteStagedRepo(staging, dir);
       updateRegistry((repos) => [
@@ -424,7 +426,7 @@ function explainGitFailure(error: string, repo: string): string {
   return `克隆 ${repo} 失败：${tail.trim() || "未知错误"}`;
 }
 
-export function removeHumanRepo(repo: string): void {
+export function removeHumanRepo(repo: string, beforeCommit?: () => void): void {
   if (!CATALOG_REPO_RE.test(repo)) throw new Error("invalid digital-human repo");
   // Same repo lock as add/update: otherwise a remove can delete the tree a
   // concurrent add just published, leaving a registered repo with no clone.
@@ -433,6 +435,7 @@ export function removeHumanRepo(repo: string): void {
     const legacy = legacyRepoDirFor(repo, listHumanRepos());
     // Filter inside the registry lock so a concurrent add of a DIFFERENT repo
     // is not lost.
+    beforeCommit?.();
     updateRegistry((repos) => repos.filter((r) => r.repo !== repo));
     for (const dir of legacy ? [humanRepoDir(repo), legacy] : [humanRepoDir(repo)]) {
       rmSync(dir, { recursive: true, force: true });

@@ -40,6 +40,7 @@ import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 import {
   resolveSpawnTarget,
   defaultShellBinary,
+  groupAlive,
   killChildTree,
   killProcessGroup,
 } from "./spawn-common.js";
@@ -93,6 +94,8 @@ export interface SafeSpawnShellOptions extends SafeSpawnOptions {
 export type SafeSpawnReason = "ok" | "timeout" | "aborted" | "spawn_failed";
 
 export interface SafeSpawnResult {
+  /** A requested tree kill finished but the OS still reports the group present. */
+  unreapedGroup?: number;
   /**
    * Discriminant for the outcome. `ok` means the process exited
    * normally (any `exitCode`, including non-zero). Mutually exclusive
@@ -213,6 +216,7 @@ function runLifecycle({
 
   return new Promise<SafeSpawnResult>((resolve) => {
     let settled = false;
+    let terminatingGroup: Promise<void> | undefined;
     // Declared before finish() so the spawn-failed early-return (which calls
     // finish before these are assigned) doesn't hit a TDZ reference.
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -232,12 +236,18 @@ function runLifecycle({
       // Always release backend-allocated resources, regardless of exit path.
       // cleanup is best-effort — see seatbelt backend for rationale.
       safeCleanup(cleanup);
-      // Remove abort listener so a long-lived AbortSignal (multi-turn
-      // session reusing the same controller) doesn't accumulate listeners.
-      if (opts.signal && onAbort) {
-        opts.signal.removeEventListener("abort", onAbort);
-      }
-      resolve(result);
+      const complete = () => {
+        if (opts.signal && onAbort) opts.signal.removeEventListener("abort", onAbort);
+        if (opts.processGroup && terminatingGroup && child.pid && groupAlive(child.pid)) {
+          result.unreapedGroup = child.pid;
+        }
+        resolve(result);
+      };
+      // A Git helper can close its pipes and survive its leader. Keep the
+      // worker and abort listener alive until its group is reaped. An explicit
+      // abort can still shorten a timeout's longer SIGTERM grace.
+      if (terminatingGroup) void terminatingGroup.then(complete);
+      else complete();
     };
 
     let child: ChildProcess;
@@ -292,12 +302,12 @@ function runLifecycle({
     // fire. Force a resolve via the last-seen `exit` code once the kill grace
     // has elapsed — the promise must never hang past terminate().
     const terminate = (graceMs: number) => {
-      if (detached && typeof child.pid === "number") {
-        void killProcessGroup(child.pid, { graceMs });
+      if ((detached || opts.processGroup) && typeof child.pid === "number") {
+        terminatingGroup = killProcessGroup(child.pid, { graceMs });
       } else {
         killChildTree(child, graceMs);
       }
-      if (settleTimer) return;
+      if (settled || settleTimer) return;
       settleTimer = setTimeout(() => {
         finishFromExit();
       }, graceMs + 500);

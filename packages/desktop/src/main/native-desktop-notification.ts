@@ -1,6 +1,9 @@
 import { isValidDesktopNotificationSessionId } from "./desktop-notifier.js";
 
+export type DesktopNotificationText = { title: string; body?: string; subtitle?: string };
+
 interface NativeNotification {
+  once(event: "failed", listener: () => void): unknown;
   on(event: "click", listener: () => void): unknown;
   show(): void;
 }
@@ -19,16 +22,29 @@ export function findNotificationWindow<
 
 /** Bind navigation to the notification instance, never to mutable active-session state. */
 export function showNativeDesktopNotification(
-  input: { title: string; body: string; sessionId?: string },
+  input: DesktopNotificationText & { sessionId?: string },
   dependencies: {
-    create(options: { title: string; body: string }): NativeNotification;
-    openSession(sessionId: string): void;
+    create(options: DesktopNotificationText): NativeNotification;
+    fallback(options: DesktopNotificationText): void;
+    openSession?(sessionId: string): void;
   },
 ): void {
-  const notification = dependencies.create({ title: input.title, body: input.body });
-  const sessionId = input.sessionId;
-  if (sessionId !== undefined && isValidDesktopNotificationSessionId(sessionId)) {
-    notification.on("click", () => dependencies.openSession(sessionId));
+  const { sessionId, title, body, subtitle } = input;
+  const text = { title, body, subtitle };
+  let usedFallback = false;
+  const fallback = () => {
+    if (usedFallback) return;
+    usedFallback = true;
+    dependencies.fallback(text);
+  };
+  try {
+    const notification = dependencies.create(text);
+    notification.once("failed", fallback);
+    if (dependencies.openSession && isValidDesktopNotificationSessionId(sessionId)) {
+      notification.on("click", () => dependencies.openSession?.(sessionId));
+    }
+    notification.show();
+  } catch {
+    fallback();
   }
-  notification.show();
 }

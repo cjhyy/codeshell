@@ -19,8 +19,9 @@ import {
   assertInstalledUiReceipt,
   assertOwnedReadonlyVolume,
   isInside,
-  queryOwnedDmgImage,
+  detachOwnedDmg,
   readOwnedDmgState,
+  recoverDmgAttachments,
   runGuardedHdiutil,
 } from "./macos-dmg-custody.mjs";
 
@@ -195,7 +196,6 @@ try {
     temporary: join(root, "tmp"),
     artifacts: join(root, "artifacts"),
     readonlyMount: join(root, "readonly-mount"),
-    bin: join(root, "bin"),
     installation: join(root, "installation"),
   };
   for (const path of Object.values(paths)) await mkdir(path, { mode: 0o700 });
@@ -208,10 +208,16 @@ try {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
+  const pkg = JSON.parse(await readFile(join(desktop, "package.json"), "utf8"));
+  const archSuffix = process.arch === "x64" ? "" : `-${process.arch}`;
+  const artifact = join(
+    paths.artifacts,
+    `${pkg.build.productName}-${pkg.version}${archSuffix}.dmg`,
+  );
+  assert.deepEqual(await readdir(paths.artifacts), []);
   guardState = {
     root,
-    sourceApp: original.appRoot,
-    arch: process.arch,
+    artifact,
     volumeName,
     stageMount,
     temporary: paths.temporary,
@@ -221,12 +227,6 @@ try {
     commands: [],
   };
   await put(stateFile, guardState);
-  const guardScript = fileURLToPath(new URL("./macos-dmg-custody.mjs", import.meta.url));
-  await writeFile(
-    join(paths.bin, "hdiutil"),
-    `#!/bin/sh\nexec '${process.execPath.replace(/'/g, "'\\''")}' '${guardScript.replace(/'/g, "'\\''")}' "$@"\n`,
-    { flag: "wx", mode: 0o700 },
-  );
   const require = createRequire(join(desktop, "package.json"));
   const builderPackage = require.resolve("electron-builder/package.json");
   const builderRequire = createRequire(builderPackage);
@@ -234,19 +234,23 @@ try {
   const dmgBuilderPackage = createRequire(appBuilderPackage).resolve("dmg-builder/package.json");
   const dmgBuilderRoot = dirname(dmgBuilderPackage);
   const dmgPackage = JSON.parse(await readFile(dmgBuilderPackage, "utf8"));
-  assert.equal(dmgPackage.version, "25.1.8", "DMG command guard requires the audited toolchain");
+  assert.equal(
+    dmgPackage.version,
+    "26.18.1",
+    "DMG acceptance requires the audited dmgbuild toolchain",
+  );
   report.dmgToolchain = {
     version: dmgPackage.version,
+    nativeTool: "dmg-builder@1.2.5 / dmgbuild 75c8a6c",
     sourceSha256: Object.fromEntries(
       await Promise.all(
-        ["dmg.js", "dmgUtil.js", "hdiuil.js"].map(async (file) => [
+        ["dmg.js", "dmgUtil.js"].map(async (file) => [
           file,
           hash(await readFile(join(dmgBuilderRoot, "out", file))),
         ]),
       ),
     ),
   };
-  const pkg = JSON.parse(await readFile(join(desktop, "package.json"), "utf8"));
   const electronDist = realpathSync(
     join(dirname(require.resolve("electron/package.json")), "dist"),
   );
@@ -263,15 +267,12 @@ try {
   };
   const environment = {
     ...createBunTestEnvironment(process.env, join(root, "build-private")),
-    PATH: `${paths.bin}:${process.env.PATH}`,
     TMPDIR: paths.temporary,
     TMP: paths.temporary,
     TEMP: paths.temporary,
     CSC_IDENTITY_AUTO_DISCOVERY: "false",
-    ELECTRON_SKIP_BINARY_DOWNLOAD: "1",
     ELECTRON_BUILDER_CACHE: join(root, "builder-cache"),
     CODESHELL_NODE_CACHE: join(root, "node-cache"),
-    CODESHELL_DMG_GUARD_REFERENCE: stateFile,
   };
   await ownedProcess(
     "production-dmg-build",
@@ -293,18 +294,19 @@ try {
     600_000,
   );
   const state = readOwnedDmgState(stateFile);
-  assert.ok(state.artifact && isInside(paths.artifacts, state.artifact));
-  assert.ok(
-    state.attachments.length === 1 && state.attachments.every((entry) => entry.detached),
-    "Builder mount must detach normally",
-  );
-  assert.equal(queryOwnedDmgImage(state.stageImage), null);
+  assert.deepEqual(recoverDmgAttachments(stateFile), [], "Builder left a disk image attached");
   runGuardedHdiutil(stateFile, ["verify", state.artifact]);
+  const imageInfo = runGuardedHdiutil(stateFile, ["imageinfo", "-plist", state.artifact]);
+  const format = execFileSync("/usr/bin/plutil", ["-extract", "Format", "raw", "-o", "-", "-"], {
+    input: imageInfo,
+    encoding: "utf8",
+    timeout: 5_000,
+  }).trim();
+  assert.equal(format, "UDZO", "Expected the production compressed disk image");
   report.dmg = {
     path: state.artifact,
     sha256: hash(await readFile(state.artifact)),
-    format: "UDZO",
-    stageFilesystem: process.arch === "arm64" ? "APFS" : "HFS+",
+    format,
   };
   runGuardedHdiutil(stateFile, [
     "attach",
@@ -334,6 +336,9 @@ try {
   );
   assert.ok(readonlyAttachment, "Readonly attachment custody must be recorded");
   report.readonlyVolume = assertOwnedReadonlyVolume(volume, readonlyAttachment);
+  assert.equal(volume.VolumeName, volumeName, "Expected the unique production build volume");
+  assert.equal(volume.FilesystemType, "hfs", "Expected the HFS+ dmgbuild filesystem");
+  report.dmg.filesystem = volume.FilesystemType;
   const mounted = join(paths.readonlyMount, `${pkg.build.productName}.app`);
   assert.ok(lstatSync(mounted).isDirectory() && !lstatSync(mounted).isSymbolicLink());
   const mountedSnapshot = {
@@ -400,18 +405,13 @@ try {
 } finally {
   if (guardState && !report.unprovenProcess) {
     try {
+      recoverDmgAttachments(stateFile);
       const state = readOwnedDmgState(stateFile);
       for (const attachment of state.attachments.filter((entry) => !entry.detached).reverse()) {
-        const current = queryOwnedDmgImage(attachment.image);
-        assert.ok(
-          current && current.mountpoint === attachment.mountpoint,
-          "Cleanup image/mount identity changed",
-        );
-        runGuardedHdiutil(stateFile, ["detach", "-quiet", attachment.devices[0]]);
+        await detachOwnedDmg(stateFile, attachment.devices[0]);
       }
       report.mountCustody = readOwnedDmgState(stateFile);
-      for (const image of [state.stageImage, state.artifact].filter(Boolean))
-        assert.equal(queryOwnedDmgImage(image), null, "Owned image still mounted");
+      assert.deepEqual(recoverDmgAttachments(stateFile), [], "Owned disk image still mounted");
       report.imagesDetached = true;
     } catch (error) {
       report.unprovenMount = true;

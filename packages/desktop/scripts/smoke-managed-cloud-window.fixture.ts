@@ -9,7 +9,7 @@ import { writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
-import { app, BrowserWindow, session } from "electron";
+import { app, BrowserWindow, desktopCapturer, session } from "electron";
 
 async function main() {
   const directory = process.env.CODESHELL_MANAGED_WINDOW_ROOT!;
@@ -93,6 +93,23 @@ async function main() {
     for (const grant of grants) confine(session.fromPartition(managedCloudPartition(grant)));
     await openManagedCloudWorkbench({ grant: first, projectId, authorized: () => true });
     const win = BrowserWindow.getAllWindows()[0];
+    // Exercise Chromium's permission request on the CI virtual display. The stub
+    // records picker entry without reading a display or offering any real sources.
+    if (process.platform === "linux") {
+      let pickerRequests = 0;
+      desktopCapturer.getSources = async () => {
+        pickerRequests++;
+        return [];
+      };
+      const result = await win.webContents.executeJavaScript(
+        `navigator.mediaDevices.getDisplayMedia({video: true})
+          .then(stream => { stream.getTracks().forEach(track => track.stop()); return "captured"; },
+            error => error.name)`,
+        true,
+      );
+      assert.notEqual(result, "captured");
+      assert.equal(pickerRequests, 1, "trusted top-level workbench must reach source selection");
+    }
     win.hide();
     const partition = managedCloudPartition(first);
     const cookies = await session
@@ -110,7 +127,7 @@ async function main() {
       ),
       { bridge: "undefined", require: "undefined", process: "undefined", cookie: "" },
     );
-    // Electron 33 exposes this native inspection method without a declaration.
+    // Electron exposes this native inspection method without a declaration.
     const prefs = (
       win.webContents as Electron.WebContents & {
         getLastWebPreferences(): Electron.WebPreferences;

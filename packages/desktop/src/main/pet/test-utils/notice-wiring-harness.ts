@@ -1,3 +1,6 @@
+import { testAttention } from "./test-attention.js";
+import { PetNoticeLedger } from "../pet-notice-ledger.js";
+import { PetRuleStore } from "../pet-rule-store.js";
 import { expect } from "bun:test";
 import { scriptedReplyModel } from "./scripted-reply-model.js";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -9,7 +12,7 @@ import type { DesktopNotificationInput } from "../../desktop-notifier.js";
 import type { HostActionHandler } from "../../host-action-dispatch.js";
 import type { GatewayControlEventInput } from "../../im-gateway-control-server.js";
 import type { ImGatewayOwnerChannel } from "../../im-gateway-service.js";
-import { collectImDecisions, PetImDecisions } from "../pet-im-decisions.js";
+import { collectCurrentImDecisions, PetImDecisions } from "../pet-im-decisions.js";
 import type { NoticeSubmission } from "../pet-notice-router.js";
 import type { NoticeOutboxOutcome, NoticeOutboxState } from "../pet-notice-types.js";
 import {
@@ -206,8 +209,20 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     workMemorySegments: [],
   });
   const deriver = new SessionOutcomeDeriver({ now: () => env.clock });
+  const projection: import("../pet-notice-types.js").PetAttentionOptions["source"] = {
+    getSnapshot: snapshot,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
   const wiring = wirePetNotices({
     userDataDir: env.dir,
+    ledger: new PetNoticeLedger({
+      path: join(env.dir, "pet", "notices.json"),
+      now: () => env.clock,
+    }),
+    rules: new PetRuleStore({ path: join(env.dir, "pet", "rules.json"), now: () => env.clock }),
     bridge: {
       setHostActionHandler: (action, registered) => {
         expect(action).toBe(PET_RULE_UPSERT_ACTION);
@@ -217,13 +232,8 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
         };
       },
     },
-    projection: {
-      getSnapshot: snapshot,
-      subscribe: (listener) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-      },
-    },
+    projection,
+    attention: testAttention(projection, () => env.clock),
     longTasks: {
       activeForSession: (id) =>
         tasks.find(
@@ -407,11 +417,14 @@ export function pause(ms = 1): Promise<void> {
  * so a loaded machine cannot fail a test by being slow; `poke` re-drives the
  * work on each round. Without it, a short drain for "nothing happens" checks.
  */
-export async function settle(until?: () => boolean, poke?: () => Promise<void>): Promise<void> {
+export async function settle(
+  until?: () => boolean | Promise<boolean>,
+  poke?: () => Promise<void>,
+): Promise<void> {
   for (let index = 0; index < 20; index += 1) await pause();
   if (!until) return;
   const deadline = Date.now() + SETTLE_DEADLINE_MS;
-  while (!until() && Date.now() < deadline) {
+  while (!(await until()) && Date.now() < deadline) {
     await poke?.();
     await pause(2);
   }
@@ -450,7 +463,8 @@ export function decisionRelay(
   const approvals: unknown[] = [];
   const relay = new PetImDecisions({
     interpret: scriptedReplyModel,
-    read: () => collectImDecisions(h.snapshot(), h.tasks, lines, h.wiring.decisions.deliveryFor),
+    read: () =>
+      collectCurrentImDecisions(h.snapshot(), h.tasks, lines, h.wiring.decisions.deliveryFor),
     now: () => env.clock,
     approve: async (_entry, decision) => {
       approvals.push(decision);
@@ -529,7 +543,7 @@ export function decisionRelay(
     for (let index = 0; index < 3; index += 1) await relay.scan();
     await settle(until, () => relay.scan());
   };
-  const code = () => relay["options"].read()[0]?.code;
+  const code = async () => (await relay["options"].read())[0]?.code;
   return { relay, approvals, raise, poll, code };
 }
 

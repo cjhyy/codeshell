@@ -82,7 +82,7 @@ const execGitAsync = promisify(execFile);
 
 /** Nonblocking project-boundary resolution for UI hosts. */
 export async function resolveProjectRootAsync(cwd: string): Promise<string> {
-  let realCwd = cwd;
+  let realCwd: string;
   try {
     realCwd = await realpath(cwd);
   } catch {
@@ -108,7 +108,7 @@ export function getCurrentBranch(cwd: string): string {
 export function getGitStatus(cwd: string): GitStatusEntry[] {
   // `-z` output is NUL-terminated and unquoted. It must not be trimmed: the
   // fixed-width `XY ` prefix of an unstaged entry starts with a space.
-  const records = gitRaw(cwd, ["status", "--porcelain", "-z"], 10000).split("\0");
+  const records = gitRaw(cwd, ["--no-optional-locks", "status", "--porcelain", "-z"], 10000).split("\0");
   const entries: GitStatusEntry[] = [];
   for (let i = 0; i < records.length; i++) {
     const record = records[i]!;

@@ -35,7 +35,9 @@ const profilesService = readFileSync(
   join(import.meta.dir, "..", "..", "main", "profiles-service.ts"),
   "utf-8",
 );
-const preload = readFileSync(join(import.meta.dir, "..", "..", "preload", "index.ts"), "utf-8");
+const preload = ["index.ts", "configuration-reads.ts"]
+  .map((file) => readFileSync(join(import.meta.dir, "..", "..", "preload", file), "utf-8"))
+  .join("\n");
 const preloadTypes = readFileSync(
   join(import.meta.dir, "..", "..", "preload", "types.d.ts"),
   "utf-8",
@@ -226,7 +228,7 @@ describe("DigitalHumansView contract", () => {
     expect(editor).toContain('basePreset: "general"');
     expect(editor).toContain("profile?.version ? { version: profile.version }");
     expect(profilesService).toContain(
-      'saveWorkspaceProfile({ ...profile, basePreset: "general" })',
+      'saveWorkspaceProfile({ ...profile, basePreset: "general" }, beforeCommit)',
     );
     expect(source).not.toContain('<dd className="mt-1 font-medium">{preview.basePreset}</dd>');
     expect(source).not.toContain('<Badge variant="secondary">{profile.basePreset}</Badge>');
@@ -234,7 +236,7 @@ describe("DigitalHumansView contract", () => {
 
   test("reviews local definition JSON and keeps rare export tools in settings", () => {
     expect(main).toContain('"profiles:pickDefinitionImport"');
-    expect(main).toContain("previewProfileDefinitionImport(filePath)");
+    expect(main).toContain('"profiles/pickedDefinition"');
     expect(main).toContain('"profiles:importReviewedDefinition"');
     expect(main).toContain('"profiles:exportDefinition"');
     expect(preload).toContain("pickProfileDefinitionImport");

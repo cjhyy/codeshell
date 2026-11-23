@@ -25,6 +25,7 @@ function setup() {
   let current: TaskInboxSnapshot = { version: 1, records: [], errors: [] };
   const actions: unknown[] = [];
   const service: TaskInboxIpcService = {
+    applyIntent: async () => ({ status: "ok" }),
     list: () => ({ version: 1, records: [], errors: [] }),
     get: () => undefined,
     reconcile: async () => {
@@ -98,7 +99,9 @@ describe("task inbox private IPC", () => {
     const state = setup();
     const request = { taskKey: "session:s1", action: "cancel", expectedRevision: "r1" };
     await state.handlers.get("taskInbox:act")!(state.event, request);
-    expect(state.actions).toEqual([[request, { webContentsId: 42 }]]);
+    expect(state.actions).toEqual([
+      [request, { webContentsId: 42, assertCurrent: expect.any(Function) }],
+    ]);
     for (const extra of [{ sessionId: "victim" }, { cwd: "/tmp" }, { command: "sh" }]) {
       expect(() =>
         state.handlers.get("taskInbox:act")!(state.event, { ...request, ...extra }),

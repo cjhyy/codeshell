@@ -424,9 +424,10 @@ test("CLI history pages backwards from a previous startIndex", async () => {
   });
   // The phone's paged request is echoed so a late reply cannot land elsewhere.
   const f = harness();
-  await handleCcRoomEvent(f.ctx, {
+  const ctx = {...f.ctx, readCcRoom: async (_method:string,input:{before?:number}) => parseRecentHistory(lines,3,input.before)} as OrchestratorCtx;
+  await handleCcRoomEvent(ctx, {
     type: "ccRoom.readHistory",
-    cwd: "/repo/no-such-transcript",
+    cwd: "/repo/fixture-transcript",
     sessionId: "missing",
     limit: 3,
     before: 4,
@@ -435,8 +436,9 @@ test("CLI history pages backwards from a previous startIndex", async () => {
   });
   expect(f.viewers[0]?.[1]).toMatchObject({
     type: "ccRoom.readHistory.ok",
-    startIndex: 0,
+    startIndex: 1,
     before: 4,
-    hasMore: false,
+    hasMore: true,
+    messages: [{text:"m1"}, {text:"m2"}, {text:"m3"}],
   });
 });

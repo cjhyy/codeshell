@@ -40,14 +40,14 @@ export class PetLongTaskStore {
   constructor(
     private readonly filePath: string,
     private readonly now: () => number = Date.now,
+    private readonly replaceFile?: (from: string, to: string) => Promise<void>,
   ) {}
 
   async load(): Promise<void> {
     try {
-      const parsed = (await readBoundedJson(
-        this.filePath,
-        MAX_LONG_TASK_FILE_BYTES,
-      )) as Partial<PetLongTaskFile> | undefined;
+      const parsed = (await readBoundedJson(this.filePath, MAX_LONG_TASK_FILE_BYTES)) as
+        | Partial<PetLongTaskFile>
+        | undefined;
       if (!parsed) return;
       if (parsed.version !== PET_LONG_TASK_SCHEMA_VERSION || !Array.isArray(parsed.tasks)) return;
       if (parsed.tasks.length > MAX_LOADED_TASK_ROWS) return;
@@ -249,6 +249,8 @@ export class PetLongTaskStore {
   }
 
   private async persist(snapshot: PetLongTaskFile): Promise<void> {
-    await writeOwnerJsonAtomic(this.filePath, snapshot, MAX_LONG_TASK_FILE_BYTES);
+    await writeOwnerJsonAtomic(this.filePath, snapshot, MAX_LONG_TASK_FILE_BYTES, {
+      replaceFile: this.replaceFile,
+    });
   }
 }

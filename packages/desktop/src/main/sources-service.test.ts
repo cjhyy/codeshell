@@ -251,3 +251,24 @@ describe("desktop sources service", () => {
     expect(readFileSync(legacy, "utf8")).toBe("Legacy bytes belong to the workspace");
   });
 });
+
+test("an upload temp prepared before document withdrawal cannot replace the visible document", async () => {
+  const { stageSourceUploads, discardStagedUploads, commitStagedUploads } =
+    await import("./sources-service.js");
+  const picked = join(sourceDir, "notes.txt");
+  writeFileSync(picked, "first");
+  uploadFiles(cwd, [picked]);
+  writeFileSync(picked, "second");
+  const staged = await stageSourceUploads(cwd, [picked], () => {});
+  try {
+    expect(() =>
+      commitStagedUploads(cwd, staged, () => {
+        throw new Error("revoked");
+      }),
+    ).toThrow("revoked");
+    expect(readFileSync(join(cwd, ".code-shell", "uploads", "notes.txt"), "utf8")).toBe("first");
+  } finally {
+    discardStagedUploads(staged);
+  }
+  expect(readdirSync(join(cwd, ".code-shell", "uploads"))).toEqual(["notes.txt"]);
+});

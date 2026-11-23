@@ -1720,9 +1720,14 @@ export class PanelAppBridge {
           this.agentTaskOwner(binding),
           (params ?? {}) as PanelAgentTaskStartInput,
         );
-      case "agent.task.models":
+      case "agent.task.models": {
         this.requirePermission(binding, "agent.task");
-        return this.options.agentTaskModels?.(binding.cwd ?? binding.projectPath) ?? { models: [] };
+        const cwd = binding.cwd ?? binding.projectPath;
+        const catalog = await this.options.agentTaskModels?.(cwd);
+        this.assertLiveProjectBinding(binding);
+        if (cwd !== (binding.cwd ?? binding.projectPath)) throw new Error("Panel workspace changed while reading models");
+        return catalog ?? { models: [] };
+      }
       case "agent.task.list":
         this.requirePermission(binding, "agent.task");
         return this.agentTaskService.list(this.agentTaskOwner(binding));
@@ -2150,6 +2155,7 @@ export class PanelAppBridge {
         cwd,
         sessionId,
         revision: binding.resource.descriptor.revision,
+        signal: binding.bindController?.signal,
         assertAuthorized: () => this.assertSessionBinding(binding),
         isAuthorized: async () => {
           if (
@@ -2662,7 +2668,8 @@ export class PanelAppBridge {
           };
         };
 
-    void dispatch()
+    const submission = output.ready ? output.ready.then(dispatch) : dispatch();
+    void submission
       .then((result) => {
         // Release once the worker has answered. By now either the run finished
         // or it failed; in the success case `context.busy` has long since been
@@ -2684,7 +2691,8 @@ export class PanelAppBridge {
             error instanceof Error ? error.message : String(error)
           }`,
         });
-      });
+      })
+      .finally(() => output.close?.());
 
     return { accepted: true, clientMessageId };
   }

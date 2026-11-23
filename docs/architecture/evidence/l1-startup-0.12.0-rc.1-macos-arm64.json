@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "system": {
+    "macOS": "15.6.1",
+    "darwin": "24.6.0",
+    "arch": "arm64",
+    "cpu": "Apple M4 Pro"
+  },
+  "metric": "Primary renderer first-contentful-paint minus OS-reported creationTime of the packaged Main process (ms).",
+  "protocol": "Five fresh processes and profiles, primed OS file cache from package verification before each launch, startup inspector pause and network guard included, Chromium mock Keychain.",
+  "environment": {
+    "storage": "The baseline was the installed app. The candidate was copied from its read-only DMG to the same local APFS volume and passed codesign --verify --deep --strict before measurement.",
+    "power": "Battery power. An idle-sleep assertion was held for each timed batch.",
+    "display": "The console was reported locked before measurement. A CoreGraphics session sample during the second pair omitted the locked flag. The benchmark requested no unlock and verified that the native primary window was visible for every sample.",
+    "order": "Two rounds on the same Mac, each with five candidate launches followed by five baseline launches."
+  },
+  "candidate": {
+    "version": "0.12.0-rc.1",
+    "electron": "45.4.1",
+    "appTreeSHA256": "3adc74c59123eb80b970532784802562c76112f3c3ed31f19f5f26387de80926",
+    "commit": "67835b7c55883b3200a1f0b0228bf69ccc6a3d40",
+    "releaseWorkflow": "https://github.com/cjhyy/codeshell/actions/runs/44724495125",
+    "artifactId": 14623584439,
+    "dmgSHA256": "f8ddef6b24850ee8625710692b9bee056a999cd49ed07edba5efca2e8760aadb"
+  },
+  "baseline": {
+    "version": "0.11.0-rc.7",
+    "electron": "33.4.11",
+    "appTreeSHA256": "8d4c5ade7e5f83cf0c0d97b9748c7cff7a27084415e7c64a2d38b77981ced035"
+  },
+  "batches": [
+    {
+      "product": "candidate",
+      "timestamp": "2026-11-21T06:48:25.003Z",
+      "samples": [
+        {
+          "processToFirstContentfulPaintMs": 4874,
+          "navigationToFirstContentfulPaintMs": 952
+        },
+        {
+          "processToFirstContentfulPaintMs": 1474,
+          "navigationToFirstContentfulPaintMs": 140
+        },
+        {
+          "processToFirstContentfulPaintMs": 1290,
+          "navigationToFirstContentfulPaintMs": 120
+        },
+        {
+          "processToFirstContentfulPaintMs": 1502,
+          "navigationToFirstContentfulPaintMs": 188
+        },
+        {
+          "processToFirstContentfulPaintMs": 1471,
+          "navigationToFirstContentfulPaintMs": 132
+        }
+      ],
+      "medianMs": 1474
+    },
+    {
+      "product": "baseline",
+      "timestamp": "2026-11-21T06:48:55.001Z",
+      "samples": [
+        {
+          "processToFirstContentfulPaintMs": 1635,
+          "navigationToFirstContentfulPaintMs": 329
+        },
+        {
+          "processToFirstContentfulPaintMs": 1455,
+          "navigationToFirstContentfulPaintMs": 310
+        },
+        {
+          "processToFirstContentfulPaintMs": 1467,
+          "navigationToFirstContentfulPaintMs": 288
+        },
+        {
+          "processToFirstContentfulPaintMs": 1420,
+          "navigationToFirstContentfulPaintMs": 266
+        },
+        {
+          "processToFirstContentfulPaintMs": 1498,
+          "navigationToFirstContentfulPaintMs": 325
+        }
+      ],
+      "medianMs": 1467
+    },
+    {
+      "product": "candidate",
+      "timestamp": "2026-11-21T06:49:18.341Z",
+      "samples": [
+        {
+          "processToFirstContentfulPaintMs": 1381,
+          "navigationToFirstContentfulPaintMs": 152
+        },
+        {
+          "processToFirstContentfulPaintMs": 1471,
+          "navigationToFirstContentfulPaintMs": 160
+        },
+        {
+          "processToFirstContentfulPaintMs": 1208,
+          "navigationToFirstContentfulPaintMs": 124
+        },
+        {
+          "processToFirstContentfulPaintMs": 1301,
+          "navigationToFirstContentfulPaintMs": 120
+        },
+        {
+          "processToFirstContentfulPaintMs": 1272,
+          "navigationToFirstContentfulPaintMs": 120
+        }
+      ],
+      "medianMs": 1301
+    },
+    {
+      "product": "baseline",
+      "timestamp": "2026-11-21T06:49:37.594Z",
+      "samples": [
+        {
+          "processToFirstContentfulPaintMs": 2848,
+          "navigationToFirstContentfulPaintMs": 1595
+        },
+        {
+          "processToFirstContentfulPaintMs": 1722,
+          "navigationToFirstContentfulPaintMs": 482
+        },
+        {
+          "processToFirstContentfulPaintMs": 1475,
+          "navigationToFirstContentfulPaintMs": 310
+        },
+        {
+          "processToFirstContentfulPaintMs": 1484,
+          "navigationToFirstContentfulPaintMs": 347
+        },
+        {
+          "processToFirstContentfulPaintMs": 1514,
+          "navigationToFirstContentfulPaintMs": 364
+        }
+      ],
+      "medianMs": 1514
+    }
+  ],
+  "comparison": {
+    "sampleCountPerVersion": 10,
+    "baselineMedianMs": 1491,
+    "candidateMedianMs": 1426,
+    "candidateMinusBaselineMs": -65,
+    "changePercent": -4.36,
+    "baselineMedianNavigationToPaintMs": 327,
+    "candidateMedianNavigationToPaintMs": 136,
+    "firstLaunch": "The first launch of the copied candidate took 4874 ms. It is included in the pooled median."
+  }
+}

@@ -1337,6 +1337,7 @@ function App() {
     },
   });
 
+  useEffect(() => window.codeshell.onNotificationFallback?.(toast), [toast]);
   useNotificationSessionNavigation({
     sessionIndicesRef,
     selectSession: selectVisibleSession,
@@ -1719,8 +1720,14 @@ function App() {
   };
 
   useEffect(() => {
-    void window.codeshell.pet?.setActiveSession?.(engineSessionIdForActive());
-  }, [activeSessionId, activeProjectBucketSegment, sessionIndices]);
+    // A reloaded window loses its document grant while Mimi is still starting.
+    // The next mount publishes its own selection. Never retry a stale window's id.
+    let current = true;
+    void window.codeshell.pet?.setActiveSession?.(activeEngineSessionId).catch((error) => {
+      if (current) window.codeshell.log("pet.active_session.update_failed", { error: String(error) });
+    });
+    return () => { current = false; };
+  }, [activeEngineSessionId]);
 
   const searchMessages = cloudSelected ? (cloudRuntime?.state.messages ?? []) : state.messages;
   const matchCount = useMemo(() => {

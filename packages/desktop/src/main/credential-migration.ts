@@ -1,13 +1,11 @@
 import {
   getDefaultCredentialCipher,
-  userHome,
   type Credential,
-  type CredentialStoreFile,
   type EncryptionCipher,
+  type AsyncEncryptionCipher,
 } from "@cjhyy/code-shell-core";
-import { mutateJsonFile } from "@cjhyy/code-shell-core/internal";
-import { lstatSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { credentialFiles } from "./credential-file-client.js";
+import type { CredentialFileAddress } from "@cjhyy/code-shell-core/internal/storage";
 
 export interface CredentialMigrationResult {
   stores: number;
@@ -16,8 +14,6 @@ export interface CredentialMigrationResult {
 
 const fileQueues = new Map<string, Promise<void>>();
 const PROBE_SECRET = "__codeshell_migration_probe__";
-const MAX_CREDENTIAL_FILE_BYTES = 32 * 1024 * 1024;
-const MAX_CREDENTIALS = 4_096;
 
 export async function migrateCredentialStore(cwd?: string): Promise<CredentialMigrationResult> {
   const result: CredentialMigrationResult = { stores: 0, credentials: 0 };
@@ -47,18 +43,9 @@ export async function migrateKnownCredentialStores(
 }
 
 async function rewriteScope(scope: "user" | "project", cwd: string | undefined): Promise<number> {
-  const filePath = credentialFilePath(scope, cwd);
-  if (!filePath) return 0;
-  return enqueueForFile(filePath, () => rewriteCredentialFile(filePath));
-}
-
-function credentialFilePath(
-  scope: "user" | "project",
-  cwd: string | undefined,
-): string | undefined {
-  if (scope === "user") return join(userHome(), ".code-shell", "credentials.json");
-  if (!cwd) return undefined;
-  return join(cwd, ".code-shell", "credentials.json");
+  if (scope === "project" && !cwd) return 0;
+  const address: CredentialFileAddress = scope === "user" ? { scope } : { scope, cwd };
+  return enqueueForFile(JSON.stringify(address), () => rewriteCredentialFile(address));
 }
 
 function enqueueForFile<T>(filePath: string, work: () => T | Promise<T>): Promise<T> {
@@ -75,87 +62,50 @@ function enqueueForFile<T>(filePath: string, work: () => T | Promise<T>): Promis
   return current;
 }
 
-function rewriteCredentialFile(filePath: string): number {
-  const parent = dirname(filePath);
-  mkdirSync(parent, { recursive: true, mode: 0o700 });
-  const parentInfo = lstatSync(parent);
-  if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
-    throw new Error("credential migration parent must be a real directory");
-  }
-  const cipher = getDefaultCredentialCipher();
-  return (
-    mutateJsonFile<CredentialStoreFile, number>(filePath, {
-      parse: (raw) => {
-        if (raw === undefined) return { version: 1, credentials: [] };
-        const parsed = JSON.parse(raw) as Partial<CredentialStoreFile>;
-        if (!Array.isArray(parsed.credentials) || parsed.credentials.length > MAX_CREDENTIALS) {
-          throw new Error("credential store is invalid");
+async function rewriteCredentialFile(address: CredentialFileAddress): Promise<number> {
+  const sync = getDefaultCredentialCipher();
+  const cipher: EncryptionCipher | AsyncEncryptionCipher = sync.asynchronous ?? sync;
+  const files = credentialFiles();
+  let target: string | undefined;
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const before = await files.read(address);
+    if (!before.file.credentials.some((c) => typeof c?.secret === "string" && c.secret.length))
+      return 0;
+    if (target === undefined) {
+      try {
+        target =
+          sync.asynchronous?.storagePrefix ?? storagePrefix(await cipher.encrypt(PROBE_SECRET));
+      } catch {
+        return 0;
+      }
+    }
+    if (!target) return 0;
+    let count = 0;
+    const credentials: Credential[] = [];
+    for (const record of before.file.credentials) {
+      const value = record?.secret;
+      if (typeof value !== "string" || !value || storagePrefix(value) === target) {
+        credentials.push(record);
+        continue;
+      }
+      let plaintext: string;
+      try {
+        if (cipher.canDecrypt && !(await cipher.canDecrypt(value))) {
+          credentials.push(record);
+          continue;
         }
-        return { version: 1, credentials: parsed.credentials as Credential[] };
-      },
-      serialize: (file) => `${JSON.stringify(file, null, 2)}\n`,
-      mutation: (file) => {
-        let count = 0;
-        const credentials = file.credentials.map((cred) => {
-          if (!cred || typeof cred !== "object" || !shouldRewriteCredential(cred, cipher)) {
-            return cred;
-          }
-          const secret = cred.secret;
-          if (typeof secret !== "string" || secret.length === 0) return cred;
-          let plaintext: string;
-          try {
-            plaintext = cipher.decrypt(secret);
-          } catch {
-            return cred;
-          }
-          const rewritten = cipher.encrypt(plaintext);
-          count += 1;
-          return { ...cred, secret: rewritten };
-        });
-        return {
-          ...(count > 0 ? { value: { version: 1 as const, credentials } } : {}),
-          result: count,
-        };
-      },
-      mode: 0o600,
-      maxBytes: MAX_CREDENTIAL_FILE_BYTES,
-    }) ?? 0
-  );
-}
-
-export function shouldRewriteCredential(
-  cred: Credential,
-  cipher: EncryptionCipher = getDefaultCredentialCipher(),
-): boolean {
-  const secret = cred.secret;
-  if (typeof secret !== "string" || secret.length === 0) return false;
-  const targetPrefix = targetStoragePrefix(cipher);
-  if (!targetPrefix) return false;
-
-  if (secret.startsWith("enc:")) {
-    if (storagePrefix(secret) === targetPrefix) return false;
-    return canDecrypt(cipher, secret);
+        plaintext = await cipher.decrypt(value);
+      } catch {
+        credentials.push(record);
+        continue;
+      }
+      credentials.push({ ...record, secret: await cipher.encrypt(plaintext) });
+      count++;
+    }
+    if (!count || (await files.commit(address, before.revision, { ...before.file, credentials })))
+      return count;
   }
-  if (secret.startsWith("plain:")) return targetPrefix !== "plain:";
-  return true;
-}
-
-function canDecrypt(cipher: EncryptionCipher, stored: string): boolean {
-  try {
-    if (cipher.canDecrypt && !cipher.canDecrypt(stored)) return false;
-    cipher.decrypt(stored);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function targetStoragePrefix(cipher: EncryptionCipher): string | undefined {
-  try {
-    return storagePrefix(cipher.encrypt(PROBE_SECRET));
-  } catch {
-    return undefined;
-  }
+  throw new Error("Credential store changed repeatedly during migration");
 }
 
 function storagePrefix(stored: string): string {

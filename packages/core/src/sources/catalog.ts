@@ -77,6 +77,7 @@ function load(): SourceDefinition[] {
 function mutateCatalog(
   mutation: (current: SourceDefinition[]) => SourceDefinition[],
   guardedId?: string | string[],
+  beforeCommit?: () => void,
 ): void {
   const path = sourceCatalogPath();
   const directory = dirname(path);
@@ -117,7 +118,11 @@ function mutateCatalog(
       if (Buffer.byteLength(raw) > MAX_CATALOG_BYTES) throw new Error("Source catalog is full");
       return raw;
     },
-    mutation: (current) => ({ value: mutation(current) }),
+    mutation: (current) => {
+      const value = mutation(current);
+      beforeCommit?.();
+      return { value };
+    },
     mode: 0o600,
     maxBytes: MAX_CATALOG_BYTES,
   });
@@ -134,6 +139,7 @@ export function readSourceDefinition(id: string): SourceDefinition | undefined {
 /** Batch create-only write. Existing definitions, including disabled ones, remain untouched. */
 export function insertSourceDefinitionsIfAbsent(
   definitions: SourceDefinition[],
+  beforeCommit?: () => void,
 ): SourceDefinition[] {
   if (!Array.isArray(definitions) || definitions.length > 100)
     throw new Error("Invalid source batch");
@@ -158,13 +164,14 @@ export function insertSourceDefinitionsIfAbsent(
       return [...current, ...inserted];
     },
     parsed.map((source) => source.id),
+    beforeCommit,
   );
   return inserted;
 }
 
 export function saveSourceDefinition(
   definition: SourceDefinition,
-  options: { expectedCollectionRevision?: string | null } = {},
+  options: { expectedCollectionRevision?: string | null; preserveCollections?: boolean; beforeCommit?: () => void } = {},
 ): void {
   const parsed = SourceDefinitionSchema.parse(definition);
   if (parsed.kind === "link") linkSourceView(parsed);
@@ -185,6 +192,8 @@ export function saveSourceDefinition(
   }
   mutateCatalog(
     (current) => {
+      if (options.preserveCollections && (parsed.kind === "collection" || current.some(def => def.id === parsed.id && def.kind === "collection")))
+        throw new Error("资料集请通过文件选择和资料集编辑界面修改。");
       if (cas) {
         const existing = current.find((item) => item.id === parsed.id);
         if (
@@ -205,19 +214,22 @@ export function saveSourceDefinition(
       if (rest.length >= MAX_CATALOG_SOURCES) throw new Error("source catalog is full");
       return [...rest, parsed];
     },
-    cas ? parsed.id : undefined,
+    cas || options.preserveCollections ? parsed.id : undefined,
+    options.beforeCommit,
   );
 }
 
 export function deleteSourceDefinition(
   id: string,
-  options: { expectedCollectionRevision?: string } = {},
+  options: { expectedCollectionRevision?: string; preserveCollections?: boolean; beforeCommit?: () => void } = {},
 ): void {
   SourceDefinitionSchema.shape.id.parse(id);
   const cas = Object.prototype.hasOwnProperty.call(options, "expectedCollectionRevision");
   if (cas) CollectionConfigSchema.shape.revision.parse(options.expectedCollectionRevision);
   mutateCatalog(
     (current) => {
+      if (options.preserveCollections && current.some(def => def.id === id && def.kind === "collection"))
+        throw new Error("请先查看资料集引用影响，再删除资料集。");
       const existing = current.find((item) => item.id === id);
       if (
         cas &&
@@ -228,6 +240,7 @@ export function deleteSourceDefinition(
         throw new Error("Collection revision conflict; reload the collection before deleting");
       return current.filter((source) => source.id !== id);
     },
-    cas ? id : undefined,
+    cas || options.preserveCollections ? id : undefined,
+    options.beforeCommit,
   );
 }

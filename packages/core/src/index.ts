@@ -724,6 +724,7 @@ export {
   type CredentialSnapshotEntry,
   type RemoteLinkActionReply,
   type EncryptionCipher,
+  type AsyncEncryptionCipher,
   PlaintextCipher,
   setDefaultCredentialCipher,
   getDefaultCredentialCipher,

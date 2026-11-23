@@ -27,37 +27,37 @@ function deps() {
 }
 
 describe("resolveAutomationWorkspace", () => {
-  test("uses no-repo when a job has no cwd", () => {
+  test("uses no-repo when a job has no cwd", async () => {
     const trustedNoRepoDeps = { ...deps(), isProjectTrusted: () => true };
-    expect(resolveAutomationWorkspace({}, trustedNoRepoDeps)).toEqual({
+    expect(await resolveAutomationWorkspace({}, trustedNoRepoDeps)).toEqual({
       cwd: "/no-repo",
       projectTrusted: false,
     });
-    expect(resolveAutomationWorkspace({ cwd: "/no-repo" }, trustedNoRepoDeps)).toEqual({
+    expect(await resolveAutomationWorkspace({ cwd: "/no-repo" }, trustedNoRepoDeps)).toEqual({
       cwd: "/no-repo",
       projectTrusted: false,
     });
   });
 
-  test("folds git subdirectories and returns the project WorkspaceContext", () => {
-    expect(resolveAutomationWorkspace({ cwd: "/repo/subdir" }, deps())).toEqual({
+  test("folds git subdirectories and returns the project WorkspaceContext", async () => {
+    expect(await resolveAutomationWorkspace({ cwd: "/repo/subdir" }, deps())).toEqual({
       cwd: "/repo",
       projectTrusted: true,
       workspaceContext,
     });
   });
 
-  test("allows a persisted legacy Session cwd but stops unresolved paths", () => {
-    expect(resolveAutomationWorkspace({ cwd: "/legacy" }, deps())).toEqual({
+  test("allows a persisted legacy Session cwd but stops unresolved paths", async () => {
+    expect(await resolveAutomationWorkspace({ cwd: "/legacy" }, deps())).toEqual({
       cwd: "/legacy",
       projectTrusted: false,
     });
-    expect(resolveAutomationWorkspace({ cwd: "/removed" }, deps())).toBeNull();
+    expect(await resolveAutomationWorkspace({ cwd: "/removed" }, deps())).toBeNull();
   });
 
-  test("stops permanently when a persisted Session cwd or project root was deleted", () => {
+  test("stops permanently when a persisted Session cwd or project root was deleted", async () => {
     expect(
-      resolveAutomationWorkspace(
+      await resolveAutomationWorkspace(
         { cwd: "/deleted-session" },
         {
           ...deps(),
@@ -66,7 +66,7 @@ describe("resolveAutomationWorkspace", () => {
       ),
     ).toBeNull();
     expect(
-      resolveAutomationWorkspace(
+      await resolveAutomationWorkspace(
         { cwd: "/deleted-project" },
         {
           ...deps(),
@@ -77,10 +77,10 @@ describe("resolveAutomationWorkspace", () => {
     ).toBeNull();
   });
 
-  test("stops a legacy job before folding when its registered mount identity was replaced", () => {
+  test("stops a legacy job before folding when its registered mount identity was replaced", async () => {
     let validated: string | undefined;
     expect(
-      resolveAutomationWorkspace(
+      await resolveAutomationWorkspace(
         { cwd: "/retargeted-root" },
         {
           ...deps(),
@@ -96,26 +96,26 @@ describe("resolveAutomationWorkspace", () => {
     expect(validated).toBe("/retargeted-root");
   });
 
-  test("prefers stable ids, ignores stale cwd, and remains bound across make-primary", () => {
+  test("prefers stable ids, ignores stale cwd, and remains bound across make-primary", async () => {
     expect(
-      resolveAutomationWorkspace(
+      await resolveAutomationWorkspace(
         { projectId: "p1", rootId: "r1", cwd: "/forged-or-old-primary" },
         deps(),
       ),
     ).toEqual({ cwd: "/repo", projectTrusted: true, workspaceContext });
   });
 
-  test("invalid, cross-project, removed, or partial ids stop without legacy fallback", () => {
+  test("invalid, cross-project, removed, or partial ids stop without legacy fallback", async () => {
     for (const job of [
       { projectId: "unknown", rootId: "r1", cwd: "/legacy" },
       { projectId: "p1", rootId: "foreign", cwd: "/legacy" },
       { projectId: "p1", cwd: "/legacy" },
       { rootId: "r1", cwd: "/legacy" },
     ]) {
-      expect(resolveAutomationWorkspace(job, deps())).toBeNull();
+      expect(await resolveAutomationWorkspace(job, deps())).toBeNull();
     }
     expect(
-      resolveAutomationWorkspace(
+      await resolveAutomationWorkspace(
         { projectId: "p1", rootId: "r1" },
         { ...deps(), resolveProjectRootById: () => undefined },
       ),

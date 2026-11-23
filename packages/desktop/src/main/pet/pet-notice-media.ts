@@ -91,7 +91,7 @@ export class PetNoticeMediaStore implements NoticeMediaFreezer {
     }
   }
 
-  async sweep(keep: (recordId: string) => boolean): Promise<void> {
+  async sweep(keep: (recordId: string) => boolean | Promise<boolean>): Promise<void> {
     let names: string[];
     try {
       names = await readdir(this.options.root);
@@ -102,7 +102,7 @@ export class PetNoticeMediaStore implements NoticeMediaFreezer {
     }
     for (const name of names) {
       // Only folders this store made; anything else in the directory is left alone.
-      if (isNoticeRecordId(name) && !keep(name)) await this.release(name);
+      if (isNoticeRecordId(name) && !(await keep(name))) await this.release(name);
     }
   }
 }

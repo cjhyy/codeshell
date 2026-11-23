@@ -119,7 +119,7 @@ export function createPanelAgentTaskRuntime(deps: {
         const update = panelAgentTaskProgress(snapshotEntry.event);
         if (update.error) latestError = update.error;
         if (update.progress) input.onProgress(update.progress);
-      });
+      }, input.sessionId);
       let releaseOwnership: (() => void) | undefined;
       try {
         const pending = bridge.requestWorker(
@@ -200,7 +200,7 @@ export function createPanelAgentTaskRuntime(deps: {
       try {
         await bridge.closeSession(sessionId);
       } finally {
-        bridge.forgetSession(sessionId);
+        await bridge.forgetSession(sessionId);
       }
     },
     rebind: (sessionId, owner) => {

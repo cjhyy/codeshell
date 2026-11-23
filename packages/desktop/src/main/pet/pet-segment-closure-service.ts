@@ -19,8 +19,9 @@ import {
   resolveAuxKey,
   resolveLLMConfigForTag,
 } from "@cjhyy/code-shell-core";
-import { join } from "node:path";
-import { readFile } from "node:fs/promises";
+import { join, dirname } from "node:path";
+import { constants } from "node:fs";
+import { open, lstat } from "node:fs/promises";
 import {
   MIN_CLOSURE_MESSAGES,
   SEGMENT_CLOSURE_SYSTEM_PROMPT,
@@ -59,11 +60,42 @@ function sanitize(text: string): string {
 
 /** Read the pet transcript's ordered user/assistant messages for range math. */
 async function defaultReadMessages(transcriptPath: string): Promise<ClosureMessage[]> {
+  const dir = dirname(transcriptPath);
+  const root = dirname(dir);
+  const parent = await lstat(root);
+  const session = await lstat(dir);
+  if (!parent.isDirectory() || !session.isDirectory()) return [];
+  const file = await open(
+    transcriptPath,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+  );
+  const current = async () => {
+    const [p, d, entry, fd] = await Promise.all([
+      lstat(root),
+      lstat(dir),
+      lstat(transcriptPath),
+      file.stat(),
+    ]);
+    return (
+      p.isDirectory() &&
+      p.dev === parent.dev &&
+      p.ino === parent.ino &&
+      d.isDirectory() &&
+      d.dev === session.dev &&
+      d.ino === session.ino &&
+      entry.isFile() &&
+      fd.isFile() &&
+      entry.dev === fd.dev &&
+      entry.ino === fd.ino
+    );
+  };
   let text: string;
   try {
-    text = await readFile(transcriptPath, "utf-8");
-  } catch {
-    return [];
+    if (!(await current())) return [];
+    text = await file.readFile("utf8");
+    if (!(await current())) return [];
+  } finally {
+    await file.close();
   }
   const messages: ClosureMessage[] = [];
   let droppedClientMessageIds: string[] = [];
@@ -178,14 +210,46 @@ export interface PetSegmentClosureService {
   }): Promise<Array<{ role: "user" | "assistant"; text: string }>>;
 }
 
+/** Prepared in the dedicated transcript/history worker before the utility's model request. */
+export function petSegmentTranscript(transcriptPath: string, read = defaultReadMessages) {
+  return {
+    async prepare(input: SegmentClosureInput) {
+      const messages = await read(transcriptPath);
+      const window = locateClosureWindow(
+        messages,
+        input.closingBoundaryMessageId,
+        input.nextBoundaryMessageId,
+      );
+      if (!window) return null;
+      const count = window.messages.filter((message) => message.text.trim()).length;
+      if (count < MIN_CLOSURE_MESSAGES) return null;
+      return {
+        range: window.range,
+        messageCount: count,
+        prompt: sanitize(buildClosureInput(window.messages)),
+      };
+    },
+    async read(range: { start: number; end: number }) {
+      const messages = await read(transcriptPath);
+      const start = Math.max(0, range.start);
+      const end = Math.min(messages.length, range.end);
+      if (end <= start) return [];
+      return messages.slice(start, end).map(({ role, text }) => ({ role, text }));
+    },
+  };
+}
 export function createPetSegmentClosureService(deps: {
   petSessionId: string;
   sessionsRootDir: string;
-  journal: PetJournalStore;
-  memory: PetMemoryStore;
+  journal: Pick<PetJournalStore, "record"> & {
+    load?(): Promise<void>;
+    recordedSegmentIds(): Set<string> | Promise<Set<string>>;
+  };
+  memory: Pick<PetMemoryStore, "remember">;
   /** Whether auto-extraction is enabled; when false, journal + memory are skipped. */
   autoExtractEnabled: () => boolean;
   cwd?: string;
+  transcript?: ReturnType<typeof petSegmentTranscript>;
   /** Injectable transcript reader (defaults to reading the pet transcript file). */
   readMessages?: (transcriptPath: string) => Promise<ClosureMessage[]>;
   /** Injectable aux call (defaults to a real one-shot aux client). */
@@ -193,31 +257,29 @@ export function createPetSegmentClosureService(deps: {
 }): PetSegmentClosureService {
   const readMessages = deps.readMessages ?? defaultReadMessages;
   const generate = deps.generate ?? createDefaultGenerate(deps.cwd ?? process.cwd());
-  const transcriptPath = join(deps.sessionsRootDir, deps.petSessionId, "transcript.jsonl");
+  const transcript =
+    deps.transcript ??
+    petSegmentTranscript(
+      join(deps.sessionsRootDir, deps.petSessionId, "transcript.jsonl"),
+      readMessages,
+    );
 
   return {
     async close(input) {
-      let messages: ClosureMessage[];
+      let window: Awaited<ReturnType<typeof transcript.prepare>>;
       try {
-        messages = await readMessages(transcriptPath);
+        window = await transcript.prepare(input);
       } catch (error) {
-        dlog("main", "pet.closure.read.failed", { error: String(error) });
+        if ((error as NodeJS.ErrnoException)?.code !== "ENOENT")
+          dlog("main", "pet.closure.read.failed", { error: String(error) });
         return null;
       }
-      const window = locateClosureWindow(
-        messages,
-        input.closingBoundaryMessageId,
-        input.nextBoundaryMessageId,
-      );
       if (!window) return null;
-      const meaningful = window.messages.filter((message) => message.text.trim().length > 0);
-      if (meaningful.length < MIN_CLOSURE_MESSAGES) return null;
-
       // Extraction (journal + memory) is gated by the preference; context
       // archival is not — the caller still archives the returned range so a
       // disabled toggle cannot let the model context grow without bound.
       if (deps.autoExtractEnabled()) {
-        const promptInput = sanitize(buildClosureInput(window.messages));
+        const promptInput = window.prompt;
         let extraction: ClosureExtraction | null = null;
         try {
           extraction = await withDesktopSessionModelTrace(
@@ -229,7 +291,7 @@ export function createPetSegmentClosureService(deps: {
         } catch (error) {
           dlog("main", "pet.closure.generate.failed", { error: String(error) });
         }
-        if (extraction) {
+        if (extraction && deps.autoExtractEnabled()) {
           try {
             await deps.journal.record({
               segmentId: input.segmentId,
@@ -237,13 +299,14 @@ export function createPetSegmentClosureService(deps: {
               summary: extraction.summary,
               startedAt: input.startedAt,
               endedAt: input.endedAt,
-              messageCount: meaningful.length,
+              messageCount: window.messageCount,
               range: window.range,
             });
           } catch (error) {
             dlog("main", "pet.closure.journal.failed", { error: String(error) });
           }
           for (const text of extraction.memories) {
+            if (!deps.autoExtractEnabled()) break;
             try {
               await deps.memory.remember(text, "auto", { segmentId: input.segmentId });
             } catch (error) {
@@ -263,8 +326,8 @@ export function createPetSegmentClosureService(deps: {
       // journal already recorded; the last segment stays open until its own
       // boundary closes it.
       if (segments.length <= 1) return;
-      await deps.journal.load().catch(() => undefined);
-      const recorded = deps.journal.recordedSegmentIds();
+      await deps.journal.load?.().catch(() => undefined);
+      const recorded = await deps.journal.recordedSegmentIds();
       const settled = segments.slice(0, -1);
       for (let index = 0; index < settled.length; index += 1) {
         const segment = settled[index]!;
@@ -296,19 +359,13 @@ export function createPetSegmentClosureService(deps: {
     },
 
     async readSegmentMessages(range) {
-      let messages: ClosureMessage[];
       try {
-        messages = await readMessages(transcriptPath);
+        return await transcript.read(range);
       } catch (error) {
-        dlog("main", "pet.closure.read.failed", { error: String(error) });
+        if ((error as NodeJS.ErrnoException)?.code !== "ENOENT")
+          dlog("main", "pet.closure.read.failed", { error: String(error) });
         return [];
       }
-      const start = Math.max(0, range.start);
-      const end = Math.min(messages.length, range.end);
-      if (end <= start) return [];
-      return messages
-        .slice(start, end)
-        .map((message) => ({ role: message.role, text: message.text }));
     },
   };
 }

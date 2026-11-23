@@ -13,6 +13,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedViewOnlyWorkbench,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -70,6 +71,7 @@ ipcMain.handle = (channel, listener) => handle(channel, async (...args) => {
 `,
     { mode: 0o600 },
   );
+  await seedViewOnlyWorkbench(isolated);
   await launch();
 }
 
@@ -86,8 +88,6 @@ async function launch() {
   await win.evaluate(() => localStorage.setItem("codeshell.uiLanguage", "zh"));
   await win.reload();
   await win.setViewportSize({ width: 390, height: 844 });
-  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
-  if (await viewOnly.isVisible()) await viewOnly.click();
   await navigateSettingsMenu(win, /^(凭证|Credentials)$/i);
   await win.getByRole("tab", { name: /^(?:API 密钥|API keys)(?:\s|$)/i }).click();
 }

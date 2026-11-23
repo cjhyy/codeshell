@@ -11,7 +11,7 @@ import {
   type ExternalApprovalEvent,
   type ExternalApprovalRequest,
 } from "../external-runtime-approvals.js";
-import { collectImDecisions, PetImDecisions, type ImDecision } from "./pet-im-decisions.js";
+import { collectCurrentImDecisions, PetImDecisions, type ImDecision } from "./pet-im-decisions.js";
 import {
   externalDecisionCode,
   externalDecisionRequest,
@@ -100,7 +100,12 @@ function setup(
       {
         read: () => {
           if (nativeReadFails) throw new Error("projection unreadable");
-          return collectImDecisions(h.snapshot(), h.tasks, lines, h.wiring.decisions.deliveryFor);
+          return collectCurrentImDecisions(
+            h.snapshot(),
+            h.tasks,
+            lines,
+            h.wiring.decisions.deliveryFor,
+          );
         },
         approve: async (_entry, decision) => void nativeAnswers.push(decision),
       },
@@ -286,7 +291,7 @@ describe("external runtime decision prompts", () => {
     expect(await t.decisions.reply({ message: `回答 ${code} 1` })).toBeUndefined();
     expect(t.router.pendingAll()).toHaveLength(1);
     // An entry claiming another Session for this request id settles nothing.
-    const [entry] = t.h.wiring.externalDecisions.read();
+    const [entry] = await t.h.wiring.externalDecisions.read();
     const forged = { ...entry!, envelope: { ...entry!.envelope, sessionId: SID } };
     await expect(t.h.wiring.externalDecisions.approve(forged, { approved: true })).rejects.toThrow(
       "no longer pending",
@@ -404,9 +409,9 @@ describe("external runtime decision prompts", () => {
     t.raiseNative();
     const { decision, code } = t.ask(bash);
     await t.graceOver(() => t.h.ownerSends.length === 2);
-    const nativeCode = t.decisions["options"]
-      .read()
-      .find((entry) => entry.envelope.sessionId === SID)!.code;
+    const nativeCode = (await t.decisions["options"].read()).find(
+      (entry) => entry.envelope.sessionId === SID,
+    )!.code;
     expect(nativeCode).not.toBe(code);
     await settle(() => t.promptOf(nativeCode)?.phase === "im" && t.promptOf(code)?.phase === "im");
 
@@ -482,9 +487,9 @@ describe("external runtime decision prompts", () => {
     t.raiseNative();
     const { code } = t.ask(bash);
     await t.graceOver(() => t.h.ownerSends.length === 2);
-    const nativeCode = t.decisions["options"]
-      .read()
-      .find((entry) => entry.envelope.sessionId === SID)!.code;
+    const nativeCode = (await t.decisions["options"].read()).find(
+      (entry) => entry.envelope.sessionId === SID,
+    )!.code;
     await settle(() => t.promptOf(nativeCode)?.phase === "im");
     t.router.cancelSession(XID);
     await settle(() => t.promptOf(code)?.phase === "revoked");
@@ -499,9 +504,9 @@ describe("external runtime decision prompts", () => {
     await watchBlocked(SID);
     t.raiseNative();
     await t.graceOver(() => t.h.ownerSends.length === 1);
-    const nativeCode = t.decisions["options"]
-      .read()
-      .find((entry) => entry.envelope.sessionId === SID)!.code;
+    const nativeCode = (await t.decisions["options"].read()).find(
+      (entry) => entry.envelope.sessionId === SID,
+    )!.code;
     await settle(() => t.promptOf(nativeCode)?.phase === "im");
     t.failNativeReads(true);
     // Answered on the desktop meanwhile: a read that saw nothing cannot tell.
@@ -600,7 +605,7 @@ describe("reading both sources", () => {
   const native = entry(SID, "req-1");
   const external = entry(XID, "external-approval-1");
 
-  test("a source that fails to read is logged and leaves the other's decisions", () => {
+  test("a source that fails to read is logged and leaves the other's decisions", async () => {
     const failing = new Set<string>();
     const failures: Array<[string, string]> = [];
     const source = (name: string, entries: ImDecision[]) => () => {
@@ -616,19 +621,19 @@ describe("reading both sources", () => {
       { read: source("native", [native]), approve: async () => undefined },
       (name, error) => failures.push([name, String(error)]),
     );
-    expect(both.read()).toEqual([native, external]);
+    expect(await both.read()).toEqual([native, external]);
     expect(both.unreadDecisions?.()).toBeUndefined();
     failing.add("native");
-    expect(both.read()).toEqual([external]);
+    expect(await both.read()).toEqual([external]);
     // What the read could not see has not ended.
     const missed = both.unreadDecisions?.();
     expect([missed?.(SID, "req-1"), missed?.(XID, "external-approval-1")]).toEqual([true, false]);
     failing.clear();
     failing.add("external");
-    expect(both.read()).toEqual([native]);
+    expect(await both.read()).toEqual([native]);
     expect(both.unreadDecisions?.()?.(XID, "external-approval-1")).toBe(true);
     failing.add("native");
-    expect(both.read()).toEqual([]);
+    expect(await both.read()).toEqual([]);
     expect(failures.map(([name]) => name)).toEqual(["native", "external", "native", "external"]);
     expect(failures[0]![1]).toContain("native unreadable");
   });
@@ -690,7 +695,7 @@ describe("external decision requests as prompts read them", () => {
     await watchBlocked();
     const { requestId, code } = t.ask(bash);
     await t.graceOver(() => t.promptOf(code)?.phase === "im");
-    const [entry] = t.h.wiring.externalDecisions.read();
+    const [entry] = await t.h.wiring.externalDecisions.read();
     expect(t.router.settle(requestId, { approved: false } satisfies ExternalApprovalDecision)).toBe(
       true,
     );

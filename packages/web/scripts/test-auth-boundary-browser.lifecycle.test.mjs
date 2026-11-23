@@ -90,6 +90,9 @@ test("original incognito options and 7s, 1s, 2.5s trusted native-focus budgets r
     fingerprint(calls("page.setDefaultTimeout")[0]),
     "32cdf8813b7ae14add61831820427c80efbee77dafc754f31a158d931f0f4d6d",
   );
+  const boot = declaration("boot").body.getText(parsed);
+  assert.ok(boot.indexOf("await page.bringToFront()") > boot.indexOf("await context.newPage()"));
+  assert.ok(boot.indexOf("await page.bringToFront()") < boot.indexOf("await page.goto("));
   const focus = calls("run")[0].arguments[1].getText(parsed);
   assert.match(focus, /timeout: 1_000/);
   assert.match(focus, /timeout: 2_500/);

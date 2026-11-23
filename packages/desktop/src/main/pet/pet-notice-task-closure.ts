@@ -1,3 +1,4 @@
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import type { PetDeliveryResolver } from "./pet-delivery-plan.js";
 import {
@@ -6,7 +7,7 @@ import {
   type NoticeMedia,
   type NoticeSubmission,
 } from "./pet-notice-types.js";
-import type { PetRuleStore, NoticeRule } from "./pet-rule-store.js";
+import type { NoticeRule } from "./pet-rule-store.js";
 
 const MAX_TITLE = 200;
 const MAX_SUMMARY = 2_000;
@@ -27,7 +28,7 @@ export function textLine(value: unknown, max: number): string | undefined {
 }
 
 export interface PetTaskClosureDeps {
-  ruleStore: PetRuleStore;
+  ruleStore: PetRuleAccess;
   deliveries: Pick<PetDeliveryResolver, "plan" | "taskOrigin">;
   /** Stores loaded (the wiring's `ready`). */
   ready: Promise<void>;
@@ -72,30 +73,26 @@ export function createTaskClosureAdapter(deps: PetTaskClosureDeps): PetTaskClosu
    * task too, so its end spends them. Otherwise a paused delegation rule
    * outlives its task and, resumed later, fires on the owner's own turns.
    */
-  const pausedDelegation = (sessionId: string): NoticeRule[] =>
-    ruleStore
-      .list()
-      .filter(
-        (rule) =>
-          rule.origin === "delegation" &&
-          rule.state === "paused" &&
-          rule.when.kind === "session" &&
-          rule.when.sessionId === sessionId,
-      );
+  const pausedDelegation = async (sessionId: string): Promise<NoticeRule[]> =>
+    (await ruleStore.list()).filter(
+      (rule) =>
+        rule.origin === "delegation" &&
+        rule.state === "paused" &&
+        rule.when.kind === "session" &&
+        rule.when.sessionId === sessionId,
+    );
 
   async function armDelegationRule(task: PetLongTask): Promise<void> {
     try {
       await ready;
       // A rule the owner set on this Session (even paused) is their choice; never rewrite it.
-      const ownerRule = ruleStore
-        .list()
-        .some(
-          (rule) =>
-            rule.origin === "user" &&
-            rule.when.kind === "session" &&
-            rule.when.sessionId === task.sessionId &&
-            (rule.state === "active" || rule.state === "paused"),
-        );
+      const ownerRule = (await ruleStore.list()).some(
+        (rule) =>
+          rule.origin === "user" &&
+          rule.when.kind === "session" &&
+          rule.when.sessionId === task.sessionId &&
+          (rule.state === "active" || rule.state === "paused"),
+      );
       if (ownerRule) {
         log("pet.notice.delegation_rule_skipped", { sessionId: task.sessionId, reason: "user" });
         return;
@@ -130,10 +127,10 @@ export function createTaskClosureAdapter(deps: PetTaskClosureDeps): PetTaskClosu
       // outlive it and fire on the owner's own later turns in that Session.
       await ready;
       await spend([
-        ...ruleStore
-          .activeForSession(task.sessionId)
-          .filter((rule) => rule.origin === "delegation"),
-        ...pausedDelegation(task.sessionId),
+        ...(await ruleStore.activeForSession(task.sessionId)).filter(
+          (rule) => rule.origin === "delegation",
+        ),
+        ...(await pausedDelegation(task.sessionId)),
       ]);
       return;
     }
@@ -174,7 +171,7 @@ export function createTaskClosureAdapter(deps: PetTaskClosureDeps): PetTaskClosu
       ...(actions ? { actions } : {}),
     });
     // This notice satisfies every Session rule that was waiting for the outcome.
-    await spend([...plan.rules, ...pausedDelegation(task.sessionId)]);
+    await spend([...plan.rules, ...(await pausedDelegation(task.sessionId))]);
   }
 
   return { notifyTaskClosed, armDelegationRule };

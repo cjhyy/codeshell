@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { registerCloudAccountIpc } from "../main/cloud-account-ipc.js";
+import { registerAccountDeviceIpc } from "../main/account-device-ipc.js";
+
 const desktopRoot = resolve(import.meta.dir, "../..");
 
 function sourceFiles(relativeRoot: string): string[] {
@@ -20,11 +23,63 @@ function literalChannels(files: string[], expression: RegExp): Set<string> {
   return channels;
 }
 
+function registeredAccountChannels(): Set<string> {
+  const channels = new Set<string>();
+  const ipcMain = {
+    handle(channel: string) {
+      if (channels.has(channel)) throw Error(`IPC channel already registered: ${channel}`);
+      channels.add(channel);
+    },
+    removeHandler(channel: string) {
+      channels.delete(channel);
+    },
+  };
+  const unused = (): never => {
+    throw Error("Registering IPC handlers must not access an account");
+  };
+  registerCloudAccountIpc({
+    ipcMain,
+    isMainWindow: () => false,
+    manager: {
+      status: unused,
+      resume: unused,
+      capabilities: unused,
+      signIn: unused,
+      signInWithBrowser: unused,
+      signInWithGitHub: unused,
+      linkGitHub: unused,
+      profile: unused,
+      manageLinks: unused,
+      cancelSignIn: unused,
+      logout: unused,
+    },
+  });
+  registerAccountDeviceIpc({
+    ipcMain,
+    windows: () => [],
+    service: {
+      setEventSink: () => {},
+      releaseOwner: unused,
+      retireIdentity: unused,
+      list: unused,
+      projects: unused,
+      connect: unused,
+      resume: unused,
+      send: unused,
+      approve: unused,
+      stop: unused,
+      close: unused,
+    },
+  });
+  return channels;
+}
+
 function registeredMainHandleChannels(files: string[]): Set<string> {
   const channels = literalChannels(
     files,
     /(?:ipcMain|options\.ipcMain)\.handle\(\s*["']([^"']+)["']/g,
   );
+  for (const channel of registeredAccountChannels()) channels.add(channel);
   for (const file of files) {
     const source = readFileSync(file, "utf8");
     const constants = new Map<string, string>();
@@ -54,6 +109,22 @@ describe("desktop IPC contract", () => {
     expect(preloadInvokes.size).toBeGreaterThan(300);
   });
 
+  test("account and device preload methods match the channels registered with Electron", () => {
+    const cloudInvokes = literalChannels(
+      sourceFiles("src/preload"),
+      /ipcRenderer\.invoke\(\s*["'](cloudAccount:[^"']+)["']/g,
+    );
+    const deviceMethods = literalChannels(
+      [join(desktopRoot, "src/preload/account-device-api.ts")],
+      /\binvoke(?:Raw)?\(\s*["']([^"']+)["']/g,
+    );
+    const preload = [
+      ...cloudInvokes,
+      ...[...deviceMethods].map((method) => `accountDevice:${method}`),
+    ];
+    expect(preload.sort()).toEqual([...registeredAccountChannels()].sort());
+  });
+
   test("exposes Session-authoritative workspace, git/profile, and file APIs end to end", () => {
     const mainHandles = registeredMainHandleChannels(sourceFiles("src/main"));
     const preloadInvokes = literalChannels(
@@ -65,20 +136,61 @@ describe("desktop IPC contract", () => {
       "workspace:authority",
       "projectRegistry:migrateSessionMainRoot",
       "sessions:setArchived",
-      "workspace:gitStatus",
-      "workspace:gitBranches",
-      "workspace:profiles",
-      "review:status",
-      "review:diff",
-      "review:recentCommits",
-      "fsSession:readDir",
-      "fsSession:readFile",
-      "fsSession:exists",
     ];
 
     for (const channel of channels) {
       expect(preloadInvokes).toContain(channel);
       expect(mainHandles).toContain(channel);
+    }
+  });
+
+  test("Git review uses scoped Host methods and has no legacy Main reads", () => {
+    const main = registeredMainHandleChannels(sourceFiles("src/main"));
+    const preload = readFileSync(join(desktopRoot, "src/preload/project-authority-api.ts"), "utf8");
+    for (const [oldChannel, method] of [
+      ["workspace:gitStatus", "workspace/gitStatus"],
+      ["workspace:gitBranches", "workspace/gitBranches"],
+      ["workspace:profiles", "workspace/profiles"],
+      ["workspace:list", "workspace/list"],
+      ["workspace:diff", "workspace/diff"],
+      ["files:searchProject", "files/searchProject"],
+      ["fsRoot:readDir", "files/list"],
+      ["fsRoot:readFile", "files/read"],
+      ["fsRoot:exists", "files/exists"],
+      ["fsSession:readDir", "files/list"],
+      ["fsSession:readFile", "files/read"],
+      ["fsSession:exists", "files/exists"],
+      ["fsSession:readFileVersion", "files/version"],
+      ["fsRoot:readFileVersion", "files/version"],
+      ["git:projectStatus", "git/projectStatus"], ["git:projectBranches", "git/projectBranches"],
+      ["review:status", "review/status"], ["review:diff", "review/diff"],
+      ["review:recentCommits", "review/commits"], ["review:preparePrompt", "review/prompt"],
+    ]) {
+      expect(main).not.toContain(oldChannel);
+      expect(preload).toContain(`read("${method}"`);
+    }
+  });
+
+  test("plugin, skill and model configuration reads use only the negotiated Host methods", () => {
+    const main = registeredMainHandleChannels(sourceFiles("src/main"));
+    const preload = sourceFiles("src/preload").map(file => readFileSync(file, "utf8")).join("\n");
+    const oldToNew = {
+      "sessions:list": "sessions/history",
+      "marketplace:list": "marketplace/list", "marketplace:load": "marketplace/load",
+      "marketplace:recommended": "marketplace/recommended", "plugins:installJobs": "marketplace/jobs",
+      "skills:list": "skills/list", "skills:read": "skills/body", "skills:checkUpdate": "skills/checkUpdate",
+      "capabilities:list": "capabilities/list", "plugins:list": "plugins/list",
+      "plugins:detail": "plugins/detail", "plugins:media": "plugins/media",
+      "plugin-commands:list": "plugins/commands", "plugin-commands:expand": "plugins/expandCommand",
+      "hooks:listPlugin": "plugins/hooks", "mcp:listPluginTrust": "mcp/pluginTrust",
+      "catalog:list": "models/catalog", "catalog:origins": "models/catalogOrigins",
+      "models:list": "models/provider", "models:resolve-meta": "models/meta",
+      "models:reasoning-control": "models/reasoning",
+    };
+    for (const [channel, method] of Object.entries(oldToNew)) {
+      expect(main).not.toContain(channel);
+      expect(preload).not.toContain(JSON.stringify(channel));
+      expect(preload).toContain(`read("${method}"`);
     }
   });
 
@@ -132,13 +244,6 @@ describe("desktop IPC contract", () => {
       "sources:unbindProject",
       "sources:pickAndUploadProject",
       "sources:deleteProjectUpload",
-      "files:searchProject",
-      "fsRoot:readDir",
-      "fsRoot:readFile",
-      "fsRoot:exists",
-      "fsSession:readDir",
-      "fsSession:readFile",
-      "fsSession:exists",
     ];
 
     for (const channel of retired) {
@@ -204,17 +309,17 @@ describe("desktop IPC contract", () => {
 test("preload version bridge forwards opaque authority ids and reference", async () => {
   const { createProjectAuthorityApi } = await import("./project-authority-api.js");
   const calls: unknown[][] = [];
-  const api = createProjectAuthorityApi({
-    invoke: async (...args: unknown[]) => {
+  const api = createProjectAuthorityApi({} as never, undefined, {
+    readBusiness: async (...args: unknown[]) => {
       calls.push(args);
       return { status: "unavailable", reason: "object-missing" };
     },
-  } as any);
+  } as Parameters<typeof createProjectAuthorityApi>[2]);
   const ref = { kind: "git-blob" } as any;
   await api.readSessionFileVersion("session", "root", ref);
   await api.readProjectFileVersion("project", "root", ref);
   expect(calls).toEqual([
-    ["fsSession:readFileVersion", "session", "root", ref],
-    ["fsRoot:readFileVersion", "project", "root", ref],
+    ["files/version", { owner: { sessionId: "session" }, rootId: "root", ref }],
+    ["files/version", { owner: { projectId: "project" }, rootId: "root", ref }],
   ]);
 });

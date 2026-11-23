@@ -16,22 +16,17 @@ import {
 } from "@cjhyy/code-shell-link";
 import type {
   AddLinkedFileSourcesInput,
+  LinkedFileProject,
   LinkedFileSourceApi,
   LinkedFileSourceSnapshot,
 } from "../shared/linked-file-sources.js";
-
-export interface LinkedFileProject {
-  projectId: string;
-  rootId: string;
-  cwd: string;
-  canonicalIdentity: string;
-}
 
 interface LinkedFileServiceDeps {
   assertCurrent(): void;
   resolveProject(projectId: string): Promise<LinkedFileProject>;
   assertProjectCurrent(project: LinkedFileProject): void;
-  snapshot(cwd: string): LinkSnapshot;
+  snapshot(cwd: string): Pick<LinkSnapshot, "connections">;
+  beforeCatalogCommit?(): void;
   /** Test seam around the real cross-process project settings transaction. */
   settings?: (cwd: string) => Pick<SettingsManager, "mutateSettingsForScope">;
 }
@@ -51,7 +46,9 @@ function projectId(input: unknown): asserts input is string {
     throw new Error("Invalid project identity");
 }
 
-function parseInput(input: AddLinkedFileSourcesInput): AddLinkedFileSourcesInput {
+export function parseLinkedFileSelection(
+  input: AddLinkedFileSourcesInput,
+): AddLinkedFileSourcesInput {
   if (
     !input ||
     typeof input !== "object" ||
@@ -82,7 +79,7 @@ function reviewRevision(connection: MaskedLinkConnection, project: LinkedFilePro
 }
 
 function connectionFor(
-  snapshot: LinkSnapshot,
+  snapshot: Pick<LinkSnapshot, "connections">,
   input: AddLinkedFileSourcesInput,
   project: LinkedFileProject,
 ) {
@@ -141,6 +138,50 @@ function assertDefinitions(definitions: SourceDefinition[]) {
   }
 }
 
+export function describeLinkedFileSources(
+  project: LinkedFileProject,
+  snapshot: Pick<LinkSnapshot, "connections">,
+): LinkedFileSourceSnapshot {
+  return {
+    connections: snapshot.connections.filter(readyFileConnection).map((connection) => {
+      const capability = getLinkProviderManifest(connection.providerId)!.fileSelection!;
+      const restricted = connection.authSource === "remote-link";
+      return {
+        id: connection.id,
+        providerId: connection.providerId,
+        label: connection.label,
+        accountLabel: connection.account?.label,
+        revision: reviewRevision(connection, project),
+        selection: capability.kind,
+        resources: restricted
+          ? (connection.account?.resourceGroups
+              ?.find((group) => group.id === capability.resourceGroup)
+              ?.items.map((item) => ({ id: item.id, label: item.label })) ?? [])
+          : [],
+        resourceRestricted: restricted,
+      };
+    }),
+    limitations: snapshot.connections
+      .flatMap((connection) => {
+        const manifest = getLinkProviderManifest(connection.providerId);
+        return connection.status === "connected" && !readyFileConnection(connection)
+          ? [
+              {
+                providerId: connection.providerId,
+                label: manifest?.displayName ?? connection.label,
+                reason:
+                  manifest?.fileSelectionLimitation ?? ("file-selection-unavailable" as const),
+              },
+            ]
+          : [];
+      })
+      .filter(
+        (item, index, all) =>
+          all.findIndex((other) => other.providerId === item.providerId) === index,
+      ),
+  };
+}
+
 /** Selection stores exact references only. No provider requests or content reads occur here. */
 export function createLinkedFileSourceService(deps: LinkedFileServiceDeps): LinkedFileSourceApi {
   async function resolve(id: string) {
@@ -157,47 +198,10 @@ export function createLinkedFileSourceService(deps: LinkedFileServiceDeps): Link
       const snapshot = deps.snapshot(project.cwd);
       deps.assertCurrent();
       deps.assertProjectCurrent(project);
-      return {
-        connections: snapshot.connections.filter(readyFileConnection).map((connection) => {
-          const capability = getLinkProviderManifest(connection.providerId)!.fileSelection!;
-          const restricted = connection.authSource === "remote-link";
-          return {
-            id: connection.id,
-            providerId: connection.providerId,
-            label: connection.label,
-            accountLabel: connection.account?.label,
-            revision: reviewRevision(connection, project),
-            selection: capability.kind,
-            resources: restricted
-              ? (connection.account?.resourceGroups
-                  ?.find((group) => group.id === capability.resourceGroup)
-                  ?.items.map((item) => ({ id: item.id, label: item.label })) ?? [])
-              : [],
-            resourceRestricted: restricted,
-          };
-        }),
-        limitations: snapshot.connections
-          .flatMap((connection) => {
-            const manifest = getLinkProviderManifest(connection.providerId);
-            return connection.status === "connected" && !readyFileConnection(connection)
-              ? [
-                  {
-                    providerId: connection.providerId,
-                    label: manifest?.displayName ?? connection.label,
-                    reason:
-                      manifest?.fileSelectionLimitation ?? ("file-selection-unavailable" as const),
-                  },
-                ]
-              : [];
-          })
-          .filter(
-            (item, index, all) =>
-              all.findIndex((other) => other.providerId === item.providerId) === index,
-          ),
-      };
+      return describeLinkedFileSources(project, snapshot);
     },
     async add(id, rawInput) {
-      const input = parseInput(rawInput);
+      const input = parseLinkedFileSelection(rawInput);
       const project = await resolve(id);
       const connection = connectionFor(deps.snapshot(project.cwd), input, project);
       const files = selectedFiles(connection, input);
@@ -218,7 +222,7 @@ export function createLinkedFileSourceService(deps: LinkedFileServiceDeps): Link
         selectedFiles(connectionFor(deps.snapshot(project.cwd), input, project), input);
       };
       assertCurrent();
-      const inserted = insertSourceDefinitionsIfAbsent(definitions);
+      const inserted = insertSourceDefinitionsIfAbsent(definitions, deps.beforeCatalogCommit);
       try {
         assertCurrent();
         assertDefinitions(definitions);

@@ -11,6 +11,10 @@ import {
   linkActionTool,
   type RemoteLinkConfiguration,
 } from "@cjhyy/code-shell-core";
+import {
+  credentialFileCommand,
+  type CredentialFileSnapshot,
+} from "@cjhyy/code-shell-core/internal/storage";
 import { LinkDeviceOAuthBroker } from "./device-oauth.js";
 import {
   createLinkService,
@@ -55,6 +59,76 @@ function deferred<T = void>() {
   });
   return { promise, resolve };
 }
+test("async Link storage retries the store operation and notifies only after adoption", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "link-detached-"));
+  directories.push(dir);
+  const store = new CredentialStore(undefined, new PlaintextCipher(), dir);
+  let reads = 0;
+  let attempts = 0;
+  let notifications = 0;
+  let allowed = true;
+  let expireDuringCommit = false;
+  const context = { ownerId: "native", authorize: () => allowed };
+  const service = createLinkService({
+    validateToken: async () => validation,
+    credentials: {
+      pendingRetirements: async () => 0,
+      read: (work) => {
+        reads++;
+        return store.withAsyncCipher(files, ["user"], undefined, work);
+      },
+      write: (work, current) =>
+        store.withAsyncCipher(
+          {
+            ...files,
+            async commit(address, expectedRevision, file) {
+              attempts++;
+              if (expireDuringCommit) allowed = false;
+              await current?.();
+              if (attempts === 1) return false;
+              return (
+                credentialFileCommand(dir, "credentials/commit", {
+                  ...address,
+                  expectedRevision,
+                  file,
+                }) === true
+              );
+            },
+          },
+          ["user"],
+          "user",
+          work,
+        ),
+    },
+    onChanged: () => {
+      notifications++;
+    },
+  });
+  const files = {
+    read: async (address: { scope: "user" | "project"; cwd?: string }) =>
+      credentialFileCommand(dir, "credentials/read", address) as CredentialFileSnapshot,
+    commit: async () => {
+      throw new Error("Unexpected read-only write");
+    },
+  };
+  services.push(service);
+  await service.retryRemoteCleanup();
+  expect(reads).toBe(0);
+  const saved = await service.connectToken(context, input);
+  expect(attempts).toBe(2);
+  expect(notifications).toBe(1);
+  expect((await service.snapshotAsync()).connections.map((record) => record.id)).toEqual([
+    saved.id,
+  ]);
+  expect(store.resolve(saved.id)?.secret).toBe(input.token);
+  expireDuringCommit = true;
+  await expect(
+    service.rename(context, saved.id, "Stale window", saved.revision),
+  ).rejects.toMatchObject({ code: "login_required" });
+  expect(notifications).toBe(1);
+  expect(store.resolve(saved.id)?.label).toBe(input.label);
+});
+
 function fixture(options: Partial<LinkServiceOptions> = {}) {
   const cwd = mkdtempSync(join(tmpdir(), "link-service-"));
   directories.push(cwd);

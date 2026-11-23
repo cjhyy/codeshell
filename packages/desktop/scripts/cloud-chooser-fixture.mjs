@@ -47,11 +47,12 @@ const lines = async (file) =>
 export async function prepareCloudChooserFixture(
   appDir,
   isolated,
-  { failAfterReady = false } = {},
+  { failAfterReady = false, remoteLinks = false } = {},
 ) {
   const env = createBunTestEnvironment(process.env, isolated.home);
   const home = env.HOME;
   env.CODESHELL_CLOUD_CHOOSER_HOME = home;
+  if (remoteLinks) env.CODESHELL_CLOUD_CHOOSER_LINKS = "1";
   isolated.home = home;
   isolated.codeShellHome = env.CODE_SHELL_HOME;
   isolated.userDataDir = join(home, "electron-user-data");

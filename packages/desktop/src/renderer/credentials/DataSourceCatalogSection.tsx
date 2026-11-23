@@ -8,6 +8,7 @@ import { SimpleSelect } from "@/components/ui/simple-select";
 import { useT, type TFunction } from "../i18n";
 import { useConfirm } from "../ui/DialogProvider";
 import type { LocalLinkProviderView, MaskedCredentialView } from "../../preload/types";
+import { onLocalProviderCatalogRecovery } from "./onLocalProviderCatalogRecovery";
 import { SourceCollectionsSection } from "./SourceCollectionsSection";
 
 type EditableSourceKind = "mcp-resource" | "link";
@@ -62,6 +63,14 @@ export function DataSourceCatalogSection({
       loadRequest.current += 1;
     };
   }, []);
+
+  React.useEffect(() => {
+    if (editing && kind === "link") {
+      return onLocalProviderCatalogRecovery(() =>
+        setConnectionRevision((revision) => revision + 1),
+      );
+    }
+  }, [editing, kind]);
 
   React.useEffect(() => {
     if (!editing || kind !== "link") return;

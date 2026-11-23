@@ -6,7 +6,7 @@
  */
 /* global window, document */
 import assert from "node:assert/strict";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
@@ -18,6 +18,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   seedOfflinePluginBootstrap,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
@@ -95,10 +96,173 @@ process.on("SIGINT", requestStop);
 process.on("SIGTERM", requestStop);
 
 try {
-  model = await startMockProviderServer();
+  const expiredAt = Date.now() - 15 * 60_000;
+  const scheduledIds = [
+    "rule-00000000-0000-4000-8000-000000000011",
+    "rule-00000000-0000-4000-8000-000000000012",
+  ];
+  const ruleFile = join(isolated.userDataDir, "pet", "rules.json");
+  await put(ruleFile, {
+    version: 1,
+    rules: scheduledIds.map((id, index) => ({
+      id,
+      version: 1,
+      origin: "user",
+      createdBy: "follow-up",
+      when: { kind: "schedule", at: expiredAt, timezone: "UTC", missedPolicy: "skip" },
+      then: {
+        mode: "remind",
+        title: "Synthetic expired reminder",
+        text: "This private fixture must never deliver.",
+      },
+      wake:
+        index === 0
+          ? { occurrence: expiredAt, status: "scheduled" }
+          : { occurrence: expiredAt, status: "claimed", claimedAt: expiredAt },
+      attention: "always",
+      channel: "desktop",
+      target: { kind: "owner" },
+      state: "active",
+      createdAt: expiredAt - 1000,
+      updatedAt: expiredAt,
+    })),
+    quarantine: [],
+  });
+  const recordedWakes = async () => {
+    const state = JSON.parse(await readFile(ruleFile, "utf8"));
+    return scheduledIds.map((id) => state.rules.find((rule) => rule.id === id)?.wake);
+  };
+  // Previous clients keep their pending receipts in the same userData file.
+  const binding = {
+    channel: "fixture",
+    target: "synthetic-private-chat",
+    senderId: "synthetic-owner",
+  };
+  // Older clients persist the brief day and the quota used by the heartbeat.
+  const currentLocalDay = () => {
+    const date = new Date();
+    return Math.floor((date.getTime() - date.getTimezoneOffset() * 60_000) / 86_400_000);
+  };
+  const localDay = currentLocalDay();
+  await put(join(isolated.userDataDir, "pet", "proactive.json"), {
+    version: 1,
+    briefs: { morning: { sentAt: expiredAt, day: localDay } },
+    heartbeat: { day: localDay, lastAt: expiredAt, judged: 8, said: 4, seen: ["fixture"] },
+  });
+  const bellFile = join(isolated.userDataDir, "pet", "attention-receipts.json");
+  const bellRows = async () => JSON.parse(await readFile(bellFile, "utf8"));
+  const oldBell = "local-user\0old-work\0old-request\0pending";
+  const freshBell = "local-user\0fresh-work\0fresh-request\0pending";
+  await put(bellFile, [{ key: oldBell, state: "suppressed-active", at: 17 }]);
+  const routesFile = join(isolated.userDataDir, "pet", "conversation-session-routes.json");
+  const boundId = "synthetic-session-route";
+  await put(routesFile, {
+    version: 1,
+    revision: 1,
+    routes: [
+      {
+        schemaVersion: 1,
+        id: boundId,
+        routeKey: ["im:fixture", binding.target, binding.senderId].join(String.fromCharCode(0)),
+        ...binding,
+        sessionId: "mimi-follow-up-fixture",
+        sessionTitle: "Fixture bound session",
+        mode: "bound",
+        origin: "enter",
+        status: "active",
+        revision: 1,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        expiresAt: Date.now() + 60 * 60_000,
+      },
+    ],
+  });
+  const storedBinding = async () =>
+    JSON.parse(await readFile(routesFile, "utf8")).routes.find((row) => row.id === boundId);
+  const noticeFile = join(isolated.userDataDir, "pet", "notices.json");
+  const pendingId = "notice-00000000-0000-4000-8000-000000000099";
+  await put(noticeFile, {
+    version: 1,
+    dedupe: [],
+    quarantine: [],
+    records: [
+      {
+        id: pendingId,
+        kind: "session.done",
+        priority: "P1",
+        dedupeKey: "synthetic-expired:done",
+        sessionId: "synthetic-expired",
+        ruleIds: [],
+        facts: { title: "Expired fixture" },
+        createdAt: expiredAt,
+        expiresAt: expiredAt,
+        delivery: {
+          status: "queued",
+          key: "0".repeat(24),
+          channel: "fixture-offline",
+          attempts: 1,
+          at: expiredAt,
+        },
+      },
+    ],
+  });
+  const readExpiredReceipt = async () =>
+    JSON.parse(await readFile(noticeFile, "utf8"))
+      .records.filter((record) => record.id === pendingId)
+      .map((row) => row.delivery);
+  const followUpSession = "mimi-follow-up-fixture";
+  const followUpDir = join(isolated.codeShellHome, "sessions", followUpSession);
+  const followUpText = "Choose the synthetic fixture color";
+  await put(join(followUpDir, "state.json"), {
+    sessionId: followUpSession,
+    parentSessionId: null,
+    origin: "desktop",
+    status: "completed",
+    cwd: isolated.home,
+    title: "Synthetic completed session",
+  });
+  // Transcript records are one JSON object per physical line.
+  await writeFile(
+    join(followUpDir, "transcript.jsonl"),
+    JSON.stringify({
+      type: "message",
+      data: { role: "assistant", content: "Which synthetic fixture color should we choose?" },
+    }) + "\n",
+  );
+  const summaryRequest = (body) =>
+    body.messages?.some(
+      (message) =>
+        message.role === "system" && JSON.stringify(message.content).includes("FOLLOW_UP:"),
+    );
+  model = await startMockProviderServer({
+    scriptResponse: (body) =>
+      summaryRequest(body)
+        ? { text: "FOLLOW_UP: " + followUpText }
+        : body.messages?.some(
+              (message) =>
+                message.role === "system" && JSON.stringify(message.content).includes("事件档案"),
+            )
+          ? {
+              text: JSON.stringify({
+                title: "Synthetic topic",
+                summary: "Two local test turns",
+                memories: ["Mimi synthetic closure preference"],
+              }),
+            }
+          : undefined,
+  });
   const fixture = await prepareConfinedElectronFixture({ appDir, isolated, origin: model.origin });
   await seedOfflinePluginBootstrap(isolated.codeShellHome);
+  const externalId = "mimi-external-fixture";
+  const rollout = join(isolated.home, ".codex", "sessions", "rollout-mimi-fixture.jsonl");
+  await mkdir(dirname(rollout), { recursive: true });
+  await writeFile(
+    rollout,
+    JSON.stringify({ type: "session_meta", payload: { id: externalId, cwd: isolated.home } }) +
+      "\n",
+  );
   await put(join(isolated.codeShellHome, "settings.json"), {
+    pet: { showExternalCodexSessions: true },
     autoUpdates: false,
     featureFlags: { computer_use_cua: options.has("--cua-driver") },
     credentials: [
@@ -155,6 +319,115 @@ try {
     )
   )
     await trust.click();
+  const followUp = await waitForAsyncFunction(
+    main,
+    async (id) => (await window.codeshell.pet.getSummaries()).find((row) => row.sessionId === id),
+    followUpSession,
+  );
+  assert.equal(followUp.text, followUpText);
+  const cached = JSON.parse(
+    await readFile(join(isolated.userDataDir, "pet", "summaries.json"), "utf8"),
+  );
+  assert.equal(cached.version, 2);
+  assert(
+    cached.entries.some((row) => row.sessionId === followUpSession && row.text === followUpText),
+  );
+  assert.equal(model.requests.filter(({ body }) => summaryRequest(body)).length, 1);
+  const readExternal = async ({ id, state }) => {
+    const row = (await window.codeshell.pet.getSnapshot()).sessions.find(
+      (session) => session.agentSessionId === id,
+    );
+    return state === "absent" ? !row : row?.external?.cli === "codex" && row.runState === state;
+  };
+  await waitForAsyncFunction(main, readExternal, { id: externalId, state: "running" });
+  await appendFile(
+    rollout,
+    JSON.stringify({ type: "event_msg", payload: { type: "task_complete" } }) + "\n",
+  );
+  await waitForAsyncFunction(main, readExternal, { id: externalId, state: "idle" });
+  await main.evaluate(() =>
+    window.codeshell.updateSettings("user", { pet: { showExternalCodexSessions: false } }),
+  );
+  await waitForAsyncFunction(main, readExternal, { id: externalId, state: "absent" });
+  receipt.checks.push(
+    "isolated Codex activity was discovered, tailed through completion, then removed when the user disabled its source",
+  );
+  const dismissed = await main.evaluate(() =>
+    window.codeshell.pet.updateDismissedWorkItemIds({ action: "add", ids: ["completed:fixture"] }),
+  );
+  assert.ok(dismissed.dismissedIds.includes("completed:fixture"));
+  const added = await main.evaluate(() =>
+    window.codeshell.pet.addMemory("Synthetic Mimi project preference"),
+  );
+  await main.evaluate(
+    (id) => window.codeshell.pet.updateMemory(id, "Updated synthetic preference"),
+    added.id,
+  );
+  const stored = JSON.parse(
+    await readFile(join(isolated.userDataDir, "pet", "memories.json"), "utf8"),
+  );
+  assert(
+    stored.entries.some(
+      (row) => row.id === added.id && row.text === "Updated synthetic preference",
+    ),
+  );
+  await main.evaluate(
+    ({ id, sessionId }) => {
+      window.__mimiRecordReads = [];
+      let reading = false;
+      window.__mimiRecordTimer = setInterval(async () => {
+        if (reading) return;
+        reading = true;
+        const start = Date.now();
+        try {
+          const [rows, journal, work, segment, inbox, projection] = await Promise.all([
+            window.codeshell.pet.listMemories(),
+            window.codeshell.pet.listJournal(),
+            window.codeshell.pet.getWorkMemory(),
+            window.codeshell.pet.getSegmentMessages({ start: 0, end: 1 }),
+            window.codeshell.pet.getDismissedWorkItemIds(),
+            window.codeshell.pet.getSnapshot(),
+          ]);
+          if (
+            rows.some((row) => row.id === id && row.text === "Updated synthetic preference") &&
+            Array.isArray(journal) &&
+            Array.isArray(work.segments) &&
+            inbox.dismissedIds.includes("completed:fixture") &&
+            projection.sessions.some(
+              (row) => row.agentSessionId === sessionId && row.terminal?.status === "completed",
+            ) &&
+            Array.isArray(segment)
+          )
+            window.__mimiRecordReads.push({ start, end: Date.now() });
+        } finally {
+          reading = false;
+        }
+      }, 90);
+    },
+    { id: added.id, sessionId: followUpSession },
+  );
+  const hold = await app.evaluate(() => {
+    const from = Date.now();
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1800);
+    return { from, to: Date.now() };
+  });
+  const reads = await main.evaluate(() => {
+    clearInterval(window.__mimiRecordTimer);
+    return window.__mimiRecordReads;
+  });
+  assert(
+    reads.some((r) => r.start > hold.from && r.end < hold.to),
+    "Mimi projection, memory and journal must resolve during the Main hold",
+  );
+  await main.evaluate((id) => window.codeshell.pet.removeMemory(id), added.id);
+  assert(
+    !(await main.evaluate(() => window.codeshell.pet.listMemories())).some(
+      (row) => row.id === added.id,
+    ),
+  );
+  console.log(
+    "PASS: Mimi editable memory persists, and workbench memory and journal reads complete during Main stall",
+  );
   receipt.guard = await fixture.assertWorker(app, { requireWorker: false });
   // A worker's stdin remains corked until this fixture verifies its bootstrap.
   // Keep doing that for replacement workers during the optional manual session.
@@ -415,6 +688,47 @@ try {
     ),
     "Actual worker did not load the Pet capability",
   );
+  const clear = await main.evaluate(() =>
+    window.codeshell.pet.dispatch({
+      type: "chat",
+      message: "/clear",
+      clientMessageId: window.crypto.randomUUID(),
+    }),
+  );
+  assert.ok(clear.ok && clear.contextCleared, "Mimi should record a fresh topic boundary");
+  const nextTopic = await main.evaluate(() =>
+    window.codeshell.pet.dispatch({
+      type: "chat",
+      message: "COMPANION_NEW_TOPIC: begin fresh",
+      clientMessageId: window.crypto.randomUUID(),
+    }),
+  );
+  assert.ok(nextTopic.ok);
+  const closedTopic = await waitForAsyncFunction(main, async () =>
+    (await window.codeshell.pet.listJournal()).find((row) => row.title === "Synthetic topic"),
+  );
+  const segment = await main.evaluate(
+    (range) => window.codeshell.pet.getSegmentMessages(range),
+    closedTopic.range,
+  );
+  assert.ok(
+    inputs.every((input) =>
+      segment.some((message) => message.role === "user" && message.text.includes(input)),
+    ),
+    "Journal range should resolve both settled turns",
+  );
+  assert.ok(
+    !segment.some((message) => message.text.includes("COMPANION_NEW_TOPIC")),
+    "The new topic must not enter the archived range",
+  );
+  await waitForAsyncFunction(main, async () =>
+    (await window.codeshell.pet.listMemories()).some(
+      (row) => row.source === "auto" && row.text === "Mimi synthetic closure preference",
+    ),
+  );
+  receipt.checks.push(
+    "Host extracted the closed topic through the local model and committed the journal and automatic memory on the original range",
+  );
   receipt.petSessionId = firstStatus.petSessionId;
   receipt.providerRequests = model.requests.length;
   receipt.checks.push(
@@ -465,6 +779,223 @@ try {
     "Clicking Mimi again did not close the bubble",
   );
   receipt.checks.push("clicking Mimi again closes the bubble");
+  const hostStarts = async () =>
+    (await readFile(join(isolated.home, "spawned-hosts.jsonl"), "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+  const chosenRule = await main.evaluate(async () => {
+    const pet = window.codeshell.pet;
+    await pet.setSystemNoticeRule({ state: "active", channel: "desktop", events: ["failed"] });
+    const state = await pet.getNoticesState();
+    return {
+      rule: state.systemRule,
+      version: state.rules.find((row) => row.id === "all-sessions").version,
+    };
+  });
+  assert.deepEqual(chosenRule.rule, { state: "active", channel: "desktop", events: ["failed"] });
+  const verifyQuota = async () => {
+    const before = currentLocalDay();
+    const quota = await main.evaluate(
+      async () => (await window.codeshell.pet.getNoticesState()).proactive,
+    );
+    const after = currentLocalDay();
+    assert.equal(
+      quota.briefs.morning.lastSentDay,
+      new Date(localDay * 86_400_000).toISOString().slice(0, 10),
+    );
+    // The UI legitimately starts a fresh day if this smoke crosses midnight.
+    if (before === after) {
+      assert.equal(quota.heartbeat.judgedToday, after === localDay ? 8 : 0);
+      assert.equal(quota.heartbeat.saidToday, after === localDay ? 4 : 0);
+      assert.equal(quota.heartbeat.atJudgeCap, after === localDay);
+      assert.equal(quota.heartbeat.atSayCap, after === localDay);
+    }
+  };
+  await verifyQuota();
+  await main.evaluate(
+    async (key) => window.codeshell.pet.markAttentionReceipt([key], "seen"),
+    freshBell,
+  );
+  const beforeBell = await bellRows();
+  assert.deepEqual(
+    beforeBell.find((row) => row.key === oldBell),
+    { key: oldBell, state: "suppressed-active", at: 17 },
+  );
+  assert.equal(beforeBell.find((row) => row.key === freshBell).state, "seen");
+  const completedWakes = await recordedWakes();
+  assert.deepEqual(
+    completedWakes.map((wake) => wake?.status),
+    ["failed", "unknown"],
+  );
+  const recoveredDelivery = await readExpiredReceipt();
+  assert.equal(recoveredDelivery.length, 1);
+  assert.equal(recoveredDelivery[0].status, "revoked");
+  assert.equal(recoveredDelivery[0].error, "expired");
+  const previousHost = (await hostStarts()).at(-1);
+  const control = JSON.parse(
+    await readFile(join(isolated.codeShellHome, "im-gateway", "desktop-control.json"), "utf8"),
+  );
+  const localControl = new URL(control.baseUrl);
+  assert.equal(localControl.protocol, "http:");
+  assert.equal(localControl.hostname, "127.0.0.1");
+  assert.equal(control.pid, previousHost.pid, "The test talks only to its isolated local gateway");
+  async function routeMessage(text, expectedPid) {
+    const descriptor = JSON.parse(
+      await readFile(join(isolated.codeShellHome, "im-gateway", "desktop-control.json"), "utf8"),
+    );
+    const url = new URL("/v1/session/route", descriptor.baseUrl);
+    assert.equal(url.protocol, "http:");
+    assert.equal(url.hostname, "127.0.0.1");
+    assert.equal(descriptor.pid, expectedPid);
+    const response = await fetch(url, {
+      method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + descriptor.token },
+      body: JSON.stringify({
+        ...binding,
+        isDirectMessage: true,
+        messageId: "route-fixture-" + text,
+        text,
+      }),
+    });
+    assert.equal(response.status, 200);
+    return response.json();
+  }
+  assert.deepEqual(await routeMessage("/session", previousHost.pid), {
+    kind: "status",
+    text: "当前在「Fixture bound session」中。发送 /mimi 可退出。",
+  });
+  assert.equal((await routeMessage("/mimi", previousHost.pid)).kind, "left");
+  const afterLeave = await storedBinding();
+  assert.equal(afterLeave.mode, "notify");
+  const gatewayReply = await fetch(new URL("/v1/pet/chat", localControl), {
+    method: "POST",
+    redirect: "error",
+    signal: AbortSignal.timeout(20_000),
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + control.token },
+    body: JSON.stringify({ message: "/clear" }),
+  });
+  assert.equal(gatewayReply.status, 200);
+  const reply = await gatewayReply.json();
+  assert.equal(reply.petSessionId, firstStatus.petSessionId);
+  assert.ok(reply.text.length > 0);
+  const auditFile = join(
+    isolated.codeShellHome,
+    "sessions",
+    firstStatus.petSessionId,
+    "transcript.jsonl",
+  );
+  const renderedReceipt = (await readFile(auditFile, "utf8"))
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line))
+    .findLast(
+      (row) =>
+        row.data?.displayOnly && row.data?.role === "assistant" && row.data.content === reply.text,
+    );
+  assert(renderedReceipt, "Gateway response must match the durable display-only receipt");
+  receipt.checks.push(
+    "a loopback gateway control turn records the Host-rendered response in the same Mimi Session",
+  );
+  receipt.providerRequests = model.requests.length;
+  const isOwned = await app.evaluate(
+    ({ app }, host) =>
+      host.ppid === process.pid &&
+      app.getAppMetrics().some((row) => row.type === "Utility" && row.pid === host.pid),
+    previousHost,
+  );
+  assert(isOwned, "Only restart the fixture's own Desktop Host");
+  process.kill(previousHost.pid, "SIGKILL");
+  const deadline = Date.now() + 15_000;
+  while ((await hostStarts()).at(-1).pid === previousHost.pid && Date.now() < deadline)
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.notEqual((await hostStarts()).at(-1).pid, previousHost.pid);
+  await waitForAsyncFunction(
+    main,
+    async ({ sessionId, title }) => {
+      try {
+        const status = await window.codeshell.pet.dispatch({ type: "get_global_status" });
+        const entries = await window.codeshell.pet.listJournal();
+        return (
+          status.ok &&
+          status.petSessionId === sessionId &&
+          entries.some((entry) => entry.title === title)
+        );
+      } catch {
+        return false;
+      }
+    },
+    { sessionId: firstStatus.petSessionId, title: closedTopic.title },
+  );
+  const restored = await main.evaluate(
+    async (id) => (await window.codeshell.pet.getSummaries()).find((row) => row.sessionId === id),
+    followUpSession,
+  );
+  assert.equal(restored.followUpId, followUp.followUpId);
+  assert.equal(restored.text, followUpText);
+  const restoredRule = await main.evaluate(async () => {
+    const state = await window.codeshell.pet.getNoticesState();
+    return {
+      rule: state.systemRule,
+      version: state.rules.find((row) => row.id === "all-sessions").version,
+    };
+  });
+  assert.deepEqual(restoredRule, chosenRule);
+  await main.evaluate(
+    async (key) => window.codeshell.pet.markAttentionReceipt([key], "dismissed"),
+    freshBell,
+  );
+  const afterBell = await bellRows();
+  assert.deepEqual(
+    afterBell.find((row) => row.key === oldBell),
+    beforeBell.find((row) => row.key === oldBell),
+  );
+  assert.deepEqual(
+    afterBell.filter((row) => row.key === freshBell).map((row) => row.state),
+    ["dismissed"],
+  );
+  receipt.checks.push(
+    "the replacement Host preserves legacy attention suppressions and updates the same bell receipt",
+  );
+
+  await verifyQuota();
+  receipt.checks.push(
+    "an existing brief day and exhausted heartbeat quotas survive Host replacement",
+  );
+  assert.deepEqual(await recordedWakes(), completedWakes);
+  assert.deepEqual(await readExpiredReceipt(), recoveredDelivery);
+  assert.deepEqual(await routeMessage("/session", (await hostStarts()).at(-1).pid), {
+    kind: "not-bound",
+  });
+  assert.deepEqual(await storedBinding(), afterLeave);
+  receipt.checks.push(
+    "a legacy private conversation leaves its bound session and stays unbound after Host replacement",
+  );
+  receipt.checks.push(
+    "the Host expires a legacy queued receipt and preserves its exact outcome after replacement",
+  );
+  receipt.checks.push(
+    "overdue and previously claimed reminders settle once and retain their outcomes through Host replacement",
+  );
+
+  receipt.checks.push(
+    "owner notification rules preserve their events, channel and version across a Host restart",
+  );
+  assert.equal(model.requests.filter(({ body }) => summaryRequest(body)).length, 1);
+  receipt.checks.push(
+    "hosted follow-up from a completed Session survives a Host restart with no duplicate inference",
+  );
+  assert.equal(
+    model.requests.length,
+    receipt.providerRequests,
+    "Restoring the manager must not replay a settled turn",
+  );
+  receipt.checks.push(
+    "replacement Desktop Host restores the same Mimi Session and journal without replaying a model turn",
+  );
+
   receipt.passed = true;
   await put(join(isolated.home, "companion-trial-state.json"), receipt);
   console.log(JSON.stringify({ phase: "companion-chat-passed", ...receipt }));

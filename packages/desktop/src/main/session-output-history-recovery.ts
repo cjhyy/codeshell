@@ -31,7 +31,7 @@ export interface OutputHistoryRecoveryAuthorization {
 }
 type RecoveryBridge = Pick<
   AgentBridge,
-  "isSessionRunning" | "getSnapshot" | "quiesceForOutputRecovery" | "resetOutputHistoryRecovery"
+  "isSessionRunning" | "readSnapshot" | "quiesceForOutputRecovery" | "resetOutputHistoryRecovery"
 >;
 type RecoveryExternal = Pick<
   ExternalRuntimeService,
@@ -61,9 +61,12 @@ export class SessionOutputHistoryRecovery {
       evidence: (sessionId) => this.evidenceFiles.get(sessionId) ?? [],
     });
   }
-  private assertIdle(sessionId: string, owner?: number) {
+  private async assertIdle(sessionId: string, owner?: number) {
     const bridge = this.deps.bridge();
-    if (bridge?.isSessionRunning(sessionId) || bridge?.getSnapshot(sessionId).topLevelRunning)
+    if (
+      (await bridge?.readSnapshot(sessionId))?.topLevelRunning ||
+      bridge?.isSessionRunning(sessionId)
+    )
       throw new Error("busy");
     this.deps.external()?.assertOutputRecoveryIdle(sessionId, owner);
     if (this.deps.assertBackgroundIdle) this.deps.assertBackgroundIdle(sessionId);
@@ -87,10 +90,10 @@ export class SessionOutputHistoryRecovery {
       },
     };
   }
-  private retire(sessionId: string): boolean {
+  private async retire(sessionId: string): Promise<boolean> {
     let complete = true;
     try {
-      this.deps.bridge()?.resetOutputHistoryRecovery(sessionId);
+      await this.deps.bridge()?.resetOutputHistoryRecovery(sessionId);
     } catch {
       complete = false;
     }
@@ -119,11 +122,12 @@ export class SessionOutputHistoryRecovery {
       return {
         status: "blocked",
         sessionId,
-        reason: this.retire(sessionId) ? "not_needed" : "storage_error",
+        reason: (await this.retire(sessionId)) ? "not_needed" : "storage_error",
       };
     try {
       assertOutputHistoryWriteAvailable(sessionId);
-      this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      await this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      authorized.assertCurrent();
     } catch {
       return { status: "blocked", sessionId, reason: "busy" };
     }
@@ -131,7 +135,8 @@ export class SessionOutputHistoryRecovery {
       const files = await outputHistoryCacheEvidence(sessionId, authorized.projectId);
       authorized.assertCurrent();
       assertOutputHistoryWriteAvailable(sessionId);
-      this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      await this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      authorized.assertCurrent();
       this.evidenceFiles.set(sessionId, files);
       return this.recovery.plan(sessionId, this.authority(sessionId, authorized));
     } catch {
@@ -156,10 +161,12 @@ export class SessionOutputHistoryRecovery {
     }
     let release: (() => void) | undefined;
     try {
-      this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      await this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      authorized.assertCurrent();
       const files = await outputHistoryCacheEvidence(sessionId, authorized.projectId);
       authorized.assertCurrent();
-      this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      await this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      authorized.assertCurrent();
       this.evidenceFiles.set(sessionId, files);
       const authority = this.authority(sessionId, authorized);
       const validated = this.recovery.validate(sessionId, input, authority);
@@ -167,7 +174,7 @@ export class SessionOutputHistoryRecovery {
         if (
           validated.status === "applied" &&
           this.pendingRetirement.has(sessionId) &&
-          !this.retire(sessionId)
+          !(await this.retire(sessionId))
         )
           return { status: "blocked", sessionId, reason: "storage_error" };
         return validated;
@@ -177,10 +184,12 @@ export class SessionOutputHistoryRecovery {
         .external()
         ?.quiesceForOutputRecovery(sessionId, authorized.ownerWebContentsId);
       authority.assertCurrent();
-      this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      await this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      authorized.assertCurrent();
       await this.deps.bridge()?.quiesceForOutputRecovery(sessionId);
       authority.assertCurrent();
-      this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      await this.assertIdle(sessionId, authorized.ownerWebContentsId);
+      authorized.assertCurrent();
       let result: OutputHistoryRecoveryResult,
         committedStorageError = false;
       try {
@@ -208,7 +217,7 @@ export class SessionOutputHistoryRecovery {
         new SessionManager().incrementSessionGeneration(sessionId);
         this.pendingRetirement.set(sessionId, release);
         release = undefined;
-        if (!this.retire(sessionId))
+        if (!(await this.retire(sessionId)))
           return { status: "blocked", sessionId, reason: "storage_error" };
       }
       if (committedStorageError) return { status: "blocked", sessionId, reason: "storage_error" };

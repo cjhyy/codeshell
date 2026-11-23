@@ -40,7 +40,11 @@ export interface PetDecisionNoticeHooks {
    */
   deliveryFor: ImDecisionDeliveryResolver;
   /** An IM conversation that belongs to the owner (direct messages only). */
-  isOwnerConversation(origin: { channel: string; target: string; senderId?: string }): boolean;
+  isOwnerConversation(origin: {
+    channel: string;
+    target: string;
+    senderId?: string;
+  }): boolean | Promise<boolean>;
   /** Hear about a pending decision in a rule-watched Session as it appears, or a rule armed. */
   onBlocked(listener: (sessionId: string) => void): () => void;
   /** The owner is away (the router's presence): a desktop-kept prompt may now go to IM. */
@@ -51,7 +55,7 @@ export interface PetDecisionNoticeHooks {
    */
   onAwayChange(listener: () => void): () => void;
   /** The owner target the router would use on this channel is a confirmed private chat. */
-  ownerChannelIsDirect(channel: string): boolean;
+  ownerChannelIsDirect(channel: string): boolean | Promise<boolean>;
   /**
    * A decision's status; undefined once it is gone. A worker request's comes
    * from the projection, a desktop external runtime's from its approval router.
@@ -73,7 +77,8 @@ export interface PetDecisionHooksDeps {
   getSystemIdleTimeSec(): number;
   presenceIdleSec(): number;
   ownerChannels(): ImGatewayOwnerChannel[];
-  isOwnerConversation(channel: string, target: string): boolean;
+  liveOwnerIsDirect?(channel: string): Promise<boolean>;
+  isOwnerConversation(channel: string, target: string): boolean | Promise<boolean>;
   /** Tasks changed (an IM-started task may now own where a prompt goes). */
   subscribeTasks?: (listener: () => void) => () => void;
   powerEvents?: PetNoticePowerEvents;
@@ -178,17 +183,19 @@ export function createDecisionHooks(deps: PetDecisionHooksDeps): PetDecisionHook
   const unsubscribeTasks = deps.subscribeTasks?.(() => nudge(""));
 
   const hooks: PetDecisionNoticeHooks = {
-    deliveryFor(sessionId, task) {
-      return deps.deliveries.planBlocked({
-        sessionId,
-        ...(task ? { task } : {}),
-        // Mimi's own Sessions and tailed CLI rollouts are never watched by rules.
-        useRules: view.isEligibleSession(sessionId),
-      }).entries[0];
+    async deliveryFor(sessionId, task) {
+      return (
+        await deps.deliveries.planBlocked({
+          sessionId,
+          ...(task ? { task } : {}),
+          // Mimi's own Sessions and tailed CLI rollouts are never watched by rules.
+          useRules: view.isEligibleSession(sessionId),
+        })
+      ).entries[0];
     },
-    isOwnerConversation(origin) {
+    async isOwnerConversation(origin) {
       try {
-        return deps.isOwnerConversation(origin.channel, origin.target);
+        return await deps.isOwnerConversation(origin.channel, origin.target);
       } catch (error) {
         log("pet.notice.owner_lookup_failed", { error: errorText(error) });
         return false;
@@ -218,8 +225,9 @@ export function createDecisionHooks(deps: PetDecisionHooksDeps): PetDecisionHook
         if (awayListeners.size === 0) checkPresence();
       };
     },
-    ownerChannelIsDirect(channel) {
+    async ownerChannelIsDirect(channel) {
       try {
+        if (deps.liveOwnerIsDirect) return await deps.liveOwnerIsDirect(channel);
         return deps.ownerChannels().some((entry) => entry.id === channel && entry.isDirect);
       } catch {
         return false;

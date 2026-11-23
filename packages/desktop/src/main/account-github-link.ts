@@ -80,7 +80,9 @@ export function createAccountGitHubLinkPreparer(options: {
       service = options.createService();
       manager = createNativeLinkAuthorizationManager({ service, open: options.open });
       await service.refreshRemoteCatalog(context);
-      const provider = service.snapshot().providers.find((entry) => entry.id === "github");
+      const provider = (await service.snapshotAsync()).providers.find(
+        (entry) => entry.id === "github",
+      );
       const mode = provider?.authModes?.find(
         (entry) => entry.available && entry.kind === "redirect" && entry.methodId === "remote-link",
       );

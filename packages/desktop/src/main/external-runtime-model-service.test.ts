@@ -54,6 +54,26 @@ describe("external runtime model discovery cache", () => {
     );
   });
 
+  test("uses the supplied native search path for probing and the CLI environment", async () => {
+    const path = "/desktop/managed-runtime";
+    let probed: string | undefined;
+    let inherited: string | undefined;
+    const service = new ExternalRuntimeModelService({
+      isEnabled: () => true,
+      probe: (pathValue) => {
+        probed = pathValue;
+        return installed;
+      },
+      discoverCodex: async (options) => {
+        inherited = options?.env?.PATH;
+        return [futureModel];
+      },
+    });
+    await service.list(path);
+    expect(probed).toBe(path);
+    expect(inherited).toBe(path);
+  });
+
   test("shares concurrent requests across windows and refreshes after five minutes", async () => {
     let now = 0;
     let calls = 0;

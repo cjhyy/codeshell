@@ -150,6 +150,7 @@ interface ResidentMigration {
 }
 
 export interface ResidentSessionMainRootMigration {
+  commitTicket?: string;
   project: SessionProjectBinding;
   mainRoot: string;
   workspaceContext: import("../workspace/workspace-context.js").WorkspaceContext;
@@ -369,7 +370,9 @@ export class ChatSessionManager {
         1;
       candidate.restoreSessionModel?.(sessionId);
 
-      const workspace = previous.migrateSessionMainRoot(sessionId, target.project, target.mainRoot);
+      const workspace = previous.migrateSessionMainRoot(
+        sessionId, target.project, target.mainRoot, target.commitTicket,
+      );
       session.replaceEngine(previous, candidate);
       this.sessionGeneration.set(sessionId, candidateGeneration);
       this.sessionSlices.set(sessionId, nextSlice);

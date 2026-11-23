@@ -14,9 +14,13 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
     expect(Object.keys(entries).sort()).toEqual([
       "activity-history-worker",
       "cua-activity-proxy",
+      "desktop-host",
       "index",
       "link-provider-module",
+      "marketplace-worker",
+      "session-index-worker",
       "session-transcript-cache-worker",
+      "skill-worker",
     ]);
     const result = await esbuild.build({
       ...options,
@@ -30,11 +34,12 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
     const entry = [...outputs].find(([path]) => path.endsWith("link-provider-module.mjs"));
     expect(entry).toBeDefined();
     expect(entry![1].exports).toEqual(["createLinkProviderModule"]);
-    expect([...outputs.keys()].some((path) => path.endsWith("index.mjs"))).toBe(true);
+    const main = [...outputs.keys()].find((path) => path.endsWith("index.mjs"));
+    expect(main).toBeDefined();
 
     // Follow the real multi-entry build graph. A provider-only build would miss
     // runtime dependencies introduced by a chunk shared with Electron Main.
-    const externalsOf = (start: string) => {
+    const dependenciesOf = (start: string, eagerOnly = false) => {
       const visited = new Set<string>();
       const external = new Set<string>();
       const pending = [start];
@@ -45,6 +50,7 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
         const output = outputs.get(path);
         expect(output, `undelivered chunk: ${path}`).toBeDefined();
         for (const dependency of output!.imports) {
+          if (eagerOnly && dependency.kind === "dynamic-import") continue;
           if (dependency.external) external.add(dependency.path);
           else {
             const fromCwd = resolve(dependency.path);
@@ -52,8 +58,23 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
           }
         }
       }
-      return external;
+      return { external, visited };
     };
+    const eagerMainSources = [...dependenciesOf(main!, true).visited].flatMap((path) =>
+      Object.keys(outputs.get(path)!.inputs),
+    );
+    expect(
+      eagerMainSources.filter(
+        (source) =>
+          source.endsWith("/puppeteer-core-browser.js") ||
+          source.endsWith("/puppeteer-browser-driver.ts") ||
+          /@modelcontextprotocol\/sdk\/dist\/esm\/client\/(auth|index|streamableHttp)\.js$/.test(
+            source,
+          ),
+      ),
+    ).toEqual([]);
+    const externalsOf = (path: string) => dependenciesOf(path).external;
+
     const external = externalsOf(entry![0]);
     expect(external.has("@cjhyy/code-shell-core/extension")).toBe(true);
     expect(external.has("@cjhyy/code-shell-link")).toBe(true);
@@ -66,6 +87,9 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
 
     // The Cua proxy is the MCP stdio server core spawns with ELECTRON_RUN_AS_NODE,
     // so it can import neither Electron nor the workspace packages.
+    const host = [...outputs.keys()].find((path) => path.endsWith("desktop-host.mjs"));
+    expect(host).toBeDefined();
+    expect(externalsOf(host!).has("electron")).toBe(false);
     const proxy = [...outputs.keys()].find((path) => path.endsWith("cua-activity-proxy.mjs"));
     expect(proxy).toBeDefined();
     expect([...externalsOf(proxy!)].filter((specifier) => !isBuiltin(specifier))).toEqual([]);
@@ -84,7 +108,14 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
     expect(history).toBeDefined();
     expect(
       [...externalsOf(history!)].filter(
-        (specifier) => !isBuiltin(specifier) && !/^@cjhyy\/code-shell-core(?:\/|$)/.test(specifier),
+        (specifier) =>
+          !isBuiltin(specifier) &&
+          specifier !== "@cjhyy/code-shell-capability-coding/orchestration" &&
+          // Profile previews resolve bound Link sources, coding capabilities and worktrees.
+          specifier !== "@cjhyy/code-shell-link" &&
+          specifier !== "@cjhyy/code-shell-capability-coding/capability" &&
+          specifier !== "@cjhyy/code-shell-capability-coding/git" &&
+          !/^@cjhyy\/code-shell-core(?:\/|$)/.test(specifier),
       ),
     ).toEqual([]);
   } finally {

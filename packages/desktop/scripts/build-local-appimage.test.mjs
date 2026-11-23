@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { createRequire } from "node:module";
 import { test } from "node:test";
 import { mkdtemp, writeFile, rm, symlink } from "node:fs/promises";
 import { join } from "node:path";
@@ -17,6 +19,38 @@ function header() {
   b.writeUInt16LE(62, 18);
   return b;
 }
+
+test(
+  "AppRun preserves arguments and leaves Chromium sandbox selection to Electron",
+  {
+    skip: process.platform === "win32",
+  },
+  async (t) => {
+    const require = createRequire(import.meta.url);
+    const builder = createRequire(require.resolve("electron-builder/package.json"));
+    const { generateAppRunScript } = builder(
+      "app-builder-lib/out/targets/appimage/appImageUtil.js",
+    );
+    const root = await mkdtemp(join(tmpdir(), "codeshell-apprun-"));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    // Hosts with a setuid sandbox can still deny unprivileged user namespaces.
+    await writeFile(join(root, "unshare"), "#!/bin/sh\nexit 1\n", { mode: 0o700 });
+    await writeFile(join(root, "receiver"), '#!/bin/sh\nprintf "%s\\n" "$#" "$@"\n', {
+      mode: 0o700,
+    });
+    const launcher = join(root, "AppRun");
+    await writeFile(launcher, generateAppRunScript({ ExecutableName: "receiver" }), {
+      mode: 0o700,
+    });
+    for (const args of [[], ["project with spaces", "--version"]]) {
+      const result = execFileSync("/bin/bash", [launcher, ...args], {
+        env: { APPDIR: root, PATH: "/usr/bin:/bin" },
+        encoding: "utf8",
+      });
+      assert.deepEqual(result.trimEnd().split("\n"), [String(args.length), ...args]);
+    }
+  },
+);
 test("AppImage conversion is native Linux x64, uses prepackaged source and never publishes", () => {
   assert.deepEqual(appImageBuildArguments("/owned/source", "linux", "x64"), [
     "--linux",

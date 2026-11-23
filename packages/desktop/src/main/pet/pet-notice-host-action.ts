@@ -1,3 +1,4 @@
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
 import {
   parseNoticeRuleUpsert,
   type BoundChannel,
@@ -9,7 +10,7 @@ import type { HostActionHandler } from "../host-action-dispatch.js";
 import type { ImGatewayOwnerChannel } from "../im-gateway-service.js";
 import type { PetDeliveryResolver } from "./pet-delivery-plan.js";
 import { quietHoursText, type PetNotificationSettings } from "./pet-notice-settings.js";
-import type { NoticeRule, PetRuleStore } from "./pet-rule-store.js";
+import type { NoticeRule } from "./pet-rule-store.js";
 
 /** The IM a rule with this channel and target is predicted to use; undefined → desktop. */
 export function predictedIm(
@@ -35,7 +36,7 @@ export function predictedIm(
 }
 
 export interface PetNoticeRuleActionDeps {
-  ruleStore: PetRuleStore;
+  ruleStore: PetRuleAccess;
   deliveries: Pick<PetDeliveryResolver, "ruleTarget">;
   ownerChannels(): ImGatewayOwnerChannel[];
   lastOwnerInboundChannel(): string | undefined;

@@ -1,0 +1,14 @@
+{
+  "from": "0.12.0-rc.1",
+  "to": "0.11.0-rc.7",
+  "darwin": "24.6.0",
+  "arch": "arm64",
+  "candidateTree": "74a5eb026ca045710ceecfe8668057637ab1f09dd1d275d309683256fa2499a4",
+  "previousTree": "8d4c5ade7e5f83cf0c0d97b9748c7cff7a27084415e7c64a2d38b77981ced035",
+  "draftOpened": true,
+  "externalTaskOpened": true,
+  "transcriptRead": true,
+  "mirrorVersion": 1,
+  "sourceHead": "08e36b743b7c0518fe5a47c2f392ec0e139948fd",
+  "conditions": "Both original macOS app bundles opened the same isolated profile with mock Keychain and local-only networking. A live external-runtime sidecar supplies the task. 0.11 reopened the catalog draft, accepted the external task open action and displayed its stored transcript in conversation history."
+}

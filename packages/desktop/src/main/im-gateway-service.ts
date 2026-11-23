@@ -1,3 +1,4 @@
+import type { WechatLoginEvent } from "../shared/wechat-login.js";
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
@@ -14,7 +15,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import type { IpcMain } from "electron";
+import { uniqueTrimmedStrings, MAX_SETUP_VALUE_CHARS } from "./im-gateway-setup-input.js";
+import {
+  dingTalkCredential,
+  dingTalkCredentialSecret,
+  DINGTALK_CREDENTIAL_ID,
+} from "./im-dingtalk-credential.js";
+export { registerImGatewayIpc } from "./im-gateway-ipc.js";
 import { CredentialStore, type Credential } from "@cjhyy/code-shell-core";
 import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
 import {
@@ -53,7 +60,6 @@ import {
   gatewayConfigTemplate,
   hasWechatStoredContextToken,
   loadGatewayConfig,
-  loginCodeShellWechat,
 } from "@cjhyy/code-shell-chat/codeshell";
 
 export type ImGatewayChannel =
@@ -159,9 +165,7 @@ export type DingTalkDiscoveryState = "connecting" | "listening" | "stopped" | "e
 
 export type ImGatewayUiEvent =
   | { type: "status-changed"; status: ImGatewayStatus }
-  | { type: "wechat-qr"; loginId: string; url: string }
-  | { type: "wechat-status"; loginId: string; status: string }
-  | { type: "wechat-verification-required"; loginId: string }
+  | WechatLoginEvent
   | {
       type: "dingtalk-discovery-state";
       discoveryId: string;
@@ -247,12 +251,6 @@ export interface ImGatewayOwnerSendOptions {
   idempotencyKey?: string;
 }
 
-interface PendingVerification {
-  loginId: string;
-  resolve: (code: string) => void;
-  reject: (error: Error) => void;
-}
-
 interface ActiveDingTalkDiscovery {
   id: string;
   abort: AbortController;
@@ -260,10 +258,7 @@ interface ActiveDingTalkDiscovery {
   conversations: Map<string, DingTalkDiscoveredConversation>;
 }
 
-const DINGTALK_CREDENTIAL_ID = "im-gateway-dingtalk";
 const MAX_GATEWAY_CONFIG_BYTES = 4 * 1024 * 1024;
-const MAX_SETUP_LIST_ITEMS = 1_000;
-const MAX_SETUP_VALUE_CHARS = 4_096;
 const MAX_SETUP_SECRET_CHARS = 64 * 1024;
 /** Sidecar next to the gateway config remembering the owner's last inbound channel. */
 const OWNER_INBOUND_STATE_FILE = "owner-inbound.json";
@@ -286,16 +281,7 @@ function readDingTalkCredentialSecret(
   credentialStore?: ImGatewayCredentialStore,
 ): string | undefined {
   const credential = resolveCredentialStore(credentialStore).resolve(DINGTALK_CREDENTIAL_ID);
-  if (!credential?.secret) return undefined;
-  try {
-    const parsed = JSON.parse(credential.secret) as { clientSecret?: unknown };
-    return typeof parsed.clientSecret === "string" && parsed.clientSecret.trim()
-      ? parsed.clientSecret.trim()
-      : undefined;
-  } catch {
-    if (credential.secret.startsWith("enc:")) return undefined;
-    return credential.secret.trim() || undefined;
-  }
+  return dingTalkCredentialSecret(credential);
 }
 
 function resolveDingTalkClientSecret(
@@ -324,13 +310,7 @@ function saveDingTalkCredential(
   clientId: string,
   clientSecret: string,
 ): void {
-  resolveCredentialStore(credentialStore).save("user", {
-    id: DINGTALK_CREDENTIAL_ID,
-    type: "link",
-    label: "DingTalk Chat Gateway",
-    secret: JSON.stringify({ version: 1, clientSecret }),
-    meta: { platform: "dingtalk", clientId },
-  });
+  resolveCredentialStore(credentialStore).save("user", dingTalkCredential(clientId, clientSecret));
 }
 
 /** Desktop-owned lifecycle for the reusable chat package. */
@@ -338,8 +318,6 @@ export class ImGatewayService {
   readonly configPath: string;
   private active?: ActiveGateway;
   private lastError?: string;
-  private login?: { id: string; abort: AbortController };
-  private verification?: PendingVerification;
   private dingtalkDiscovery?: ActiveDingTalkDiscovery;
   private readonly adapterStates = new Map<ImGatewayChannel, AdapterRuntimeState>();
   private readonly recentActivity: ImGatewayActivity[] = [];
@@ -1249,7 +1227,13 @@ export class ImGatewayService {
     };
   }
 
+  /** A native async keyring must finish before committing or scrubbing the visible config. */
   saveDingTalkSetup(input: DingTalkSetupInput): DingTalkSetup {
+    const { secret, clientId, commit } = this.prepareDingTalkSetup(input);
+    if (secret) saveDingTalkCredential(this.options.credentialStore, clientId, secret);
+    return commit();
+  }
+  prepareDingTalkSetup(input: DingTalkSetupInput) {
     const enabled = Boolean(input.enabled);
     const clientId = input.clientId.trim();
     const incomingSecret = input.clientSecret?.trim();
@@ -1279,9 +1263,6 @@ export class ImGatewayService {
     // created. Treat the visible config value as an explicit update before
     // scrubbing it so the form never silently restores an older vault value.
     const secretToStore = incomingSecret || legacySecret;
-    if (secretToStore) {
-      saveDingTalkCredential(this.options.credentialStore, clientId, secretToStore);
-    }
 
     const nextSection: Record<string, unknown> = {
       ...previous,
@@ -1291,16 +1272,32 @@ export class ImGatewayService {
       allowedUserIds,
     };
     delete nextSection.clientSecret;
-    mutateGatewayConfigRecord(this.configPath, (current) => {
-      current.dingtalk = { ...readRecord(current.dingtalk), ...nextSection };
-      delete readRecord(current.dingtalk).clientSecret;
-      return current;
-    });
-    this.lastError = undefined;
-    this.emitStatus();
-    return this.getDingTalkSetup();
+    const check = (section: unknown) => {
+      if (JSON.stringify(readRecord(section)) !== JSON.stringify(previous))
+        throw Error("钉钉配置已更改，请重新读取后再保存。");
+    };
+    return {
+      assertUnchanged: () => check(readGatewayConfigRecord(this.configPath).dingtalk),
+      clientId,
+      secret: secretToStore,
+      commit: (assertCurrent?: () => void) => {
+        mutateGatewayConfigRecord(this.configPath, (current) => {
+          assertCurrent?.();
+          check(current.dingtalk);
+          current.dingtalk = { ...readRecord(current.dingtalk), ...nextSection };
+          delete readRecord(current.dingtalk).clientSecret;
+          return current;
+        });
+        this.lastError = undefined;
+        this.emitStatus();
+        return this.getDingTalkSetup();
+      },
+    };
   }
-
+  usesDingTalkSetup() {
+    const section = readGatewayConfigRecord(this.configPath).dingtalk;
+    return !!section && readRecord(section).enabled !== false;
+  }
   async startDingTalkDiscovery(): Promise<{ discoveryId: string }> {
     if (this.dingtalkDiscovery) return { discoveryId: this.dingtalkDiscovery.id };
     if (this.active?.channels.includes("dingtalk")) {
@@ -1409,62 +1406,24 @@ export class ImGatewayService {
     return true;
   }
 
-  async loginWechat(): Promise<{ accountId: string; configPath: string }> {
-    if (this.login) throw new Error("个人微信登录正在进行中");
-    const restartAfterLogin = Boolean(this.active);
-    const id = randomUUID();
-    const abort = new AbortController();
-    this.login = { id, abort };
-    try {
-      const result = await loginCodeShellWechat({
-        configPath: this.configPath,
-        signal: abort.signal,
-        onQrCode: (url) => this.emit({ type: "wechat-qr", loginId: id, url }),
-        onStatus: (status) =>
-          this.emit({ type: "wechat-status", loginId: id, status: String(status) }),
-        requestVerificationCode: () => this.requestVerificationCode(id),
-      });
-      this.lastError = undefined;
-      if (restartAfterLogin) {
-        await this.stop();
-        await this.start();
-      } else {
-        this.emitStatus();
-      }
-      return result;
-    } finally {
-      if (this.login?.id === id) this.login = undefined;
-      if (this.verification?.loginId === id) {
-        this.verification.reject(new Error("微信登录已结束"));
-        this.verification = undefined;
-      }
-    }
+  async withWechatLogin<T>(login: () => Promise<T>): Promise<T> {
+    const restart = Boolean(this.active);
+    const result = await login();
+    await this.afterWechatLogin(restart);
+    return result;
   }
 
-  submitWechatVerification(loginId: string, code: string): boolean {
-    const pending = this.verification;
-    const normalized = code.trim();
-    if (!pending || pending.loginId !== loginId || !normalized) return false;
-    this.verification = undefined;
-    pending.resolve(normalized);
-    return true;
-  }
-
-  cancelWechatLogin(): boolean {
-    const login = this.login;
-    if (!login) return false;
-    this.login = undefined;
-    login.abort.abort();
-    if (this.verification?.loginId === login.id) {
-      const pending = this.verification;
-      this.verification = undefined;
-      pending.reject(new Error("微信登录已取消"));
+  async afterWechatLogin(restart: boolean): Promise<void> {
+    this.lastError = undefined;
+    if (restart && this.active) {
+      await this.stop();
+      await this.start();
+    } else {
+      this.emitStatus();
     }
-    return true;
   }
 
   async dispose(): Promise<void> {
-    this.cancelWechatLogin();
     await this.stopDingTalkDiscovery();
     await this.stop();
     await this.deliveryHandoffTail;
@@ -1508,14 +1467,6 @@ export class ImGatewayService {
           ? error.message
           : String(error)
         : "钉钉发现连接意外结束",
-    });
-  }
-
-  private requestVerificationCode(loginId: string): Promise<string> {
-    if (this.verification) throw new Error("已有微信验证数字等待输入");
-    return new Promise<string>((resolveCode, rejectCode) => {
-      this.verification = { loginId, resolve: resolveCode, reject: rejectCode };
-      this.emit({ type: "wechat-verification-required", loginId });
     });
   }
 
@@ -1802,21 +1753,6 @@ function readUniqueStringList(value: unknown): string[] {
   return Array.isArray(value) ? uniqueTrimmedStrings(value) : [];
 }
 
-function uniqueTrimmedStrings(values: readonly unknown[]): string[] {
-  if (values.length > MAX_SETUP_LIST_ITEMS) {
-    throw new Error(`白名单最多包含 ${MAX_SETUP_LIST_ITEMS} 项`);
-  }
-  return [
-    ...new Set(
-      values.flatMap((value) =>
-        typeof value === "string" && value.trim() && value.length <= MAX_SETUP_VALUE_CHARS
-          ? [value.trim()]
-          : [],
-      ),
-    ),
-  ];
-}
-
 function isImGatewayChannel(value: string): value is ImGatewayChannel {
   return (IM_GATEWAY_CHANNELS as readonly string[]).includes(value);
 }
@@ -1830,46 +1766,4 @@ function readEnabledChannels(configPath: string): Set<ImGatewayChannel> {
     if ((section as Record<string, unknown>).enabled !== false) enabled.add(channel);
   }
   return enabled;
-}
-
-export function registerImGatewayIpc(ipcMain: IpcMain, service: ImGatewayService): void {
-  ipcMain.handle("im-gateway:status", () => service.status());
-  ipcMain.handle("im-gateway:start", () => service.start());
-  ipcMain.handle("im-gateway:stop", () => service.stop());
-  ipcMain.handle("im-gateway:ensureConfig", () => service.ensureConfig());
-  ipcMain.handle("im-gateway:dingtalkGetSetup", () => service.getDingTalkSetup());
-  ipcMain.handle("im-gateway:dingtalkSaveSetup", (_event, raw: unknown) => {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-      throw new Error("缺少钉钉配置参数");
-    }
-    const input = raw as Record<string, unknown>;
-    if (typeof input.enabled !== "boolean" || typeof input.clientId !== "string") {
-      throw new Error("钉钉配置参数无效");
-    }
-    if (input.clientSecret !== undefined && typeof input.clientSecret !== "string") {
-      throw new Error("钉钉 Client Secret 参数无效");
-    }
-    if (!Array.isArray(input.allowedConversationIds) || !Array.isArray(input.allowedUserIds)) {
-      throw new Error("钉钉白名单参数无效");
-    }
-    return service.saveDingTalkSetup({
-      enabled: input.enabled,
-      clientId: input.clientId,
-      ...(typeof input.clientSecret === "string" ? { clientSecret: input.clientSecret } : {}),
-      allowedConversationIds: uniqueTrimmedStrings(input.allowedConversationIds),
-      allowedUserIds: uniqueTrimmedStrings(input.allowedUserIds),
-    });
-  });
-  ipcMain.handle("im-gateway:dingtalkStartDiscovery", () => service.startDingTalkDiscovery());
-  ipcMain.handle("im-gateway:dingtalkStopDiscovery", () => service.stopDingTalkDiscovery());
-  ipcMain.handle("im-gateway:wechatLogin", () => service.loginWechat());
-  ipcMain.handle("im-gateway:wechatCancelLogin", () => service.cancelWechatLogin());
-  ipcMain.handle("im-gateway:wechatSubmitVerification", (_event, raw: unknown) => {
-    if (!raw || typeof raw !== "object") throw new Error("缺少微信验证参数");
-    const input = raw as Record<string, unknown>;
-    if (typeof input.loginId !== "string" || typeof input.code !== "string") {
-      throw new Error("微信验证参数无效");
-    }
-    return service.submitWechatVerification(input.loginId, input.code);
-  });
 }

@@ -48,7 +48,6 @@ const DEFAULT_MAX_LINES = 1_500;
 // go down. When a split brings a file under DEFAULT_MAX_LINES, delete its entry.
 // Do not add entries for new files: split them instead.
 const LEGACY_MAX_LINES: Record<string, number> = {
-  "packages/desktop/src/main/index.ts": 5_000,
   "packages/core/src/engine/engine.ts": 5_000,
   "packages/core/src/protocol/server.ts": 4_500,
   "packages/desktop/src/main/panel-app-bridge.ts": 3_500,
@@ -165,7 +164,7 @@ const CORE_LAYERS: readonly (readonly string[])[] = [
     "goal",
     "workspace",
   ],
-  ["utils", "runtime", "logging", "data", "agent", "remote", "testing", "capabilities"],
+  ["utils", "storage", "runtime", "logging", "data", "agent", "remote", "testing", "capabilities"],
 ];
 
 // Measured on fcd8406d5. These exceptions may only shrink: removing the import
@@ -373,48 +372,8 @@ describe("architecture growth budgets", () => {
   });
 
   test("IPC routes and preload invokes cannot grow silently", () => {
-    // Count extracted registrations too: moving a route cannot hide API growth.
-    // New explicit project-package, remote-Link and Cloud-window operations are
-    // part of this feature's reviewed transport contract, total 295 routes.
-    // +1 authenticated, owner-scoped cancelRestore route releases abandoned
-    // version reviews. Count the extracted version registrar in the same budget.
-    // +3 reviewed device registration/status/forget operations, no credential read.
-    // +2 main-frame-only Desktop file metadata/preview operations. These read an
-    // explicitly selected file without granting access to its parent directory.
-    // Count the full session transcript registrar, including its two previously
-    // extracted routes, and three reviewed Task Center list/get/act routes.
-    // The reviewed additions are five Link challenge operations, four Lab
-    // operations and one usage-history query. Count every registration, including
-    // the extracted modules, with no allowance for future routes.
-    // Optional accounts add eight reviewed main-frame-owned operations: status,
-    // capabilities, login, register, github, linkGitHub, cancelSignIn and logout. Their results
-    // expose only public account state; access/refresh tokens remain in Main.
-    // Include the extracted registrar and raise only this contract baseline by eight.
-    // Capabilities is the v0.9.34 anonymous, origin-bounded service discovery route;
-    // it exposes only registration/GitHub availability, never account credentials.
-    // Count all five explicit collection operations in the extracted registrar.
-    // Managed runtime discovery retains its two existing routes in an extracted registrar.
-    // The registrar loops over eight fixed method entries, so count entries, not the loop.
-    // Two linked-file source routes: snapshot and add. Project resolution and
-    // Link authorization stay in Main; extraction must not hide them.
-    // Three owner-scoped DriveAgent task routes: list, cancel and the user's
-    // explicit mark-ended for a task no live process reports.
-    // rooms:create and ccRoom:openSession, moved here unchanged in number so
-    // both pass the Host room permission-mode authority.
-    // Nine local-only Lab routes: eight existing operations plus P2 native
-    // adoption. Exact body/scope review and post-dialog revalidation remain
-    // in this owner-scoped registrar; ordinary RPC cannot approve adoption.
-    // Count the two existing native manual-review routes and the new
-    // fixed-read reconciliation route; extraction must not hide them.
-    // Exactly two Native batch routes: bounded options and manual approval.
-    // Main alone issues the private Run nonce; extraction cannot hide IPC growth.
-    // Mimi's single presence owner: get/set/preview/retry plus the two legacy
-    // pet:widget-visible(-get) routes moved here from index.ts.
-    // The 2026-11-09 index.ts split moved 176 existing routes into these
-    // registrars without adding any; count each so the move hides nothing.
-    // 2026-11: scan every production file instead of a manually maintained list.
-    // The legacy 48-file selection still counts 390; the other 82 routes already
-    // existed but were not counted. This baseline grants no new routes.
+    // Count native registrars across Main, including modules using a fixed helper.
+    // Port-only business methods are covered by the Desktop Host contract tests.
     expect(
       countIpc("packages/desktop/src/main", /ipcMain\.handle\(/g, {
         "packages/desktop/src/main/account-device-ipc.ts": /^ {4}[a-z]+: \(/gm,
@@ -425,92 +384,19 @@ describe("architecture growth budgets", () => {
           /handle\(\s*"operationResolution:/g,
         "packages/desktop/src/main/operation-batch-ipc.ts": /handle\("operationBatch:/g,
         "packages/desktop/src/main/quota-ipc.ts": /handle\("quota:/g,
+        "packages/desktop/src/main/cloud-account-ipc.ts": /handle\("cloudAccount:/g,
       }),
-      // +1 read-only, bounded Session output-journal page route. Its file/owner
-      // validation and recovery algorithm stay in Core and the extracted adapters.
-      // +2 metadata-only Profile preview and revision-checked adoption routes.
-      // +3 preview/cancel/reviewed-save operations, without installation authority.
-      // +2 project-memory copy preview/commit operations, bound to a main-frame review.
-      // +1 main-frame-owned Account profile read/update operation, bound to the
-      // signed-in origin/UUID. Only public names cross IPC; credentials stay in Main.
-      // +5 main-frame-owned Computer Use setup operations: status, enable,
-      // permission request, fixed System Settings links, and restart.
-      // +2 main-frame-owned Native batch options/start operations.
-      // +2 linked-file source snapshot/add operations; no file content crosses IPC.
-      // The integrated baseline contains 356 routes (the previous ceiling missed one).
-      // +4 local model trace list/detail/config read/update routes, restricted to application main frames.
-      // +1 metadata-only session grouping route shares the same fixed store and caller guard.
-      // +1 review:preparePrompt; prompt assembly and Git reads stay in the review service.
-      // +1 externalRuntime:yieldGoal; the owner check and Goal state stay in the service.
-      // +3 backgroundWork list/cancelJob/markInterrupted; ownership checks stay in Core.
-      // +2 main-frame-owned Mimi companion setting and preview routes.
-      // +1 computerUse:input (stop/resume/force-stop); the gate itself lives in
-      // the CUA proxy, so this route only flips host-owned state.
-      // The merged tree counts 367: the previous ceiling carried two spare routes.
-      // +2 Main-frame-only history recovery plan/apply routes; caller and paths remain Host-owned.
-      // Measured after merging main (2026-10-29): main counts 368, this branch adds 3.
-      // +1 panel-apps:bindingsForProjects batches binding reads so each package is verified once.
-      // +4 main-frame-owned Mimi presence routes (get/set/preview/retry). The two
-      // legacy widget-visibility routes moved, not added; every Mimi entry now goes
-      // through one owner, so docked and moving can never be shown together.
-      // +1 explicit account resume; construction/status remain side-effect free.
-      // +8 main-frame-owned computer operations: list/projects/connect/resume/send/stop/approve/close.
-      // Main retains credentials and pins every operation to its owner/Host/project/Session.
-      // +3 main-frame-only account operations: fixed registration page, public
-      // feature snapshot and bounded refresh. No credential-read route is exposed.
-      // +2 main-frame-owned account operations: browser sign-in and fixed account
-      // management pages. PKCE, session custody and origin checks remain in Main.
-      // +2 main-frame-only usage provider operations: local metadata discovery
-      // and an explicit query of a registered provider. The existing quota:get
-      // moves into the same guarded registrar and is still counted.
-      // +1 read-only ccRoom:settingsState returns this room's actual model/mode
-      // and busy reason, so native controls can disable changes before submission.
-      // Mutations still use the existing ccRoom:openSession authority/handoff.
-      // +2 mobileRemote:terminalAccess get/set: the Desktop owner's off-by-default
-      // switch for remote terminals. Terminal I/O itself rides the authenticated
-      // remote socket, not IPC.
-    ).toBeLessThanOrEqual(477);
+    ).toBeLessThanOrEqual(436);
     expect(matches("packages/desktop/src/main/quota-ipc.ts", /handle\("quota:/g)).toBe(3);
     expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^ {4}[a-z]+: \(/gm)).toBe(8);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
     ).toBe(2);
-    // Include all nine extracted Lab invokes and the five generic Link
-    // challenge invokes plus usage history. Main-only routes remain counted
-    // above even when no renderer adapter exists; do not equate the totals.
-    // Count the same eight reviewed optional-account invokes: status, capabilities,
-    // login, register, github, linkGitHub, cancelSignIn and logout. No token-read API
-    // exists; this increases the invoke contract by exactly eight, not line budgets.
-    // Count each fixed helper call plus send's raw delivery DTO invoke.
-    // The legacy 16-file selectors counted 371. Counting both invoke receivers
-    // also finds two existing accountFeatures calls that its old ipc-only regex
-    // missed (373 on that selection). The other 108 invokes were outside the
-    // list, so the full measured baseline is 481, not the review's initial 479.
     expect(
       countIpc("packages/desktop/src/preload", /\b(?:ipcRenderer|ipc)\.invoke\(/g, {
         "packages/desktop/src/preload/account-device-api.ts": /\binvoke(?:Raw)?\("/g,
       }),
-      // Five reviewed collection invokes. Native file paths never arrive as renderer arguments.
-      // +2 memory-copy invokes; commit carries only the reviewed token and project.
-      // +1 typed cloudAccount:profile invoke mirrors the single reviewed Main
-      // read/update route above; no credential-read or additional route is added.
-      // +5 typed Computer Use setup invokes; no raw native command surface.
-      // +2 typed Native batch adapters return no private nonce.
-      // +2 typed linked-file snapshot/add invokes mirror the two Main routes above.
-      // The integrated baseline contains 349 invokes; tracing adds four fixed
-      // list/detail/config read/update invokes, without renderer filesystem access.
-      // +1 session grouping invoke mirrors the single guarded Main route above.
-      // +3 Mimi companion setting, preview and chat-focus invokes.
-      // +1 computerUse:input mirrors the single stop/resume/force-stop Main route.
-      // +2 typed history recovery plan/apply invokes mirror the reviewed Main routes.
-      // +9 mirrors explicit account resume and the eight bounded computer operations above.
-      // +3 exact adapters for registration, feature snapshot and refresh above.
-      // Browser sign-in and fixed account-management navigation add two typed
-      // adapters within the existing ceiling; neither exposes credentials.
-      // +2 typed provider discovery/query invokes; credentials remain in Main.
-      // +1 typed ccRoom:settingsState adapter for the reviewed read-only route.
-      // +2 typed mobileRemote terminal-access get/set adapters mirroring Main.
-    ).toBeLessThanOrEqual(486);
+    ).toBeLessThanOrEqual(444);
     expect(matches("packages/desktop/src/preload/quota-api.ts", /ipc\.invoke\(/g)).toBe(3);
     expect(
       matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),

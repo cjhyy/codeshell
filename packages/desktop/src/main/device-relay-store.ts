@@ -1,18 +1,11 @@
-import type { Stats } from "node:fs";
 import {
-  constants,
-  closeSync,
-  fsyncSync,
-  lstatSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  renameSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname } from "node:path";
-import { randomUUID } from "node:crypto";
+  EncryptedGrantStore,
+  grantCustody,
+  type AsyncGrantCipher,
+  type GrantCustody,
+  type RelaySecretCipher,
+} from "@cjhyy/code-shell-core/internal/storage";
+export type { RelaySecretCipher } from "@cjhyy/code-shell-core/internal/storage";
 import { isRelayHostId, isRelayOrigin, isRelayToken } from "@cjhyy/code-shell-server/remote-relay";
 
 export interface RelayRegistration {
@@ -29,11 +22,6 @@ export interface RelayRegistration {
   credentialExpiresAt?: number;
   /** Local account preference; absent on older registrations means remote access is off. */
   remoteAccessEnabled?: boolean;
-}
-export interface RelaySecretCipher {
-  available(): boolean;
-  encrypt(value: string): Buffer;
-  decrypt(value: Buffer): string;
 }
 export function validRegistration(value: unknown): value is RelayRegistration {
   const data = value as RelayRegistration | undefined;
@@ -60,76 +48,56 @@ export function validRegistration(value: unknown): value is RelayRegistration {
   );
 }
 
-/** Separate from generic credentials: no renderer enumeration/export path. */
-export class DeviceRelayStore {
-  constructor(
-    private readonly path: string,
-    private readonly cipher: RelaySecretCipher,
-  ) {}
-  private assertAvailable() {
-    if (!this.cipher.available())
-      throw new Error("系统安全存储不可用，请解锁或配置系统密钥环后重试连接。");
-  }
-  private temporary(bytes: Buffer): string {
-    mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });
-    const path = `${this.path}.${randomUUID()}.tmp`;
-    const fd = openSync(path, "wx", 0o600);
-    try {
-      writeFileSync(fd, bytes);
-      fsyncSync(fd);
-      return path;
-    } catch (error) {
-      unlinkSync(path);
-      throw error;
-    } finally {
-      closeSync(fd);
-    }
-  }
-  /** Verify encryption and writable storage before consuming a one-time ticket. */
-  preflight() {
-    this.assertAvailable();
-    const probe = randomUUID();
-    const encrypted = this.cipher.encrypt(probe);
-    if (this.cipher.decrypt(encrypted) !== probe) throw new Error("系统安全存储校验失败。");
-    unlinkSync(this.temporary(encrypted));
-  }
-  load(): RelayRegistration | undefined {
-    let metadata: Stats;
-    try {
-      metadata = lstatSync(this.path);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
-      throw error;
-    }
-    this.assertAvailable();
-    if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.size > 16_384)
-      throw new Error("电脑登记文件无效，请移除后重新登记。");
-    const fd = openSync(this.path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-    try {
-      const registration = JSON.parse(this.cipher.decrypt(readFileSync(fd)));
-      if (!validRegistration(registration)) throw new Error("电脑登记文件无效，请重新登记。");
-      return registration;
-    } finally {
-      closeSync(fd);
-    }
-  }
-  save(registration: RelayRegistration) {
-    this.assertAvailable();
-    if (!validRegistration(registration)) throw new Error("电脑登记响应无效。");
-    const temp = this.temporary(this.cipher.encrypt(JSON.stringify(registration)));
-    try {
-      renameSync(temp, this.path);
-    } catch (error) {
-      unlinkSync(temp);
-      throw error;
-    }
-  }
+/** OS custody accepts only the known relay registration fields, including for a legacy grant. */
+export function relayGrantCustody(
+  path: string,
+  cipher: AsyncGrantCipher,
+): GrantCustody<RelayRegistration> {
+  const custody = grantCustody(path, cipher, validRegistration);
+  const project = (grant: RelayRegistration): RelayRegistration => {
+    if (!validRegistration(grant)) throw Error("设备登记无效。");
+    const {
+      relayOrigin,
+      publicOrigin,
+      hostId,
+      environmentId,
+      credential,
+      credentialEpoch,
+      protocolVersion,
+      name,
+      accountId,
+      refreshToken,
+      credentialExpiresAt,
+      remoteAccessEnabled,
+    } = grant;
+    return {
+      relayOrigin,
+      publicOrigin,
+      hostId,
+      environmentId,
+      credential,
+      credentialEpoch,
+      protocolVersion,
+      name,
+      accountId,
+      refreshToken,
+      credentialExpiresAt,
+      remoteAccessEnabled,
+    };
+  };
+  return {
+    checkKeyring: () => custody.checkKeyring(),
+    async readSaved() {
+      const saved = await custody.readSaved();
+      return saved && project(saved);
+    },
+    seal: (grant) => custody.seal(project(grant)),
+  };
+}
 
-  forget() {
-    try {
-      unlinkSync(this.path);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    }
+/** Separate from generic credentials: no renderer enumeration/export path. */
+export class DeviceRelayStore extends EncryptedGrantStore<RelayRegistration> {
+  constructor(path: string, cipher: RelaySecretCipher) {
+    super(path, cipher, validRegistration);
   }
 }

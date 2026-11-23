@@ -6,9 +6,8 @@
  * mobile-remote state.
  */
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname } from "node:path";
+import { basename } from "node:path";
 import type { MobileTerminalInfo } from "@cjhyy/code-shell-core";
 import type { MobileServerEvent, RemoteHostManager } from "@cjhyy/code-shell-server/mobile-remote";
 import {
@@ -24,47 +23,11 @@ import {
   type PtyInfo,
 } from "../pty-service.js";
 import { dlog } from "../desktop-logger.js";
-import type { AuthenticatedMobileClientEvent } from "./handle-client-event.js";
 
-export type RemoteTerminalEvent = Extract<
-  AuthenticatedMobileClientEvent,
-  { type: `terminal.${string}` }
->;
-
-export function isRemoteTerminalEvent(
-  event: AuthenticatedMobileClientEvent,
-): event is RemoteTerminalEvent {
-  return event.type.startsWith("terminal.");
-}
-
-/** The only persisted state: whether remote viewers may use terminals at all. */
-export class RemoteTerminalPolicy {
-  private value: boolean;
-
-  constructor(private readonly filePath: string) {
-    try {
-      const parsed: unknown = JSON.parse(readFileSync(filePath, "utf8"));
-      this.value =
-        typeof parsed === "object" && parsed !== null && "enabled" in parsed
-          ? parsed.enabled === true
-          : false;
-    } catch {
-      this.value = false;
-    }
-  }
-
-  get enabled(): boolean {
-    return this.value;
-  }
-
-  set(enabled: boolean): void {
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    const tmp = `${this.filePath}.${process.pid}.tmp`;
-    writeFileSync(tmp, `${JSON.stringify({ enabled })}\n`, { mode: 0o600 });
-    renameSync(tmp, this.filePath);
-    this.value = enabled;
-  }
-}
+import type { RemoteTerminalEvent } from "./terminal-port.js";
+import type { RemoteTerminalPolicy } from "./remote-terminal-policy.js";
+export { RemoteTerminalPolicy } from "./remote-terminal-policy.js";
+export type { RemoteTerminalEvent } from "./terminal-port.js";
 
 /** Output is coalesced per viewer so a redrawing TUI doesn't send a frame per write. */
 const FLUSH_DELAY_MS = 12;

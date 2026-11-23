@@ -13,7 +13,7 @@
  */
 
 import type { ToolRegistry } from "../tool-system/registry.js";
-import type { SettingsManager } from "../settings/manager.js";
+import { setDottedSetting, type SettingsManager } from "../settings/manager.js";
 import type { SkillDefinition } from "../skills/scanner.js";
 import type { AgentDefinition } from "../agent/agent-definition.js";
 import type { InstalledPluginsV2 } from "../plugins/types.js";
@@ -37,10 +37,7 @@ import type { CapabilityOverrides } from "../settings/schema.js";
 
 export interface CapabilityServiceDeps {
   registry: Pick<ToolRegistry, "listToolsDetailed">;
-  settings: Pick<
-    SettingsManager,
-    "get" | "saveUserSetting" | "mutateSettingsForScope" | "getForScope"
-  >;
+  settings: Pick<SettingsManager, "get" | "mutateSettingsForScope" | "getForScope">;
   cwd: string;
   scanSkills: (
     cwd: string,
@@ -130,15 +127,20 @@ export class CapabilityService {
    * pass no opts → global write, unchanged). scope:"project" maps on/off to a
    * tri-state override and writes capabilityOverrides (requires cwd).
    */
-  setEnabled(id: string, on: boolean, opts?: { scope?: WriteScope; cwd?: string }): void {
+  setEnabled(
+    id: string,
+    on: boolean,
+    opts?: { scope?: WriteScope; cwd?: string; beforeCommit?: () => void },
+  ): void {
     if (opts?.scope === "project") {
       this.setOverride(id, on ? "on" : "off", {
         scope: "project",
         cwd: opts.cwd ?? this.deps.cwd,
+        beforeCommit: opts.beforeCommit,
       });
       return;
     }
-    this.writeUserScope(id, on);
+    this.writeUserScope(id, on, opts?.beforeCommit);
   }
 
   /**
@@ -151,7 +153,7 @@ export class CapabilityService {
   setOverride(
     id: string,
     state: CapabilityOverrideState,
-    opts: { scope: "project"; cwd: string },
+    opts: { scope: "project"; cwd: string; beforeCommit?: () => void },
   ): void {
     const descriptor = this.list().find((c) => c.id === id);
     if (!descriptor) throw new CapabilityNotFoundError(id);
@@ -182,31 +184,28 @@ export class CapabilityService {
       } else {
         current.capabilityOverrides = { ...overrides, [bucket]: { ...entries, [token]: state } };
       }
+      opts.beforeCommit?.();
     });
   }
 
   /** Existing global write path — unchanged behavior, refactored out of setEnabled. */
-  private writeUserScope(id: string, on: boolean): void {
+  private writeUserScope(id: string, on: boolean, beforeCommit?: () => void): void {
     const descriptor = this.list().find((c) => c.id === id);
     if (!descriptor) throw new CapabilityNotFoundError(id);
     const { settingsKey, mode, token } = descriptor.control;
-    const s = this.deps.settings.get() as Record<string, any>;
-
-    if (mode === "record-flag") {
-      const servers = { ...(s.mcpServers ?? {}) };
-      // Never conjure a server that was never configured.
-      if (!servers[token]) return;
-      servers[token] = { ...servers[token], enabled: on };
-      this.deps.settings.saveUserSetting("mcpServers", servers);
-      return;
-    }
-
-    const arr = new Set<string>(readArray(s, settingsKey));
-    // denylist: present ⇒ OFF, so we want it present when turning off.
-    const wantPresent = mode === "allowlist" ? on : !on;
-    if (wantPresent) arr.add(token);
-    else arr.delete(token);
-    this.deps.settings.saveUserSetting(settingsKey, [...arr]);
+    this.deps.settings.mutateSettingsForScope("user", this.deps.cwd, (current) => {
+      if (mode === "record-flag") {
+        const servers = current.mcpServers as Record<string, Record<string, unknown>> | undefined;
+        if (!servers || !Object.hasOwn(servers, token) || !servers[token]) return false;
+        current.mcpServers = { ...servers, [token]: { ...servers[token], enabled: on } };
+      } else {
+        const arr = new Set(readArray(current, settingsKey));
+        if (mode === "allowlist" ? on : !on) arr.add(token);
+        else arr.delete(token);
+        setDottedSetting(current, settingsKey, [...arr]);
+      }
+      beforeCommit?.();
+    });
   }
 }
 

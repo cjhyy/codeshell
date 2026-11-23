@@ -72,3 +72,26 @@ describe("PetMetadataStore", () => {
     }
   });
 });
+
+test("a stored path is replaced with a local Mimi session identity", async () => {
+  const root = await mkdtemp(join(tmpdir(), "mimi-local-id-"));
+  try {
+    const file = join(root, "metadata.json");
+    await writeFile(
+      file,
+      JSON.stringify({
+        version: 1,
+        owner: "local-user",
+        petId: "local-pet",
+        petSessionId: "pet-stale/old",
+        createdAt: 1,
+      }),
+    );
+    const meta = await new PetMetadataStore(file, {
+      createSessionId: () => "pet-recovered",
+    }).ensure();
+    expect(meta.petSessionId).toBe("pet-recovered");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -65,16 +65,15 @@ describe("desktop Pet window position", () => {
   });
 
   test("keeps the pet above other apps and active across macOS Spaces", () => {
-    const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
-    // Window lifecycle moved into the docked surface; host-specific options stay in index.ts.
+    const windowSource = readFileSync(join(import.meta.dir, "..", "shell", "pet-windows.ts"), "utf8");
     const surfaceSource = readFileSync(join(import.meta.dir, "pet-widget-surface.ts"), "utf8");
     expect(surfaceSource).toContain(
       "win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform, win.isFocused()))",
     );
     expect(surfaceSource).toContain("win.moveTop()");
-    const factory = mainSource.slice(
-      mainSource.indexOf("function createPetWidgetBrowserWindow("),
-      mainSource.indexOf("async function loadPetWidgetBrowserWindow("),
+    const factory = windowSource.slice(
+      windowSource.indexOf("function createPetWidgetBrowserWindow("),
+      windowSource.indexOf("async function loadPetWidgetBrowserWindow("),
     );
     // A regular NSWindow is not drawn over another app's fullscreen Space: on a
     // display showing one, the docked pet was off screen (2026-11-02 three-display
@@ -86,8 +85,8 @@ describe("desktop Pet window position", () => {
     expect(factory).toMatch(
       /win\.setVisibleOnAllWorkspaces\(true, \{\s*visibleOnFullScreen: true,\s*skipTransformProcessType: true,?\s*\}\)/,
     );
-    expect(mainSource).toContain("win.setHiddenInMissionControl(true)");
-    expect(mainSource).toContain("backgroundThrottling: false");
+    expect(windowSource).toContain("win.setHiddenInMissionControl(true)");
+    expect(windowSource).toContain("backgroundThrottling: false");
     expect(surfaceSource).toContain('win.on("always-on-top-changed"');
   });
 
@@ -98,7 +97,7 @@ describe("desktop Pet window position", () => {
   });
 
   test("starts hidden and exposes visibility through the single presence owner", () => {
-    const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
+    const mainSource = readFileSync(join(import.meta.dir, "..", "shell", "mimi-presence.ts"), "utf8");
     const stateSource = readFileSync(join(import.meta.dir, "mimi-presence-state.ts"), "utf8");
     const ipcSource = readFileSync(join(import.meta.dir, "mimi-presence-ipc.ts"), "utf8");
     expect(stateSource).toMatch(/visible: false,\s+mode: "docked"/);
@@ -113,7 +112,7 @@ describe("desktop Pet window position", () => {
       join(import.meta.dir, "..", "..", "renderer", "pet", "PetWidget.tsx"),
       "utf8",
     );
-    const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
+    const mainSource = readFileSync(join(import.meta.dir, "..", "shell", "mimi-presence.ts"), "utf8");
     expect(widgetSource).toContain("onDoubleClick");
     expect(widgetSource).toContain("onOpen();");
     expect(widgetSource).toContain("onContextMenu();");

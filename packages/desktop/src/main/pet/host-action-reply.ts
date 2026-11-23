@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { GatewayControlEventAttachment } from "../im-gateway-control-server.js";
 import {
@@ -384,8 +384,9 @@ async function renderPairingQrFile(
     const { default: QRCode } = await import("qrcode");
     const data = await QRCode.toBuffer(pairingUrl, { type: "png", width: 512, margin: 2 });
     await mkdir(qrDir, { recursive: true, mode: 0o700 });
+    if (!(await lstat(qrDir)).isDirectory()) return undefined;
     const path = join(qrDir, `pairing-qr-${Date.now()}-${randomUUID()}.png`);
-    await writeFile(path, data, { mode: 0o600 });
+    await writeFile(path, data, { mode: 0o600, flag: "wx" });
     await pruneOldQrFiles(qrDir);
     const info = await stat(path);
     return {

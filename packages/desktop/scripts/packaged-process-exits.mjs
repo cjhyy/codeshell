@@ -14,6 +14,7 @@ async function rows(home, name, allowMissing) {
 export async function canCleanupPackagedProcesses({
   home,
   requireWorkerEvidence = true,
+  requireHostEvidence = false,
   launchFailed,
   children,
   verifiedMains,
@@ -43,6 +44,35 @@ export async function canCleanupPackagedProcesses({
     )
   )
     return false;
+  let hosts = [],
+    hostExits = [];
+  if (requireHostEvidence) {
+    hosts = await rows(home, "spawned-hosts.jsonl", false);
+    hostExits = await rows(home, "host-exits.jsonl", false);
+    const mainExits = await rows(home, "main-exits.jsonl", false);
+    if (
+      !children.every((child) => {
+        const pid = mainPid(child);
+        const known = hosts.filter((host) => host.ppid === pid);
+        const exits = mainExits.filter((x) => x.pid === pid);
+        return known.length > 0 && exits.length === 1 && exits[0].hostSpawnCount === known.length;
+      }) ||
+      !hosts.every((host) => {
+        const exits = hostExits.filter((x) => x.pid === host.pid && x.ppid === host.ppid);
+        return (
+          exits.length === 1 &&
+          exits[0].code === 0 &&
+          exits[0].workerSpawnCount ===
+            spawned.filter((worker) => worker.ppid === host.pid && worker.mainPid === host.ppid)
+              .length
+        );
+      }) ||
+      spawned.some(
+        (worker) => !hosts.some((host) => host.pid === worker.ppid && host.ppid === worker.mainPid),
+      )
+    )
+      return false;
+  }
   if (requireWorkerEvidence) {
     if (!workers.size || !children.every((child) => verifiedWorkerMains.has(mainPid(child))))
       return false;
@@ -60,7 +90,9 @@ export async function canCleanupPackagedProcesses({
           (child.exitCode !== 0 || child.signalCode !== null || proofs[0].code !== 0)
         )
           return false;
-        const count = proofs[0].workerSpawnCount;
+        const count = requireHostEvidence
+          ? hostExits.filter((x) => x.ppid === pid).reduce((n, x) => n + x.workerSpawnCount, 0)
+          : proofs[0].workerSpawnCount;
         return (
           Number.isSafeInteger(count) &&
           count >= 0 &&

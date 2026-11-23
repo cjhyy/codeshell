@@ -1,3 +1,4 @@
+import { withLocalPluginMutation } from "./mutation-lock.js";
 import { existsSync, statSync } from "node:fs";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -10,6 +11,7 @@ import { PluginInstallError } from "./types.js";
 
 /** Options for the unified local-install entry. */
 export interface InstallLocalOptions {
+  beforeCommit?: () => void;
   /**
    * When the target name is already installed, replace it instead of throwing
    * "already installed". The replace is atomic (rename-backup + rollback via
@@ -81,15 +83,23 @@ async function installRootMaybeOverwrite(
   installedAt: string,
   options: InstallLocalOptions | undefined,
 ): Promise<string> {
-  const finalDir = pluginInstallDir(resolvedName);
-  const pathOptions = options?.source ? { source: options.source } : {};
-  if (options?.overwrite && existsSync(finalDir)) {
-    await reinstallAtomic(resolvedName, options.source ?? root, () =>
-      installPluginFromPath(root, resolvedName, installedAt, pathOptions),
-    );
-    return finalDir;
-  }
-  return installPluginFromPath(root, resolvedName, installedAt, pathOptions);
+  return withLocalPluginMutation(resolvedName, async () => {
+    const finalDir = pluginInstallDir(resolvedName);
+    const pathOptions = options?.source ? { source: options.source } : {};
+    if (options?.overwrite && existsSync(finalDir)) {
+      await reinstallAtomic(
+        resolvedName,
+        options.source ?? root,
+        () => installPluginFromPath(root, resolvedName, installedAt, pathOptions),
+        options.beforeCommit,
+      );
+      return finalDir;
+    }
+    return installPluginFromPath(root, resolvedName, installedAt, {
+      ...pathOptions,
+      beforeCommit: options?.beforeCommit,
+    });
+  });
 }
 
 /**

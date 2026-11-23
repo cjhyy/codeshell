@@ -196,6 +196,7 @@ export const panelWebCompatibility = (
 });
 
 interface Grant {
+  lifetime: AbortController;
   projectScope?: PanelProjectScopeBinding;
   sharedTools?: SharedPanelToolBinding;
   unsubscribeTools?: () => void;
@@ -1016,6 +1017,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   }
   function remove(grant: Grant) {
     if (grants.get(grant.id) !== grant) return;
+    grant.lifetime.abort();
     grant.unsubscribeTools?.();
     grants.delete(grant.id);
     assets.delete(grant.asset);
@@ -1498,6 +1500,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       if (closed || generation !== startedGeneration || preparation.cancelled)
         error(410, "面板授权已失效，请重新打开。");
       const grant: Grant = {
+        lifetime: new AbortController(),
         projectScope,
         sharedTools,
         guestId: ++nextGuest,
@@ -1639,6 +1642,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           cwd: options.cwd,
           sessionId: grant.context.sessionId,
           revision: grant.revision,
+          signal: AbortSignal.any([
+            grant.lifetime.signal,
+            AbortSignal.timeout(Math.max(1, grant.expiresAt - now())),
+          ]),
           isAuthorized: () => authorized(grant),
         },
         method,

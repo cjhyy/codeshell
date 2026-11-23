@@ -27,6 +27,9 @@ class FakeWorker extends EventEmitter {
     this.emit("exit", 1);
     return 1;
   }
+  ready() {
+    this.emit("message", { type: "ready" });
+  }
   reply(index: number, error?: string) {
     this.emit("message", { id: this.requests[index]!.id, error });
   }
@@ -37,6 +40,8 @@ test("history shutdown drains accepted policy writes and maintenance before term
   const history = new ActivityHistoryWorker({ sessionsDir: "/fixture" }, () => worker);
   const writing = history.setConfig({ captureContent: false });
   const closing = history.close();
+  expect(worker.requests).toHaveLength(0);
+  worker.ready();
   expect(worker.requests.map((request) => request.method)).toEqual(["setConfig", "flush"]);
   await expect(history.list()).rejects.toThrow("closed");
   expect(worker.terminated).toBe(false);
@@ -73,6 +78,7 @@ test("a rejected query does not poison later reads and queued requests stay boun
   const worker = new FakeWorker();
   const history = new ActivityHistoryWorker({ sessionsDir: "/fixture" }, () => worker);
   const invalid = history.get("../foreign").catch((error) => error);
+  worker.ready();
   worker.reply(0, "Invalid model trace id");
   expect((await invalid).message).toBe("Invalid model trace id");
   const reads = Array.from({ length: 64 }, () => history.getConfig());
@@ -81,4 +87,48 @@ test("a rejected query does not poison later reads and queued requests stay boun
   for (let index = 1; index < worker.requests.length; index++) worker.reply(index);
   await Promise.all(reads);
   await closing;
+});
+
+test("a cold quit cancels unstarted dashboard reads without waiting for imports", async () => {
+  const worker = new FakeWorker();
+  const history = new ActivityHistoryWorker({ sessionsDir: "/fixture" }, () => worker);
+  const reads = [
+    history.mimiExternalActivity({}),
+    history.view("activity/runs", {}),
+    history.view("profiles/list", { target: null }),
+  ].map((read) => read.catch((error) => error));
+  const closing = history.close();
+  await closing;
+  expect(worker.terminated).toBe(true);
+  expect(
+    (await Promise.all(reads)).every(
+      (error) => error instanceof Error && /closed/.test(error.message),
+    ),
+  ).toBe(true);
+  worker.ready();
+  expect(worker.requests).toEqual([]);
+});
+
+test("a cold quit preserves FIFO when an accepted write follows a dashboard read", async () => {
+  const worker = new FakeWorker();
+  const history = new ActivityHistoryWorker({ sessionsDir: "/fixture" }, () => worker);
+  const read = history.mimiExternalActivity({});
+  const title = { id: "owned", title: "saved" };
+  const write = history.setTitle(title, new Int32Array(new SharedArrayBuffer(4)));
+  title.title = "changed after admission";
+  const closing = history.close();
+  worker.ready();
+  expect(worker.requests.map(({ method }) => method)).toEqual([
+    "mimiExternalActivity",
+    "activity/setTitle",
+    "flush",
+  ]);
+  worker.reply(0);
+  expect(worker.requests[1]?.input).toEqual({ id: "owned", title: "saved" });
+  worker.reply(1);
+  await Promise.all([read, write]);
+  expect(worker.terminated).toBe(false);
+  worker.reply(2);
+  await closing;
+  expect(worker.terminated).toBe(true);
 });

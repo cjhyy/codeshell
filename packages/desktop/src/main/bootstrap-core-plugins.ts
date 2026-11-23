@@ -84,7 +84,10 @@ async function writeMarker(home: string, marker: Record<string, string>): Promis
  * Run the soft pre-install. Best-effort end to end: any error is logged and
  * swallowed (next startup retries whatever didn't get marked).
  */
-export async function bootstrapCorePlugins(home: string = userHome()): Promise<void> {
+export async function bootstrapCorePlugins(
+  home: string = userHome(),
+  signal?: AbortSignal,
+): Promise<void> {
   try {
     const marker = await readMarker(home);
     const installedKeys = Object.keys(readInstalledPlugins().plugins);
@@ -100,6 +103,7 @@ export async function bootstrapCorePlugins(home: string = userHome()): Promise<v
       changed = true;
     }
     for (const cp of toInstall) {
+      if (signal?.aborted) break;
       try {
         const res = await installPlugin(cp.plugin, cp.marketplace);
         if (res.ok) {

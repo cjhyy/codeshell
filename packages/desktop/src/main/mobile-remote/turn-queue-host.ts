@@ -66,7 +66,7 @@ export interface MobileTurnQueueHostDeps {
     onlineDeviceIds(): string[];
   };
   uploads?: {
-    retain(deviceId: string, uploadId: string): void;
+    retain(deviceId: string, uploadId: string): void | Promise<void>;
     discard(deviceId: string, uploadId: string): Promise<void>;
   };
   /** Native worker run or external provider run of this exact Session. */
@@ -427,7 +427,9 @@ export class MobileTurnQueueHost {
       item.transport === "upload" ? [item.uploadId] : [],
     );
     try {
-      for (const uploadId of uploadIds) this.deps.uploads?.retain(deviceId, uploadId);
+      for (const uploadId of uploadIds) await this.deps.uploads?.retain(deviceId, uploadId);
+      if (uploadIds.length && !this.deps.remote.hasAuthenticatedViewer(viewerId, deviceId))
+        throw Error("设备连接已结束");
     } catch (error) {
       reject(
         `图片附件已失效，无法加入队列：${error instanceof Error ? error.message : String(error)}`,

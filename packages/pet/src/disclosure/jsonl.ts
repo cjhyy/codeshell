@@ -3,7 +3,9 @@
  * than TAIL_BYTES read only the last TAIL_BYTES and drop the first partial
  * line. Malformed lines are skipped (mirrors core Transcript.loadFromFile).
  */
-import { open, stat } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, open } from "node:fs/promises";
+import { dirname } from "node:path";
 
 const TAIL_BYTES = 512 * 1024;
 
@@ -16,22 +18,37 @@ export interface DiskTranscriptEvent {
 }
 
 export async function readTranscriptTail(transcriptPath: string): Promise<DiskTranscriptEvent[]> {
-  let size: number;
-  try {
-    size = (await stat(transcriptPath)).size;
-  } catch {
-    return [];
-  }
-  const start = Math.max(0, size - TAIL_BYTES);
-  const handle = await open(transcriptPath, "r").catch(() => null);
-  if (!handle) return [];
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  let start: number;
   let text: string;
   try {
-    const buffer = Buffer.alloc(size - start);
+    const parent = dirname(transcriptPath);
+    const before = await lstat(parent);
+    if (!before.isDirectory()) return [];
+    handle = await open(
+      transcriptPath,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+    );
+    const opened = await handle.stat();
+    const [file, directory] = await Promise.all([lstat(transcriptPath), lstat(parent)]);
+    if (
+      !file.isFile() ||
+      !opened.isFile() ||
+      !directory.isDirectory() ||
+      file.dev !== opened.dev ||
+      file.ino !== opened.ino ||
+      directory.dev !== before.dev ||
+      directory.ino !== before.ino
+    )
+      return [];
+    start = Math.max(0, opened.size - TAIL_BYTES);
+    const buffer = Buffer.alloc(opened.size - start);
     const { bytesRead } = await handle.read(buffer, 0, buffer.length, start);
     text = buffer.subarray(0, bytesRead).toString("utf-8");
+  } catch {
+    return [];
   } finally {
-    await handle.close();
+    await handle?.close();
   }
   const lines = text.split("\n");
   if (start > 0) lines.shift();

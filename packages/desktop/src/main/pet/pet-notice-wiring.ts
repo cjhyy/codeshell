@@ -8,7 +8,6 @@ import { createDecisionHooks } from "./pet-notice-decision-hooks.js";
 import { createExternalDecisions } from "./pet-notice-external-decisions.js";
 import { createGoalNoticeReconciler } from "./pet-notice-goal-reconcile.js";
 import { createNoticeRuleAction, predictedIm } from "./pet-notice-host-action.js";
-import { PetNoticeLedger } from "./pet-notice-ledger.js";
 import { PetNoticeMediaStore } from "./pet-notice-media.js";
 import { createNoticeOutlets } from "./pet-notice-outlets.js";
 import {
@@ -25,8 +24,6 @@ import { createTaskClosureAdapter } from "./pet-notice-task-closure.js";
 import { errorText } from "./pet-notice-types.js";
 import type { PetNoticeWiring, PetNoticeWiringDeps } from "./pet-notice-wiring-types.js";
 import { createPresenceDetector } from "./pet-presence.js";
-import { PetReceiptStore } from "./pet-receipt-store.js";
-import { PetRuleStore } from "./pet-rule-store.js";
 import {
   goalPauseDedupeKey,
   PetSessionRuleWatcher,
@@ -61,13 +58,10 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const now = deps.now ?? Date.now;
   const log = deps.log ?? ((event, data) => dlog("main", event, data));
   const petDir = join(deps.userDataDir, "pet");
-  // Desktop main is the only writer of rules.json / notices.json, so their
-  // in-process serialisation is enough (no cross-process lock).
-  const ruleStore = new PetRuleStore({ path: join(petDir, "rules.json"), now });
-  const ledger = new PetNoticeLedger({ path: join(petDir, "notices.json"), now });
+  const ruleStore = deps.rules;
+  const ledger = deps.ledger;
   // Each notice's files are copied here when it is recorded, so a resend sends the same bytes.
   const mediaStore = new PetNoticeMediaStore({ root: join(petDir, "notice-media"), log });
-  const receipts = new PetReceiptStore(join(petDir, "attention-receipts.json"), now);
   const views = new SessionViewTracker();
   const settings = createNoticeSettings({ readSettings: () => deps.readSettings(), now, log });
   let disposed = false;
@@ -75,7 +69,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   // Read lazily: where a prompt goes needs the hooks and view built below.
   const externalDecisions = createExternalDecisions({
     ...(deps.externalApprovals ? { source: deps.externalApprovals } : {}),
-    tasks: () => deps.longTasks.getSnapshot().tasks,
+    tasks: async () => (await deps.longTasks.getSnapshot()).tasks,
     deliveryFor: (sessionId, task) => decisions.hooks.deliveryFor(sessionId, task),
     title: (sessionId) => view.sessionTitle(sessionId),
     onChange: (event) => {
@@ -117,8 +111,6 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   };
 
   const router = new PetNoticeRouter({
-    source: deps.projection,
-    receipts,
     now,
     ledger,
     presence,
@@ -133,8 +125,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     supportsIdempotentSend: () => true,
     isDecisionStillPending: view.isDecisionStillPending,
     wasSessionViewedSince: (sessionId, ms) => viewedSince(sessionId, ms),
-    isGoalRuleCancelled: (ruleId) => {
-      const rule = ruleStore.get(ruleId);
+    isGoalRuleCancelled: async (ruleId) => {
+      const rule = await ruleStore.get(ruleId);
       return (
         rule?.when.kind === "session" && rule.when.scope === "goal" && rule.state === "cancelled"
       );
@@ -202,6 +194,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     getSystemIdleTimeSec: () => deps.presence.getSystemIdleTimeSec(),
     presenceIdleSec: () => settings.settings().presenceIdleSec,
     ownerChannels: outlets.ownerChannels,
+    liveOwnerIsDirect: deps.gateway.liveOwnerChannel
+      ? async (channel) => (await deps.gateway.liveOwnerChannel!(channel))?.target.isDirect === true
+      : undefined,
     isOwnerConversation: (channel, target) => deps.gateway.isOwnerConversation(channel, target),
     ...(deps.longTasks.subscribe
       ? { subscribeTasks: (listener: () => void) => deps.longTasks.subscribe!(listener) }
@@ -269,7 +264,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   });
   const removeHostAction = deps.bridge.setHostActionHandler(PET_RULE_UPSERT_ACTION, upsertRule);
 
-  const ready: Promise<void> = Promise.all([ruleStore.load(), ledger.load(), receipts.load()])
+  const ready: Promise<void> = Promise.all([ruleStore.load(), ledger.load()])
     .then(() => undefined)
     .catch((error) => log("pet.notice.load_failed", { error: errorText(error) }));
   // In the background: a slow resend (up to the IM timeout) must not hold up
@@ -282,9 +277,10 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const goalNotices = deps.externalGoals
     ? createGoalNoticeReconciler({
         source: deps.externalGoals,
+        isMimiSession: deps.isMimiSession,
         isExternalSession: (sessionId) =>
           isExternal(sessionId) && view.isEligibleSession(sessionId),
-        isReported: (outcome) => ledger.seenDedupeKeys().has(goalPauseDedupeKey(outcome)),
+        isReported: (outcome) => ledger.hasSeen(goalPauseDedupeKey(outcome)),
         report: (outcome) => watcher.reportBlocked(outcome),
         waitingSessions: () => router.goalPauseSessions(),
         withdraw: (sessionId) => router.revokeSessionBlocked(sessionId, "goal-moved-on"),
@@ -361,8 +357,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     ruleStore,
     watcher,
     ledger,
-    receipts,
-    attention: createNoticeAttention(router, views, now),
+    attention: createNoticeAttention(deps.attention, views, now),
     ready,
     observeSessionOutcomes(sessionId, outcomes) {
       if (outcomes.length === 0) return;

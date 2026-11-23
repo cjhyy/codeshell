@@ -1,8 +1,16 @@
+import { runDesktopCredentialOperation } from "./credential-file-client.js";
 import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
 import type { CaptureLinkAccountAccess } from "./link-account-access.js";
 import { createFigmaMcpLinkAdapter } from "./figma-mcp-link.js";
-import { BrowserWindow, clipboard, ipcMain, shell } from "electron";
+import {
+  BrowserWindow,
+  clipboard,
+  dialog,
+  ipcMain,
+  shell,
+  type IpcMainInvokeEvent,
+} from "electron";
 import {
   CredentialStore,
   isRemoteLinkCredential,
@@ -18,6 +26,7 @@ import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js
 import { listDesktopLinkProviders } from "./link-provider-catalog.js";
 import { createDesktopLinkConnections } from "./link-connections.js";
 import {
+  copyOrShowDeviceCode,
   isLocalBrowserLinkProvider,
   LinkDeviceOAuthBroker,
   type LocalBrowserAuthToken,
@@ -31,6 +40,7 @@ import { migrateCredentialStore } from "./credential-migration.js";
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 
 export interface LinkCredentialIpcDeps {
+  withCaller<T>(event: IpcMainInvokeEvent, work: () => T): T;
   mainWindows: Set<BrowserWindow>;
   bridge: () => AgentBridge | null;
   linkDeviceOAuthBroker: LinkDeviceOAuthBroker;
@@ -50,22 +60,36 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     normalizeMcpOAuthLoginInput,
     captureLinkAccount,
   } = deps;
-  ipcMain.handle("credentials:list", async (_e, cwd: string) => {
-    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-    await migrateCredentialStore(authorizedCwd || undefined);
-    const store = new CredentialStore(authorizedCwd || undefined);
-    const projectIds = new Set(store.list("project").map((credential) => credential.id));
-    return store.listMasked().map((credential) => ({
-      ...credential,
-      meta: credential.meta ? linkConnectionMetadata(credential.meta) : undefined,
-      storeScope: projectIds.has(credential.id) ? "project" : "user",
-    }));
-  });
+  function guarded<A extends unknown[], T>(
+    handler: (event: IpcMainInvokeEvent, ...args: A) => Promise<T>,
+  ) {
+    return (event: IpcMainInvokeEvent, ...args: A) =>
+      deps.withCaller(event, () => handler(event, ...args));
+  }
+  ipcMain.handle(
+    "credentials:list",
+    guarded(async (_e, cwd: string) => {
+      const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+      await migrateCredentialStore(authorizedCwd || undefined);
+      return runDesktopCredentialOperation(
+        authorizedCwd || undefined,
+        ["user", "project"],
+        undefined,
+        (store) => {
+          const projectIds = new Set(store.list("project").map((credential) => credential.id));
+          return store.listMasked().map((credential) => ({
+            ...credential,
+            meta: credential.meta ? linkConnectionMetadata(credential.meta) : undefined,
+            storeScope: projectIds.has(credential.id) ? "project" : "user",
+          }));
+        },
+      );
+    }),
+  );
   ipcMain.handle(
     "credentials:save",
-    async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
+    guarded(async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
       const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-      assertGenericCredentialMutation(authorizedCwd, cred.id);
       if (isRemoteLinkCredential(cred)) throw new Error("远程 Link 连接必须通过授权创建。");
       if (cred.meta?.recordSchemaVersion === 2) {
         const {
@@ -76,25 +100,41 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
         } = cred.meta;
         cred = { ...cred, meta };
       }
-      new CredentialStore(authorizedCwd || undefined).save(scope, cred);
+      await runDesktopCredentialOperation(
+        authorizedCwd || undefined,
+        ["user", "project"],
+        scope,
+        (store) => {
+          assertGenericCredentialRecord(store, scope, cred.id);
+          store.save(scope, cred);
+        },
+      );
       cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, cred.id, scope);
       deps.bridge()?.pushCredentialSnapshot(authorizedCwd || undefined);
-    },
+    }),
   );
   ipcMain.handle(
     "credentials:remove",
-    async (_e, cwd: string, scope: CredentialScope, id: string) => {
+    guarded(async (_e, cwd: string, scope: CredentialScope, id: string) => {
       const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-      assertGenericCredentialMutation(authorizedCwd, id);
-      new CredentialStore(authorizedCwd || undefined).remove(scope, id);
+      await runDesktopCredentialOperation(
+        authorizedCwd || undefined,
+        ["user", "project"],
+        scope,
+        (store) => {
+          assertGenericCredentialRecord(store, scope, id);
+          store.remove(scope, id);
+        },
+      );
       cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, id, scope);
       deps.bridge()?.pushCredentialSnapshot(authorizedCwd || undefined);
-    },
+    }),
   );
   ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
 
   const remoteLinkIpc = registerRemoteLinkIpc({
     ipcMain,
+    withCaller: deps.withCaller,
     requireRendererProjectPath,
     isMainWindow: (sender) =>
       [...mainWindows].some((win) => !win.isDestroyed() && win.webContents === sender),
@@ -112,23 +152,44 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     ],
   });
 
-  function assertGenericCredentialMutation(cwd: string, id: string) {
-    const credential = new CredentialStore(cwd || undefined).resolve(id);
+  function assertGenericCredentialRecord(
+    store: CredentialStore,
+    scope: CredentialScope,
+    id: string,
+  ) {
+    const record = store.listLayerWithStatus(scope).credentials.find((c) => c.id === id);
+    if (
+      (record && isRemoteLinkCredential(record)) ||
+      store.list().some((c) => c.id === id && isRemoteLinkCredential(c))
+    )
+      throw new Error("请在 Link 页的独立服务连接中管理或断开此连接，以同步撤销远端授权。");
+  }
+  async function assertGenericCredentialMutation(cwd: string, id: string) {
+    const credential = await runDesktopCredentialOperation(
+      cwd || undefined,
+      ["user", "project"],
+      undefined,
+      (store) => store.resolve(id),
+    );
     if (credential && isRemoteLinkCredential(credential))
       throw new Error("请在 Link 页的独立服务连接中管理或断开此连接，以同步撤销远端授权。");
   }
 
-  async function persistLocalLinkCredential(input: {
-    cwd: string;
-    providerId: string;
-    methodId: string;
-    label: string;
-    token: string;
-    browserOAuthToken?: LocalBrowserAuthToken;
-    existingId: string;
-    authSource: "manual-token" | "browser-oauth";
-  }) {
+  async function persistLocalLinkCredential(
+    event: IpcMainInvokeEvent,
+    input: {
+      cwd: string;
+      providerId: string;
+      methodId: string;
+      label: string;
+      token: string;
+      browserOAuthToken?: LocalBrowserAuthToken;
+      existingId: string;
+      authSource: "manual-token" | "browser-oauth";
+    },
+  ) {
     const connections = createDesktopLinkConnections({
+      withCaller: (work) => deps.withCaller(event, work),
       cwd: input.cwd || undefined,
       onChanged: () => deps.bridge()?.notifyWebConfigurationChanged(),
     });
@@ -139,15 +200,19 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     }
   }
 
-  async function persistCliLinkCredential(input: {
-    cwd: string;
-    providerId: CliLinkProviderId;
-    methodId: string;
-    label: string;
-    existingId: string;
-    loginIfNeeded: boolean;
-  }) {
+  async function persistCliLinkCredential(
+    event: IpcMainInvokeEvent,
+    input: {
+      cwd: string;
+      providerId: CliLinkProviderId;
+      methodId: string;
+      label: string;
+      existingId: string;
+      loginIfNeeded: boolean;
+    },
+  ) {
     const connections = createDesktopLinkConnections({
+      withCaller: (work) => deps.withCaller(event, work),
       cwd: input.cwd || undefined,
       onChanged: () => deps.bridge()?.notifyWebConfigurationChanged(),
     });
@@ -191,23 +256,36 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     return linkDeviceOAuthBroker.status(providerId);
   });
 
-  ipcMain.handle("links:startBrowserAuth", async (_e, rawProviderId: unknown) => {
+  ipcMain.handle("links:startBrowserAuth", async (event, rawProviderId: unknown) => {
     const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
     if (!isLocalBrowserLinkProvider(providerId)) {
       throw new Error("Unsupported browser-login Link provider");
     }
     const prompt = await linkDeviceOAuthBroker.start(providerId);
-    clipboard.writeText(prompt.userCode);
     try {
+      const codeCopied = await copyOrShowDeviceCode(
+        prompt.userCode,
+        (code) => clipboard.writeText(code),
+        async (code) => {
+          const owner = BrowserWindow.fromWebContents(event.sender);
+          if (!owner || owner.isDestroyed()) throw new Error("Authorization window closed");
+          await dialog.showMessageBox(owner, {
+            type: "info",
+            title: "CodeShell",
+            message: "请在授权页面输入此一次性验证码",
+            detail: code,
+          });
+        },
+      );
       await shell.openExternal(prompt.verificationUriComplete ?? prompt.verificationUri);
+      return { ...prompt, codeCopied };
     } catch (error) {
       linkDeviceOAuthBroker.cancel(prompt.attemptId);
-      throw new Error("Could not open the provider authorization page", { cause: error });
+      throw new Error("Could not start provider authorization", { cause: error });
     }
-    return { ...prompt, codeCopied: true };
   });
 
-  ipcMain.handle("links:completeBrowserAuth", async (_e, raw: unknown) => {
+  ipcMain.handle("links:completeBrowserAuth", async (event, raw: unknown) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
       throw new Error("links:completeBrowserAuth requires a connection request");
     }
@@ -230,7 +308,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     if (token.providerId !== providerId) {
       throw new Error("Browser-login provider does not match the connection request");
     }
-    return persistLocalLinkCredential({
+    return persistLocalLinkCredential(event, {
       cwd,
       providerId,
       methodId,
@@ -247,7 +325,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     return attemptId ? linkDeviceOAuthBroker.cancel(attemptId) : false;
   });
 
-  ipcMain.handle("links:connectCli", async (_e, raw: unknown) => {
+  ipcMain.handle("links:connectCli", async (event, raw: unknown) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
       throw new Error("links:connectCli requires a connection request");
     }
@@ -263,7 +341,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(methodId)) throw new Error("Invalid Link method");
     if (label.length > 200) throw new Error("Connection label is too long");
 
-    return persistCliLinkCredential({
+    return persistCliLinkCredential(event, {
       cwd,
       providerId: rawProviderId,
       methodId,
@@ -273,7 +351,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     });
   });
 
-  ipcMain.handle("links:connectLocal", async (_e, raw: unknown) => {
+  ipcMain.handle("links:connectLocal", async (event, raw: unknown) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
       throw new Error("links:connectLocal requires a connection request");
     }
@@ -294,7 +372,7 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     if (label.length > 200) throw new Error("Connection label is too long");
     if (token.length > 16_384) throw new Error("Token is too long");
 
-    return persistLocalLinkCredential({
+    return persistLocalLinkCredential(event, {
       cwd,
       providerId,
       methodId,
@@ -307,68 +385,86 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
   // 只改元数据(label/autoUseByAI/meta),保留 secret —— UI 的编辑/AI 开关用,避免清空 jar。
   ipcMain.handle(
     "credentials:patchMeta",
-    async (
-      _e,
-      cwd: string,
-      scope: CredentialScope,
-      id: string,
-      fields: {
-        label?: string;
-        exposeAsEnv?: string;
-        autoUseByAI?: boolean;
-        autoInjectByAI?: boolean;
-        meta?: unknown;
-      },
-    ) => {
-      const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-      if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
-        throw new Error("credentials:patchMeta requires id");
-      }
-      if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
-        throw new Error("credentials:patchMeta requires fields");
-      }
-      assertGenericCredentialMutation(authorizedCwd, id);
-      new CredentialStore(authorizedCwd || undefined).patch(scope, id, fields as never);
-      if (
-        fields.meta &&
-        typeof fields.meta === "object" &&
-        "autoRefreshFromBrowser" in fields.meta
-      ) {
-        if (fields.meta.autoRefreshFromBrowser === true) {
-          cookieCredentialAutoRefresh.requestRefreshForCredential(
-            authorizedCwd || undefined,
-            id,
-            scope,
-          );
-        } else {
-          cookieCredentialAutoRefresh.cancelRefreshForCredential(
-            authorizedCwd || undefined,
-            id,
-            scope,
-          );
+    guarded(
+      async (
+        _e,
+        cwd: string,
+        scope: CredentialScope,
+        id: string,
+        fields: {
+          label?: string;
+          exposeAsEnv?: string;
+          autoUseByAI?: boolean;
+          autoInjectByAI?: boolean;
+          meta?: unknown;
+        },
+      ) => {
+        const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+        if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
+          throw new Error("credentials:patchMeta requires id");
         }
-      }
-      deps.bridge()?.pushCredentialSnapshot(authorizedCwd || undefined);
-    },
+        if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
+          throw new Error("credentials:patchMeta requires fields");
+        }
+        await runDesktopCredentialOperation(
+          authorizedCwd || undefined,
+          ["user", "project"],
+          scope,
+          (store) => {
+            assertGenericCredentialRecord(store, scope, id);
+            store.patch(scope, id, fields as never);
+          },
+        );
+        if (
+          fields.meta &&
+          typeof fields.meta === "object" &&
+          "autoRefreshFromBrowser" in fields.meta
+        ) {
+          if (fields.meta.autoRefreshFromBrowser === true) {
+            cookieCredentialAutoRefresh.requestRefreshForCredential(
+              authorizedCwd || undefined,
+              id,
+              scope,
+            );
+          } else {
+            cookieCredentialAutoRefresh.cancelRefreshForCredential(
+              authorizedCwd || undefined,
+              id,
+              scope,
+            );
+          }
+        }
+        deps.bridge()?.pushCredentialSnapshot(authorizedCwd || undefined);
+      },
+    ),
   );
-  ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) => {
-    const input = normalizeMcpOAuthLoginInput(raw);
-    if (input.credentialId) assertGenericCredentialMutation("", input.credentialId);
-    return getMcpOAuthService().login(input);
-  });
-  ipcMain.handle("mcpOAuth:refresh", (_e, credentialId: unknown) => {
-    if (typeof credentialId !== "string" || !credentialId) {
-      throw new Error("mcpOAuth:refresh requires credentialId");
-    }
-    assertGenericCredentialMutation("", credentialId);
-    return getMcpOAuthService().refresh(credentialId);
-  });
-  ipcMain.handle("mcpOAuth:logout", (_e, credentialId: unknown) => {
-    if (typeof credentialId !== "string" || !credentialId) {
-      throw new Error("mcpOAuth:logout requires credentialId");
-    }
-    assertGenericCredentialMutation("", credentialId);
-    return getMcpOAuthService().logout(credentialId);
-  });
+  ipcMain.handle(
+    "mcpOAuth:login",
+    guarded(async (_e, raw: unknown) => {
+      const input = normalizeMcpOAuthLoginInput(raw);
+      if (input.credentialId) await assertGenericCredentialMutation("", input.credentialId);
+      return getMcpOAuthService().login(input);
+    }),
+  );
+  ipcMain.handle(
+    "mcpOAuth:refresh",
+    guarded(async (_e, credentialId: unknown) => {
+      if (typeof credentialId !== "string" || !credentialId) {
+        throw new Error("mcpOAuth:refresh requires credentialId");
+      }
+      await assertGenericCredentialMutation("", credentialId);
+      return getMcpOAuthService().refresh(credentialId);
+    }),
+  );
+  ipcMain.handle(
+    "mcpOAuth:logout",
+    guarded(async (_e, credentialId: unknown) => {
+      if (typeof credentialId !== "string" || !credentialId) {
+        throw new Error("mcpOAuth:logout requires credentialId");
+      }
+      await assertGenericCredentialMutation("", credentialId);
+      return getMcpOAuthService().logout(credentialId);
+    }),
+  );
   return { remoteLinkIpc };
 }

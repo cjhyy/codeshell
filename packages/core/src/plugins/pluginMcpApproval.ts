@@ -65,7 +65,10 @@ export function listPluginMcpTrust(): PluginMcpTrustEntry[] {
 }
 
 /** Approve only the install-time MCP bytes; tampered bytes require update/reinstall. */
-export function approvePluginMcp(target: string): PluginMcpApprovalResult[] {
+export function approvePluginMcp(
+  target: string,
+  beforeCommit?: () => void,
+): PluginMcpApprovalResult[] {
   return (
     mutateInstalledPlugins((data) => {
       const keys = matchingInstallKeys(data, target);
@@ -92,6 +95,7 @@ export function approvePluginMcp(target: string): PluginMcpApprovalResult[] {
           out.push(trustEntry(installKey, entry, entryChanged) as PluginMcpApprovalResult);
         }
       }
+      if (writeNeeded) beforeCommit?.();
       return { ...(writeNeeded ? { value: data } : {}), result: out };
     }) ?? []
   );
@@ -101,7 +105,10 @@ export function approvePluginMcp(target: string): PluginMcpApprovalResult[] {
  * Revoke plugin MCP execution. Legacy entries first record their current
  * digest, preventing revocation from falling back to legacy compatibility.
  */
-export function revokePluginMcp(target: string): PluginMcpApprovalResult[] {
+export function revokePluginMcp(
+  target: string,
+  beforeCommit?: () => void,
+): PluginMcpApprovalResult[] {
   return (
     mutateInstalledPlugins((data) => {
       const keys = matchingInstallKeys(data, target);
@@ -130,6 +137,7 @@ export function revokePluginMcp(target: string): PluginMcpApprovalResult[] {
           out.push(trustEntry(installKey, entry, entryChanged) as PluginMcpApprovalResult);
         }
       }
+      if (writeNeeded) beforeCommit?.();
       return { ...(writeNeeded ? { value: data } : {}), result: out };
     }) ?? []
   );

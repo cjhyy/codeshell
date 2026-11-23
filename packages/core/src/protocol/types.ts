@@ -368,6 +368,8 @@ export interface SetWorkspaceParams {
 
 /** Atomically rebind every main-root field through the live Session owner. */
 export interface MigrateSessionMainRootParams {
+  /** Optional Desktop document grant checked inside the resident Session state write. */
+  commitTicket?: string;
   sessionId: string;
   project: SessionProjectBinding;
   mainRoot: string;

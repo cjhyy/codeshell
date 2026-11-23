@@ -80,7 +80,7 @@ export interface ImDecisionDelivery {
 export type ImDecisionDeliveryResolver = (
   sessionId: string,
   task: PetLongTask | undefined,
-) => DeliveryPlanEntry | undefined;
+) => DeliveryPlanEntry | undefined | Promise<DeliveryPlanEntry | undefined>;
 
 export interface ImDecision {
   code: string;
@@ -92,6 +92,31 @@ export interface ImDecision {
   task?: PetLongTask;
   envelope: Envelope;
   delivery: ImDecisionDelivery;
+}
+
+function activeDecisionTask(tasks: readonly PetLongTask[], sessionId: string) {
+  return tasks.find(
+    (task) =>
+      task.sessionId === sessionId && !["completed", "failed", "cancelled"].includes(task.status),
+  );
+}
+
+/** Resolve each Session's live routing rules once per scan before joining its worker envelopes. */
+export async function collectCurrentImDecisions(
+  snapshot: DesktopPetProjectionSnapshot,
+  tasks: readonly PetLongTask[],
+  lines: readonly string[],
+  deliveryFor: ImDecisionDeliveryResolver,
+): Promise<ImDecision[]> {
+  const entries = new Map<string, DeliveryPlanEntry | undefined>();
+  for (const row of snapshot.pending) {
+    if (row.status !== "pending" || entries.has(row.agentSessionId)) continue;
+    entries.set(
+      row.agentSessionId,
+      await deliveryFor(row.agentSessionId, activeDecisionTask(tasks, row.agentSessionId)),
+    );
+  }
+  return collectImDecisions(snapshot, tasks, lines, (sessionId) => entries.get(sessionId));
 }
 
 /** First-route reasons that mean "kept on the desktop only because the owner was there". */
@@ -112,7 +137,7 @@ export function collectImDecisions(
   snapshot: DesktopPetProjectionSnapshot,
   tasks: readonly PetLongTask[],
   lines: readonly string[],
-  deliveryFor: ImDecisionDeliveryResolver,
+  deliveryFor: (sessionId: string, task: PetLongTask | undefined) => DeliveryPlanEntry | undefined,
 ): ImDecision[] {
   const envelopes = new Map<string, Envelope>();
   for (const line of lines) {
@@ -129,11 +154,7 @@ export function collectImDecisions(
   const result: ImDecision[] = [];
   for (const pending of snapshot.pending) {
     if (pending.status !== "pending") continue;
-    const task = tasks.find(
-      (entry) =>
-        entry.sessionId === pending.agentSessionId &&
-        !["completed", "failed", "cancelled"].includes(entry.status),
-    );
+    const task = activeDecisionTask(tasks, pending.agentSessionId);
     const entry = deliveryFor(pending.agentSessionId, task);
     if (!entry) continue;
     const delivery: ImDecisionDelivery = {
@@ -206,13 +227,15 @@ const UNRECORDED_RETRY_MS = 3_000;
 const UNRECORDED_RETRY_MAX_MS = 60_000;
 
 export interface PetImDecisionsOptions {
-  read: () => ImDecision[];
+  read: () => ImDecision[] | Promise<ImDecision[]>;
   /**
    * Right after a `read`: the decisions it could not see (their source failed
    * to read), or undefined when it saw everything. Missing from that read
    * does not mean ended for them.
    */
-  unreadDecisions?: () => ((sessionId: string, requestId: string) => boolean) | undefined;
+  unreadDecisions?: (
+    items?: ImDecision[],
+  ) => ((sessionId: string, requestId: string) => boolean) | undefined;
   approve: (entry: ImDecision, decision: Decision) => Promise<void>;
   /** Drop a model question's auto-resolve deadline (回答 码 等待). */
   keepWaiting?: (entry: ImDecision) => Promise<void>;
@@ -223,9 +246,13 @@ export interface PetImDecisionsOptions {
    */
   router: NoticeDecisionPrompts;
   /** A direct chat that belongs to the owner, for owner-targeted prompts. */
-  isOwnerConversation?: (origin: { channel: string; target: string; senderId?: string }) => boolean;
+  isOwnerConversation?: (origin: {
+    channel: string;
+    target: string;
+    senderId?: string;
+  }) => boolean | Promise<boolean>;
   /** The owner target on this channel is a confirmed private chat. */
-  ownerChannelIsDirect?: (channel: string) => boolean;
+  ownerChannelIsDirect?: (channel: string) => boolean | Promise<boolean>;
   /** The owner left the computer: a prompt kept on the desktop may now go to IM. */
   isAway?: () => boolean;
   /** The projection's status of a decision ("expired" = Core's deadline fired). */
@@ -271,7 +298,7 @@ export interface PetImDecisionsOptions {
   ) => Promise<ReplyInterpretation | undefined>;
   /** Notice items (goal pauses, failures, results to open): listed per channel, executed on request. */
   actions?: {
-    items(channel: string): NoticeActionRecord[];
+    items(channel: string): NoticeActionRecord[] | Promise<NoticeActionRecord[]>;
     execute(request: NoticeActionRequest): Promise<NoticeActionReply>;
   };
 }
@@ -285,7 +312,7 @@ type ReplyOrigin = Pick<
 type OpenItem =
   | { source: "decision"; code: string; entry: ImDecision; model: ReplyItem }
   | { source: "action"; code: string; record: NoticeActionRecord; model: ReplyItem }
-  | { source: "ended"; code: string; model: ReplyItem };
+  | { source: "ended"; code: string; target: NoticeTarget; model: ReplyItem };
 
 type DraftItem<T> = T extends OpenItem
   ? Omit<T, "model"> & { model: Omit<ReplyItem, "ordinal" | "ref"> }
@@ -427,18 +454,18 @@ export class PetImDecisions {
     if (skippableEnvelope(entry.envelope)) return Number.POSITIVE_INFINITY;
     return entry.createdAt + (this.options.timeoutMs ?? USER_DECISION_TIMEOUT_MS);
   }
-  private sameOrigin(
+  private async sameOrigin(
     target: NoticeTarget,
     origin: Parameters<PetImDecisions["reply"]>[0]["origin"],
-  ): boolean {
+  ): Promise<boolean> {
     if (!origin || origin.isDirectMessage !== true || !this.canReply(target)) return false;
     if (target.kind === "owner") {
       return (
-        this.options.isOwnerConversation?.({
+        (await this.options.isOwnerConversation?.({
           channel: origin.channel,
           target: origin.target,
           ...(origin.senderId !== undefined ? { senderId: origin.senderId } : {}),
-        }) === true
+        })) === true
       );
     }
     return (
@@ -452,8 +479,8 @@ export class PetImDecisions {
    * An owner target that is not a confirmed private chat got the generic
    * text: nothing there is answerable.
    */
-  private answerableOn(target: NoticeTarget, channel: string): boolean {
-    return target.kind !== "owner" || this.options.ownerChannelIsDirect?.(channel) === true;
+  private async answerableOn(target: NoticeTarget, channel: string): Promise<boolean> {
+    return target.kind !== "owner" || (await this.options.ownerChannelIsDirect?.(channel)) === true;
   }
 
   /** Look over every decision; a call during a look runs one more afterwards. */
@@ -478,13 +505,13 @@ export class PetImDecisions {
   private async scanOnce(): Promise<void> {
     try {
       await this.router.decisionsLoaded();
-      const entries = this.options.read();
-      const unread = this.options.unreadDecisions?.();
+      const entries = await this.options.read();
+      const unread = this.options.unreadDecisions?.(entries);
       const live = new Set(entries.map((entry) => entry.code));
       // Ended prompts matter only while their expiry notice is still owed.
       const open = (prompt: DecisionPromptRecord["prompt"]) =>
         !isPromptEnded(prompt.phase) || prompt.expiryNotice?.sent === false;
-      for (const record of this.router.decisionRecords(open)) {
+      for (const record of await this.router.decisionRecords(open)) {
         if (this.answering.has(record.code)) continue;
         try {
           const owed = record.prompt.expiryNotice;
@@ -508,12 +535,12 @@ export class PetImDecisions {
             await this.expire(entry);
             continue;
           }
-          let record = this.router.decisionRecord(entry.code);
+          let record = await this.router.decisionRecord(entry.code);
           if (record) record = await this.catchUp(entry, record);
           else {
             if (this.now() - entry.createdAt < this.graceMs()) continue;
             await this.promptFirst(entry);
-            record = this.router.decisionRecord(entry.code);
+            record = await this.router.decisionRecord(entry.code);
             if (!record) continue;
           }
           if (!this.escalates(entry, record)) continue;
@@ -523,7 +550,7 @@ export class PetImDecisions {
           this.options.onError(error);
         }
       }
-      this.reschedule(entries);
+      await this.reschedule(entries);
       this.watchAway(awaitingAway);
     } catch (error) {
       this.options.onError(error);
@@ -583,7 +610,7 @@ export class PetImDecisions {
     if (
       channel !== undefined &&
       result.sent === "accepted" &&
-      this.answerableOn(entry.delivery.target, channel)
+      (await this.answerableOn(entry.delivery.target, channel))
     ) {
       await this.router.updateDecision(entry.code, {
         ...patch,
@@ -607,7 +634,7 @@ export class PetImDecisions {
       // Enqueued: the gateway outbox has it and delivers it, like an accepted send.
       if ((copy.status !== "accepted" && copy.status !== "enqueued") || copy.channel === undefined)
         continue;
-      if (!this.answerableOn(entry.delivery.target, copy.channel)) continue;
+      if (!(await this.answerableOn(entry.delivery.target, copy.channel))) continue;
       const patch = { phase: "im" as const, channel: copy.channel, imAt: this.now() };
       return (
         (await this.router.updateDecision(entry.code, patch)) ?? {
@@ -636,7 +663,7 @@ export class PetImDecisions {
   private async expire(entry: ImDecision): Promise<void> {
     // Core applies a model question's timeout (recommended option or skip).
     if (skippableEnvelope(entry.envelope)) return;
-    const found = this.router.decisionRecord(entry.code);
+    const found = await this.router.decisionRecord(entry.code);
     const record = found ? await this.catchUp(entry, found) : undefined;
     // Answered here already; the projection has not caught up yet.
     if (record && isPromptEnded(record.prompt.phase)) return;
@@ -647,11 +674,11 @@ export class PetImDecisions {
       (entry.delivery.reply && entry.delivery.target.kind === "route"
         ? entry.delivery.target.route.channel
         : undefined);
-    if (channel === undefined) return;
+    if (channel === undefined || this.answering.has(entry.code)) return;
     this.answering.add(entry.code);
     try {
       // Re-read immediately before submitting; cancellation/restart wins.
-      if (!this.options.read().some((item) => item.code === entry.code)) return;
+      if (!(await this.options.read()).some((item) => item.code === entry.code)) return;
       await this.options.approve(entry, {
         approved: false,
         failure: "timed_out",
@@ -719,13 +746,15 @@ export class PetImDecisions {
   }
 
   /** Each decision's next moment: the end of its grace, then its deadline. */
-  private reschedule(entries: readonly ImDecision[]): void {
+  private async reschedule(entries: readonly ImDecision[]): Promise<void> {
     const now = this.now();
     const codes = new Set(entries.map((entry) => entry.code));
     for (const code of this.unrecordedTries.keys())
       if (!codes.has(code)) this.unrecordedTries.delete(code);
+    const activeRows = entries.length ? await this.router.decisionRecords() : [];
+    const byCode = new Map(activeRows.map((row) => [row.code, row]));
     for (const entry of entries) {
-      const record = this.router.decisionRecord(entry.code);
+      const record = byCode.get(entry.code);
       if (record) this.unrecordedTries.delete(entry.code);
       const end = this.expiresAt(entry);
       const graceEnd = entry.createdAt + this.graceMs();
@@ -783,8 +812,8 @@ export class PetImDecisions {
     const ordinals: Array<number | undefined> = [];
     let expired = false;
     for (const entry of entries) {
-      if (!this.sameOrigin(entry.delivery.target, origin)) continue;
-      const found = this.router.decisionRecord(entry.code);
+      if (!(await this.sameOrigin(entry.delivery.target, origin))) continue;
+      const found = await this.router.decisionRecord(entry.code);
       const record = found ? await this.catchUp(entry, found) : undefined;
       const delivered =
         entry.delivery.target.kind === "route"
@@ -805,8 +834,8 @@ export class PetImDecisions {
       const slot = record?.prompt.slot;
       ordinals.push(slot?.channel === origin.channel ? slot.ordinal : undefined);
     }
-    for (const record of this.options.actions?.items(origin.channel) ?? []) {
-      if (!this.sameOrigin(record.target, origin)) continue;
+    for (const record of (await this.options.actions?.items(origin.channel)) ?? []) {
+      if (!(await this.sameOrigin(record.target, origin))) continue;
       items.push({
         source: "action",
         code: record.actions.code,
@@ -819,10 +848,11 @@ export class PetImDecisions {
     // are shown too (no actions), so a late answer to one is never taken for another.
     if (items.length === 0) return { items: [], expired };
     const live = new Set(items.map((item) => item.code));
-    for (const record of this.recentlyEnded(origin)) {
+    for (const record of await this.recentlyEnded(origin)) {
       if (live.has(record.code)) continue;
       items.push({
         source: "ended",
+        target: record.target,
         code: record.code,
         model: {
           kind: "ended",
@@ -862,16 +892,18 @@ export class PetImDecisions {
   }
 
   /** Prompts that reached this conversation and ended within the last 10 minutes. */
-  private recentlyEnded(origin: ReplyOrigin): DecisionPromptRecord[] {
+  private async recentlyEnded(origin: ReplyOrigin): Promise<DecisionPromptRecord[]> {
     const now = this.now();
-    return this.router
-      .decisionRecords(
-        (prompt) =>
-          isPromptEnded(prompt.phase) &&
-          prompt.channel === origin.channel &&
-          now - (prompt.endedAt ?? 0) <= USER_DECISION_TIMEOUT_MS,
-      )
-      .filter((record) => this.sameOrigin(record.target, origin));
+    const records = await this.router.decisionRecords(
+      (prompt) =>
+        isPromptEnded(prompt.phase) &&
+        prompt.channel === origin.channel &&
+        now - (prompt.endedAt ?? 0) <= USER_DECISION_TIMEOUT_MS,
+    );
+    const allowed = await Promise.all(
+      records.map((record) => this.sameOrigin(record.target, origin)),
+    );
+    return records.filter((_record, index) => allowed[index]);
   }
 
   private itemOptions(entry: ImDecision): { wait: boolean; skip: boolean } {
@@ -903,7 +935,7 @@ export class PetImDecisions {
     const message = request.message.trim();
     if (!message) return undefined;
     await this.router.decisionsLoaded();
-    const { items, expired } = await this.openItems(this.options.read(), request.origin);
+    const { items, expired } = await this.openItems(await this.options.read(), request.origin);
     // A reply to a prompt past its deadline: the timeout backstop runs now.
     if (expired) await this.scan();
     if (items.length === 0) return undefined;
@@ -913,6 +945,17 @@ export class PetImDecisions {
       items.map((item) => item.model),
       { bound: request.handoff === false },
     );
+    const hasOwnerItem = items.some(
+      (item) =>
+        (item.source === "decision"
+          ? item.entry.delivery.target
+          : item.source === "action"
+            ? item.record.target
+            : item.target
+        ).kind === "owner",
+    );
+    if (hasOwnerItem && !(await this.sameOrigin({ kind: "owner" }, request.origin)))
+      return "当前会话的主人授权已结束，没有采用这条回复。";
     if (!reading)
       // Only notice items open: nothing waits on an answer, so Mimi takes the message.
       return items.some((item) => item.source === "decision") ? NOT_UNDERSTOOD : undefined;
@@ -933,20 +976,25 @@ export class PetImDecisions {
         message,
       });
     }
-    return this.resolveDecision(item.entry, reading);
+    return this.resolveDecision(item.entry, reading, request.origin);
   }
 
   private async resolveDecision(
     offered: ImDecision,
     reading: Extract<ReplyInterpretation, { kind: "resolve" }>,
+    origin: ReplyOrigin | undefined,
   ): Promise<string> {
     const { code } = offered;
-    if (this.answering.has(code)) return "这件事正在处理，请稍等。";
     // The model took a while: the decision may have been answered or ended meanwhile.
-    const entry = this.options.read().find((item) => item.code === code);
-    const prompted = this.router.decisionRecord(code);
-    if (!entry || (prompted && isPromptEnded(prompted.prompt.phase)))
+    const prompted = await this.router.decisionRecord(code);
+    const entry = (await this.options.read()).find((item) => item.code === code);
+    if (
+      !entry ||
+      !(await this.sameOrigin(entry.delivery.target, origin)) ||
+      (prompted && isPromptEnded(prompted.prompt.phase))
+    )
       return "这件事已经结束了，没有采用这条回答。";
+    if (this.answering.has(code)) return "这件事正在处理，请稍等。";
     if (this.expired(entry)) {
       await this.scan();
       return "这个确认已经超时，没有采用这条回答。";
@@ -1003,7 +1051,7 @@ export class PetImDecisions {
     this.answering.add(code);
     try {
       await this.options.approve(entry, decision);
-      const record = this.router.decisionRecord(code);
+      const record = await this.router.decisionRecord(code);
       if (record && !isPromptEnded(record.prompt.phase))
         await this.router.updateDecision(code, { phase: "answered", endedAt: this.now() });
       if (asked)

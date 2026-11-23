@@ -657,6 +657,7 @@ describe("mobile question answer acknowledgment", () => {
         decision: "approve",
         answer: "Read only",
       });
+      await Promise.resolve(); // the pending decision is read from its Host owner
       expect(requests).toHaveLength(1);
       expect(resolved).toEqual([]);
       expect(requests[0]?.params).toEqual({
@@ -783,22 +784,65 @@ describe("mobile snapshot epoch recovery", () => {
     store.append("session-1", { type: "turn_complete" });
     const cursors: number[] = [];
     const approvalReplays: Array<[string, string | undefined]> = [];
-    harness.ctx.getBridge = () =>
-      ({
-        getLastRunContext: () => ({}),
-        getSnapshot: (sessionId: string, sinceSeq: number) => {
-          cursors.push(sinceSeq);
-          const snapshot = store.get(sessionId, sinceSeq);
-          if (!legacyServer) return snapshot;
-          const { epoch: _epoch, ...legacy } = snapshot;
-          return legacy;
-        },
-      }) as unknown as AgentBridge;
+    const bridge = {
+      getLastRunContext: () => ({}),
+      getSnapshot: (sessionId: string, sinceSeq: number) => {
+        cursors.push(sinceSeq);
+        const snapshot = store.get(sessionId, sinceSeq);
+        if (!legacyServer) return snapshot;
+        const { epoch: _epoch, ...legacy } = snapshot;
+        return legacy;
+      },
+    } as unknown as AgentBridge;
+    harness.ctx.getBridge = () => bridge;
     harness.ctx.replayPendingMobileApprovals = (sessionId, deviceId) => {
       approvalReplays.push([sessionId, deviceId]);
     };
     return { ...harness, store, cursors, approvalReplays };
   }
+
+  test.each(["viewer", "owner", "selection", "bridge"] as const)(
+    "withdraws an in-flight Host replay after its %s changes",
+    async (reason) => {
+      const h = snapshotHarness();
+      const bridge = h.ctx.getBridge()!;
+      const start = Promise.withResolvers<void>();
+      const resume = Promise.withResolvers<void>();
+      let viewer = true;
+      let ownerRevision = 0;
+      bridge.sessionPanelOwnerRevision = () => ownerRevision;
+      h.ctx.remote.hasAuthenticatedViewer = () => viewer;
+      bridge.readSnapshot = async (...args) => {
+        start.resolve();
+        await resume.promise;
+        return bridge.getSnapshot(...args);
+      };
+      const pending = handleClientEvent(h.ctx, {
+        type: "session.sync",
+        deviceId: "phone-1",
+        viewerId: "tab",
+        sessionId: "session-1",
+      });
+      await start.promise;
+      if (reason === "viewer") viewer = false;
+      if (reason === "owner") ownerRevision += 2;
+      if (reason === "bridge") h.ctx.getBridge = () => null;
+      if (reason === "selection") {
+        for (const sessionId of ["other", "session-1"]) {
+          await handleClientEvent(h.ctx, {
+            type: "session.select",
+            deviceId: "phone-1",
+            sessionId,
+          });
+        }
+        h.approvalReplays.length = 0;
+      }
+      resume.resolve();
+      await pending;
+      expect(h.replies).toEqual([]);
+      expect(h.approvalReplays).toEqual([]);
+    },
+  );
 
   test("replays the new Main snapshot when a previous lifetime supplied a higher cursor", async () => {
     const harness = snapshotHarness();
@@ -1154,6 +1198,7 @@ describe("mobile keep-waiting on a model question", () => {
         connectionId: "worker",
         generation: 2,
       });
+      await Promise.resolve(); // the pending decision is read from its Host owner
       expect(requests).toHaveLength(1);
       expect(requests[0]!.method).toBe("agent/approvalKeepWaiting");
       expect(requests[0]!.params).toEqual({
@@ -1410,4 +1455,58 @@ describe("remote subagent reads", () => {
     ]);
     expect(h.listed).toEqual([]);
   });
+});
+
+test("a paired cold Goal read rechecks the original viewer before delivering its objective", async () => {
+  const replies: unknown[] = [];
+  const deferred = Promise.withResolvers<void>();
+  const began = Promise.withResolvers<void>();
+  let online = true;
+  const ctx = {
+    getBridge: () => ({ hasLiveWorker: () => false, getLastRunContext: () => ({}) }),
+    deviceState: () => ({ selectedSessionId: "native" }),
+    externalCommands: {
+      observe() {},
+      isExternal: () => false,
+      authorizeNative: async () => ({
+        assertCurrent() {
+          if (!online) throw Error("Viewer left");
+        },
+      }),
+    },
+    async readColdGoal() {
+      began.resolve();
+      await deferred.promise;
+      return {
+        external: false,
+        goal: {
+          goal: "private synthetic objective",
+          goalId: "fixture",
+          revision: 3,
+          paused: false,
+        },
+      };
+    },
+    remote: { sendToDevice: (_id: string, reply: unknown) => replies.push(reply) },
+  } as unknown as OrchestratorCtx;
+  const reading = handleClientEvent(ctx, {
+    type: "goal.get",
+    sessionId: "native",
+    deviceId: "phone",
+    viewerId: "tab",
+    requestId: "read",
+  });
+  await began.promise;
+  online = false;
+  deferred.resolve();
+  await reading;
+  expect(replies).toEqual([
+    {
+      type: "goal.state",
+      sessionId: "native",
+      requestId: "read",
+      ok: false,
+      message: "Viewer left",
+    },
+  ]);
 });

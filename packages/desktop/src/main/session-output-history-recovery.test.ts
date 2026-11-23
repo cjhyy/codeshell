@@ -59,7 +59,7 @@ function fixture() {
   const service = new SessionOutputHistoryRecovery({
     bridge: () => ({
       isSessionRunning: () => busy,
-      getSnapshot: (id) => snapshots.get(id),
+      readSnapshot: async (id) => snapshots.get(id),
       async quiesceForOutputRecovery() {
         closed++;
         await pause;

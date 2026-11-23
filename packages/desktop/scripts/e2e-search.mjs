@@ -4,6 +4,7 @@
  * developer profile. CODESHELL_SEARCH_SCREENSHOT_DIR enables optional previews.
  */
 /* global document, localStorage, window */
+import { installWorkbenchReadFixture } from "./workbench-read-fixture.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -54,6 +55,7 @@ try {
     userDataDir: isolated.userDataDir,
   });
   const win = await findCodeShellWindow(app);
+  await app.evaluate(installWorkbenchReadFixture);
   const errors = captureRendererErrors(win);
   const trust = win.getByRole("button", { name: /仅查看|View only/i });
   if (
@@ -170,11 +172,10 @@ try {
   await dialog.waitFor({ state: "hidden" });
   await win.waitForFunction(() => document.activeElement?.textContent?.trim() === "搜索");
 
-  // Drive the real preload IPC method with deterministic search outcomes.
-  await app.evaluate(({ ipcMain }) => {
+  // Inject the failure and retry at the workbench read boundary.
+  await app.evaluate(() => {
     let failed = false;
-    ipcMain.removeHandler("session:content-search");
-    ipcMain.handle("session:content-search", (_event, query) => {
+    globalThis.__workbenchFixtureReads.set("activity/searchTranscripts", ({ query }) => {
       if (query === "重试" && !failed) {
         failed = true;
         throw new Error("search fixture unavailable");

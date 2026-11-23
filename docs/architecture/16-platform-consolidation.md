@@ -1,6 +1,6 @@
 # 16 · 平台层收敛技术方案
 
-> 状态：v1.3（2026-10-15，S1 第 3–7 项已通过 CC 复审及宿主打包验证，待 CI）；变更记录见文末
+> 状态：v1.6（2026-11-22），同步 0.12 工作台握手、worker 归属与两类续传。各批次进度见文末和首版实施计划。
 > 基线：codeshell `main @ 08eaa4369`（0.9.41 源码已合入、尚未正式发布；v0.9.40 之后 97 个提交）；codeshell-services `main @ a5958f0`（锁定 `@cjhyy/code-shell-server` 0.9.38）
 > 对照：Codex（本机 ChatGPT.app 26.1002.52244 安装包、本仓库第 15 章）、Claude Code（公开设计）
 > 上游文档：[15 · Codex 对比与路线](15-codex-harness-comparison-and-roadmap.md)（Protocol v2 契约与术语以该章为准）
@@ -45,6 +45,12 @@ W1 和 W2 是交织的，不是先后关系。步骤级依赖见第 9.1 节。�
 | 本章                  | HostRuntime、Protocol v2 宿主侧、策略 / 执行、扩展包、契约版本 | 上两份文档的实现都跑在本章定义的宿主和协议上                                                                                                         |
 
 ---
+
+### 0.12 Desktop 接入进度
+
+Desktop 已将会话输出、worker 生命周期、索引和任务投影接入本地 Host。工作台直连 Host，已配对的手机继续走带设备身份的网关。两种客户端分别验证已有权限，输出续传沿用同一套 Session 和 Turn 标识。[Desktop Host 接入](../../packages/desktop/src/main/desktop-host/utility.ts) · [输出订阅](../../packages/desktop/src/main/desktop-host/output-methods.ts)
+
+账号和中继的连接、票据轮换及失效回收由同一代 Host 持有。需要解密本机保存的账号时，Main 调用系统钥匙环，冷启动的首次账号读取等待恢复完成。各阶段其余迁移与验收见[第 17 章](17-host-process-and-storage.md)。
 
 ## 1. 现状事实（2026-10-14 据源码核对）
 
@@ -246,8 +252,10 @@ class HostRuntime {
 ```
 
 - 客户端声明自己**能应答**哪些 `client/*` 反向请求；宿主声明自己**提供**哪些能力和方法。
-- 没发 `initialize` 的连接按 v1 处理。
+- AgentServer 对未发 `initialize` 的连接沿用 v1。
 - **S0 已实现的子集**：`initialize` 返回 `{ protocolVersion: "1", contracts }`（`packages/core/src/protocol/initialize.ts` 的 `InitializeResult`），在 `moduleReady` 之后分发，暂不读取客户端参数、不做版本协商。`contracts` 永久留在顶层，S1 在它旁边增加 `host`、`capabilities`、`methods`、`unsupported`。serve 的 `/health` 同样返回 `{ status, mode, contracts }`（no-store）。
+
+**0.12 Desktop 工作台端口。** 受信文档用 `initialize` 协商 JSON-RPC 协议、宿主版本、契约和本次可用方法。preload 按握手结果发送会话、任务、Review、配置读取和 worker 请求。Native Shell 的私有操作使用独立父子进程通道。首批 L2 只读 Link 目录是这套端口最早的消费者。[工作台服务端](../../packages/desktop/src/main/desktop-host/server.ts) · [Host 入口](../../packages/desktop/src/main/desktop-host/utility.ts)
 
 ### 4.2 对象模型
 
@@ -277,6 +285,8 @@ class HostRuntime {
 | 宿主状态  | Session 列表、Approval 待办、BackgroundRun、Device | 每个对象带 `stateVersion`；`session/subscribe` 返回当前快照加版本，断线后用 `since: stateVersion` 拉差分  |
 
 Approval 事件同时出现在两处：作为 Item 进 journal（可续传），作为独立对象进状态快照（可查询）。`SessionSnapshotStore` 和 `HubStreamCursor` 各自的 seq / epoch 删除，或改成 journal cursor 的内存缓存。
+
+0.12 的工作台重连先建立新文档端口，再按 journal cursor 补读输出，并按 epoch 和 stateVersion 恢复宿主待审批状态。Host 崩溃与单窗刷新均通过真实 Electron 冒烟测试。平台首版第 8b 项可沿用这两个续传入口。[输出方法](../../packages/desktop/src/main/desktop-host/output-methods.ts) · [宿主状态](../../packages/desktop/src/main/desktop-host/approval-state.ts) · [原生验收](../../packages/desktop/scripts/smoke-desktop-host.mjs)
 
 ### 4.4 宿主请求类型化（worker → host）
 
@@ -525,7 +535,7 @@ export const CONTRACTS = {
 | 连接       | 手机 → 中继 → 电脑的 HostRuntime，直接走 Protocol v2；中继是无状态转发。手机端那套私有 WS 协议先补版本号，再逐步下线                                                                         |
 | 推送网关   | services 里**独立进程**，权限隔离，可单独扩容。iOS 用 APNs；Android 用 FCM，大陆走厂商通道或聚合推送。触发事件：待审批、Turn 完成、需要人工接管、电脑离线                                    |
 | Link OAuth | 第三方授权的公网回调和密钥托管留在云端，和现在一样                                                                                                                                           |
-| 保持在线   | Desktop 有手机连接时阻止系统睡眠；关窗口不杀 HostRuntime（第 3.3 节守护进程的轻量版，提前到 S2）                                                                                             |
+| 保持在线   | Desktop 有手机连接时阻止系统睡眠（S2-C）。关闭最后窗口后保留 App 与 Host 由第 17 章 L2 承接                                                                                             |
 | App        | 第一版用 Capacitor 包装 `packages/web`。前提是 `packages/web` 先切到 v2 并能脱离 Hub 直连 HostRuntime（S2 的工作量要计入）。推送、生物识别、后台恢复用原生插件；数据模型用 W2 生成的 TS 类型 |
 | 基础设施   | 域名、wildcard DNS / TLS（大陆需备案，可先用香港节点）、Apple 开发者账号与 APNs 证书、各厂商推送账号、App 备案                                                                               |
 
@@ -610,7 +620,7 @@ flowchart LR
 | #   | 问题                                        | 决定                                                                                          | 依据                                                                                                      |
 | --- | ------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | 1   | `packages/host` 单独成包还是放进 `server`   | **单独成包**                                                                                  | server 依赖 web、capability-coding、link，Desktop 不应被拖进来                                            |
-| 2   | Desktop 内嵌 HostRuntime 还是连本机守护进程 | **S1、S2 内嵌；S3 再评估守护进程**                                                            | 与《项目本地与云端运行 V2》的会话固定执行位置模型兼容                                                     |
+| 2   | Desktop 内嵌 HostRuntime 还是连本机守护进程 | **0.12 起在 App 管理的 utilityProcess 中逐域托管，S3 再评估守护进程** | 第 17 章 L2 先迁只读 Link 目录，原 worker 及其余服务按 L4–L6 分批迁移                                                     |
 | 3   | v2 命名                                     | **沿用 Session / Turn / Item**，Thread 只在外部 Runtime 适配器                                | 第 15 章 §6.2 已定，不重开                                                                                |
 | 4   | Bash 是否默认关闭网络                       | **按项目信任级别**：受信任 allow，未信任 deny                                                 | 编码场景要装依赖                                                                                          |
 | 5   | 自动审查的模型和位置                        | **本机、默认关闭、只处理 low 风险的 ask→allow**                                               | 隐私和安全边界                                                                                            |
@@ -638,3 +648,5 @@ flowchart LR
 | v1.2 | 2026-10-15 | S1 第 3–7 项：协议分发与预算下调、显式 workspace bridge、Panel typed unsupported、env/REPL/保留工具名与 Core-only host 1.1 生产接线；后续依赖及真实环境出口分开跟踪。 |
 | v1.3 | 2026-10-15 | CC 首轮修复：Desktop 内联 Host 改 devDependency、predist 同源实体化守卫；Panel 无文字 UI 的 AskUser 明确 unavailable 并清理；Desktop unsupported approve 增唯一 RPC id；主控已补齐上轮受限验证，本轮 unsigned pack 补跑单列。 |
 | v1.4 | 2026-10-15 | 第 8a 纯服务首版：skills inventory/MCP probe/Session FS 两端真实共用，MCP SDK 限 Core internal；Hub 模型探测 ownership 迁移；PR188 三个 P2 修复。8b replay 等两类续传，9–14 与 S2/S3 未开始；CC review/沙箱受限补验与提交单列。 |
+| v1.5 | 2026-11-21 | 更新 §4、§10 的 Desktop Host 进程决策，明确 L2 专用端口握手和只读方法，以及 L5 的两类续传。 |
+| v1.6 | 2026-11-22 | 记录 Desktop 工作台与 Host 的实际通信路径、worker 归属和输出与审批续传。 |

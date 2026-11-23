@@ -4,11 +4,9 @@
  */
 
 import {
-  appendFileSync,
   chmodSync,
   closeSync,
   existsSync,
-  fchmodSync,
   fstatSync,
   fsyncSync,
   mkdirSync,
@@ -23,7 +21,10 @@ import { nanoid } from "nanoid";
 import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from "../types.js";
 import type { EngineResult } from "../engine/types.js";
 import { logger } from "../logging/logger.js";
-import { syncDirectoryAncestors } from "../model-request-boundary/durability.js";
+import {
+  openForDurableRead,
+  syncDirectoryAncestors,
+} from "../model-request-boundary/durability.js";
 import {
   contextMessageMark,
   isContextMessageEvent,
@@ -40,36 +41,19 @@ import {
   type PromptRewriteEventData,
 } from "./prompt-rewrites.js";
 
+import {
+  defaultTranscriptWriter,
+  readAppendEvents,
+  withVerifiedAppend,
+} from "./transcript-append.js";
+
+const openedTranscript = Symbol("opened transcript");
+
 type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => void;
 
 type ParsedEvents = { events: TranscriptEvent[]; malformedLineCount: number };
 
 const DEFAULT_CONTEXT_TAIL_SCAN_BYTES = 32 * 1024 * 1024;
-
-function appendTranscriptLine(filePath: string, data: string): void {
-  // Use one append-mode descriptor so concurrent OS writers cannot overwrite
-  // one another. Also repair the record boundary after a crash-torn final line;
-  // otherwise the next valid event is concatenated to the fragment and both
-  // are discarded on replay.
-  const fd = openSync(filePath, "a+", 0o600);
-  try {
-    if (process.platform !== "win32") fchmodSync(fd, 0o600);
-    const size = fstatSync(fd).size;
-    let prefix = "";
-    if (size > 0) {
-      const lastByte = Buffer.allocUnsafe(1);
-      readSync(fd, lastByte, 0, 1, size - 1);
-      if (lastByte[0] !== 0x0a) prefix = "\n";
-    }
-    appendFileSync(fd, prefix + data, "utf-8");
-  } finally {
-    closeSync(fd);
-  }
-}
-
-const defaultTranscriptWriter: TranscriptWriter = (filePath, data) => {
-  appendTranscriptLine(filePath, data);
-};
 
 export interface TranscriptFlushFailure {
   errno: string | number;
@@ -355,12 +339,12 @@ export class Transcript {
   constructor(
     filePath: string,
     writer: TranscriptWriter = defaultTranscriptWriter,
-    options: { persistent?: boolean } = {},
+    options: { persistent?: boolean; [openedTranscript]?: true } = {},
   ) {
     this.filePath = filePath;
     this.writer = writer;
     this.persistent = options.persistent !== false;
-    if (!this.persistent) return;
+    if (!this.persistent || options[openedTranscript]) return;
     mkdirSync(dirname(filePath), { recursive: true });
     if (!existsSync(filePath)) {
       writeFileSync(filePath, "", { encoding: "utf-8", mode: 0o600 });
@@ -440,7 +424,7 @@ export class Transcript {
     if (this.dirty) throw new Error("Transcript persistence is incomplete");
     if (!this.persistent || this.writer !== defaultTranscriptWriter) return;
     try {
-      const fd = openSync(this.filePath, "r");
+      const fd = openForDurableRead(this.filePath);
       try {
         fsyncSync(fd);
       } finally {
@@ -499,7 +483,7 @@ export class Transcript {
     // Injected writers own their durability contract (including failure tests).
     if (this.persistent && this.writer === defaultTranscriptWriter) {
       try {
-        const fd = openSync(this.filePath, "r");
+        const fd = openForDurableRead(this.filePath);
         try {
           fsyncSync(fd);
         } finally {
@@ -1293,34 +1277,48 @@ export class Transcript {
   static loadTailForAppend(filePath: string, maxTailBytes: number = 4 * 1024 * 1024): Transcript {
     if (!existsSync(filePath)) return new Transcript(filePath);
     const fd = openSync(filePath, "r");
-    let text: string;
     try {
-      const size = fstatSync(fd).size;
-      if (size <= maxTailBytes) return Transcript.loadFromFile(filePath);
-      const buffer = Buffer.allocUnsafe(maxTailBytes);
-      const read = readSync(fd, buffer, 0, maxTailBytes, size - maxTailBytes);
-      const window = buffer.subarray(0, read);
-      const newline = window.indexOf(0x0a);
-      text = window.subarray(newline + 1).toString("utf8");
+      return Transcript.readAppendTail(new Transcript(filePath), fd, maxTailBytes);
     } finally {
       closeSync(fd);
     }
-    const transcript = new Transcript(filePath);
-    const events: TranscriptEvent[] = [];
-    for (const line of text.split("\n")) {
-      if (!line.trim()) continue;
-      try {
-        events.push(JSON.parse(line) as TranscriptEvent);
-      } catch {
-        // A torn line at the window edge is skipped like any malformed line.
-      }
-    }
+  }
+
+  /** Reconcile and append display receipts against one verified regular file. */
+  static withTailForAppend(
+    filePath: string,
+    mutate: (transcript: Pick<Transcript, "appendMessage" | "hasClientMessageId">) => void,
+    maxTailBytes = 4 * 1024 * 1024,
+  ): void {
+    withVerifiedAppend(filePath, (fd, appendLine, assertOpen) => {
+      const transcript = new Transcript(filePath, (_, line) => appendLine(line), {
+        [openedTranscript]: true,
+      });
+      Transcript.readAppendTail(transcript, fd, maxTailBytes);
+      mutate({
+        hasClientMessageId: (id) => transcript.hasClientMessageId(id),
+        appendMessage: (...args) => {
+          assertOpen();
+          return transcript.appendMessage(...args);
+        },
+      });
+      if (transcript.dirty) throw Error("Transcript receipt write failed");
+    });
+  }
+
+  private static readAppendTail(
+    transcript: Transcript,
+    fd: number,
+    maxTailBytes: number,
+  ): Transcript {
+    const { events, complete } = readAppendEvents(fd, maxTailBytes);
     transcript.loadEvents(events);
-    for (const event of events) {
-      if (typeof event.turnNumber === "number" && event.turnNumber > transcript.currentTurn) {
-        transcript.currentTurn = event.turnNumber;
+    if (complete) transcript.repairToolResultPairs();
+    else
+      for (const event of events) {
+        if (typeof event.turnNumber === "number" && event.turnNumber > transcript.currentTurn)
+          transcript.currentTurn = event.turnNumber;
       }
-    }
     return transcript;
   }
 

@@ -1,5 +1,5 @@
 /* Actual production Main/Review service/preload/renderer against owned Git.
- * Only catalog:list is seeded. Never replaces the Review handler or parser.
+ * Observes actual review/diff replies before forwarding them to the workbench.
  * Run with run-isolated-node-smoke.mjs --evidence-dir <new outside directory>. */
 /* global window */
 import assert from "node:assert/strict";
@@ -76,7 +76,7 @@ const report = {
   operations,
   failures,
   boundary:
-    "Actual compiled Main, session-authorized Review service, preload, diff parser and file panel; catalog:list seeded only. Owned Git/files only; no model, worker, native crypto, OS open or account use. Not an OS socket sandbox.",
+    "Actual compiled Main, session-authorized Review Host service, preload, diff parser and file panel. Owned Git/files only; no model, worker, native crypto, OS open or account use. Not an OS socket sandbox.",
 };
 let app, win, monitor, captured, processClosed, fixture;
 const git = (...args) =>
@@ -102,16 +102,6 @@ const modeContents = "owned mode-only preview\nunchanged bytes\n";
 const binaryFile = "二进制.bin";
 const binaryBefore = Buffer.from([0, 1, 2, 3]);
 const binaryAfter = Buffer.from([0, 1, 2, 4]);
-async function dismissTrust() {
-  const view = win.getByRole("button", { name: /^(仅查看|View only)/ });
-  if (
-    await view.waitFor({ state: "visible", timeout: 1500 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await view.click();
-}
 async function openPanel(kind) {
   const toggle = win.locator('[data-panel-action="toggle"]');
   if ((await toggle.getAttribute("aria-pressed")) !== "true") await toggle.click();
@@ -181,6 +171,12 @@ try {
     binary: { path: binaryFile, patch: binaryPatch },
   };
   await put(join(isolated.codeShellHome, "settings.json"), { autoUpdates: false });
+  // Both scopes are view-only for this read-only Review fixture, including the first
+  // no-project workbench shown while the recent repository is being registered.
+  await put(join(isolated.codeShellHome, "desktop/trust.json"), {
+    [join(isolated.codeShellHome, "no-repo")]: "untrusted",
+    [projectPath]: "untrusted",
+  });
   await put(join(isolated.codeShellHome, "desktop/recents.json"), [
     { path: projectPath, name: "Owned Review repository", lastOpenedAt: Date.now() },
   ]);
@@ -201,16 +197,25 @@ for(const transport of [http,https]) for(const name of ["get","request"]) transp
 const spawn = children.spawn;
 children.spawn = function(command,args,options) { if(args?.some(arg=>String(arg).includes("agent-server-stdio"))) return deny("worker"); return spawn.call(this,command,args,options); };
 syncBuiltinESMExports();
+if (process.type === "utility") {
+  const { observeReviewPort } = await import(${JSON.stringify(new URL("./review-host-observer.mjs", import.meta.url).href)});
+  observeReviewPort(process.parentPort, {
+    method: "review/diff",
+    observe: ({sessionId,request}, {result,error}) => {
+      appendFileSync(${JSON.stringify(join(isolated.home, "actual-review-calls.jsonl"))}, JSON.stringify({sessionId,request,result,error}) + "\\n", {mode:0o600});
+    },
+    checkAgent: (request) => { if (request.method === "agent/run") deny("core-turn"); },
+  });
+}
+if (process.type === "browser") {
 const {app,ipcMain,net,safeStorage,shell} = await import("electron");
 net.request = net.fetch = () => deny("network");
 for(const name of ["isEncryptionAvailable","getSelectedStorageBackend","encryptString","decryptString"]) if(typeof safeStorage[name]==="function") safeStorage[name] = () => deny("crypto");
 for(const name of ["openPath","openExternal","showItemInFolder"]) shell[name] = () => deny("OS-open");
 app.on("web-contents-created",(_event,contents)=>contents.session.webRequest.onBeforeRequest({urls:["http://*/*","https://*/*"]},()=>deny("network")));
-globalThis.__ownedReviewCalls = [];
-const handle = ipcMain.handle.bind(ipcMain);
-ipcMain.handle = (channel,listener) => handle(channel,channel!=="review:diff" ? listener : async (...args) => { const result=await listener(...args); globalThis.__ownedReviewCalls.push({sessionId:args[1],request:args[2],result}); return result; });
 const on=ipcMain.on.bind(ipcMain);
 ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,line)=>{let request;try{request=JSON.parse(line);}catch{return listener(event,line);}if(request?.method==="agent/run")return deny("core-turn");return listener(event,line);});
+}
 `,
   );
   fixture = await prepareConfinedElectronFixture({
@@ -296,9 +301,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
   win.setDefaultTimeout(10000);
   rendererErrors.push(captureRendererErrors(win));
   await win.setViewportSize({ width: 1440, height: 960 });
-  await dismissTrust();
   await win.getByText("Owned Review repository", { exact: true }).first().click();
-  await dismissTrust();
   diagnostics.phase("review-session-seed");
   const project = await win.evaluate(
     async (path) =>
@@ -344,10 +347,8 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     },
   });
   await win.reload();
-  await dismissTrust();
   await expandSidebar(win);
   await win.getByRole("button", { name: title, exact: true }).click();
-  await dismissTrust();
   report.confinement = await fixture.assertWorker(app, { requireWorker: false });
   assert.equal(report.confinement.workerCreated, false);
   diagnostics.phase("review-ui-operations");
@@ -480,7 +481,10 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     actualBytesSHA256: hash(modeBytes),
   });
   diagnostics.caseCompleted(operations.at(-1).action, operations.length);
-  report.reviewCalls = await app.evaluate(() => globalThis.__ownedReviewCalls);
+  report.reviewCalls = (await readFile(join(isolated.home, "actual-review-calls.jsonl"), "utf8"))
+    .trim()
+    .split("\n")
+    .map(JSON.parse);
   assert.ok(
     report.reviewCalls.some(
       (call) =>
@@ -508,12 +512,19 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
             repository.diff.includes(binaryPatch),
         ),
     ),
-    "Actual Main Review diff must retain both owned header-only Git patches",
+    "Actual Host Review diff must retain both owned header-only Git patches",
   );
   assert.equal(operations.length, 11);
 } catch (error) {
   diagnostics.error(error, captured);
   failures.push({ message: error.message, stack: error.stack });
+  if (win) {
+    report.sessionAtFailure = await bounded(win.evaluate(async id => {
+      const page = await window.codeshell.listDiskSessions({ sessionId: id, limit: 1 });
+      const status = await window.codeshell.getReviewStatus(id);
+      return { sessionIds: page.sessions.map(row => row.id), status };
+    }, sessionId), 1500, "Session diagnostics timed out").catch(e => ({ error: e.message }));
+  }
   await win?.screenshot({ path: join(evidence, "failure.png"), timeout: 2000 }).catch(() => {});
 } finally {
   if (failures.length) diagnostics.error(new Error(failures[0].message), captured);

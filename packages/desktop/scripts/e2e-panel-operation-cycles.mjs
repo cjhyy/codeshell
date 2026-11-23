@@ -14,6 +14,8 @@ import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { createPanelOperationDiagnostics } from "./panel-operation-diagnostics.mjs";
 import {
   assertSourceElectronTransportSettled,
+  chooseViewOnlyIfPrompted,
+  seedViewOnlyWorkbench,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -109,16 +111,6 @@ await new Promise((done) => server.listen(0, "127.0.0.1", done));
 const origin = `http://127.0.0.1:${server.address().port}`;
 const confined = await prepareConfinedElectronFixture({ appDir, isolated, origin });
 
-async function dismissTrust() {
-  const button = win.getByRole("button", { name: /^(仅查看|View only)/ });
-  if (
-    await button.waitFor({ state: "visible", timeout: 2000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await button.click();
-}
 async function openPanel(kind) {
   const toggle = win.locator('[data-panel-action="toggle"]');
   if ((await toggle.getAttribute("aria-pressed")) !== "true") await toggle.click();
@@ -162,6 +154,7 @@ async function navigate(url, expectedTitle) {
   return browser;
 }
 async function seed() {
+  await seedViewOnlyWorkbench(isolated);
   await mkdir(join(projectPath, "nested"), { recursive: true });
   await mkdir(dirname(generatedPath), { recursive: true });
   await writeFile(generatedPath, ownedImage, { mode: 0o600 });
@@ -247,10 +240,10 @@ try {
     report.errors.push(error.message);
   });
   await win.setViewportSize({ width: 1280, height: 850 });
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   await win.evaluate((cwd) => window.codeshell.setTrust(cwd, "trusted"), projectPath);
   await win.getByText("operation-project", { exact: true }).first().click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   const project = await win.evaluate(
     async (cwd) =>
       (await window.codeshell.projectRegistry.list()).find((item) =>
@@ -334,10 +327,10 @@ try {
     },
   });
   await win.reload();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   await expandSidebar(win);
   await win.getByRole("button", { name: title, exact: true }).click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   report.confinement = await confined.assertWorker(electron, { requireWorker: false });
   // Production history replay and real Main image IPC render this owned PNG.
   // GenerateImage/provider execution and OS-default opening are not invoked.
@@ -440,10 +433,12 @@ try {
   await files.getByText("updated content", { exact: true }).waitFor();
   await rename(join(projectPath, "alpha.txt"), join(projectPath, "alpha-hidden.txt"));
   await files.getByRole("button", { name: "刷新", exact: true }).last().click();
-  await files.getByText(/读取失败|Failed to read/).waitFor();
+  const missingFile = files.locator("[data-file-missing]");
+  await missingFile.getByText(join(projectPath, "alpha.txt"), { exact: true }).waitFor();
   await rename(join(projectPath, "alpha-hidden.txt"), join(projectPath, "alpha.txt"));
   await files.getByRole("button", { name: "刷新", exact: true }).last().click();
   await files.getByText("updated content", { exact: true }).waitFor();
+  await missingFile.waitFor({ state: "detached" });
   recordCase(
     "Files opens real project content, exposes deleted-file failure and refresh recovers it",
   );
@@ -512,7 +507,18 @@ try {
   await activeGuest().click({
     position: { x: inputRect.x + 10, y: inputRect.y + inputRect.height / 2 },
   });
-  await win.keyboard.type("Keep this browser draft");
+  assert.equal(
+    await guestValue(
+      "document.hasFocus() && document.activeElement === document.getElementById('draft')",
+    ),
+    true,
+    "The native click must focus the input inside the retained guest",
+  );
+  // Playwright's Page keyboard targets the outer renderer. Send native text
+  // events to the focused webview that owns this form, as its user would.
+  await activeGuest().evaluate(async (view, text) => {
+    for (const character of text) await view.sendInputEvent({ type: "char", keyCode: character });
+  }, "Keep this browser draft");
   assert.equal(
     await guestValue("document.getElementById('draft').value"),
     "Keep this browser draft",
@@ -769,17 +775,22 @@ try {
   recordCase("Terminal executes real PTY input and preserves output across panel switches");
   await input.focus();
   diagnostics.phase("panel-terminal-interrupt");
-  await win.keyboard.type("printf 'PANEL_OPERATION_SLEEP_STARTED\\n'; sleep 60\n");
+  await win.keyboard.type("PS1='PANEL_READY> '; printf 'PANEL_OPERATION_SLEEP_STARTED\\n'; sleep 60\n");
   await terminal.getByText("PANEL_OPERATION_SLEEP_STARTED", { exact: true }).waitFor();
-  await win.keyboard.press("Control+C");
-  await win.waitForFunction(() => {
-    const rows = document.querySelector(
-      '[data-panel-id="terminal"][data-panel-active="true"] .xterm-rows',
-    );
-    return /[%$#>]\s*$/.test(rows?.textContent ?? "");
-  });
+  // Git Bash on ConPTY can flush typeahead while delivering the interrupt.
+  // Wait for this command’s fresh prompt before typing the follow-up command.
+  await input.press("Control+c");
+  await win.waitForFunction(
+    () => [...document.querySelectorAll('[data-panel-id="terminal"] .xterm-rows > div')].some(
+      (row) => row.textContent.replaceAll("\u00a0", " ").trim() === "PANEL_READY>",
+    ),
+    undefined,
+    { timeout: 15_000 },
+  );
   await win.keyboard.type("printf 'PANEL_OPERATION_CANCEL_OK\\n'\n");
-  await terminal.getByText("PANEL_OPERATION_CANCEL_OK", { exact: true }).waitFor();
+  // The foreground sleep lasts a minute. The shell can execute this command
+  // within 15 seconds only once Ctrl+C has interrupted it.
+  await terminal.getByText("PANEL_OPERATION_CANCEL_OK", { exact: true }).waitFor({ timeout: 15_000 });
   diagnostics.phase("panel-terminal-exit");
   await win.keyboard.type("exit\n");
   await terminal.getByText(/进程已退出/).waitFor();

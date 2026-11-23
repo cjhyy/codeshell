@@ -24,11 +24,6 @@ const expectedChannels = [
   "projectRegistry:completeLegacyMigration",
   "workspace:current",
   "workspace:authority",
-  "workspace:gitStatus",
-  "workspace:gitBranches",
-  "workspace:profiles",
-  "workspace:list",
-  "workspace:diff",
   "workspace:switch",
   "workspace:release",
   "workspace:releaseMany",
@@ -75,8 +70,6 @@ function harness() {
     broadcastMobileProjects: async () => {
       mobileBroadcasts += 1;
     },
-    getGitStatus: async () => ({ branch: null, entries: [], clean: true }),
-    getGitBranches: async () => ({ isRepo: false, current: null, branches: [] }),
     revealInFinder: async () => undefined,
     openPath: async () => "",
   } as unknown as ProjectAuthorityIpcDependencies;

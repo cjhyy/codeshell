@@ -1,16 +1,32 @@
+import {
+  createHostedTaskInboxService,
+  type TaskInboxStorageCommand,
+} from "./host-task-inbox-service.js";
 import { createTaskInboxStore } from "./task-inbox-store.js";
 import { createTaskInboxProjector, type TaskInboxSourceReader } from "./task-inbox-projector.js";
-import { createTaskInboxActions, type TaskInboxActionAdapter } from "./task-inbox-actions.js";
-import type { TaskInboxActionRequest, TaskInboxListQuery } from "./task-inbox-types.js";
+import {
+  createTaskInboxActions,
+  type TaskInboxActionAdapter,
+  type TaskExecutorContext,
+} from "./task-inbox-actions.js";
+import type {
+  TaskInboxActionRequest,
+  TaskInboxIntent,
+  TaskInboxListQuery,
+  TaskSource,
+} from "./task-inbox-types.js";
 
 /** The host owns scheduling and subscriptions; projection failures never stop real work. */
 export function createTaskInboxService(options: {
   filePath: string;
+  command?: TaskInboxStorageCommand;
   readers: TaskInboxSourceReader[];
   adapters: TaskInboxActionAdapter[];
   enabled?: () => boolean;
   onError?: (error: unknown) => void;
 }) {
+  if (options.command)
+    return createHostedTaskInboxService({ ...options, command: options.command });
   const store = createTaskInboxStore({ filePath: options.filePath });
   const projector = createTaskInboxProjector({
     store,
@@ -38,7 +54,7 @@ export function createTaskInboxService(options: {
     subscribe: (listener: Parameters<typeof projector.subscribe>[0]) =>
       projector.subscribe(listener),
     reconcile,
-    act: async (request: TaskInboxActionRequest, context: { webContentsId: number }) => {
+    act: async (request: TaskInboxActionRequest, context: TaskExecutorContext) => {
       if (!enabled()) return { status: "unavailable" as const, message: "Task inbox is disabled" };
       return actions.act(request, context);
     },
@@ -50,6 +66,12 @@ export function createTaskInboxService(options: {
       }, 250);
       refreshTimer.unref?.();
     },
+    markDirty: (_source: TaskSource, _id: string) => refresh(),
+    hostRestarted: refresh,
+    applyIntent: async (_input: TaskInboxIntent, _assertCurrent?: () => void) => ({
+      status: "unavailable" as const,
+    }),
+    sessionIntent: async (_intent: unknown) => undefined,
     start: () => {
       if (sweepTimer || closed) return;
       refresh();

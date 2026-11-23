@@ -61,14 +61,16 @@ export class PetWorkInboxStore {
   private revision = 0;
   private writeQueue = Promise.resolve();
 
-  constructor(private readonly filePath: string) {}
+  constructor(
+    private readonly filePath: string,
+    private readonly replaceFile?: (from: string, to: string) => Promise<void>,
+  ) {}
 
   async load(): Promise<void> {
     try {
-      const parsed = (await readBoundedJson(
-        this.filePath,
-        MAX_WORK_INBOX_FILE_BYTES,
-      )) as Partial<PetWorkInboxFile> | undefined;
+      const parsed = (await readBoundedJson(this.filePath, MAX_WORK_INBOX_FILE_BYTES)) as
+        | Partial<PetWorkInboxFile>
+        | undefined;
       if (!parsed) return;
       const revision = parsed.revision;
       if (
@@ -262,6 +264,8 @@ export class PetWorkInboxStore {
       revision: snapshot.revision,
       dismissedIds: snapshot.dismissedIds,
     };
-    await writeOwnerJsonAtomic(this.filePath, file, MAX_WORK_INBOX_FILE_BYTES);
+    await writeOwnerJsonAtomic(this.filePath, file, MAX_WORK_INBOX_FILE_BYTES, {
+      replaceFile: this.replaceFile,
+    });
   }
 }

@@ -307,9 +307,7 @@ export function desktopAutomationAuthorityDeps(): AutomationAuthorityDeps {
         : undefined;
     },
     resolveSessionAuthority: async (sessionId) => {
-      const index = getSessionCwdIndex();
-      await index.ensureLoaded();
-      const entry = await index.refresh(sessionId);
+      const entry = await getSessionCwdIndex().refresh(sessionId);
       if (!entry || entry.status !== "confirmed") return undefined;
       if (entry.projectId && entry.mainRootId) {
         const resolved = projectStore.resolveRunProjectSync(

@@ -249,6 +249,29 @@ describe("previewLocalPlugin", () => {
     expect(readdirSync(previewTmp)).toEqual([]);
   });
 
+  test("revoked local install and overwrite preserve the published plugin", async () => {
+    writeCodexPlugin();
+    const input = { kind: "dir" as const, path: source };
+    const initial = await previewLocalPlugin(input);
+    const at = "2026-07-17T00:00:00.000Z";
+    const revoked = () => {
+      throw Error("withdrawn");
+    };
+    await expect(
+      installReviewedLocalPlugin(input, initial.reviewToken, at, { beforeCommit: revoked }),
+    ).rejects.toThrow("withdrawn");
+    const installed = await installReviewedLocalPlugin(input, initial.reviewToken, at);
+    const output = join(installed.dir, "commands", "review.md");
+    const before = readFileSync(output, "utf8");
+    await expect(
+      installReviewedLocalPlugin(input, initial.reviewToken, at, {
+        overwrite: true,
+        beforeCommit: revoked,
+      }),
+    ).rejects.toThrow("withdrawn");
+    expect(readFileSync(output, "utf8")).toBe(before);
+  });
+
   test("installs only the private snapshot that matches the review token", async () => {
     writeCodexPlugin();
     const preview = await previewLocalPlugin({ kind: "dir", path: source });

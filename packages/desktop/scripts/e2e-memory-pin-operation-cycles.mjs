@@ -15,6 +15,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedViewOnlyWorkbench,
   waitForAsyncFunction,
 } from "./electron-harness.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -229,6 +230,7 @@ try {
     settingsBundleSHA256: hash(await readFile(join(appDir, "out/renderer/assets", settingsBundle))),
     coreMemorySHA256: hash(await readFile(resolve(appDir, "../core/dist/session/memory.js"))),
   };
+  await seedViewOnlyWorkbench(isolated, [project]);
   await write(join(isolated.codeShellHome, "settings.json"), { autoUpdates: false });
   await write(join(isolated.codeShellHome, "desktop/recents.json"), [
     { path: project, name: "Owned memory project", lastOpenedAt: Date.now() },
@@ -254,7 +256,11 @@ children.spawn = function (command, args, options) {
   return spawn.call(this, command, args, options);
 };
 syncBuiltinESMExports();
-const { app, ipcMain, net } = await import("electron");
+const { observeMemoryPort, observeNativeMemoryReads } = await import(${JSON.stringify(new URL("./memory-pin-host-guard.mjs", import.meta.url).href)});
+if (process.type === "utility") observeMemoryPort(process.parentPort);
+if (process.type === "browser") {
+const { app, ipcMain, net, utilityProcess } = await import("electron");
+observeNativeMemoryReads(utilityProcess,state);
 net.request = deny; net.fetch = deny;
 app.on("web-contents-created", (_event, contents) => contents.session.webRequest.onBeforeRequest({urls:["http://*/*", "https://*/*"]}, (_details, done) => { state.networkAttempts++; done({cancel:true}); }));
 const handle = ipcMain.handle.bind(ipcMain);
@@ -276,6 +282,7 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
   } catch (error) { if (call.status === "pending") call.status = "handler-error"; throw error; }
   finally { state.lastActivity = Date.now(); }
 });
+}
 `,
   );
   const fixture = await prepareConfinedElectronFixture({
@@ -354,6 +361,12 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
   stage = "verify own compiled Desktop confinement";
   receipt.confinement = await fixture.assertWorker(app, { requireWorker: false });
   assert.equal(receipt.confinement.workerCreated, false);
+  await win.evaluate(() =>
+    window.codeshell.onDesktopHostStatus((state) => {
+      window.__fixtureHostStatus = state;
+    }),
+  );
+  await win.waitForFunction(() => window.__fixtureHostStatus === "ready");
   const guiGuard = (await readFile(join(isolated.home, "cost-gui-guard.jsonl"), "utf8"))
     .trim()
     .split("\n")
@@ -371,25 +384,10 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
     localStorage.setItem("codeshell.uiLanguage", "en");
     window.dispatchEvent(new window.Event("codeshell:language-changed"));
   });
-  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
-  if (
-    await viewOnly.waitFor({ state: "visible", timeout: 2_000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await viewOnly.click();
   await win
     .locator("aside")
     .getByRole("button", { name: "Owned memory project", exact: true })
     .click();
-  if (
-    await viewOnly.waitFor({ state: "visible", timeout: 2_000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await viewOnly.click();
   stage = "seed through production memory IPC";
   const seeded = await win.evaluate(
     async ({ project, names, bodies }) => {
@@ -424,6 +422,12 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
       assert.ok(found && /^[a-z0-9_-]+\.md$/.test(found.fileName));
       return [key, join(memoryRoot, scope, found.fileName)];
     }),
+  );
+  assert.ok(
+    (await mainState()).calls.some(
+      (call) => call.channel === "memory:list" && call.route === "workbench-port",
+    ),
+    "The negotiated Host port must read the seeded memory list",
   );
   receipt.seedWrites = (await mainState()).calls.filter(
     (call) => call.channel === "memory:save" && call.status === "committed",

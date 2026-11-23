@@ -7,15 +7,13 @@ export function releaseUrlForVersion(version: string): string {
 }
 
 export function macSignatureNeedsManualInstall(text: string): boolean {
-  // Stable designated requirements survive across builds, so Squirrel can
-  // validate the update: the bare identifier form (legacy stabilized ad-hoc)
-  // and the self-signed "CodeShell Local Signing" form, which has no Team ID.
-  if (
-    /^\s*designated => identifier "com\.cjhyy\.codeshell"(?: and certificate leaf = H"[0-9a-f]{40}")?\s*$/im.test(
-      text,
-    )
-  ) {
-    return false;
+  // Squirrel validates the installed requirement. Our release leaf has no Apple team ID.
+  const releaseLeaf = "30a64d20fc3614e327902f45cf9b725e6e1986dc";
+  const requirement =
+    /^designated => identifier "com\.cjhyy\.codeshell"(?: and certificate leaf = H"([0-9a-fA-F]{40})")?$/;
+  for (const line of text.split("\n")) {
+    const match = requirement.exec(line.trim());
+    if (match && (!match[1] || match[1].toLowerCase() === releaseLeaf)) return false;
   }
 
   return (

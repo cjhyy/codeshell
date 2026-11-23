@@ -580,7 +580,10 @@ export interface InstallFromGithubInput {
   installName?: string;
 }
 
-export async function installFromGithub(input: InstallFromGithubInput): Promise<InstalledSkill> {
+export async function installFromGithub(
+  input: InstallFromGithubInput,
+  beforeCommit?: () => void,
+): Promise<InstalledSkill> {
   const { inspection, selected, scope, cwd, installName } = input;
   const reviewedSelection = inspection.skills.find(
     (candidate) =>
@@ -615,7 +618,13 @@ export async function installFromGithub(input: InstallFromGithubInput): Promise<
     await fs.writeFile(path.join(tmpRoot, SKILL_META_FILE), JSON.stringify(meta, null, 2), {
       mode: 0o600,
     });
-    return installSkillFromDirectory(tmpRoot, scope, cwd, installName || reviewedSelection.name);
+    return await installSkillFromDirectory(
+      tmpRoot,
+      scope,
+      cwd,
+      installName || reviewedSelection.name,
+      beforeCommit,
+    );
   } finally {
     await fs.rm(tmpRoot, { recursive: true, force: true }).catch(() => undefined);
   }
@@ -723,6 +732,7 @@ const defaultUpdateDeps: SkillUpdateDeps = { getRefCommit, downloadSkillTree };
 export async function updateSkillFromSource(
   filePath: string,
   deps: SkillUpdateDeps = defaultUpdateDeps,
+  beforeCommit?: () => void,
 ): Promise<SkillUpdateResult> {
   const dir = path.dirname(filePath);
   const metaPath = path.join(dir, SKILL_META_FILE);
@@ -792,7 +802,7 @@ export async function updateSkillFromSource(
         filter: (source) => path.basename(source) !== ".git",
       });
       readSkillBundle(stage);
-      commitSkillDirectory(stage, root, path.basename(dir), previous.revision);
+      commitSkillDirectory(stage, root, path.basename(dir), previous.revision, beforeCommit);
     } catch (error) {
       throw new Error(
         `更新失败，已保留(restored/kept)旧版本：${error instanceof Error ? error.message : String(error)}`,

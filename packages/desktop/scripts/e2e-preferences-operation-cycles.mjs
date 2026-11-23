@@ -18,6 +18,7 @@ import {
   makeIsolatedElectronHome,
   navigateSettingsMenu,
   seedSessionCatalog,
+  seedViewOnlyWorkbench,
   waitForAsyncFunction,
   waitForSessionCatalogSelection,
 } from "./electron-harness.mjs";
@@ -146,32 +147,19 @@ async function frames(page = win) {
   );
 }
 async function general(page = win) {
-  const back = page.getByRole("button", { name: /^(返回应用|Back to app)$/ });
-  if (await back.isVisible()) await back.click();
-  await navigateSettingsMenu(page, /^(设置|Settings)$/);
-  await page
-    .getByRole("navigation", { name: /^(设置导航|Settings navigation)$/ })
-    .getByRole("button", { name: /^(常规|General)$/ })
-    .click();
+  const navigation = page.getByRole("navigation", { name: /^(设置导航|Settings navigation)$/ });
+  const sidebar = page.locator('[data-sidebar-action="toggle"]:visible');
+  await navigation.or(sidebar).first().waitFor({ state: "visible" });
+  if (!(await navigation.isVisible())) await navigateSettingsMenu(page, /^(设置|Settings)$/);
+  await navigation.getByRole("button", { name: /^(常规|General)$/ }).click();
   await page.getByRole("heading", { name: /^(语言|Language)$/ }).waitFor();
 }
 async function viewOnly(page = win) {
-  const dialog = page.getByRole("dialog", { name: /^(信任此项目？|Trust this project\?)$/ });
-  if (
-    !(await dialog.waitFor({ state: "visible", timeout: 2_000 }).then(
-      () => true,
-      () => false,
-    ))
-  )
-    return;
-  assert.ok(
-    (await dialog.innerText()).includes(isolated.home),
-    "Only an owned fixture directory may be decided",
+  const decisions = await page.evaluate(
+    (paths) => Promise.all(paths.map((path) => window.codeshell.getTrust(path))),
+    [join(isolated.codeShellHome, "no-repo"), project],
   );
-  await dialog
-    .getByRole("button", { name: /^(仅查看\(拒绝写工具\)|View only \(deny write tools\))$/ })
-    .click();
-  await dialog.waitFor({ state: "hidden" });
+  assert.deepEqual(decisions, ["untrusted", "untrusted"]);
 }
 async function appearance(page = win) {
   await page
@@ -497,12 +485,19 @@ async function launch() {
   stage = `cold Main ${processProof.cycle}: confinement`;
   processProof.confinement = await fixture.assertWorker(app, { requireWorker: false });
   assert.equal(processProof.confinement.workerCreated, false);
+  await win.evaluate(() =>
+    window.codeshell.onDesktopHostStatus((state) => {
+      window.__fixtureHostStatus = state;
+    }),
+  );
+  await win.waitForFunction(() => window.__fixtureHostStatus === "ready");
   await assertGuard();
   await win.setViewportSize({ width: 1440, height: 960 });
   stage = `cold Main ${processProof.cycle}: owned project read-only navigation`;
   await viewOnly();
   const back = win.getByRole("button", { name: /^(返回应用|Back to app)$/ });
-  if (await back.isVisible()) await back.click();
+  // Both restarts restore the Appearance page that was open at the previous quit.
+  if (processProof.cycle > 1) await back.click();
   await expandSidebar(win);
   await win
     .locator("aside")
@@ -564,8 +559,11 @@ try {
   );
   assert.ok(bundle, "Own compiled SettingsPage is required");
   const rendererHTML = await readFile(join(appDir, "out/renderer/index.html"), "utf8");
-  const rendererEntry = rendererHTML.match(/src="\.\/assets\/(index-[A-Za-z0-9_-]+\.js)"/)?.[1];
-  assert.ok(rendererEntry, "Own compiled renderer entry is required");
+  const entryScripts = [
+    ...rendererHTML.matchAll(/<script\b[^>]*\bsrc="\.\/assets\/([\w-]+\.js)"/g),
+  ];
+  assert.equal(entryScripts.length, 1, "Expected a single local renderer entry script");
+  const rendererEntry = entryScripts[0][1];
   receipt.build = {
     sourceHead: children
       .execFileSync("git", ["rev-parse", "HEAD"], { cwd: appDir, encoding: "utf8", timeout: 5_000 })
@@ -580,6 +578,7 @@ try {
     rendererEntrySHA256: hash(await readFile(join(appDir, "out/renderer/assets", rendererEntry))),
     settingsBundleSHA256: hash(await readFile(join(appDir, "out/renderer/assets", bundle))),
   };
+  await seedViewOnlyWorkbench(isolated, [project]);
   await write(join(isolated.codeShellHome, "settings.json"), { autoUpdates: false });
   await write(join(isolated.codeShellHome, "desktop/recents.json"), [
     { path: project, name: "Owned preference project", lastOpenedAt: Date.now() },
@@ -607,7 +606,8 @@ children.spawn = function (command, args, options) {
   return spawn.call(this, command, args, options);
 };
 syncBuiltinESMExports();
-const { app, BrowserWindow, ipcMain, nativeTheme, net, safeStorage } = await import("electron");
+if (process.type === "browser") {
+const { app, BrowserWindow, ipcMain, MessageChannelMain, nativeTheme, net, safeStorage } = await import("electron");
 const loadFile = BrowserWindow.prototype.loadFile;
 BrowserWindow.prototype.loadFile = function (file, ...args) {
   state.rendererLoads.push({windowId:this.id, file});
@@ -629,6 +629,7 @@ ipcMain.on = (channel, listener) => on(channel, channel !== "agent:msg" ? listen
   return listener(event, line);
 });
 ${preferenceGoalDeleteGuardSource(goalConfig)}
+}
 `,
   );
   fixture = await prepareConfinedElectronFixture({
@@ -894,6 +895,10 @@ ${preferenceGoalDeleteGuardSource(goalConfig)}
       rows,
     );
     receipt.goalDeleteAcceptance.ledgerSHA256 = hash(raw);
+    assert.ok(
+      String(receipt.goalDeleteAcceptance.rpc.deletion.request.id).startsWith("workbench:"),
+      "The observed Goal deletion must use the negotiated workbench port",
+    );
     receipt.goalDeleteAcceptance.status = "passed";
   } catch (error) {
     receipt.goalDeleteAcceptance.status = "failed";

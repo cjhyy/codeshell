@@ -21,6 +21,7 @@ export class PetReportReceiptStore {
   constructor(
     private readonly filePath: string,
     private readonly now: () => number = Date.now,
+    private readonly replaceFile?: (from: string, to: string) => Promise<void>,
   ) {}
 
   async has(reportId: string): Promise<boolean> {
@@ -43,7 +44,9 @@ export class PetReportReceiptStore {
         const staged = new Map(this.receipts);
         staged.set(reportId, { reportId, deliveredAt });
         while (staged.size > MAX_RECEIPTS) staged.delete(staged.keys().next().value!);
-        await writeOwnerJsonAtomic(this.filePath, [...staged.values()], MAX_FILE_BYTES);
+        await writeOwnerJsonAtomic(this.filePath, [...staged.values()], MAX_FILE_BYTES, {
+          replaceFile: this.replaceFile,
+        });
         this.receipts = staged;
       });
     this.mutationQueue = run.catch(() => undefined);

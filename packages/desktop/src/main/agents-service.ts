@@ -1,12 +1,10 @@
 /**
  * Read + write sub-agent role definitions for the Settings panel.
  *
- * Mirrors skills-service.ts: the main process imports core's registry
+ * The Host reads Core's registry
  * directly (data is "what's on disk"). Listing merges project-level
  * (.code-shell/agents, ships the built-in 4) with user-level
- * (~/.code-shell/agents). Writes only ever touch the USER-level dir —
- * editing a built-in produces a same-named user override file; the
- * project-level built-in files are never modified.
+ * (~/.code-shell/agents). Each edit targets the selected scope.
  */
 
 import {
@@ -162,6 +160,7 @@ async function safeAgentsRootFor(opts?: {
 export async function saveAgent(
   def: AgentDefinition,
   opts?: { scope?: "user" | "project"; cwd?: string },
+  commit?: () => Promise<void>,
 ): Promise<AgentSummary> {
   assertAgentDefinition(def);
   const name = normalizeAgentName(def.name);
@@ -189,6 +188,7 @@ export async function saveAgent(
   try {
     try {
       await fs.writeFile(tmp, serializeAgentDefinition(clean), { encoding: "utf8", mode: 0o600 });
+      await commit?.();
       await fs.rename(tmp, target);
       rememberCodeShellMarkdownPath(target);
     } finally {
@@ -220,6 +220,7 @@ export async function saveAgent(
 export async function deleteAgent(
   name: string,
   opts?: { scope?: "user" | "project"; cwd?: string },
+  commit?: () => Promise<void>,
 ): Promise<void> {
   const safe = normalizeAgentName(name);
   const root = await safeAgentsRootFor(opts);
@@ -227,5 +228,6 @@ export async function deleteAgent(
   if (!target.startsWith(root + path.sep)) {
     throw new Error(`refuse to delete outside agents dir: ${target}`);
   }
+  await commit?.();
   await fs.rm(target, { force: true });
 }

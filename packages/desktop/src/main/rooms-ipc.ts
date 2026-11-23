@@ -1,140 +1,58 @@
-import type { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
-import type { RoomModeAuthority } from "./cc-room/room-mode-authority.js";
-import { MAX_EXTERNAL_RUNTIME_TEXT_CHARS } from "./external-runtime-ipc.js";
-import { BrowserWindow, ipcMain } from "electron";
-import { listBackgroundWorkForUI } from "@cjhyy/code-shell-core/internal";
-import {
-  DEFAULT_DISCOVER_LIMIT,
-  DEFAULT_DISCOVER_SINCE_MS,
-  listRelatedClaudeSessions,
-  listRelatedCodexSessions,
-  probeClaudeCli,
-  probeCodexCli,
-  readCodexRecentHistory,
-  readRecentHistory,
-} from "@cjhyy/code-shell-capability-coding/orchestration";
-import { AgentBridge } from "./agent-bridge.js";
-import {
-  requireRendererLinkedSessionPath,
-  requireRendererProjectPath,
-} from "./renderer-project-path.js";
-import { registerRoomHistoryIpc } from "./cc-room/linked-session-ipc.js";
+import { registerRoomSettingsIpc } from "./cc-room/room-settings-ipc.js";
 import { registerLinkedSessionObservationIpc } from "./cc-room/linked-session-observation-ipc.js";
-import { RoomManager } from "@cjhyy/code-shell-server/mobile-remote";
-import { MobileRemoteOrchestrator } from "./mobile-remote-orchestrator.js";
-import { registerRoomModeIpc } from "./cc-room/room-mode-ipc.js";
-import { ApprovalBridge } from "./cc-room/approval-bridge.js";
-import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
+import { ipcMain, type BrowserWindow } from "electron";
+import type { NativeRooms } from "./desktop-host/rooms-client.js";
+import type { ReadCcRoom } from "../shared/cc-room-reads.js";
+import type { RoomHistoryAccess } from "../shared/room-history.js";
+import type { MobileRemoteOrchestrator } from "./mobile-remote-orchestrator.js";
+import { registerRoomHistoryIpc } from "./cc-room/linked-session-ipc.js";
 import { createDefaultUsageProviderService } from "./usage-provider-host.js";
 import { registerQuotaIpc } from "./quota-ipc.js";
 
-export interface RoomsIpcDeps {
+export function registerRoomsIpc(deps: {
+  readCcRoom: ReadCcRoom;
+  roomHistory: RoomHistoryAccess;
   mainWindows: Set<BrowserWindow>;
-  bridge: () => AgentBridge | null;
-  approvalBridge: ApprovalBridge;
-  roomManager: RoomManager;
-  transcriptSubscriptions: TranscriptSubscriptionManager;
-  roomModes: RoomModeAuthority;
+  hostedRooms: NativeRooms;
   mobileOrchestrator: MobileRemoteOrchestrator;
-}
-
-/** Desktop rooms, CC/Codex room orchestration and subscription quota routes. */
-export function registerRoomsIpc(deps: RoomsIpcDeps) {
-  const {
-    mainWindows,
-    approvalBridge,
-    roomManager,
-    transcriptSubscriptions,
-    roomModes,
-    mobileOrchestrator,
-  } = deps;
-  // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
-  ipcMain.handle("rooms:list", async () =>
-    roomManager.listRooms().map((room) => mobileOrchestrator.roomToPublic(room)),
+}) {
+  const { hostedRooms: rooms, mainWindows } = deps;
+  registerRoomSettingsIpc(ipcMain, (event, action) => rooms.desktop(event, action));
+  registerLinkedSessionObservationIpc(ipcMain, (event, action) => rooms.desktop(event, action));
+  ipcMain.handle("rooms:list", (event) => rooms.desktop(event, { op: "list" }));
+  ipcMain.handle("rooms:projects", () => deps.mobileOrchestrator.projectList());
+  ipcMain.handle("rooms:create", (event, input) => rooms.desktop(event, { op: "create", input }));
+  ipcMain.handle("rooms:open", (event, roomId) => rooms.desktop(event, { op: "open", roomId }));
+  ipcMain.handle("rooms:send", (event, roomId, text) =>
+    rooms.desktop(event, { op: "send", roomId, text }),
   );
-  ipcMain.handle("rooms:projects", async () => mobileOrchestrator.projectList());
-  // rooms:create and ccRoom:openSession choose a room's mode via the Host authority.
-  registerRoomModeIpc({
-    ipcMain,
-    roomManager,
-    roomModes,
-    roomToPublic: (room) => mobileOrchestrator.roomToPublic(room),
-    broadcastRoomState: (roomId) => mobileOrchestrator.broadcastRoomState(roomId),
-  });
-  ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(roomId));
-  ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => {
-    if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
-      throw new Error("invalid room message");
-    }
-    return roomManager.send(roomId, text);
-  });
-  ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
-    roomManager.getMessages(roomId, sinceSeq ?? 0),
+  ipcMain.handle("rooms:history", (_event, roomId, sinceSeq) =>
+    deps.roomHistory.getMessages(roomId, sinceSeq ?? 0),
   );
-
-  // ── CC rooms (external `claude` CLI orchestration) ──────────────────────────
-  ipcMain.handle("ccRoom:probe", async (_e, force?: boolean) => probeClaudeCli(Boolean(force)));
-  ipcMain.handle("ccRoom:codexProbe", async (_e, force?: boolean) => probeCodexCli(Boolean(force)));
-  // Bounded by default (recent 2 weeks AND ≤20) so a project with lots of history
-  // doesn't deep-read every session file on open. `all:true` returns everything
-  // (the "load more" path). `total` lets the UI show how many are hidden.
-  ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string, all?: boolean) => {
-    cwd = await requireRendererProjectPath(cwd);
-    const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-    return listRelatedClaudeSessions(cwd, opts, {}, Boolean(all));
-  });
-  ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean) => {
-    cwd = await requireRendererProjectPath(cwd);
-    const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-    return listRelatedCodexSessions(cwd, opts);
-  });
-  registerLinkedSessionObservationIpc({
-    ipcMain,
-    windows: mainWindows,
-    roomManager,
-    listBackgroundWork: createTaskInboxBackgroundHost({ worker: () => deps.bridge() }).list,
-    readLocalBackgroundWork: () => listBackgroundWorkForUI("task-inbox", { scope: "all" }),
-    requirePath: requireRendererLinkedSessionPath,
-    subscriptions: transcriptSubscriptions,
-    roomMatchesTranscript: (...args) => mobileOrchestrator.roomMatchesTranscript(...args),
-    pendingApprovals: (roomId) => approvalBridge.pendingRequests(roomId),
-    broadcastRoomState: (roomId) => mobileOrchestrator.broadcastRoomState(roomId),
-  });
-  ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => {
-    if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
-      throw new Error("invalid room message");
-    }
-    return roomManager.send(roomId, text);
-  });
-  ipcMain.handle(
-    "ccRoom:respondApproval",
-    async (
-      _e,
-      roomId: string,
-      requestId: string,
-      decision:
-        | { behavior: "allow"; updatedInput?: unknown; answer?: string }
-        | { behavior: "deny"; message: string },
-    ) => approvalBridge.respond(roomId, requestId, decision),
+  ipcMain.handle("ccRoom:send", (event, roomId, text) =>
+    rooms.desktop(event, { op: "send", roomId, text }),
   );
-  registerRoomHistoryIpc(ipcMain, roomManager);
-  ipcMain.handle(
-    "ccRoom:readHistory",
-    async (_e, cwd: string, sessionId: string, limit: number) => {
-      cwd = await requireRendererProjectPath(cwd);
-      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500)
-        throw new Error("invalid limit");
-      return readRecentHistory(cwd, sessionId, limit);
-    },
+  ipcMain.handle("ccRoom:respondApproval", (event, roomId, requestId, decision) =>
+    rooms.desktop(event, { op: "respond", roomId, requestId, decision }),
   );
-  ipcMain.handle(
-    "ccRoom:readCodexHistory",
-    async (_e, cwd: string, threadId: string, limit: number) => {
-      cwd = await requireRendererProjectPath(cwd);
-      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500)
-        throw new Error("invalid limit");
-      return readCodexRecentHistory(cwd, threadId, limit);
-    },
+  ipcMain.handle("ccRoom:probe", (_e, force?: boolean) =>
+    deps.readCcRoom("ccRoom/probe", { kind: "claude-code", force }),
+  );
+  ipcMain.handle("ccRoom:codexProbe", (_e, force?: boolean) =>
+    deps.readCcRoom("ccRoom/probe", { kind: "codex", force }),
+  );
+  ipcMain.handle("ccRoom:listSessions", (_e, cwd: string, all?: boolean) =>
+    deps.readCcRoom("ccRoom/sessions", { kind: "claude-code", cwd, all }),
+  );
+  ipcMain.handle("ccRoom:listCodexSessions", (_e, cwd: string, all?: boolean) =>
+    deps.readCcRoom("ccRoom/sessions", { kind: "codex", cwd, all }),
+  );
+  registerRoomHistoryIpc(ipcMain, deps.roomHistory);
+  ipcMain.handle("ccRoom:readHistory", (_e, cwd: string, sessionId: string, limit: number) =>
+    deps.readCcRoom("ccRoom/history", { kind: "claude-code", cwd, sessionId, limit }),
+  );
+  ipcMain.handle("ccRoom:readCodexHistory", (_e, cwd: string, sessionId: string, limit: number) =>
+    deps.readCcRoom("ccRoom/history", { kind: "codex", cwd, sessionId, limit }),
   );
 
   const quota = createDefaultUsageProviderService();

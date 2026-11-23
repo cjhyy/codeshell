@@ -1,3 +1,4 @@
+import { ConversationSessionRouteStore } from "./conversation-session-route-store.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import type { PetReusableSessionCandidate } from "./pet-dispatch-service.js";
@@ -358,7 +359,7 @@ describe("bound Session replies", () => {
       h.wiring.observeSessionOutcomes(sessionId, outcomes);
     if (tapFirst) listeners.push(tap);
     const wiringRef: SessionBridgeWiring = createSessionBridgeWiring({
-      routesFilePath: join(env.dir, "routes.json"),
+      routes: new ConversationSessionRouteStore(join(env.dir, "routes.json"), () => env.clock),
       resolveSelector: async () =>
         ({
           sessionId: SID,

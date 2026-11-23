@@ -11,6 +11,7 @@ import { readPluginMcp } from "./loadPluginMcp.js";
 import { projectPluginSource } from "./projectPluginSource.js";
 
 export interface InstallPluginFromPathOptions {
+  beforeCommit?: () => void;
   /** Trusted source identity to persist instead of the temporary projection input path. */
   source?: string;
   /** Trusted distribution version to persist instead of the plugin manifest version. */
@@ -53,6 +54,7 @@ export async function installPluginFromPath(
       installedAt,
     };
     await writeFile(join(tmpDir, ".cs-meta.json"), JSON.stringify(meta, null, 2));
+    options.beforeCommit?.();
     await rename(tmpDir, finalDir);
     // Register so existing loaders (scanInstalledPlugins / loadPluginHooks)
     // discover this local install. Marketplace tag "local" distinguishes it

@@ -83,11 +83,26 @@ function fixture({ handler, brokenSink = false } = {}) {
       },
     },
   };
+  class TestPort {
+    close() {}
+    emit() {
+      return true;
+    }
+    postMessage(message) {
+      sent.push(message);
+    }
+  }
   const send = event.sender.send;
   runInNewContext(
     preferenceGoalDeleteGuardSource(config),
     {
       ipcMain,
+      MessageChannelMain: class {
+        constructor() {
+          this.port1 = new TestPort();
+          this.port2 = new TestPort();
+        }
+      },
       state,
       Buffer,
       appendFileSync(path, line, options) {
@@ -128,6 +143,7 @@ function fixture({ handler, brokenSink = false } = {}) {
     event,
     send,
     receiver,
+    hosted: new TestPort(),
     invoke(line) {
       return registered.get("agent:msg").call(receiver, event, line);
     },
@@ -156,6 +172,25 @@ test("actual generated guard delegates exact frame/receiver and observes the unc
   const result = reconcilePreferenceGoalLedger(config, [], f.durable);
   assert.equal(result.deletion.response.result.deleted, true);
   assert.equal(result.lateRows, 2);
+});
+
+test("hosted no-worker admissions match overlapping reads and deletion by original request ID", () => {
+  const f = fixture();
+  f.arm();
+  const send = (call, text) =>
+    f.hosted.emit("message", {
+      data: { type: "renderer-prepare", call, request: JSON.parse(text) },
+    });
+  send(1, frame("agent/goalGet", { sessionId: "owned-b" }, "workbench:read"));
+  send(2, deletion("workbench:delete"));
+  const reply = (call, result) =>
+    f.hosted.postMessage({ type: "renderer-admitted", call, admission: { type: "reply", result } });
+  reply(2, { ok: true, deleted: true });
+  reply(1, { ok: true, goal: null, paused: false });
+  const proof = reconcilePreferenceGoalLedger(config, f.durable, f.durable);
+  assert.equal(proof.deletion.response.id, "workbench:delete");
+  assert.equal(f.sent.length, 2);
+  assert.equal(f.state.goalDelete.pending, 0);
 });
 
 test("ordinary readonly UI remains original before arming; armed reads are two-session confined", () => {

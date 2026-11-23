@@ -15,20 +15,23 @@ export const NOTICE_TOOL_KINDS: ReadonlySet<string> = new Set([
 
 export interface PetNoticeTurnGate {
   /** Whether an IM conversation is one of the owner's allowlisted targets. */
-  isOwnerConversation(channel: string, target: string): boolean;
+  isOwnerConversation(channel: string, target: string): boolean | Promise<boolean>;
   /** A Mimi turn starts in `sessionId`; `owner`: it is the owner's. */
-  begin(sessionId: string, owner: boolean): void;
+  begin(sessionId: string, owner: boolean, current?: () => Promise<boolean>): void | Promise<void>;
   /** That turn ended (however it ended). */
-  end(sessionId: string): void;
+  end(sessionId: string): void | Promise<void>;
 }
 
 type ChatCommand = Extract<PetDispatchCommand, { type: "chat" }>;
 
 /** The same check the change executors run, on this turn's own routing facts. */
-export function isNoticeOwnerTurn(command: ChatCommand, gate?: PetNoticeTurnGate): boolean {
+export async function isNoticeOwnerTurn(
+  command: ChatCommand,
+  gate?: PetNoticeTurnGate,
+): Promise<boolean> {
   if (command.hostWake) return false;
   const source = command.source;
-  const refusal = ownerTurnRefusal(
+  const refusal = await ownerTurnRefusal(
     {
       originClientMessageId: command.clientMessageId ?? "",
       requestedAt: 0,
@@ -44,7 +47,7 @@ export function isNoticeOwnerTurn(command: ChatCommand, gate?: PetNoticeTurnGate
         : {}),
       isDirectMessage: source?.isDirectMessage === true,
     },
-    (channel, target) => gate?.isOwnerConversation(channel, target) === true,
+    (channel, target) => gate?.isOwnerConversation(channel, target) ?? false,
   );
   return refusal === undefined;
 }
@@ -57,18 +60,20 @@ export async function withNoticeTurn<T>(
   gate: PetNoticeTurnGate | undefined,
   params: Record<string, unknown>,
   run: () => Promise<T>,
+  current?: () => Promise<boolean>,
 ): Promise<T> {
   const sessionId = typeof params.sessionId === "string" ? params.sessionId : undefined;
   if (!gate || !sessionId) return run();
   const profile = params.profileParams as { hostActions?: unknown } | undefined;
   const kinds = Array.isArray(profile?.hostActions) ? profile.hostActions : [];
-  gate.begin(
+  await gate.begin(
     sessionId,
     kinds.some((kind) => NOTICE_TOOL_KINDS.has(kind as string)),
+    current,
   );
   try {
     return await run();
   } finally {
-    gate.end(sessionId);
+    await gate.end(sessionId);
   }
 }

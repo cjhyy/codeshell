@@ -736,7 +736,13 @@ for (const fail of [false, true]) {
       installProductionClosure(source, target, closure, (command, args, options) => {
         called = true;
         expect(command).toBe(process.execPath);
-        expect(args).toEqual(["install", "--production", "--frozen-lockfile", "--linker=hoisted"]);
+        expect(args).toEqual([
+          "install",
+          "--production",
+          "--frozen-lockfile",
+          "--linker=hoisted",
+          ...(process.platform === "darwin" ? ["--cpu=*"] : []),
+        ]);
         expect(options.cwd).toBe(target);
         expect(readFileSync(join(target, "package.json"), "utf8")).toBe(closure.manifest);
         expect(readFileSync(join(target, "bun.lock"), "utf8")).toBe(closure.lock);

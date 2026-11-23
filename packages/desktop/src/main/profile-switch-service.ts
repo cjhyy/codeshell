@@ -1,3 +1,9 @@
+import type {
+  ProfileSwitchTarget as SwitchTarget,
+  ProfileCredentialAnswers,
+} from "../shared/profile-switch-authority.js";
+import { profileSourceDecisions, ProfileSourceChanged } from "./profile-switch-authority.js";
+import { withProfileCredentialRevisions } from "@cjhyy/code-shell-core/internal/storage";
 import { createHash } from "node:crypto";
 import { SettingsManager, invalidateSkillCache, validateSettings } from "@cjhyy/code-shell-core";
 import {
@@ -8,11 +14,8 @@ import {
   resolveEffectiveSourceAccess,
 } from "@cjhyy/code-shell-core/internal";
 import type { WorkspaceProfile } from "@cjhyy/code-shell-core";
-import type { ResolvedRendererConfigurationTarget } from "./renderer-configuration-authority.js";
 import { profileSwitchCapabilitySnapshot } from "./capabilities-service.js";
 import type { ProfileSwitchAdoptResult, ProfileSwitchPreview } from "../shared/profile-switch.js";
-
-type SwitchTarget = Exclude<ResolvedRendererConfigurationTarget, { kind: "no-repo" }>;
 
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);
@@ -26,7 +29,12 @@ function canonical(value: unknown): unknown {
   return value;
 }
 
-function switchPlan(target: SwitchTarget, name: string | null, project: Record<string, unknown>) {
+function switchPlan(
+  target: SwitchTarget,
+  name: string | null,
+  project: Record<string, unknown>,
+  answers?: ProfileCredentialAnswers,
+) {
   if (name !== null && (typeof name !== "string" || !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(name))) {
     throw new Error("invalid digital-human profile id");
   }
@@ -72,6 +80,7 @@ function switchPlan(target: SwitchTarget, name: string | null, project: Record<s
     directOverrides,
     capabilities: snapshot.capabilities,
   });
+  const credentialDecision = answers && profileSourceDecisions(answers);
   const sourcesFor = (profile: WorkspaceProfile | undefined, selectedName?: string) => {
     // A missing selected definition must remain deny-all; absence of selection falls back to bindings.
     if (selectedName && !profile) return [];
@@ -79,6 +88,7 @@ function switchPlan(target: SwitchTarget, name: string | null, project: Record<s
       cwd: target.cwd,
       settings,
       credentialStatus: defaultCredentialStatus,
+      credentialDecision,
       settingsScope: "full",
       profile: profile ?? { name: "profile-switch-unbound" },
     });
@@ -145,10 +155,15 @@ function switchPlan(target: SwitchTarget, name: string | null, project: Record<s
 export function previewProfileSwitch(
   target: SwitchTarget,
   name: string | null,
+  answers?: ProfileCredentialAnswers,
 ): ProfileSwitchPreview {
   const settings = new SettingsManager(target.cwd, "full");
-  return switchPlan(target, name, settings.getRawForScope("project", target.cwd, { strict: true }))
-    .preview;
+  return switchPlan(
+    target,
+    name,
+    settings.getRawForScope("project", target.cwd, { strict: true }),
+    answers,
+  ).preview;
 }
 
 /** CAS and the sole profile-subtree write share the existing cross-process settings lock. */
@@ -156,17 +171,27 @@ export function adoptProfileSwitch(
   target: SwitchTarget,
   name: string | null,
   expectedRevision: string,
+  answers?: ProfileCredentialAnswers,
+  claim?: () => void,
 ): ProfileSwitchAdoptResult {
   if (typeof expectedRevision !== "string" || !/^[a-f0-9]{64}$/.test(expectedRevision))
     throw new Error("invalid profile switch revision");
   let result: ProfileSwitchAdoptResult = { status: "stale" };
   const settings = new SettingsManager(target.cwd, "full");
-  settings.mutateSettingsForScope("project", target.cwd, (current) => {
-    const plan = switchPlan(target, name, current);
-    if (plan.preview.revision !== expectedRevision) return false;
-    if (plan.subtree) current.profile = plan.subtree;
-    else delete current.profile;
-    result = { status: "adopted" };
-  });
+  const write = (areCurrent: () => boolean) =>
+    settings.mutateSettingsForScope("project", target.cwd, (current) => {
+      const plan = switchPlan(target, name, current, answers);
+      if (plan.preview.revision !== expectedRevision || !areCurrent()) return false;
+      claim?.();
+      if (plan.subtree) current.profile = plan.subtree;
+      else delete current.profile;
+      result = { status: "adopted" };
+    });
+  try {
+    if (answers?.revisions) withProfileCredentialRevisions(target.cwd, answers.revisions, write);
+    else write(() => true);
+  } catch (error) {
+    if (!(error instanceof ProfileSourceChanged)) throw error;
+  }
   return result;
 }

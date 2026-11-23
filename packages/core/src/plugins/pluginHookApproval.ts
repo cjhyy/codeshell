@@ -131,7 +131,10 @@ export function reviewPluginHooks(target: string): PluginHookReview[] {
 }
 
 /** Approve the exact install-time digest; changed-on-disk hooks cannot be blessed. */
-export function approvePluginHooks(target: string): PluginHookApprovalResult[] {
+export function approvePluginHooks(
+  target: string,
+  beforeCommit?: () => void,
+): PluginHookApprovalResult[] {
   return (
     mutateInstalledPlugins((data) => {
       const keys = matchingInstallKeys(data, target);
@@ -168,6 +171,7 @@ export function approvePluginHooks(target: string): PluginHookApprovalResult[] {
           out.push(result(installKey, entry, entryChanged, snapshot));
         }
       }
+      if (writeNeeded) beforeCommit?.();
       return { ...(writeNeeded ? { value: data } : {}), result: out };
     }) ?? []
   );
@@ -177,7 +181,10 @@ export function approvePluginHooks(target: string): PluginHookApprovalResult[] {
  * Revoke hook execution. Legacy entries are first migrated to a recorded
  * digest so revocation fails closed instead of falling back to legacy trust.
  */
-export function revokePluginHooks(target: string): PluginHookApprovalResult[] {
+export function revokePluginHooks(
+  target: string,
+  beforeCommit?: () => void,
+): PluginHookApprovalResult[] {
   return (
     mutateInstalledPlugins((data) => {
       const keys = matchingInstallKeys(data, target);
@@ -204,6 +211,7 @@ export function revokePluginHooks(target: string): PluginHookApprovalResult[] {
           out.push(result(installKey, entry, entryChanged, snapshot));
         }
       }
+      if (writeNeeded) beforeCommit?.();
       return { ...(writeNeeded ? { value: data } : {}), result: out };
     }) ?? []
   );

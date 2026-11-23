@@ -81,11 +81,19 @@ async function validateReleaseRecovery({ github, context, tag, sourceRunId }) {
   return { sha: object.sha, artifactIds: artifactIds.join(",") };
 }
 
+// The 0.12 prereleases already ship Electron 45. Keep immutable older
+// install artifacts recoverable even though their feeds omit the OS floor.
+function requiresMacUpdateFloor(version) {
+  const [major, minor] = version.split(".").map(Number);
+  return major > 0 || (major === 0 && minor >= 12);
+}
+
 /** Verify downloaded updater manifests and asset names before publishing anything. */
 function collectReleaseAssets(directory, version) {
   const root = resolve(directory);
   const assets = [];
   const names = new Set();
+  const floorRequired = requiresMacUpdateFloor(version);
   const versionInName = new RegExp(
     `(?:^|[-_])${version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=[-_.]|$)`,
   );
@@ -97,15 +105,22 @@ function collectReleaseAssets(directory, version) {
         : platform === "codeshell-mac"
           ? "latest-mac.yml"
           : "latest-linux.yml";
-    const manifest = readFileSync(join(platformDir, metadata), "utf8");
-    requireCondition(
-      manifest.match(/^version:\s*["']?([^\s"']+)["']?\s*$/m)?.[1] === version,
-      `Updater version does not match the tag: ${platform}/${metadata}`,
-    );
+    if (platform === "codeshell-mac" && floorRequired) {
+      require("./mac-release-manifest.cjs").verifyMacManifest(platformDir, version);
+    } else {
+      const { parse } = require("yaml");
+      const manifest = parse(readFileSync(join(platformDir, metadata), "utf8"));
+      requireCondition(
+        manifest?.version === version,
+        `Updater version does not match the tag: ${platform}/${metadata}`,
+      );
+    }
     const files = readdirSync(platformDir, { withFileTypes: true }).filter(
       (entry) =>
         entry.isFile() &&
-        /(?:\.(?:exe|dmg|zip|AppImage|blockmap)|^latest[^/]*\.yml)$/.test(entry.name),
+        (/\.(?:exe|dmg|zip|AppImage|blockmap)$/.test(entry.name) ||
+          entry.name === metadata ||
+          (!floorRequired && /^latest[^/]*\.yml$/.test(entry.name))),
     );
     requireCondition(
       files.some((entry) => /\.(exe|dmg|zip|AppImage)$/.test(entry.name)),
@@ -124,4 +139,8 @@ function collectReleaseAssets(directory, version) {
   return assets.sort();
 }
 
-module.exports = { validateReleaseRecovery, collectReleaseAssets };
+module.exports = {
+  validateReleaseRecovery,
+  collectReleaseAssets,
+  requiresMacUpdateFloor,
+};

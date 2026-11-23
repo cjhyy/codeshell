@@ -11,6 +11,7 @@ import {
   rmSync,
 } from "node:fs";
 import { randomUUID } from "node:crypto";
+import { copyFile, chmod } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { SettingsManager } from "@cjhyy/code-shell-core";
 import {
@@ -74,20 +75,23 @@ export function catalogList() {
   return listSourceDefinitions().filter((definition) => definition.kind !== "mock");
 }
 
-export function catalogSave(definition: Parameters<typeof saveSourceDefinition>[0]): void {
+export function catalogSave(
+  definition: Parameters<typeof saveSourceDefinition>[0],
+  beforeCommit?: () => void,
+): void {
   if (
     definition.kind === "collection" ||
     readSourceDefinition(definition.id)?.kind === "collection"
   )
     throw new Error("资料集请通过文件选择和资料集编辑界面修改。");
   if (definition.kind === "mock") throw new Error("演示数据仅用于测试，不能保存为项目资料。");
-  saveSourceDefinition(definition);
+  saveSourceDefinition(definition, { preserveCollections: true, beforeCommit });
 }
 
-export function catalogDelete(id: string): void {
+export function catalogDelete(id: string, beforeCommit?: () => void): void {
   if (readSourceDefinition(id)?.kind === "collection")
     throw new Error("请先查看资料集引用影响，再删除资料集。");
-  deleteSourceDefinition(id);
+  deleteSourceDefinition(id, { preserveCollections: true, beforeCommit });
 }
 
 export function workspaceAccess(cwd: string) {
@@ -119,14 +123,18 @@ export function workspaceAccess(cwd: string) {
   };
 }
 
-export function bind(cwd: string, binding: Parameters<typeof bindWorkspaceSource>[2]): void {
+export function bind(
+  cwd: string,
+  binding: Parameters<typeof bindWorkspaceSource>[2],
+  beforeCommit?: () => void,
+): void {
   if (readSourceDefinition(binding.sourceId)?.kind === "mock")
     throw new Error("演示数据仅用于测试，不能绑定到项目。");
-  bindWorkspaceSource(new SettingsManager(cwd, "full"), cwd, binding);
+  bindWorkspaceSource(new SettingsManager(cwd, "full"), cwd, binding, beforeCommit);
 }
 
-export function unbind(cwd: string, sourceId: string): void {
-  unbindWorkspaceSource(new SettingsManager(cwd, "full"), cwd, sourceId);
+export function unbind(cwd: string, sourceId: string, beforeCommit?: () => void): void {
+  unbindWorkspaceSource(new SettingsManager(cwd, "full"), cwd, sourceId, beforeCommit);
 }
 
 export async function listScopes(sourceId: string) {
@@ -139,8 +147,7 @@ export async function listScopes(sourceId: string) {
   return adapter.listScopes(definition);
 }
 
-/** 上传 = 把用户选中的文件按 basename 拷进 uploads 目录（同名覆盖）。 */
-export function uploadFiles(cwd: string, absolutePaths: string[]): string[] {
+function uploadInputs(cwd: string, absolutePaths: string[]) {
   if (!Array.isArray(absolutePaths) || absolutePaths.length > MAX_UPLOAD_FILES) {
     throw new Error(`too many upload files (max ${MAX_UPLOAD_FILES})`);
   }
@@ -167,7 +174,101 @@ export function uploadFiles(cwd: string, absolutePaths: string[]): string[] {
     }
     return { path: realpathSync(path), name, target };
   });
+  return { root, files };
+}
 
+export interface StagedSourceUploads {
+  directory: string;
+  files: { name: string; temporary: string; dev: number; ino: number; size: number }[];
+}
+
+function isStagedFile(path: string, expected: StagedSourceUploads["files"][number]) {
+  try {
+    const current = lstatSync(path);
+    return (
+      current.isFile() &&
+      !current.isSymbolicLink() &&
+      current.dev === expected.dev &&
+      current.ino === expected.ino &&
+      current.size === expected.size
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function discardStagedUploads(staged: StagedSourceUploads) {
+  for (const file of staged.files) {
+    const path = join(staged.directory, file.temporary);
+    if (isStagedFile(path, file)) rmSync(path, { force: true });
+  }
+}
+
+/** Stage bounded native selections asynchronously before claiming the writer.
+ * Only the final rename runs on the shared storage thread. */
+export async function stageSourceUploads(
+  cwd: string,
+  paths: string[],
+  assertCurrent: () => void,
+): Promise<StagedSourceUploads> {
+  assertCurrent();
+  const { root, files } = uploadInputs(cwd, paths);
+  const staged: StagedSourceUploads = { directory: root, files: [] };
+  try {
+    for (const file of files) {
+      assertCurrent();
+      const temporary = `.codeshell-upload-${randomUUID()}.tmp`;
+      const destination = join(root, temporary);
+      await copyFile(file.path, destination, constants.COPYFILE_EXCL);
+      const stat = lstatSync(destination);
+      staged.files.push({
+        name: file.name,
+        temporary,
+        dev: stat.dev,
+        ino: stat.ino,
+        size: stat.size,
+      });
+      if (!stat.isFile() || stat.size > MAX_UPLOAD_FILE_BYTES)
+        throw new Error("upload source exceeds the size limit");
+      if (process.platform !== "win32") await chmod(destination, 0o600);
+    }
+    assertCurrent();
+    return staged;
+  } catch (error) {
+    discardStagedUploads(staged);
+    throw error;
+  }
+}
+
+export function commitStagedUploads(
+  cwd: string,
+  staged: StagedSourceUploads,
+  commit: () => void,
+): string[] {
+  const root = checkedUploadsDir(cwd, false);
+  if (!root || root !== staged.directory) throw new Error("Project uploads directory changed");
+  const files = staged.files.map((file) => {
+    resolveUploadTarget(cwd, file.name);
+    if (!/^\.codeshell-upload-[a-f0-9-]+\.tmp$/.test(file.temporary))
+      throw new Error("Invalid staged upload");
+    const temporary = join(root, file.temporary);
+    const target = join(root, file.name);
+    if (!isStagedFile(temporary, file)) throw new Error("Staged upload changed");
+    if (existsSync(target) && !lstatSync(target).isFile())
+      throw new Error("upload target must be a regular file");
+    return { name: file.name, temporary, target };
+  });
+  commit();
+  for (const file of files) {
+    renameSync(file.temporary, file.target);
+    invalidateUploadedDocumentIndex(cwd, file.name);
+  }
+  return files.map((file) => file.name);
+}
+
+/** Synchronous local adapter for callers already running on their own file owner. */
+export function uploadFiles(cwd: string, absolutePaths: string[]): string[] {
+  const { root, files } = uploadInputs(cwd, absolutePaths);
   for (const file of files) {
     const temporary = join(root, `.${file.name}.${process.pid}.${randomUUID()}.tmp`);
     try {
@@ -183,7 +284,7 @@ export function uploadFiles(cwd: string, absolutePaths: string[]): string[] {
 }
 
 /** 只允许删除 uploads 根目录下一层、未编码且非隐藏的 basename。 */
-export function deleteUpload(cwd: string, name: string): void {
+export function deleteUpload(cwd: string, name: string, beforeCommit?: () => void): void {
   const root = checkedUploadsDir(cwd, false);
   if (!root) return;
   resolveUploadTarget(cwd, name); // validates the untrusted basename
@@ -194,6 +295,7 @@ export function deleteUpload(cwd: string, name: string): void {
       throw new Error("upload target must be a regular file");
     }
   }
+  beforeCommit?.();
   rmSync(target, { force: true });
   invalidateUploadedDocumentIndex(cwd, name);
 }

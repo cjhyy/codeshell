@@ -1,14 +1,45 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import { randomUUID } from "node:crypto";
+import type {
+  SessionIndex,
+  SessionCatalogSnapshot,
+  SessionCatalogPatch,
+} from "../shared/session-catalog.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
 import { SessionTranscriptCache } from "./session-transcript-cache.js";
 
+interface CatalogDirectory {
+  load(signal?: AbortSignal): Promise<SessionCatalogSnapshot>;
+  importLegacy(
+    indices: Record<string, SessionIndex>,
+    signal?: AbortSignal,
+  ): Promise<SessionCatalogSnapshot>;
+  apply(patch: SessionCatalogPatch, signal?: AbortSignal): Promise<SessionCatalogSnapshot>;
+  onChanged(listener: (snapshot: SessionCatalogSnapshot) => void): () => void;
+  flush(): Promise<void>;
+}
 /** Only application windows can read or mutate the private session directory. */
 export function registerSessionCatalogIpc(
   ipc: Pick<IpcMain, "handle" | "removeHandler">,
   windows: () => BrowserWindow[],
-  catalog = new SessionCatalogStore(),
-  transcripts = new SessionTranscriptCache(),
+  catalog: CatalogDirectory = new SessionCatalogStore(),
+  transcripts: {
+    read(
+      input: Parameters<SessionTranscriptCache["read"]>[0],
+      signal?: AbortSignal,
+    ): ReturnType<SessionTranscriptCache["read"]>;
+    write(
+      input: Parameters<SessionTranscriptCache["write"]>[0],
+      signal?: AbortSignal,
+    ): Promise<void>;
+    delete(
+      input: Parameters<SessionTranscriptCache["delete"]>[0],
+      signal?: AbortSignal,
+    ): Promise<void>;
+    flush(): Promise<void>;
+    close(): Promise<void>;
+  } = new SessionTranscriptCache(),
+  documentSignal?: (e: IpcMainInvokeEvent) => AbortSignal,
 ) {
   const channels: string[] = [];
   const pendingFlushes = new Map<
@@ -21,21 +52,24 @@ export function registerSessionCatalogIpc(
   const trustedEvent = (event: IpcMainInvokeEvent) =>
     windows().some((window) => !window.isDestroyed() && window.webContents === event.sender) &&
     event.senderFrame === event.sender.mainFrame;
-  const handle = (channel: string, action: (input: any) => Promise<unknown>) => {
+  const handle = (
+    channel: string,
+    action: (input: any, signal?: AbortSignal) => Promise<unknown>,
+  ) => {
     channels.push(channel);
     ipc.handle(channel, (event: IpcMainInvokeEvent, input: unknown) => {
       if (!trustedEvent(event)) {
         throw new Error("session catalogue requires an application window");
       }
-      return action(input);
+      return action(input, documentSignal?.(event));
     });
   };
-  handle("sessionCatalog:load", () => catalog.load());
-  handle("sessionCatalog:importLegacy", (indices) => catalog.importLegacy(indices));
-  handle("sessionCatalog:apply", (patch) => catalog.apply(patch));
-  handle("sessionCatalog:writeTranscript", (input) => transcripts.write(input));
-  handle("sessionCatalog:readTranscript", (input) => transcripts.read(input));
-  handle("sessionCatalog:deleteTranscript", (input) => transcripts.delete(input));
+  handle("sessionCatalog:load", (_, signal) => catalog.load(signal));
+  handle("sessionCatalog:importLegacy", (indices, signal) => catalog.importLegacy(indices, signal));
+  handle("sessionCatalog:apply", (patch, signal) => catalog.apply(patch, signal));
+  handle("sessionCatalog:writeTranscript", (input, signal) => transcripts.write(input, signal));
+  handle("sessionCatalog:readTranscript", (input, signal) => transcripts.read(input, signal));
+  handle("sessionCatalog:deleteTranscript", (input, signal) => transcripts.delete(input, signal));
   channels.push("sessionCatalog:flushComplete");
   ipc.handle("sessionCatalog:flushComplete", (event, input) => {
     if (!trustedEvent(event) || typeof input?.requestId !== "string") return;

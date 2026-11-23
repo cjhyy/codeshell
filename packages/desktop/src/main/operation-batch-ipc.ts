@@ -1,10 +1,14 @@
+import {
+  operationOwnerIdentity as fixedOwner,
+  operationRootIdentity as identity,
+  operationCredentialRevision,
+} from "./operation-authority.js";
+import type { OperationClient } from "./desktop-host/private-operations.js";
 import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, MessageBoxOptions } from "electron";
 import { randomUUID } from "node:crypto";
-import { lstatSync } from "node:fs";
 import type { CredentialMetadata } from "@cjhyy/code-shell-core";
 import {
-  createGithubIssueBatch,
   normalizeGithubIssueBatch,
   readOperationSessionOwner,
   githubIssueBatchPolicy,
@@ -47,7 +51,9 @@ interface Deps {
   trustedSync(cwd: string): boolean;
   authorityRevision(): string;
   isSessionRunning(sessionId: string): boolean;
-  connections(cwd: string): CredentialMetadata[];
+  withCaller?<T>(event: IpcMainInvokeEvent, work: () => T): T;
+  captureClient(): OperationClient;
+  connections(cwd: string): CredentialMetadata[] | Promise<CredentialMetadata[]>;
   confirm(window: BrowserWindow, options: MessageBoxOptions): Promise<{ response: number }>;
 }
 function exact(input: unknown, keys: string[]): Record<string, unknown> {
@@ -60,21 +66,6 @@ function exact(input: unknown, keys: string[]): Record<string, unknown> {
   )
     throw new Error("Invalid Issue batch proposal");
   return input as Record<string, unknown>;
-}
-function identity(path: string): string {
-  const stat = lstatSync(path);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("Batch project unavailable");
-  return JSON.stringify([path, stat.dev, stat.ino]);
-}
-function fixedOwner(owner: ReturnType<typeof readOperationSessionOwner>) {
-  return JSON.stringify([
-    owner.incarnation,
-    identity(owner.directory),
-    owner.state.cwd,
-    owner.state.project,
-    owner.state.workspace,
-    owner.state.workspaceProfile,
-  ]);
 }
 function eligible(connection: CredentialMetadata): boolean {
   return (
@@ -97,7 +88,10 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
     runId?: string;
     generation?: number;
     connectionId: string;
-    batch: ReturnType<typeof createGithubIssueBatch>;
+    batch: { id: string; count: number; close(): void | Promise<void> };
+    client: OperationClient;
+    credentials: () => string;
+    refresh(): Promise<void>;
     check(): void;
     closed: boolean;
   };
@@ -136,10 +130,10 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
     if (sessionOwner.state.status === "active") throw new Error("Batch Session is running");
     return { target, revision, owner: fixedOwner(sessionOwner), root: identity(target.cwd) };
   };
-  const close = (permit: Permit) => {
+  const close = async (permit: Permit) => {
     permit.closed = true;
     // Keep the permit map entry while sealing fails: never downgrade to ordinary single.
-    permit.batch.close();
+    await permit.batch.close();
     permits.delete(permit.token);
     sessions.delete(permit.sessionId);
   };
@@ -166,6 +160,7 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
         input.originIntent !== permit.origin
       )
         throw new Error("Batch Run identity changed");
+      await permit.refresh();
       permit.check();
       const current = readOperationSessionOwner(deps.root, permit.sessionId);
       if (current.state.runId !== input.runId || current.state.status !== "active")
@@ -178,7 +173,7 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
       permit.runId = input.runId;
       permit.generation = generation;
       if (input.phase === "cancel") {
-        close(permit);
+        await close(permit);
         return {
           kind: "batch",
           batchId: permit.batch.id,
@@ -187,13 +182,26 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
           allVerified: false,
         };
       }
-      if (input.phase === "finish") return permit.batch.finish();
-      if (!["resolve", "check"].includes(input.phase) || input.connectionId !== permit.connectionId)
+      if (
+        input.phase !== "finish" &&
+        (!["resolve", "check"].includes(input.phase) || input.connectionId !== permit.connectionId)
+      )
         throw new Error("Batch connection changed");
-      return permit.batch.resolve(input.parameters);
+      const result = await permit.client.operationCommand<DesktopOperationBatchAuthorityResult>(
+        input.phase === "finish" ? "host/batchFinish" : "host/batchResolve",
+        {
+          sessionId: permit.sessionId,
+          token: permit.token,
+          request: input,
+          generation,
+          credentials: permit.credentials(),
+        },
+      );
+      permit.check();
+      return result;
     } catch (error) {
       try {
-        close(permit);
+        await close(permit);
       } catch {
         permit.closed = true;
       }
@@ -201,7 +209,16 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
     }
   };
   const bridges = new Set<BatchBridge>();
-  deps.ipc.handle("operationBatch:options", async (event, input) => {
+  const handle = (
+    channel: string,
+    callback: (event: IpcMainInvokeEvent, input: unknown) => Promise<unknown>,
+  ) =>
+    deps.ipc.handle(channel, (event, input) =>
+      deps.withCaller
+        ? deps.withCaller(event, () => callback(event, input))
+        : callback(event, input),
+    );
+  handle("operationBatch:options", async (event, input) => {
     const window = owner(event),
       frame = event.senderFrame;
     const check = () => {
@@ -210,14 +227,13 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
     };
     const { sessionId } = exact(input, ["sessionId"]);
     const current = await context(sessionId, check);
+    const connections = await deps.connections(current.target.cwd);
+    check();
     return {
-      connections: deps
-        .connections(current.target.cwd)
-        .filter(eligible)
-        .map(({ id, label }) => ({ id, label })),
+      connections: connections.filter(eligible).map(({ id, label }) => ({ id, label })),
     };
   });
-  deps.ipc.handle("operationBatch:start", async (event, input): Promise<OperationBatchResult> => {
+  handle("operationBatch:start", async (event, input): Promise<OperationBatchResult> => {
     const window = owner(event),
       frame = event.senderFrame;
     const check = () => {
@@ -237,12 +253,26 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
       bridge.setOperationBatchResolver(resolve);
       bridges.add(bridge);
       const items = normalizeGithubIssueBatch(proposal.items);
-      const connection = deps
-        .connections(current.target.cwd)
-        .find((entry) => entry.id === proposal.connectionId && eligible(entry));
+      const client = deps.captureClient();
+      const revision = () => operationCredentialRevision(current.target.cwd);
+      let credentials = revision();
+      const connections = await deps.connections(current.target.cwd);
+      check();
+      if (credentials !== revision()) throw new Error("Batch connection changed");
+      const connection = connections.find(
+        (entry) => entry.id === proposal.connectionId && eligible(entry),
+      );
       if (!connection)
         throw new Error("Choose a current GitHub connection with write and verification scopes");
       const authority = linkAuthoritySnapshot(connection);
+      const matches = (list: CredentialMetadata[]) =>
+        list.some((entry) => eligible(entry) && linkAuthoritySnapshot(entry) === authority);
+      const refresh = async () => {
+        const before = revision();
+        const list = await deps.connections(current.target.cwd);
+        if (before !== revision() || !matches(list)) throw new Error("Batch connection changed");
+        credentials = before;
+      };
       const sessionProfile = readOperationSessionOwner(deps.root, sessionId).state.workspaceProfile;
       const policy = githubIssueBatchPolicy(
         current.target.cwd,
@@ -268,9 +298,7 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
             current.target.cwd,
             typeof sessionProfile === "string" ? sessionProfile : undefined,
           ) !== policy ||
-          !deps
-            .connections(current.target.cwd)
-            .some((entry) => eligible(entry) && linkAuthoritySnapshot(entry) === authority)
+          credentials !== revision()
         )
           throw new Error("Batch project, owner, Profile or account authority changed");
       };
@@ -293,18 +321,33 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
       )
         throw new Error("Session started while Native confirmation was open");
       assertCurrent();
+      await refresh();
+      assertCurrent();
       const token = randomUUID(),
         origin = randomUUID();
-      const batch = createGithubIssueBatch({
-        root: deps.root,
-        sessionId,
-        originIntent: origin,
-        connection,
-        items,
-        assertCurrent,
-      });
+      const scope = {
+        cwd: current.target.cwd,
+        root: current.root,
+        authority: current.revision,
+        owner: current.owner,
+        policy,
+        ...(typeof sessionProfile === "string" ? { profile: sessionProfile } : {}),
+      };
+      const reservation = await client.operationCommand<{ id: string; count: number }>(
+        "host/batchReserve",
+        { sessionId, token, credentials, proposal: { origin, scope, connection, items } },
+      );
+      if (!reservation || typeof reservation.id !== "string" || reservation.count !== items.length)
+        throw new Error("Batch reservation unavailable");
+      const batch = {
+        ...reservation,
+        close: () => client.operationCommand<void>("host/batchClose", { sessionId, token }),
+      };
       permit = {
         token,
+        client,
+        credentials: () => credentials,
+        refresh,
         origin,
         sessionId,
         connectionId: connection.id,
@@ -314,6 +357,12 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
       };
       permits.set(token, permit);
       const admitted = permit;
+      try {
+        assertCurrent();
+      } catch (error) {
+        await close(admitted);
+        throw error;
+      }
       // The secret nonce rides only the dedicated Main request. Task text carries no authority.
       void bridge
         .requestOperationBatchRun(
@@ -333,9 +382,9 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
           },
         )
         .catch(() => undefined)
-        .finally(() => {
+        .finally(async () => {
           try {
-            close(admitted);
+            await close(admitted);
           } catch {
             /* Retain closed permit; restart still has no authority. */
           }
@@ -350,6 +399,6 @@ export function registerOperationBatchIpc(deps: Deps): () => Promise<void> {
     for (const bridge of bridges) bridge.setOperationBatchResolver(undefined);
     deps.ipc.removeHandler("operationBatch:options");
     deps.ipc.removeHandler("operationBatch:start");
-    for (const permit of permits.values()) close(permit);
+    await Promise.all([...permits.values()].map(close));
   };
 }

@@ -314,7 +314,7 @@ test("guard copying is limited to fixed owned files; absence, oversized and chan
   f.diagnostics.exportGuards(f.home, true);
   assert.equal(f.read().guards["network-guard.jsonl"].status, "copied");
   assert.equal(f.read().guards["spawned-workers.jsonl"].status, "missing");
-  assert.equal(f.diagnostics.hasRequiredGuards(), true);
+  assert.equal(f.diagnostics.hasRequiredGuards(), false);
   assert.equal(f.state.closes, 2);
   const capped = fixture();
   capped.records.set(join(capped.home, COMPOSER_GUARD_FILES[0]), Buffer.alloc(64 * 1024 + 1));
@@ -349,7 +349,7 @@ test("guard copying is limited to fixed owned files; absence, oversized and chan
   assert.equal(unproven.diagnostics.hasRequiredGuards(), false);
 });
 
-test("actual bounded filesystem export reads only three owned records, with no generated content for missing", (t) => {
+test("actual bounded filesystem export reads only fixed owned records, with no generated content for missing", (t) => {
   const root = fs.mkdtempSync(join(tmpdir(), "codeshell-composer-observer-owned-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const evidence = join(root, "evidence"),
@@ -369,6 +369,8 @@ test("actual bounded filesystem export reads only three owned records, with no g
 async function runTail(mode) {
   const f = fixture(),
     main = child();
+  for (const name of COMPOSER_GUARD_FILES.slice(2))
+    f.records.set(join(f.home, name), Buffer.from('{"pid":42,"ppid":41}\n'));
   f.diagnostics.observeChild(main);
   const original = mode === "UI failure" ? Error("original UI rejection") : undefined;
   if (original) f.diagnostics.error(original, main);

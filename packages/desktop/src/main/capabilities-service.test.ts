@@ -38,6 +38,23 @@ describe("desktop capability service", () => {
     else rmSync(userSettingsPath, { force: true });
   });
 
+  test("a revoked document cannot update user or project settings", () => {
+    mkdirSync(join(process.env.HOME!, ".code-shell"), { recursive: true });
+    writeFileSync(userSettingsPath, JSON.stringify({ disabledBuiltinTools: [] }));
+    const projectPath = join(cwd, ".code-shell", "settings.json");
+    const userBefore = readFileSync(userSettingsPath);
+    const projectBefore = readFileSync(projectPath);
+    const revoke = () => {
+      throw Error("Lost document");
+    };
+    const builtin = listCapabilities("").find((cap) => cap.kind === "builtin")!;
+    expect(() =>
+      setCapabilityEnabled("", builtin.id, false, { scope: "user", beforeCommit: revoke }),
+    ).toThrow("Lost document");
+    expect(() => setCapabilityOverride(cwd, builtin.id, "off", revoke)).toThrow("Lost document");
+    expect(readFileSync(userSettingsPath)).toEqual(userBefore);
+    expect(readFileSync(projectPath)).toEqual(projectBefore);
+  });
   test("global overview lists builtin and user capabilities without a project directory", () => {
     new SettingsManager("", "full").saveUserSetting("mcpServers", {
       "overview-fixture": { command: "node", args: [], enabled: true },

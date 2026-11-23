@@ -1,3 +1,4 @@
+import type { MimiNoticeLedger } from "../../shared/mimi-notice-ledger.js";
 import { createHash } from "node:crypto";
 import type { PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
 import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
@@ -8,7 +9,6 @@ import type {
   NoticeDecisionPromptPatch,
   NoticeDeliveryStatus,
   NoticeRecord,
-  PetNoticeLedger,
 } from "./pet-notice-ledger.js";
 import {
   DEFAULT_MAX_P0_PER_HOUR,
@@ -49,7 +49,8 @@ export interface PetAttentionOptions {
     getSnapshot(): DesktopPetProjectionSnapshot;
     subscribe(listener: (event: DesktopPetProjectionEvent) => void): () => void;
   };
-  receipts: { has(key: string): boolean; mark(key: string, state?: string): void };
+  claim(rows: import("../../shared/mimi-attention.js").AttentionReceipt[]): Promise<string[]>;
+  report(error: unknown): void;
   now?: () => number;
   setTimeout?: (callback: () => void, delay: number) => unknown;
   clearTimeout?: (timer: unknown) => void;
@@ -143,7 +144,7 @@ export interface NoticeMediaFreezer {
   /** Delete the record's folder (best effort, never throws). */
   release(recordId: string): Promise<void>;
   /** Delete every record folder that `keep` does not claim (best effort). */
-  sweep(keep: (recordId: string) => boolean): Promise<void>;
+  sweep(keep: (recordId: string) => boolean | Promise<boolean>): Promise<void>;
 }
 
 /** One notice handed to `PetNoticeRouter.submit`. */
@@ -286,9 +287,13 @@ export interface NoticeDecisionPrompts {
   submitWithOutcome(notice: NoticeSubmission): Promise<NoticeSubmitResult>;
   /** Resolves once the records are readable (the ledger loaded, or failed to). */
   decisionsLoaded(): Promise<void>;
-  decisionRecord(code: string): DecisionPromptRecord | undefined;
+  decisionRecord(
+    code: string,
+  ): DecisionPromptRecord | undefined | Promise<DecisionPromptRecord | undefined>;
   /** Prompt records, oldest first; `only` picks them before any view is built. */
-  decisionRecords(only?: (prompt: NoticeDecisionPrompt) => boolean): DecisionPromptRecord[];
+  decisionRecords(
+    only?: (prompt: NoticeDecisionPrompt) => boolean,
+  ): DecisionPromptRecord[] | Promise<DecisionPromptRecord[]>;
   /**
    * A request prompted by an older build has its first record (`dedupeKey`)
    * but no lifecycle: give it one instead of prompting again.
@@ -323,23 +328,27 @@ export interface NoticeOutlets {
   /** Withdraw an enqueued delivery; it is never sent after this resolves. Throws when it could not be. */
   revoke?(deliveryKey: string): Promise<void>;
   /** Where an enqueued delivery stands in the outbox (startup recovery). */
-  outboxState?(deliveryKey: string): NoticeOutboxState | undefined;
+  outboxState?(
+    deliveryKey: string,
+  ): NoticeOutboxState | undefined | Promise<NoticeOutboxState | undefined>;
 }
 
 /** The ledger surface the router uses; `PetNoticeLedger` satisfies it. */
 export type NoticeLedgerPort = Pick<
-  PetNoticeLedger,
+  MimiNoticeLedger,
   | "load"
   | "record"
   | "claim"
   | "settle"
   | "countsThisHour"
-  | "seenDedupeKeys"
+  | "routingState"
+  | "waiting"
   | "queued"
   | "held"
   | "enqueued"
   | "recoverOnStartup"
   | "expireQueued"
+  | "decisionRows"
   | "get"
   | "byDedupeKey"
   | "byPromptCode"
@@ -371,7 +380,10 @@ export interface ReplayedNotice {
   body: string;
 }
 
-export interface PetNoticeRouterOptions extends PetAttentionOptions {
+export interface PetNoticeRouterOptions extends Pick<
+  PetAttentionOptions,
+  "now" | "setTimeout" | "clearTimeout"
+> {
   /** Without a ledger the router cannot dedupe, cap or claim, so it never sends IM. */
   ledger?: NoticeLedgerPort;
   /** Defaults to "present" (desktop) when absent. */
@@ -386,7 +398,7 @@ export interface PetNoticeRouterOptions extends PetAttentionOptions {
   isDecisionStillPending?: (sessionId: string, requestId: string) => boolean;
   wasSessionViewedSince?: (sessionId: string, ms: number) => boolean;
   /** The rule is a goal-scope Session rule that was cancelled (its Goal was cleared). */
-  isGoalRuleCancelled?: (ruleId: string) => boolean;
+  isGoalRuleCancelled?: (ruleId: string) => boolean | Promise<boolean>;
   /** Owner's offset east of UTC at an instant; defaults to the host's (DST-aware). */
   timezoneOffsetMin?: (ms: number) => number;
   /** An IM send that has not answered by then counts as failed (default 30 s). */
@@ -525,14 +537,14 @@ export function normalizeSettings(
  * pause whose goal rule is cancelled), or (done / failed / report) the owner already
  * looked at the Session on the desktop.
  */
-export function staleReason(
+export async function staleReason(
   record: NoticeRecord,
   now: number,
   probes: Pick<
     PetNoticeRouterOptions,
     "isDecisionStillPending" | "wasSessionViewedSince" | "isGoalRuleCancelled"
   >,
-): string | undefined {
+): Promise<string | undefined> {
   if (record.expiresAt !== undefined && record.expiresAt <= now) return "expired";
   const { sessionId, requestId } = record;
   const pending = probes.isDecisionStillPending;
@@ -542,7 +554,7 @@ export function staleReason(
     (record.kind === "session.blocked" || record.kind === "session.paused") &&
     requestId === undefined &&
     goalCancelled &&
-    record.ruleIds.some((id) => goalCancelled(id))
+    (await Promise.all(record.ruleIds.map(goalCancelled))).some(Boolean)
   )
     return "goal-cleared";
   if (

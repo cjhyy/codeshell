@@ -142,7 +142,7 @@ async function harness(options: { missingWorkspace?: boolean } = {}) {
     },
   };
   const wiring = createSessionBridgeWiring({
-    routesFilePath,
+    routes: new ConversationSessionRouteStore(routesFilePath),
     resolveSelector: createReusableSessionResolver(sessionsRootDir),
     createRunner: (onTurn) => createBoundSessionRunner(worker, aggregator, onTurn),
     health: createBoundSessionHealth(aggregator, sessionsRootDir),

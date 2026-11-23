@@ -18,7 +18,7 @@ import type {
   PetNoticePowerEvents,
   PetNoticePresenceTimers,
 } from "./pet-notice-decision-hooks.js";
-import type { PetNoticeLedger } from "./pet-notice-ledger.js";
+import type { MimiNoticeLedger } from "../../shared/mimi-notice-ledger.js";
 import type { PetNoticeOutbox, PetNoticeWiringGateway } from "./pet-notice-outlets.js";
 import type { PetInboundOrigin, PetInboundReplay } from "./pet-notice-replay.js";
 import type { PetNoticeRouter } from "./pet-notice-router.js";
@@ -32,8 +32,8 @@ import type {
   NoticeSubmission,
   PetAttentionOptions,
 } from "./pet-notice-types.js";
-import type { PetReceiptStore } from "./pet-receipt-store.js";
-import type { NoticeRule, PetRuleStore } from "./pet-rule-store.js";
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
+import type { NoticeRule } from "./pet-rule-store.js";
 import type { PetSessionRuleWatcher } from "./pet-session-rule-watcher.js";
 import type { SessionOutcome } from "./session-outcome.js";
 
@@ -41,12 +41,15 @@ import type { SessionOutcome } from "./session-outcome.js";
 export interface PetNoticeWiringDeps {
   /** Electron `app.getPath("userData")`; stores live under `<userData>/pet/`. */
   userDataDir: string;
+  rules: PetRuleAccess;
+  ledger: MimiNoticeLedger;
+  attention: PetIpcAttention & { start(): void | Promise<void> };
   bridge: { setHostActionHandler(action: string, handler: HostActionHandler): () => void };
   /** The pet projection (PetStateAggregator): attention source and Session facts. */
   projection: PetAttentionOptions["source"];
   longTasks: {
-    activeForSession(sessionId: string): PetLongTask | undefined;
-    getSnapshot(): { tasks: readonly PetLongTask[] };
+    activeForSession(sessionId: string): PetLongTask | undefined | Promise<PetLongTask | undefined>;
+    getSnapshot(): { tasks: readonly PetLongTask[] } | Promise<{ tasks: readonly PetLongTask[] }>;
     /** Tasks changed (an IM-started task may now own where a prompt goes). */
     subscribe?(listener: () => void): () => void;
   };
@@ -112,12 +115,11 @@ export interface PetNoticeWiringDeps {
 
 export interface PetNoticeWiring {
   router: PetNoticeRouter;
-  ruleStore: PetRuleStore;
+  ruleStore: PetRuleAccess;
   watcher: PetSessionRuleWatcher;
-  ledger: PetNoticeLedger;
-  receipts: PetReceiptStore;
+  ledger: MimiNoticeLedger;
   /** The router as pet IPC sees it; also records which Session the owner is viewing. */
-  attention: PetIpcAttention;
+  attention: PetIpcAttention & { start(): void | Promise<void> };
   /**
    * Stores loaded. Startup recovery then runs in the background; the
    * router's submit, replay and digest flush wait for it themselves.

@@ -180,7 +180,8 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "22.16.0"
+          node-version: "24.22.1"
+          package-manager-cache: false
 
       - uses: actions/setup-python@v6
         with:
@@ -232,7 +233,11 @@ jobs:
 
       - name: install locked native dependencies
         timeout-minutes: 15
+        env:
+          FORCE_REBUILD_NATIVE: "1"
         run: bun install --frozen-lockfile
+      - name: prepare locked Electron binary
+        run: node packages/desktop/scripts/prepare-electron.mjs
 
       - name: Windows installer ownership and failure contracts
         if: runner.os == 'Windows'
@@ -245,7 +250,7 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/composer-operation-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-process-roles.test.mjs packages/desktop/scripts/packaged-startup-observation.test.mjs packages/desktop/scripts/preference-goal-delete-acceptance.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/operation-evidence-contracts.log"
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/composer-operation-diagnostics.test.mjs packages/desktop/scripts/composer-worker-fixture.test.mjs packages/desktop/scripts/windows-nsis-process-roles.test.mjs packages/desktop/scripts/packaged-startup-observation.test.mjs packages/desktop/scripts/preference-goal-delete-acceptance.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/operation-evidence-contracts.log"
 
       - name: Review first-error and cleanup observation contracts
         timeout-minutes: 2
@@ -299,6 +304,26 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/commands/builtin/branch-command.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/branch-command.log"
+
+      - name: quit an active Git marketplace operation and retry the interrupted seed
+        if: runner.os != 'Linux'
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-marketplace-shutdown.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/marketplace-shutdown.log"
+
+      - name: macOS Panel launcher, guest isolation and native window focus
+        if: runner.os == 'macOS'
+        timeout-minutes: 5
+        env:
+          CODESHELL_E2E_MOCK_KEYCHAIN: "1"
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-panel-app-window.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/native-panel-window.log"
+
+      - name: Host room and IM restart, delivery authority and private notices
+        timeout-minutes: 3
+        run: node scripts/run-bun-test-shard.mjs --timeout 60000 packages/desktop/src/host/im/gateway.native.test.ts packages/desktop/src/host/im/private-notices.test.ts packages/desktop/src/host/rooms/service.native.test.ts
 
       - name: project capability literal-key regressions
         timeout-minutes: 2
@@ -829,7 +854,8 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "22.16.0"
+          node-version: "24.22.1"
+          package-manager-cache: false
 
       - uses: actions/setup-python@v6
         with:
@@ -850,7 +876,11 @@ jobs:
 
       - name: install locked native dependencies
         timeout-minutes: 15
+        env:
+          FORCE_REBUILD_NATIVE: "1"
         run: bun install --frozen-lockfile
+      - name: prepare locked Electron binary
+        run: node packages/desktop/scripts/prepare-electron.mjs
 
       - name: Windows installer ownership and failure contracts
         if: runner.os == 'Windows'

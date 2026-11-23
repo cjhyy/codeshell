@@ -31,7 +31,7 @@ export function createDesktopPanelAutomationHost(
         authorityDeps(),
       );
       if (!(await scope.isAuthorized())) throw Error("Panel automation authorization expired");
-      scope.assertAuthorized?.();
+      if (operation.action !== "runNow") scope.assertAuthorized?.();
       const s = scheduler();
       s.loadJobs();
       const owns = (job: ReturnType<typeof s.list>[number]) =>
@@ -69,6 +69,7 @@ export function createDesktopPanelAutomationHost(
       const assertCurrent = (current: Readonly<typeof job>) => {
         if (!owns(current)) throw Error("Panel automation binding changed; reload before retrying");
         assertPanelAutomationRevision(current, operation.expectedRevision);
+        if (operation.action === "runNow") scope.assertAuthorized?.();
       };
       // No asynchronous gap between this final ownership check and mutation.
       try {

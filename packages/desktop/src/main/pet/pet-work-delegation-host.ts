@@ -190,7 +190,7 @@ export class PetWorkDelegationHost {
         throw new Error(acceptance.message || "The delegated Work Session run was rejected");
       }
     } catch (error) {
-      if (!wasKnownToHost) this.options.bridge.forgetSession(sessionId);
+      if (!wasKnownToHost) await this.options.bridge.forgetSession(sessionId);
       throw error;
     }
     // Acceptance owns the run now. A retention-write failure must not turn an

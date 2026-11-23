@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ClosureExtraction, ClosureMessage } from "@cjhyy/code-shell-pet";
@@ -7,6 +7,7 @@ import { PetJournalStore } from "./pet-journal-store";
 import { PetMemoryStore } from "./pet-memory-store";
 import {
   createPetSegmentClosureService,
+  petSegmentTranscript,
   type ClosedSegmentDescriptor,
 } from "./pet-segment-closure-service";
 
@@ -325,3 +326,64 @@ describe("createPetSegmentClosureService", () => {
     });
   });
 });
+
+test("disabling native extraction while a model answer is pending leaves both stores untouched", async () => {
+  await withStores(async ({ journal, memory }) => {
+    const started = Promise.withResolvers<void>();
+    const answer = Promise.withResolvers<ClosureExtraction>();
+    let enabled = true;
+    const service = createPetSegmentClosureService({
+      petSessionId: "pet-local",
+      sessionsRootDir: "/unused",
+      journal,
+      memory,
+      readMessages: async () => messages,
+      autoExtractEnabled: () => enabled,
+      generate: async () => {
+        started.resolve();
+        return answer.promise;
+      },
+    });
+    const closing = service.close({
+      segmentId: "first",
+      startedAt: 1,
+      endedAt: 2,
+      nextBoundaryMessageId: "c1",
+    });
+    await started.promise;
+    enabled = false;
+    answer.resolve(extraction());
+    expect(await closing).toEqual({ range: { start: 0, end: 4 } });
+    expect(journal.list()).toEqual([]);
+    expect(memory.list()).toEqual([]);
+  });
+});
+
+test.skipIf(process.platform === "win32")(
+  "the local Mimi transcript cannot resolve through a linked session directory or linked transcript file",
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), "mimi-segment-fixed-root-"));
+    try {
+      const outside = join(root, "elsewhere");
+      const dir = join(root, "sessions");
+      await mkdir(outside);
+      await mkdir(dir);
+      const leaf = join(outside, "transcript.jsonl");
+      await writeFile(
+        leaf,
+        JSON.stringify({ type: "message", data: { role: "user", content: "unrelated" } }) + "\n",
+      );
+      const allowed = join(dir, "pet-local");
+      await symlink(outside, allowed);
+      const read = () =>
+        petSegmentTranscript(join(allowed, "transcript.jsonl")).read({ start: 0, end: 1 });
+      expect(await read()).toEqual([]);
+      await rm(allowed);
+      await mkdir(allowed);
+      await symlink(leaf, join(allowed, "transcript.jsonl"));
+      await expect(read()).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);

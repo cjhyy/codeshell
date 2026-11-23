@@ -1,3 +1,4 @@
+import { guardedWorkerTree } from "./guarded-worker-tree.mjs";
 import assert from "node:assert/strict";
 import childrenModule from "node:child_process";
 import { createHash } from "node:crypto";
@@ -8,6 +9,7 @@ import { syncBuiltinESMExports } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import { _electron } from "playwright";
+import { mockKeychainBootstrapSource } from "./electron-harness.mjs";
 import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { createPackagedSignalDiagnostics } from "./packaged-signal-diagnostics.mjs";
@@ -31,11 +33,14 @@ export async function preparePackagedPetFixture({
   origin,
   fixtureRoot,
   keychainReferenceFile,
+  mockKeychain = false,
   requireWorkerEvidence = true,
+  legacyMainWorker = false,
   appImageRuntime,
   onLaunchError,
   launchDiagnostics = false,
 }) {
+  assert.ok(!mockKeychain || (process.platform === "darwin" && !keychainReferenceFile));
   assert.equal(typeof requireWorkerEvidence, "boolean");
   assert.equal(typeof launchDiagnostics, "boolean");
   if (appImageRuntime) {
@@ -68,6 +73,19 @@ export async function preparePackagedPetFixture({
     target: "node20",
     external: ["electron"],
   });
+  // Inject the fixture only in this temporary profile. The imported Host entry
+  // and the rest of the signed app still come from the installed package.
+  const hostWrapper = join(isolated.home, "packaged-host-wrapper.mjs");
+  await writeFile(
+    hostWrapper,
+    [
+      'import { createRequire } from "node:module";',
+      'import { pathToFileURL } from "node:url";',
+      "createRequire(import.meta.url)(process.env.CODESHELL_OFFICIAL_BOOTSTRAP);",
+      "await import(pathToFileURL(process.env.CODESHELL_OFFICIAL_HOST_ENTRY).href);",
+    ].join("\n"),
+    { mode: 0o600, flag: "wx" },
+  );
   const environment = {};
   for (const key of [
     "PATH",
@@ -119,10 +137,17 @@ export async function preparePackagedPetFixture({
     CODESHELL_OFFICIAL_NODE: managedNode,
     CODESHELL_OFFICIAL_WORKER_EXECUTABLE: executable,
     CODESHELL_OFFICIAL_BOOTSTRAP: bootstrap,
+    CODESHELL_OFFICIAL_HOST_WRAPPER: hostWrapper,
     CODESHELL_OFFICIAL_USER_DATA: isolated.userDataDir,
+    ...(legacyMainWorker && { CODESHELL_OFFICIAL_011_MAIN_WORKER: "1" }),
   });
   // Never inherit APPIMAGE/APPDIR. Only the actual ELF runtime may supply them.
   if (appImageRuntime) Object.assign(environment, appImageRuntime.environment);
+  if (mockKeychain) {
+    const path = join(isolated.home, "packaged-mock-keychain.cjs");
+    await writeFile(path, mockKeychainBootstrapSource(isolated.home), { mode: 0o600 });
+    environment.CODESHELL_OFFICIAL_MOCK_KEYCHAIN = "1";
+  }
   const children = [];
   const processMonitors = [];
   const signalDiagnostics = createPackagedSignalDiagnostics();
@@ -168,13 +193,14 @@ export async function preparePackagedPetFixture({
       };
     },
     async launch() {
-      ensureElectronKeychainContext({
-        home: isolated.home,
-        environment: {
-          ...environment,
-          CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE: keychainReferenceFile,
-        },
-      });
+      if (!mockKeychain)
+        ensureElectronKeychainContext({
+          home: isolated.home,
+          environment: {
+            ...environment,
+            CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE: keychainReferenceFile,
+          },
+        });
       // No app directory/script argument: this executable must load its
       // own Resources/app.asar Main/preload/renderer. Its actual worker uses
       // this executable in Node mode; the synthetic plugin uses managed Node.
@@ -184,7 +210,12 @@ export async function preparePackagedPetFixture({
       let preloadFailure;
       let startupRecord;
       let windowsTransport;
-      const launchArgs = ["--inspect-brk=0", `--user-data-dir=${isolated.userDataDir}`];
+      const launchArgs = [
+        ...(mockKeychain ? ["--use-mock-keychain"] : []),
+        "--inspect-brk=0",
+        `--user-data-dir=${isolated.userDataDir}`,
+      ];
+      const chromium = Promise.withResolvers();
       const captureMain = (child) => {
         assert.equal(captured, undefined, "Packaged launcher captured more than once");
         captured = child;
@@ -218,6 +249,7 @@ export async function preparePackagedPetFixture({
             passiveLaunchDiagnostics?.appended(child, stream, chunk);
           });
         preload = preloadPausedPackagedMain(child, bootstrap, {
+          chromiumReady: chromium.promise,
           // Initial ESM Break-on-start precedes the first dependency body.
           // Parsing the graph is expected; ordinary later pauses are denied.
           allowedPause: (url) => url.startsWith(layout.mainURLPrefix),
@@ -295,14 +327,16 @@ export async function preparePackagedPetFixture({
       let app;
       let launchPhase = "playwright-launch";
       try {
-        app = await _electron.launch({
-          executablePath: launcherExecutable,
-          chromiumSandbox: true,
-          args: launchArgs,
-          cwd: isolated.home,
-          env: environment,
-          timeout: 30_000,
-        });
+        app = await _electron
+          .launch({
+            executablePath: launcherExecutable,
+            chromiumSandbox: true,
+            args: launchArgs,
+            cwd: isolated.home,
+            env: environment,
+            timeout: 30_000,
+          })
+          .finally(chromium.resolve);
         launchPhase = "startup-barrier";
         startupObservation.sdkReturned(startupRecord);
         const startupPause = await preload;
@@ -426,6 +460,12 @@ export async function preparePackagedPetFixture({
           .split("\n")
           .filter(Boolean)
           .map((line) => JSON.parse(line));
+        const tree = await guardedWorkerTree(
+          isolated.home,
+          pid,
+          receipts,
+          (r) => r.negativeProbes === 7,
+        );
         assert.ok(
           receipts.every(
             (receipt) => receipt.origin === origin && receipt.homeId === hash(isolated.home),
@@ -440,10 +480,13 @@ export async function preparePackagedPetFixture({
           spawned.every(
             (worker) =>
               worker.command === executable &&
+              (legacyMainWorker
+                ? worker.ppid === pid && worker.mainPid === pid
+                : tree.hasWorker(worker)) &&
               receipts.some(
                 (receipt) =>
                   receipt.pid === worker.pid &&
-                  receipt.ppid === pid &&
+                  receipt.ppid === worker.ppid &&
                   receipt.role === "worker" &&
                   receipt.electron === app.__packagedIdentity.electron &&
                   receipt.negativeProbes === 7,
@@ -502,6 +545,7 @@ export async function preparePackagedPetFixture({
       )
         return false;
       return canCleanupPackagedProcesses({
+        requireHostEvidence: !legacyMainWorker,
         home: isolated.home,
         requireWorkerEvidence,
         launchFailed,

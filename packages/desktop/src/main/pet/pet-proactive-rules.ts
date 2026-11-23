@@ -1,6 +1,7 @@
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
 import { localMinuteOfDay } from "./pet-notice-policy.js";
 import type { PetNotificationSettings } from "./pet-notice-settings.js";
-import type { PetRuleStore, SystemScheduleInput, SystemScheduleRuleId } from "./pet-rule-store.js";
+import type { SystemScheduleInput, SystemScheduleRuleId } from "./pet-rule-store.js";
 import type { ScheduleWhen } from "./pet-schedule-rule.js";
 
 /**
@@ -126,7 +127,7 @@ export function systemScheduleInputs(
  * Switching the heartbeat off also pauses a pending recheck.
  */
 export async function syncSystemSchedules(
-  rules: Pick<PetRuleStore, "setSystemSchedule" | "get" | "update">,
+  rules: Pick<PetRuleAccess, "setSystemSchedule" | "get" | "update">,
   settings: Pick<PetNotificationSettings, "briefs" | "heartbeat">,
   timezone: string,
   log: (event: string, data: Record<string, unknown>) => void,
@@ -138,7 +139,7 @@ export async function syncSystemSchedules(
       log("pet.proactive.rule_sync_failed", { id, error: String(error) });
     }
   }
-  const recheck = rules.get("system-heartbeat-recheck");
+  const recheck = await rules.get("system-heartbeat-recheck");
   if (!settings.heartbeat.enabled && recheck?.state === "active") {
     try {
       await rules.update(recheck.id, recheck.version, { state: "paused" });

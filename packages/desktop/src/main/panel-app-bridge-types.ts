@@ -122,7 +122,7 @@ export interface PanelAppBridgeOptions {
   cookieCredentials?: {
     /** Host-only vault access for versioned background task credentials. */
     taskCredentials?(cwd: string): Promise<Credential[]>;
-    list(cwd?: string): Promise<PanelAppCookieCredential[]>;
+    list(cwd?: string): Promise<(PanelAppCookieCredential & { approvalIdentity?: string })[]>;
     loginAndSave(input: {
       appId: string;
       providerId: string;
@@ -146,6 +146,8 @@ export interface PanelAppBridgeOptions {
     }): Promise<{ count: number } | { invalid: true }>;
     materialize?(input: {
       credentialId: string;
+      expectedApprovalIdentity?: string;
+      assertCurrent?: () => void;
       cwd?: string;
     }): Promise<{ filePath: string; count: number; cleanup: () => void } | { invalid: true }>;
   };

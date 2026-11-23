@@ -17,6 +17,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  seedViewOnlyWorkbench,
   openSettingsMenu,
 } from "./electron-harness.mjs";
 
@@ -406,6 +407,14 @@ async function checkDataSourceAdds(app, win) {
   await linked.waitFor({ state: "hidden", timeout: 10_000 });
   const references = await win.evaluate(async () => {
     const project = (await window.codeshell.projectRegistry.list())[0];
+    // A separate catalog mutation reparses existing rows in the storage worker.
+    // Both GitHub references must survive it before the Host reads them back.
+    await window.codeshell.saveSourceCatalog({
+      id: "unrelated-source",
+      kind: "mcp-resource",
+      label: "Separate catalog entry",
+    });
+    await window.codeshell.deleteSourceCatalog("unrelated-source");
     return {
       catalog: await window.codeshell.listSourceCatalog(),
       access: await window.codeshell.projectSourceAccess(project.id),
@@ -458,19 +467,25 @@ async function checkDataSourceAdds(app, win) {
     (await networkAttempts()) === attemptsBefore,
     "Linked selection attempted a network request",
   );
+  const savedFiles = [...github, ...figma];
+  async function assertSavedFiles(rows, message) {
+    // Navigation renders before the catalog or project snapshot finishes loading.
+    for (const file of savedFiles) {
+      await rows.getByText(file.label, { exact: true }).waitFor({ timeout: 10_000 });
+    }
+    assert((await rows.count()) === 3, message);
+  }
   await win.getByRole("button", { name: "添加或管理资料集", exact: true }).click();
-  const online = win.locator("[data-connected-materials]");
-  assert(
-    (await online.locator("[data-source-definition]").count()) === 3,
+  await assertSavedFiles(
+    win.locator("[data-connected-materials] [data-source-definition]"),
     "Selected online files are hidden in advanced definitions",
   );
   await screenshot(win, "settings-online-materials.png");
   await win
     .getByRole("button", { name: `返回 ${basename(projectPath)} 数据源`, exact: true })
     .click();
-  await win.getByRole("button", { name: "从 Link 选择文件", exact: true }).waitFor();
-  assert(
-    (await win.locator("[data-source-access]").count()) === 3,
+  await assertSavedFiles(
+    win.locator('[data-data-sources-module="project"] [data-source-access]'),
     "Returning to the project lost its file references",
   );
   // Leave the remainder of this settings smoke in its original global context.
@@ -505,6 +520,7 @@ require("node:module").syncBuiltinESMExports();
 `,
     { mode: 0o600 },
   );
+  await seedViewOnlyWorkbench(isolated);
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,

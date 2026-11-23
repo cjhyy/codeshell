@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { PetProjectionSnapshotResult } from "@cjhyy/code-shell-pet";
 import type { ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
-import { PetNoticeRouter } from "./pet-notice-router";
+import { MimiAttentionTracker } from "../../host/composition/mimi-attention-tracker.js";
 import {
   PetStateAggregator,
   type AgentBridgePetEvent,
@@ -79,9 +79,12 @@ describe("Pet lifecycle integration", () => {
       ],
     };
     await bridge.emit({ kind: "lifecycle", state: "active" });
-    const policy = new PetNoticeRouter({
+    const policy = new MimiAttentionTracker({
       source: aggregator,
-      receipts: { has: () => true, mark: () => {} },
+      claim: async () => [],
+      report: (error) => {
+        throw error;
+      },
       now: () => 20_000,
     });
     policy.start();

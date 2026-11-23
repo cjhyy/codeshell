@@ -1,3 +1,12 @@
+import { installDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
+import { decideSourceCredential } from "@cjhyy/code-shell-core/internal";
+import type { ProfileCredentialRevisions } from "@cjhyy/code-shell-core/internal/storage";
+import type {
+  ProfileCredentialQuestion,
+  ProfileCredentialAnswers,
+} from "../shared/profile-switch-authority.js";
+import { materializeDesktopCookie } from "./desktop-cookie-lease.js";
+import { credentialFiles, runDesktopCredentialOperation } from "./credential-file-client.js";
 import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import {
   CredentialStore,
@@ -33,20 +42,54 @@ export interface CredentialMaterializeCookieRequest {
 export function buildCredentialSnapshot(
   cwds: Array<string | undefined>,
   revision: number,
-): CredentialSnapshot {
-  const entries: CredentialSnapshotEntry[] = [];
-  const seen = new Set<string>();
-  for (const cwd of [undefined, ...cwds]) {
-    const key = cwd ?? "";
-    if (seen.has(key)) continue;
-    seen.add(key);
-    entries.push(buildCredentialSnapshotEntry(cwd));
-  }
-  return { revision, entries };
+): CredentialSnapshot;
+export function buildCredentialSnapshot(
+  cwds: Array<string | undefined>,
+  revision: number,
+  hosted: true,
+): Promise<CredentialSnapshot>;
+export function buildCredentialSnapshot(
+  cwds: Array<string | undefined>,
+  revision: number,
+  hosted?: true,
+): CredentialSnapshot | Promise<CredentialSnapshot> {
+  const roots = [...new Set([undefined, ...cwds.map((cwd) => cwd || undefined)])];
+  if (hosted)
+    return Promise.all(
+      roots.map((cwd) =>
+        runDesktopCredentialOperation(cwd, ["user", "project"], undefined, (store) =>
+          buildCredentialSnapshotEntry(cwd, store),
+        ),
+      ),
+    ).then((entries) => ({ revision, entries }));
+  return {
+    revision,
+    entries: roots.map((cwd) => buildCredentialSnapshotEntry(cwd, new CredentialStore(cwd))),
+  };
 }
-
-export function resolveCredentialValueForWorker(req: CredentialResolveRequest): { value: string } {
-  const record = new CredentialStore(req.cwd).resolveForApproval(req.id, req.scope);
+export function resolveCredentialValueForWorker(req: CredentialResolveRequest): { value: string };
+export function resolveCredentialValueForWorker(
+  req: CredentialResolveRequest,
+  assertCurrent: () => void,
+): Promise<{ value: string }>;
+export function resolveCredentialValueForWorker(
+  req: CredentialResolveRequest,
+  assertCurrent?: () => void,
+) {
+  if (assertCurrent)
+    return runDesktopCredentialOperation(
+      req.cwd,
+      req.scope === "project" ? ["project"] : ["user", "project"],
+      undefined,
+      (store) => {
+        assertCurrent();
+        return credentialValue(store, req);
+      },
+    );
+  return credentialValue(new CredentialStore(req.cwd), req);
+}
+function credentialValue(store: CredentialStore, req: CredentialResolveRequest): { value: string } {
+  const record = store.resolveForApproval(req.id, req.scope);
   if (req.expectedApprovalIdentity && record?.approvalIdentity !== req.expectedApprovalIdentity)
     throw new Error("credential changed after approval");
   const cred = record?.credential;
@@ -85,11 +128,33 @@ export function resolveCredentialValueForWorker(req: CredentialResolveRequest): 
   };
 }
 
-export function materializeCredentialCookieForWorker(req: CredentialMaterializeCookieRequest): {
-  cookiesFile: string;
-  count: number;
-} {
-  const record = new CredentialStore(req.cwd).resolveForApproval(req.id, req.scope);
+type Cookiefiles = ReturnType<typeof materializeCookieSecret>;
+export function materializeCredentialCookieForWorker(
+  req: CredentialMaterializeCookieRequest,
+): Cookiefiles;
+export function materializeCredentialCookieForWorker(
+  req: CredentialMaterializeCookieRequest,
+  assertCurrent: () => void,
+): Promise<Cookiefiles>;
+export function materializeCredentialCookieForWorker(
+  req: CredentialMaterializeCookieRequest,
+  assertCurrent?: () => void,
+) {
+  if (assertCurrent)
+    return materializeDesktopCookie(
+      req.cwd,
+      req.id,
+      req.scope,
+      req.expectedApprovalIdentity,
+      assertCurrent,
+    );
+  return materializeCookie(new CredentialStore(req.cwd), req);
+}
+function materializeCookie(
+  store: CredentialStore,
+  req: CredentialMaterializeCookieRequest,
+): Cookiefiles {
+  const record = store.resolveForApproval(req.id, req.scope);
   if (req.expectedApprovalIdentity && record?.approvalIdentity !== req.expectedApprovalIdentity)
     throw new Error("credential changed after approval");
   const cred = record?.credential;
@@ -99,8 +164,10 @@ export function materializeCredentialCookieForWorker(req: CredentialMaterializeC
   return materializeCookieSecret(cred.id, cred.secret);
 }
 
-function buildCredentialSnapshotEntry(cwd: string | undefined): CredentialSnapshotEntry {
-  const store = new CredentialStore(cwd);
+function buildCredentialSnapshotEntry(
+  cwd: string | undefined,
+  store: CredentialStore,
+): CredentialSnapshotEntry {
   const full = store.listWithSources("full");
   const project = store.listWithSources("project");
   return {
@@ -149,4 +216,55 @@ function toMetadata(cred: Credential, approvalIdentity: string): CredentialMetad
       ? { oauthStatus: summarizeOAuthCredentialSecret(secret) }
       : {}),
   };
+}
+
+/** Only a bound source's availability and opaque Link authority leave Main. */
+export async function answerProfileCredentialQuestions(
+  cwd: string,
+  questions: ProfileCredentialQuestion[],
+  assertCurrent: () => void,
+): Promise<ProfileCredentialAnswers> {
+  if (!questions.length) return { decisions: [] };
+  if (questions.some((q) => q.link)) installDefaultLinkProviders();
+  const refs = new Set(questions.map((q) => q.ref));
+  const files = credentialFiles();
+  const revisions: Partial<ProfileCredentialRevisions> = {};
+  const scopedFiles = {
+    ...files,
+    async read(address: Parameters<typeof files.read>[0]) {
+      assertCurrent();
+      const image = await files.read(address);
+      assertCurrent();
+      revisions[address.scope] = image.revision;
+      return {
+        ...image,
+        file: {
+          ...image.file,
+          credentials: image.file.credentials.filter((record) => record && refs.has(record.id)),
+        },
+      };
+    },
+  };
+  const decisions = await new CredentialStore(cwd).withAsyncCipher(
+    scopedFiles,
+    ["user", "project"],
+    undefined,
+    (store) => {
+      assertCurrent();
+      const credentials = new Map(
+        store
+          .listWithSources("full")
+          .credentials.map(({ credential, source }) => [
+            credential.id,
+            toMetadata(credential, store.approvalIdentity(source, credential)),
+          ]),
+      );
+      return questions.map((q) => ({
+        key: JSON.stringify(q),
+        ...decideSourceCredential(q, credentials.get(q.ref)),
+      }));
+    },
+  );
+  if (!revisions.user || !revisions.project) throw Error("Missing profile credential revisions");
+  return { decisions, revisions: { user: revisions.user, project: revisions.project } };
 }

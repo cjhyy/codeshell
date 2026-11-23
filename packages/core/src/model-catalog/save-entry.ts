@@ -117,7 +117,7 @@ function writeCatalogAtomic(path: string, entries: CatalogEntry[]): void {
  */
 export function saveCatalogEntry(
   entry: unknown,
-  opts: { path: string; stamp: string },
+  opts: { path: string; stamp: string; beforeCommit?: () => void },
 ): SaveCatalogResult {
   // Validate the incoming entry first — never write a malformed catalog.
   const parsed = catalogEntrySchema.safeParse(entry);
@@ -130,6 +130,7 @@ export function saveCatalogEntry(
   try {
     release = acquireFileLock(opts.path);
     const existing = readExistingCatalog(opts.path);
+    opts.beforeCommit?.();
     let backup = existing ? `${opts.path}.bak-${opts.stamp}` : undefined;
     if (existing && !writeBackup(backup!, existing.raw)) backup = undefined;
     const action: "added" | "updated" = existing?.entries.some((e) => e.id === valid.id)
@@ -160,7 +161,7 @@ export interface DeleteCatalogResult {
  */
 export function deleteUserCatalogEntry(
   id: string,
-  opts: { path: string; stamp: string },
+  opts: { path: string; stamp: string; beforeCommit?: () => void },
 ): DeleteCatalogResult {
   if (!BACKUP_STAMP_RE.test(opts.stamp)) {
     return { ok: false, removed: false, error: "invalid backup stamp" };
@@ -170,6 +171,7 @@ export function deleteUserCatalogEntry(
     release = acquireFileLock(opts.path);
     const existing = readExistingCatalog(opts.path);
     if (!existing) return { ok: true, removed: false };
+    opts.beforeCommit?.();
     let backup: string | undefined = `${opts.path}.bak-${opts.stamp}`;
     if (!writeBackup(backup, existing.raw)) backup = undefined;
     const next = existing.entries.filter((e) => e.id !== id);

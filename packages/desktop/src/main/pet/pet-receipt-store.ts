@@ -1,3 +1,4 @@
+import type { AttentionReceiptWrite } from "../../shared/mimi-attention.js";
 import { readBoundedJson, writeOwnerJsonAtomic } from "./bounded-json-store.js";
 
 interface ReceiptRecord {
@@ -6,67 +7,91 @@ interface ReceiptRecord {
   at: number;
 }
 
-const MAX_RECEIPT_FILE_BYTES = 1024 * 1024;
+const MAX_BYTES = 1024 * 1024;
+export const MAX_RECEIPTS = 1_000;
 
+function validKey(key: unknown): key is string {
+  return typeof key === "string" && key.length > 0 && key.length <= 4_096;
+}
+function validState(state: unknown): state is string {
+  return (
+    typeof state === "string" && state.length > 0 && state.length <= 128 && !state.includes("\0")
+  );
+}
+
+/** The storage worker serializes claims and never exposes a receipt before its replacement commits. */
 export class PetReceiptStore {
-  private readonly records = new Map<string, ReceiptRecord>();
-  private writeQueue = Promise.resolve();
-
+  private records?: Map<string, ReceiptRecord>;
+  private queue: Promise<unknown> = Promise.resolve();
   constructor(
-    private readonly filePath: string,
+    private readonly path: string,
     private readonly now: () => number = Date.now,
   ) {}
 
-  async load(): Promise<void> {
-    try {
-      const parsed = await readBoundedJson(this.filePath, MAX_RECEIPT_FILE_BYTES);
-      if (!Array.isArray(parsed)) return;
-      for (const item of parsed.slice(-1_000)) {
-        const record = item as Partial<ReceiptRecord>;
+  private async load() {
+    if (this.records) return this.records;
+    const records = new Map<string, ReceiptRecord>();
+    // As in 0.11, missing/corrupt history permits a fresh surface.
+    const value = await readBoundedJson(this.path, MAX_BYTES).catch(() => undefined);
+    if (Array.isArray(value))
+      for (const row of value.slice(-MAX_RECEIPTS)) {
         if (
-          validReceiptKey(record.key) &&
-          validReceiptState(record.state) &&
-          Number.isSafeInteger(record.at) &&
-          (record.at ?? -1) >= 0
-        ) {
-          this.records.set(record.key, record as ReceiptRecord);
-        }
+          row &&
+          validKey(row.key) &&
+          validState(row.state) &&
+          Number.isSafeInteger(row.at) &&
+          row.at >= 0
+        )
+          records.set(row.key, { key: row.key, state: row.state, at: row.at });
       }
-    } catch {
-      // Missing/corrupt receipt history means notifications may surface once again.
-    }
+    this.records = records;
+    return records;
   }
 
-  has(key: string): boolean {
-    return validReceiptKey(key) && this.records.has(key);
+  write(call: AttentionReceiptWrite, replaceFile?: (from: string, to: string) => Promise<void>) {
+    if (
+      !call ||
+      !["claim", "mark"].includes(call.type) ||
+      !Array.isArray(call.rows) ||
+      call.rows.length > MAX_RECEIPTS ||
+      call.rows.some(
+        (row) =>
+          !row ||
+          !validKey(row.key) ||
+          !["seen", "dismissed", "surfaced", "suppressed-active"].includes(row.state),
+      )
+    )
+      throw Error("invalid Pet attention receipt");
+    const task = this.queue.then(async () => {
+      const next = new Map(await this.load());
+      const added: string[] = [];
+      const at = this.now();
+      if (!Number.isSafeInteger(at) || at < 0) throw Error("invalid Pet receipt timestamp");
+      for (const { key, state } of call.rows) {
+        if (call.type === "claim" && next.has(key)) continue;
+        added.push(key);
+        next.set(key, { key, state, at });
+      }
+      if (added.length) {
+        while (next.size > MAX_RECEIPTS) next.delete(next.keys().next().value!);
+        // Long but valid legacy keys must not fill the file and prevent future claims.
+        const rows = [...next.values()];
+        let bytes =
+          2 + rows.reduce((sum, row) => sum + 1 + Buffer.byteLength(JSON.stringify(row)), 0);
+        for (const row of rows) {
+          if (bytes <= MAX_BYTES) break;
+          next.delete(row.key);
+          bytes -= Buffer.byteLength(JSON.stringify(row)) + 1;
+        }
+        await writeOwnerJsonAtomic(this.path, [...next.values()], MAX_BYTES, {
+          compact: true,
+          ...(replaceFile && { replaceFile }),
+        });
+        this.records = next;
+      }
+      return added;
+    });
+    this.queue = task.catch(() => {});
+    return task;
   }
-
-  mark(key: string, state = "seen"): void {
-    if (!validReceiptKey(key) || !validReceiptState(state)) {
-      throw new Error("invalid Pet receipt");
-    }
-    const at = this.now();
-    if (!Number.isSafeInteger(at) || at < 0) throw new Error("invalid Pet receipt timestamp");
-    this.records.set(key, { key, state, at });
-    while (this.records.size > 1_000) this.records.delete(this.records.keys().next().value!);
-    const write = this.writeQueue.catch(() => undefined).then(() => this.persist());
-    void write.catch(() => undefined);
-    this.writeQueue = write;
-  }
-
-  flush(): Promise<void> {
-    return this.writeQueue;
-  }
-
-  private async persist(): Promise<void> {
-    await writeOwnerJsonAtomic(this.filePath, [...this.records.values()], MAX_RECEIPT_FILE_BYTES);
-  }
-}
-
-function validReceiptKey(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0 && value.length <= 4_096;
-}
-
-function validReceiptState(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0 && value.length <= 128 && !value.includes("\0");
 }

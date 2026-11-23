@@ -119,6 +119,13 @@ describe("the shipped preload actually routes", () => {
       main.indexOf('ipcMain.handle("agent:subscribe"'),
     );
     expect(pending).toContain("pendingForWindow(event.sender.id)");
-    expect(main).toContain("externalRuntime.approvals?.cancelWindow(ownerWebContentsId)");
+    const workbench = readFileSync(
+      new URL("../main/shell/workbench-window.ts", import.meta.url),
+      "utf8",
+    );
+    expect(workbench).toContain("deps.releaseWindow(ownerId, windowId)");
+    expect(main).toMatch(
+      /releaseWindow\(id, parentId\)\s*\{\s*externalRuntime\.approvals\?\.cancelWindow\(id\)/,
+    );
   });
 });

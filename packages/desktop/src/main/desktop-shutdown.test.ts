@@ -231,15 +231,21 @@ test("the external runtime pilot retains first-window start and the existing shu
   expect(startup.indexOf("bridge = new AgentBridge(")).toBeLessThan(
     startup.indexOf("desktopModules.start();"),
   );
-  expect(startup.indexOf("desktopModules.start();")).toBeLessThan(
-    startup.indexOf("const externalGoalSessions"),
-  );
+  const goalHooks = startup.indexOf("nativeExternalGoals(");
+  expect(goalHooks).toBeGreaterThan(startup.indexOf("desktopModules.start();"));
+  expect(startup.indexOf("mimiRuntime.start(")).toBeGreaterThan(goalHooks);
   expect(source).not.toContain("await desktopModules.start()");
-  const cleanup = source.slice(source.indexOf("registerDesktopShutdown(app,"));
+  expect(source).toContain("registerNativeShutdown({");
+  const shutdown = await readFile(new URL("./shell/shutdown.ts", import.meta.url), "utf8");
+  const cleanup = shutdown.slice(shutdown.indexOf("registerDesktopShutdown(app,"));
   expect(cleanup.match(/desktopModules\.dispose\(\)/g)).toHaveLength(1);
-  expect(cleanup.indexOf("roomManager.closeAll();")).toBeLessThan(
-    cleanup.indexOf("desktopModules.dispose()"),
-  );
+  // Host owns room subprocesses and transcript watchers. Start its disposal
+  // before disposing captured local runtimes, then wait for its completion.
+  const stopHost = cleanup.indexOf("const desktopHostShutdown = desktopHost.dispose()");
+  expect(stopHost).toBeGreaterThanOrEqual(0);
+  expect(stopHost).toBeLessThan(cleanup.indexOf("desktopModules.dispose()"));
+  expect(cleanup).toMatch(/await Promise\.allSettled\(\[\s*desktopHostShutdown,/);
+
   expect(cleanup.indexOf("desktopModules.dispose()")).toBeLessThan(
     cleanup.indexOf("getCuaDriverHost()?.stop()"),
   );
@@ -550,7 +556,6 @@ test("native quit wiring uses phase-aware dialogs without restoring disposed ser
   };
   registerDesktopShutdown(app, {
     ownsInstance: () => owned,
-    platform: "linux",
     flushRenderers: async () => {},
     disposeOperationResolution: async () => {},
     cleanup: async () => {
@@ -569,6 +574,8 @@ test("native quit wiring uses phase-aware dialogs without restoring disposed ser
       calls.push("restore");
     },
   });
+  listeners.get("window-all-closed")!();
+  expect(calls).toEqual([]);
   listeners.get("before-quit")!({ preventDefault() {} });
   await settle();
   expect(calls).toEqual(["disposed", "cache-close", "quit"]);

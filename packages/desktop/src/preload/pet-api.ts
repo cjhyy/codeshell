@@ -1,3 +1,4 @@
+import type { DesktopHostClient } from "./desktop-host-client.js";
 import type {
   PetLongTask,
   PetLongTaskControlAction,
@@ -458,13 +459,23 @@ export interface PetIpcRenderer {
   removeListener(channel: string, listener: (event: unknown, payload: unknown) => void): unknown;
 }
 
-export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
+export function createPetApi(
+  ipcRenderer: PetIpcRenderer,
+  host?: Pick<DesktopHostClient, "readBusiness">,
+): PetApi {
   // One rule-mutation channel carries the every-Session patch and listed-rule actions.
   const updateNoticeRule = (payload: PetNoticeSystemRulePatch | PetNoticeRuleUpdate) =>
     ipcRenderer.invoke("pet:notices:update-rule", payload);
   return {
-    getSnapshot: () => ipcRenderer.invoke("pet:get-snapshot") as Promise<PetProjectionSnapshot>,
-    getWorkMemory: () => ipcRenderer.invoke("pet:get-work-memory") as Promise<PetWorkMemoryQuery>,
+    getSnapshot: () => {
+      const fallback = () => ipcRenderer.invoke("pet:get-snapshot") as Promise<PetProjectionSnapshot>;
+      return host ? host.readBusiness("mimi/projection", {}, fallback) : fallback();
+    },
+    getWorkMemory: () => {
+      const fallback = () =>
+        ipcRenderer.invoke("pet:get-work-memory") as Promise<PetWorkMemoryQuery>;
+      return host ? host.readBusiness("mimi/workMemory", {}, fallback) : fallback();
+    },
     openSession: (request) =>
       ipcRenderer.invoke("pet:open-session", request) as Promise<PetOpenSessionResult>,
     dispatch: (command) =>
@@ -493,8 +504,11 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.invoke("pet:set-active-session", sessionId) as Promise<{ ok: true }>,
     markAttentionReceipt: (keys, state) =>
       ipcRenderer.invoke("pet:attention-receipt", { keys, state }) as Promise<{ ok: true }>,
-    getDismissedWorkItemIds: () =>
-      ipcRenderer.invoke("pet:work-inbox-dismissed-get") as Promise<PetWorkInboxSnapshot>,
+    getDismissedWorkItemIds: () => {
+      const fallback = () =>
+        ipcRenderer.invoke("pet:work-inbox-dismissed-get") as Promise<PetWorkInboxSnapshot>;
+      return host ? host.readBusiness("mimi/workInbox", {}, fallback) : fallback();
+    },
     updateDismissedWorkItemIds: (update) =>
       ipcRenderer.invoke(
         "pet:work-inbox-dismissed-update",
@@ -506,7 +520,10 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.on("pet:work-inbox-dismissed-changed", handler);
       return () => ipcRenderer.removeListener("pet:work-inbox-dismissed-changed", handler);
     },
-    getLongTasks: () => ipcRenderer.invoke("pet:long-tasks-get") as Promise<PetLongTaskSnapshot>,
+    getLongTasks: () => {
+      const fallback=()=>ipcRenderer.invoke("pet:long-tasks-get") as Promise<PetLongTaskSnapshot>;
+      return host ? host.readBusiness("mimi/longTasks",{},fallback):fallback();
+    },
     controlLongTask: (request) =>
       ipcRenderer.invoke("pet:long-task-control", request) as Promise<PetLongTaskControlResult>,
     clearTerminalLongTasks: () =>
@@ -519,7 +536,10 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.on("pet:long-tasks-changed", handler);
       return () => ipcRenderer.removeListener("pet:long-tasks-changed", handler);
     },
-    listMemories: () => ipcRenderer.invoke("pet:memories-get") as Promise<PetMemoryEntry[]>,
+    listMemories: () => {
+      const fallback = () => ipcRenderer.invoke("pet:memories-get") as Promise<PetMemoryEntry[]>;
+      return host ? host.readBusiness("mimi/memories", {}, fallback) : fallback();
+    },
     addMemory: (text) => ipcRenderer.invoke("pet:memory-add", text) as Promise<PetMemoryEntry>,
     updateMemory: (id, text) =>
       ipcRenderer.invoke("pet:memory-update", { id, text }) as Promise<PetMemoryEntry>,
@@ -542,15 +562,21 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.on("pet:follow-ups-changed", handler);
       return () => ipcRenderer.removeListener("pet:follow-ups-changed", handler);
     },
-    listJournal: () => ipcRenderer.invoke("pet:journal-get") as Promise<PetJournalEntry[]>,
+    listJournal: () => {
+      const fallback = () => ipcRenderer.invoke("pet:journal-get") as Promise<PetJournalEntry[]>;
+      return host ? host.readBusiness("mimi/journal", {}, fallback) : fallback();
+    },
     onJournalChanged: (listener) => {
       const handler = (_event: unknown, payload: unknown): void =>
         listener(payload as PetJournalEntry[]);
       ipcRenderer.on("pet:journal-changed", handler);
       return () => ipcRenderer.removeListener("pet:journal-changed", handler);
     },
-    getSegmentMessages: (range) =>
-      ipcRenderer.invoke("pet:segment-transcript", range) as Promise<PetSegmentMessage[]>,
+    getSegmentMessages: (range) => {
+      const fallback = () =>
+        ipcRenderer.invoke("pet:segment-transcript", range) as Promise<PetSegmentMessage[]>;
+      return host ? host.readBusiness("mimi/segmentMessages", range, fallback) : fallback();
+    },
     getMemoryAutoExtract: () =>
       (ipcRenderer.invoke("pet:prefs-get") as Promise<{ autoExtract: boolean }>).then(
         (prefs) => prefs.autoExtract,

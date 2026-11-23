@@ -1,10 +1,14 @@
 import { useTaskInboxSnapshot } from "./useTaskInboxSnapshot";
+import { TaskRecordCleanup } from "./TaskRecordCleanup";
 import { OperationBatchForm } from "./OperationBatchForm";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Inbox, ListFilter, Loader2, RefreshCw } from "lucide-react";
 import type {
   TaskInboxRecordV1,
   TaskInboxAction,
+  TaskInboxActionResult,
+  TaskInboxIntent,
+  TaskInboxVisibility,
   TaskSource,
   TaskStatus,
 } from "../../preload/task-inbox-api";
@@ -72,7 +76,8 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
   const confirm = useOptionalConfirm();
   const id = useId();
   const [selectedSubagent, setSelectedSubagent] = useState<TaskInboxRecordV1 | null>(null);
-  const { snapshot, loading, error, refresh } = useTaskInboxSnapshot();
+  const [visibility, setVisibility] = useState<TaskInboxVisibility>("visible");
+  const { snapshot, loading, error, refresh } = useTaskInboxSnapshot(visibility);
   const [actionError, setActionError] = useState<string | null>(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -81,6 +86,7 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
   const [visibleCounts, setVisibleCounts] = useState(initialCounts);
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const pendingRef = useRef(new Set<string>());
+  const [feedback, setFeedback] = useState<string | null>(null);
   const refreshRef = useRef<HTMLButtonElement>(null);
   const mounted = useRef(false);
 
@@ -121,16 +127,34 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
     setFilters((current) => ({ ...current, [key]: value }));
     setVisibleCounts(initialCounts());
   };
-  const activeFilterCount = [filters.source, filters.project, filters.status].filter(
-    Boolean,
-  ).length;
+  const activeFilterCount =
+    [filters.source, filters.project, filters.status].filter(Boolean).length +
+    Number(visibility !== "visible");
   const clearFilters = () => {
+    setVisibility("visible");
     setFilters(EMPTY_FILTERS);
     setVisibleCounts(initialCounts());
     searchRef.current?.focus({ preventScroll: true });
   };
   const renderFilters = (suffix = "") => (
     <>
+      <div className="space-y-1.5 text-xs text-muted-foreground">
+        <label htmlFor={`${id}-visibility${suffix}`}>{t("taskInbox.visibility")}</label>
+        <SimpleSelect
+          ariaLabel={t("taskInbox.visibility")}
+          triggerProps={{ id: `${id}-visibility${suffix}` }}
+          className="h-9 text-foreground"
+          value={visibility}
+          options={(["visible", "hidden", "all"] as const).map((value) => ({
+            value,
+            label: t(`taskInbox.views.${value}`),
+          }))}
+          onChange={(value) => {
+            setVisibility(value as TaskInboxVisibility);
+            setVisibleCounts(initialCounts());
+          }}
+        />
+      </div>
       <FilterSelect
         id={`${id}-source${suffix}`}
         label={t("taskInbox.source")}
@@ -163,12 +187,46 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
       />
     </>
   );
-  const actOnTask = async (record: TaskInboxRecordV1, action: TaskInboxAction) => {
-    if (pendingRef.current.has(record.taskKey)) return;
-    pendingRef.current.add(record.taskKey);
-    setPending(new Set(pendingRef.current));
+  // A key stays reserved throughout confirmation and execution. A bulk operation
+  // excludes row operations until its authoritative response has arrived.
+  const runAction = async (key: string, run: () => Promise<TaskInboxActionResult | undefined>) => {
+    const busy = pendingRef.current;
+    if (busy.has(key) || busy.has("clear") || (key === "clear" && busy.size)) return;
+    busy.add(key);
+    setPending(new Set(busy));
     setActionError(null);
+    setFeedback(null);
     try {
+      const result = await run();
+      if (!result || !mounted.current) return;
+      if (result.status !== "ok") {
+        const messages = {
+          stale: "taskInbox.actionStale",
+          unavailable: "taskInbox.actionUnavailable",
+          rejected: "taskInbox.actionRejected",
+          failed: "taskInbox.tryAgain",
+        } as const;
+        const message =
+          result.status === "stale"
+            ? t(messages.stale)
+            : (result.message ?? t(messages[result.status]));
+        setActionError(t("taskInbox.actionFailed", { message }));
+      }
+      refresh();
+    } catch (e) {
+      if (mounted.current) {
+        setActionError(
+          t("taskInbox.actionFailed", { message: e instanceof Error ? e.message : String(e) }),
+        );
+        refresh();
+      }
+    } finally {
+      busy.delete(key);
+      if (mounted.current) setPending(new Set(busy));
+    }
+  };
+  const actOnTask = (record: TaskInboxRecordV1, action: TaskInboxAction) =>
+    runAction(record.taskKey, async () => {
       if (
         (action === "cancel" || action === "retry") &&
         !(await confirm({
@@ -185,35 +243,35 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
         action,
         expectedRevision: record.sourceRevision,
       });
-      if (result.status === "ok") {
-        if (action === "open") {
-          if (!mounted.current) return;
-          if (record.source === "subagent") setSelectedSubagent(result.record ?? record);
-          else if (onOpenTaskInboxRecord) await onOpenTaskInboxRecord(result.record ?? record);
-          else setActionError(t("taskInbox.openUnavailable"));
-        }
-      } else {
-        const fallback =
-          result.status === "stale"
-            ? t("taskInbox.actionStale")
-            : result.status === "unavailable"
-              ? t("taskInbox.actionUnavailable")
-              : result.status === "rejected"
-                ? t("taskInbox.actionRejected")
-                : result.status;
-        setActionError(t("taskInbox.actionFailed", { message: result.message ?? fallback }));
+      if (mounted.current && result.status === "ok" && action === "open") {
+        if (record.source === "subagent") setSelectedSubagent(result.record ?? record);
+        else if (onOpenTaskInboxRecord) await onOpenTaskInboxRecord(result.record ?? record);
+        else setActionError(t("taskInbox.openUnavailable"));
       }
-      refresh();
-    } catch (e) {
-      setActionError(
-        t("taskInbox.actionFailed", { message: e instanceof Error ? e.message : String(e) }),
-      );
-      refresh();
-    } finally {
-      pendingRef.current.delete(record.taskKey);
-      setPending(new Set(pendingRef.current));
-    }
-  };
+      return result;
+    });
+  const applyIntent = (input: TaskInboxIntent, confirmation?: string) =>
+    runAction(input.type === "clear" ? "clear" : input.taskKey, async () => {
+      if (
+        confirmation &&
+        !(await confirm({
+          message: confirmation,
+          confirmLabel: t("taskInbox.permanentlyDelete"),
+          destructive: true,
+        }))
+      )
+        return;
+      if (!mounted.current) return;
+      const result = await window.codeshell.taskInbox.intent(input);
+      if (mounted.current && result.status === "ok") {
+        setFeedback(
+          input.type === "clear" && result.count !== undefined
+            ? t("taskInbox.clearedCount", { count: result.count })
+            : t(`taskInbox.feedback.${input.type}`),
+        );
+      }
+      return result;
+    });
 
   if (selectedSubagent)
     return (
@@ -242,32 +300,45 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
             </span>
           )}
         </h1>
-        <Button
-          type="button"
-          ref={refreshRef}
-          size="sm"
-          variant="outline"
-          aria-disabled={loading}
-          className="gap-2 rounded-xl"
-          onClick={() => {
-            if (!loading) {
-              refreshRef.current?.focus();
-              refresh();
+        <div className="flex items-center gap-1">
+          <TaskRecordCleanup
+            pending={pending.size > 0}
+            onClear={(before, message) =>
+              applyIntent(
+                before === undefined ? { type: "clear" } : { type: "clear", before },
+                message,
+              )
             }
-          }}
-        >
-          {loading ? (
-            <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden />
-          ) : (
-            <RefreshCw size={14} aria-hidden />
-          )}
-          {t("taskInbox.refresh")}
-        </Button>
+          />
+          <Button
+            type="button"
+            ref={refreshRef}
+            size="sm"
+            variant="outline"
+            aria-disabled={loading}
+            aria-label={t("taskInbox.refresh")}
+            title={t("taskInbox.refresh")}
+            className="gap-2 rounded-xl"
+            onClick={() => {
+              if (!loading) {
+                refreshRef.current?.focus();
+                refresh();
+              }
+            }}
+          >
+            {loading ? (
+              <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden />
+            ) : (
+              <RefreshCw size={14} aria-hidden />
+            )}
+            <span className="hidden @min-[480px]/tasks:inline">{t("taskInbox.refresh")}</span>
+          </Button>
+        </div>
         <p className="col-span-2 line-clamp-2 text-sm text-muted-foreground @min-[480px]/tasks:line-clamp-none">
           {t("activity.backgroundDescription")}
         </p>
       </header>
-      <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 px-4 pb-3 @min-[1000px]/tasks:grid-cols-4 @min-[760px]/tasks:px-6">
+      <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 px-4 pb-3 @min-[1000px]/tasks:grid-cols-5 @min-[760px]/tasks:px-6">
         <label
           className="min-w-0 space-y-1.5 text-xs text-muted-foreground"
           htmlFor={`${id}-search`}
@@ -298,7 +369,7 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="w-80 space-y-3 p-3"
+              className="max-h-[var(--radix-popover-content-available-height)] w-80 space-y-3 overflow-y-auto p-3"
               aria-label={t("taskInbox.filters")}
               onCloseAutoFocus={(event) => {
                 if ((containerRef.current?.getBoundingClientRect().width ?? 0) >= 1000) {
@@ -315,6 +386,7 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
                   size="sm"
                   disabled={activeFilterCount === 0}
                   onClick={() => {
+                    setVisibility("visible");
                     setFilters((current) => ({ ...current, source: "", project: "", status: "" }));
                     setVisibleCounts(initialCounts());
                   }}
@@ -360,6 +432,11 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
             >
               {t("activity.retry")}
             </Button>
+          </p>
+        )}
+        {feedback && (
+          <p role="status" className="mb-3 text-sm text-muted-foreground">
+            {feedback}
           </p>
         )}
         {actionError && (
@@ -484,6 +561,11 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
                                 ))}
                               </ul>
                             )}
+                            {record.hidden && (
+                              <span className="text-xs text-muted-foreground">
+                                {t("taskInbox.views.hidden")}
+                              </span>
+                            )}
                             {record.stale && (
                               <p role="status" className="text-xs text-status-warn">
                                 {t("taskInbox.stale")}
@@ -516,8 +598,10 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
                                   key={action}
                                   size="sm"
                                   variant={action === "cancel" ? "destructive" : "outline"}
-                                  disabled={
+                                  disabled={record.stale && action !== "open"}
+                                  aria-disabled={
                                     pending.has(record.taskKey) ||
+                                    pending.has("clear") ||
                                     (record.stale && action !== "open")
                                   }
                                   aria-label={t("taskInbox.actionLabel", {
@@ -533,6 +617,59 @@ export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxP
                                 <span className="text-xs text-muted-foreground">
                                   {t("taskInbox.readonly")}
                                 </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                aria-disabled={pending.has(record.taskKey) || pending.has("clear")}
+                                aria-label={t("taskInbox.actionLabel", {
+                                  action: t(record.hidden ? "taskInbox.unhide" : "taskInbox.hide"),
+                                  title: record.title,
+                                })}
+                                onClick={() =>
+                                  void applyIntent({
+                                    type: record.hidden ? "unhide" : "hide",
+                                    taskKey: record.taskKey,
+                                    expectedRevision: record.sourceRevision,
+                                  })
+                                }
+                              >
+                                {t(record.hidden ? "taskInbox.unhide" : "taskInbox.hide")}
+                              </Button>
+                              {["done", "failed", "cancelled", "interrupted"].includes(
+                                record.status,
+                              ) && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive"
+                                  disabled={record.stale}
+                                  aria-disabled={
+                                    record.stale ||
+                                    pending.has(record.taskKey) ||
+                                    pending.has("clear")
+                                  }
+                                  aria-label={t("taskInbox.actionLabel", {
+                                    action: t("taskInbox.deleteRecord"),
+                                    title: record.title,
+                                  })}
+                                  onClick={() =>
+                                    void applyIntent(
+                                      {
+                                        type: "delete",
+                                        taskKey: record.taskKey,
+                                        expectedRevision: record.sourceRevision,
+                                      },
+                                      t("taskInbox.confirmDelete", { title: record.title }),
+                                    )
+                                  }
+                                >
+                                  {t("taskInbox.deleteRecord")}
+                                </Button>
                               )}
                             </div>
                           </article>

@@ -13,7 +13,7 @@ export function createDesktopModelRequestSigner(options: {
   hostDirectory: string;
   sessionStorageDir: string;
   cipher: EncryptionCipher;
-  encryptionAvailable: () => boolean;
+  encryptionAvailable: () => boolean | Promise<boolean>;
   hasActiveEphemeralOwner: (sessionId: string) => boolean;
   /** Explicit running Host tasks; absence grants no additional ephemeral authority. */
   hasActiveHostTaskOwner?: (sessionId: string) => boolean;
@@ -61,10 +61,12 @@ export function createDesktopModelRequestSigner(options: {
           throw error;
         }
       }
-      if (!options.encryptionAvailable())
+      if (!(await options.encryptionAvailable()))
         throw new Error("Host request key encryption unavailable");
       assertDurableRequestOwner(subject, options.sessionStorageDir);
-      return keys.sign(input);
+      const signatures = await keys.sign(input);
+      assertDurableRequestOwner(subject, options.sessionStorageDir);
+      return signatures;
     },
     dispose() {
       ephemeralIncarnations.clear();

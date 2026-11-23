@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, symlinkSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { Transcript } from "./transcript.js";
@@ -15,6 +15,34 @@ function messageLine(i: number, extra: Record<string, unknown> = {}, turnNumber 
 }
 
 describe("Transcript.loadTailForAppend", () => {
+  test.skipIf(process.platform === "win32")(
+    "scoped appends hold the original regular file and cannot outlive their callback",
+    () => {
+      const dir = mkdtempSync(join(tmpdir(), "transcript-receipt-"));
+      try {
+        const file = join(dir, "transcript.jsonl"),
+          original = join(dir, "original.jsonl");
+        let append: (() => void) | undefined;
+        Transcript.withTailForAppend(file, (t) => {
+          renameSync(file, original);
+          symlinkSync(original, file);
+          append = () => {
+            t.appendMessage("assistant", "fixture", {
+              clientMessageId: "receipt",
+              displayOnly: true,
+            });
+          };
+          append();
+        });
+        expect(() => append!()).toThrow("closed");
+        expect(() => Transcript.withTailForAppend(file, () => {})).toThrow();
+        expect(readFileSync(original, "utf8").trim().split("\n")).toHaveLength(1);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
   test("dedupes recent client ids and appends without parsing the whole file", () => {
     const dir = mkdtempSync(join(tmpdir(), "transcript-tail-"));
     try {

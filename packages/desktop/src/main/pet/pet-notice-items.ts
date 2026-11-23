@@ -82,12 +82,12 @@ export class NoticeItems {
   }
 
   /** An open item going out over IM takes its number in that conversation (and maybe a label). */
-  slot(
+  async slot(
     notice: NoticeSubmission,
     decision: RouteDecision,
     id: string | undefined,
     actions: NoticeActions | undefined,
-  ): { slot: NoticeSlot; label: string } | undefined {
+  ): Promise<{ slot: NoticeSlot; label: string } | undefined> {
     const ledger = this.deps.ledger;
     const channel =
       decision.im && (decision.outlet === "im" || decision.outlet === "both" || decision.queued)
@@ -126,7 +126,7 @@ export class NoticeItems {
     if (!ledger) return;
     const now = this.deps.now();
     const here = targetKey(notice.target);
-    for (const record of ledger.actionRecords()) {
+    for (const record of await ledger.actionRecords()) {
       if (record.id === recordId || record.actions?.family !== "notice") continue;
       if (!isOpenActions(record, now) || targetKey(unpackFacts(record.facts).target) !== here)
         continue;
@@ -144,27 +144,16 @@ export class NoticeItems {
   }
 
   /** The notice whose open item has this internal code; undefined before the ledger loads. */
-  actionRecord(code: string): NoticeActionRecord | undefined {
-    const record = this.deps.ledger?.byActionCode(code);
-    if (!record?.actions) return undefined;
-    const { facts, target } = unpackFacts(record.facts);
-    return {
-      recordId: record.id,
-      kind: record.kind,
-      createdAt: record.createdAt,
-      target,
-      facts,
-      actions: record.actions,
-    };
+  async actionRecord(code: string): Promise<NoticeActionRecord | undefined> {
+    const record = await this.deps.ledger?.byActionCode(code);
+    return record ? actionView(record) : undefined;
   }
-
   /** Open items that reached an IM conversation on `channel` (enqueued or delivered), oldest first. */
-  openActionItems(channel: string): NoticeActionRecord[] {
+  async openActionItems(channel: string): Promise<NoticeActionRecord[]> {
     const ledger = this.deps.ledger;
     if (!ledger) return [];
     const now = this.deps.now();
-    return ledger
-      .actionRecords()
+    return (await ledger.actionRecords())
       .filter(
         (record) =>
           record.actions?.slot?.channel === channel &&
@@ -172,7 +161,7 @@ export class NoticeItems {
           (record.delivery?.status === "accepted" || record.delivery?.status === "enqueued"),
       )
       .flatMap((record) => {
-        const view = this.actionRecord(record.actions!.code);
+        const view = actionView(record);
         return view ? [view] : [];
       });
   }
@@ -186,7 +175,7 @@ export class NoticeItems {
     patch: NoticeActionsPatch,
   ): Promise<NoticeActionRecord | undefined> {
     const ledger = this.deps.ledger;
-    const record = ledger?.byActionCode(code);
+    const record = await ledger?.byActionCode(code);
     if (!ledger || !record) return undefined;
     try {
       await ledger.updateActions(record.id, patch);
@@ -207,7 +196,7 @@ export class NoticeItems {
     const ledger = this.deps.ledger;
     if (!ledger) return;
     const now = this.deps.now();
-    for (const record of ledger.actionRecords()) {
+    for (const record of await ledger.actionRecords()) {
       if (record.sessionId !== sessionId || !isOpenActions(record, now) || !which(record)) continue;
       try {
         await ledger.updateActions(record.id, { closedAt: now });
@@ -221,7 +210,9 @@ export class NoticeItems {
 
   private async slotPrompt(sessionId: string, requestId: string, slot: NoticeSlot): Promise<void> {
     const ledger = this.deps.ledger!;
-    const prompted = ledger.forRequest(sessionId, requestId).find((record) => record.prompt);
+    const prompted = (await ledger.forRequest(sessionId, requestId)).find(
+      (record) => record.prompt,
+    );
     const current = prompted?.prompt?.slot;
     if (!prompted || (current?.channel === slot.channel && current.ordinal === slot.ordinal))
       return;
@@ -231,4 +222,17 @@ export class NoticeItems {
       this.deps.log("pet.notice.prompt_slot_failed", { error: errorText(error) });
     }
   }
+}
+
+function actionView(record: NoticeRecord): NoticeActionRecord | undefined {
+  if (!record.actions) return undefined;
+  const { facts, target } = unpackFacts(record.facts);
+  return {
+    recordId: record.id,
+    kind: record.kind,
+    createdAt: record.createdAt,
+    target,
+    facts,
+    actions: record.actions,
+  };
 }

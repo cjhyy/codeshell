@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
+import { parse, stringify } from "yaml";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 
@@ -26,7 +28,12 @@ function sourceFixture() {
     "package (windows-latest)",
   ].map((name) => ({ name, status: "completed", conclusion: "success" }));
   const artifacts = ["codeshell-linux", "codeshell-mac", "codeshell-windows"].map(
-    (name, index) => ({ name, id: index + 1, expired: false, size_in_bytes: 1 }),
+    (name, index) => ({
+      name,
+      id: index + 1,
+      expired: false,
+      size_in_bytes: 1,
+    }),
   );
   const reference = { object: { type: "commit", sha } };
   const github = {
@@ -156,4 +163,148 @@ test("release assets require matching updater versions and unique installer name
   rmSync(wrongVersion);
   writeFileSync(join(directory, "codeshell-mac", "code-shell-Setup-0.9.7.exe"), "duplicate");
   expect(() => collectReleaseAssets(directory, "0.9.7")).toThrow("Duplicate release asset");
+});
+
+const { prepareMacManifest } = createRequire(import.meta.url)(
+  "../scripts/mac-release-manifest.cjs",
+);
+const candidate = "0.12.0-rc.1";
+
+function candidateArtifacts(version = candidate) {
+  const directory = mkdtempSync(join(tmpdir(), "release-mac-floor-"));
+  directories.push(directory);
+  for (const [os, installer, metadata] of [
+    ["windows", `code-shell-Setup-${version}.exe`, "latest.yml"],
+    ["linux", `code-shell-${version}.AppImage`, "latest-linux.yml"],
+  ]) {
+    const path = join(directory, `codeshell-${os}`);
+    mkdirSync(path);
+    writeFileSync(join(path, installer!), "package");
+    writeFileSync(join(path, metadata!), stringify({ version }));
+  }
+  const mac = join(directory, "codeshell-mac");
+  mkdirSync(mac);
+  const files = ["-arm64", ""].map((suffix) => {
+    const url = `code-shell-${version}${suffix}-mac.zip`;
+    const bytes = Buffer.from(url);
+    writeFileSync(join(mac, url), bytes);
+    return {
+      url,
+      size: bytes.length,
+      sha512: createHash("sha512").update(bytes).digest("base64"),
+    };
+  });
+  const manifest = join(mac, "latest-mac.yml");
+  writeFileSync(
+    manifest,
+    stringify({
+      version,
+      files,
+      path: files[0]!.url,
+      sha512: files[0]!.sha512,
+    }),
+  );
+  return { directory, mac, manifest };
+}
+
+test("0.12 mac manifests are finalized idempotently and recovery checks the retained ZIPs", () => {
+  const { directory, mac, manifest } = candidateArtifacts();
+  expect(() => collectReleaseAssets(directory, candidate)).toThrow("minimumSystemVersion");
+  prepareMacManifest(mac, candidate);
+  const finalized = readFileSync(manifest, "utf8");
+  expect(parse(finalized).minimumSystemVersion).toBe("22.6.0");
+  prepareMacManifest(mac, candidate);
+  expect(readFileSync(manifest, "utf8")).toBe(finalized);
+  expect(collectReleaseAssets(directory, candidate)).toContain(manifest);
+  for (const invalid of [
+    finalized + 'minimumSystemVersion: "22.6.0"\n',
+    finalized.replace("22.6.0", "13.5"),
+    finalized.replace("22.6.0", "invalid"),
+  ]) {
+    writeFileSync(manifest, invalid);
+    expect(() => collectReleaseAssets(directory, candidate)).toThrow();
+    expect(() => prepareMacManifest(mac, candidate)).toThrow();
+  }
+  const data = parse(finalized);
+  writeFileSync(manifest, stringify({ ...data, files: data.files.slice(0, 1) }));
+  expect(() => collectReleaseAssets(directory, candidate)).toThrow("architecture ZIPs");
+  writeFileSync(manifest, stringify({ ...data, path: "other.zip" }));
+  expect(() => collectReleaseAssets(directory, candidate)).toThrow("primary ZIP");
+  writeFileSync(manifest, finalized);
+  writeFileSync(join(mac, data.files[1].url), Buffer.alloc(data.files[1].size));
+  expect(() => collectReleaseAssets(directory, candidate)).toThrow("SHA-512");
+});
+
+test("0.11 updater selects the stable or RC GitHub release and enforces the Darwin floor", async () => {
+  const { mac, manifest } = candidateArtifacts();
+  prepareMacManifest(mac, candidate);
+  const legacy = createRequire(import.meta.url);
+  expect(legacy("electron-updater-0-11/package.json").version).toBe("6.8.3");
+  const { AppUpdater } = legacy("electron-updater-0-11/out/AppUpdater");
+  const { GitHubProvider } = legacy("electron-updater-0-11/out/providers/GitHubProvider");
+  const os = legacy("node:os");
+  const base = "/cjhyy/codeshell/releases";
+  const stable = "0.10.1";
+  const releases = (versions: string[]) =>
+    "<feed>" +
+    versions
+      .map((v) => `<entry><title>${v}</title><link href="${base}/tag/v${v}"/></entry>`)
+      .join("") +
+    "</feed>";
+  async function check(currentVersion: string, latest: string) {
+    const requests: string[] = [];
+    const provider = new GitHubProvider(
+      { owner: "cjhyy", repo: "codeshell" },
+      { currentVersion, allowPrerelease: currentVersion.includes("-") },
+      {
+        platform: "darwin",
+        executor: {
+          async request({ path }: { path: string }) {
+            requests.push(path);
+            if (path === `${base}.atom`) return releases([candidate, latest]);
+            if (path === `${base}/latest`) return JSON.stringify({ tag_name: `v${latest}` });
+            if (path.endsWith("/rc-mac.yml")) throw new Error("fixture: rc manifest absent");
+            if (path === `${base}/download/v${candidate}/latest-mac.yml`)
+              return readFileSync(manifest, "utf8");
+            if (path === `${base}/download/v${latest}/latest-mac.yml`) {
+              return stringify({
+                version: latest,
+                minimumSystemVersion: latest === stable ? undefined : "22.6.0",
+              });
+            }
+            throw new Error(`Unexpected fixture request: ${path}`);
+          },
+        },
+      },
+    );
+    const info = await provider.getLatestVersion();
+    return { info, requests };
+  }
+  const rc = await check("0.11.0-rc.8", stable);
+  expect(rc.info.version).toBe(candidate);
+  expect(rc.requests.slice(-2)).toEqual([
+    `${base}/download/v${candidate}/rc-mac.yml`,
+    `${base}/download/v${candidate}/latest-mac.yml`,
+  ]);
+  expect((await check(stable, stable)).info.version).toBe(stable);
+  const ga = await check(stable, "0.12.0");
+  expect(ga.info.version).toBe("0.12.0");
+  const release = os.release;
+  try {
+    for (const info of [rc.info, ga.info]) {
+      for (const [darwin, supported] of [
+        ["21.6.0", false],
+        ["22.5.0", false],
+        ["22.6.0", true],
+        ["23.0.0", true],
+      ]) {
+        os.release = () => darwin;
+        expect(
+          AppUpdater.prototype.checkIfUpdateSupported.call({ _logger: { info() {} } }, info),
+        ).toBe(supported);
+      }
+    }
+  } finally {
+    os.release = release;
+  }
 });

@@ -8,6 +8,7 @@ import {
 } from "./task-inbox-mappers.js";
 import {
   parseTaskInboxActionRequest,
+  parseTaskInboxIntent,
   parseTaskInboxListQuery,
   parseTaskInboxRecord,
   TASK_SOURCES,
@@ -76,6 +77,32 @@ describe("task inbox normalized model", () => {
     ).toThrow();
     expect(() => parseTaskInboxRecord({ ...task(), externalCli: "codex" })).toThrow();
     expect(() => parseTaskInboxRecord({ ...task(), runId: "bad\nrun" })).toThrow();
+  });
+  test("user intents allow only record management, with per-record revisions", () => {
+    const row = { taskKey: "session:s1", expectedRevision: "1" };
+    for (const type of ["hide", "unhide", "delete"]) {
+      expect(parseTaskInboxIntent({ type, ...row })).toEqual({ type, ...row });
+      expect(() => parseTaskInboxIntent({ type, taskKey: row.taskKey })).toThrow();
+    }
+    expect(parseTaskInboxIntent({ type: "clear" })).toEqual({ type: "clear" });
+    expect(parseTaskInboxIntent({ type: "clear", before: 123 })).toEqual({
+      type: "clear",
+      before: 123,
+    });
+    for (const invalid of [
+      { type: "clear", ...row },
+      { type: "hide", ...row, before: 0 },
+      { type: "clear", before: -1 },
+      { type: "clear", before: Infinity },
+      { type: "archive", ...row },
+      { type: "delete", ...row, sessionId: "s1" },
+    ])
+      expect(() => parseTaskInboxIntent(invalid)).toThrow();
+    for (const visibility of ["visible", "hidden", "all"])
+      expect(parseTaskInboxListQuery({ visibility })).toEqual({ visibility });
+    expect(() => parseTaskInboxListQuery({ visibility: "deleted" })).toThrow();
+    expect(parseTaskInboxRecord({ ...task(), hidden: true }).hidden).toBe(true);
+    expect(() => parseTaskInboxRecord({ ...task(), hidden: 1 })).toThrow();
   });
   test("Mimi, automation execution and child associations each suppress their duplicate Session", () => {
     for (const source of [

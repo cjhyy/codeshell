@@ -31,7 +31,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir, userInfo } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 import { describePackagedAppLayout } from "./packaged-app-layout.mjs";
@@ -57,7 +57,7 @@ const within = (parent, path) => {
   const part = relative(parent, path);
   return part === "" || (part !== ".." && !part.startsWith(`..${sep}`) && !isAbsolute(part));
 };
-const header = (archive) => (path) => asar.statFile(archive, path, false);
+const header = (archive) => (path) => asar.statFile(archive, normalize(path), false);
 
 const INDEX = `<!doctype html><html><head><title>CodeShell Remote</title>
 <script type="module" crossorigin src="/mobile/assets/index-SMOKE1.js"></script>

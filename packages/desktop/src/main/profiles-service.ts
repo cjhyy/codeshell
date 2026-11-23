@@ -69,7 +69,7 @@ const MAX_PROFILE_IMPORT_REVIEWS = 16;
 
 const reviewedProfileImports = new Map<
   string,
-  ReviewedDigitalHumanProfile & { createdAt: number }
+  ReviewedDigitalHumanProfile & { createdAt: number; owner?: string }
 >();
 
 function pruneExpiredProfileImportReviews(now = Date.now()): void {
@@ -213,7 +213,10 @@ function capabilityCounts(
 }
 
 /** Parse and review a local definition without mutating the profile library. */
-export function previewProfileDefinitionImport(filePath: string): DigitalHumanProfileImportPreview {
+export function previewProfileDefinitionImport(
+  filePath: string,
+  owner?: string,
+): DigitalHumanProfileImportPreview {
   if (typeof filePath !== "string" || !filePath) {
     throw new Error("Digital-human profile import requires a file path");
   }
@@ -224,6 +227,7 @@ export function previewProfileDefinitionImport(filePath: string): DigitalHumanPr
     profile,
     sourceFileName: basename(filePath),
     createdAt: Date.now(),
+    owner,
   });
   return {
     reviewToken,
@@ -243,6 +247,8 @@ export function previewProfileDefinitionImport(filePath: string): DigitalHumanPr
 export function importReviewedProfileDefinition(
   input: DigitalHumanProfileImportCommitInput,
   cwd?: string,
+  beforeCommit?: () => void,
+  owner?: string,
 ): DigitalHumanProfileImportCommitResult {
   if (!input || typeof input.reviewToken !== "string" || !input.reviewToken) {
     throw new Error("Digital-human profile import requires a review token");
@@ -252,7 +258,7 @@ export function importReviewedProfileDefinition(
   }
   pruneExpiredProfileImportReviews();
   const reviewed = reviewedProfileImports.get(input.reviewToken);
-  if (!reviewed) {
+  if (!reviewed || reviewed.owner !== owner) {
     throw new Error("Digital-human profile import review expired; choose the file again");
   }
 
@@ -268,7 +274,7 @@ export function importReviewedProfileDefinition(
   // Match the editor save path: overwriting the active project default must
   // refresh its persisted capability snapshot, otherwise the new definition
   // is visible in the library while the project keeps running the old Skills.
-  saveProfile(reviewed.profile, cwd);
+  saveProfile(reviewed.profile, cwd, beforeCommit);
   reviewedProfileImports.delete(input.reviewToken);
   return { ok: true, name: reviewed.profile.name, label: reviewed.profile.label };
 }
@@ -277,6 +283,7 @@ export function importReviewedProfileDefinition(
 export function exportProfileDefinition(
   name: string,
   filePath: string,
+  beforeCommit?: () => void,
 ): Exclude<DigitalHumanProfileExportResult, { canceled: true }> {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   if (typeof filePath !== "string" || !filePath) {
@@ -301,6 +308,7 @@ export function exportProfileDefinition(
       mode: 0o600,
       flag: "wx",
     });
+    beforeCommit?.();
     renameSync(tmp, filePath);
   } finally {
     rmSync(tmp, { force: true });
@@ -359,7 +367,7 @@ export function listProfiles(cwd?: string): ProfileListEntry[] {
   }));
 }
 
-export function activateProfile(cwd: string, name: string): void {
+export function activateProfile(cwd: string, name: string, beforeCommit?: () => void): void {
   const settings = new SettingsManager(cwd, "full");
   // Only an exclusive profile needs the inventory (to know what to switch off),
   // and scanning costs a disk walk — so skip it for the union default.
@@ -367,12 +375,12 @@ export function activateProfile(cwd: string, name: string): void {
   const installed = profile?.exclusiveCapabilities
     ? { skills: scanSkills(cwd).map((skill) => skill.name) }
     : undefined;
-  activateWorkspaceProfile(settings, name, cwd, installed);
+  activateWorkspaceProfile(settings, name, cwd, installed, beforeCommit);
 }
 
-export function deactivateProfile(cwd: string): void {
+export function deactivateProfile(cwd: string, beforeCommit?: () => void): void {
   const settings = new SettingsManager(cwd, "full");
-  deactivateWorkspaceProfile(settings, cwd);
+  deactivateWorkspaceProfile(settings, cwd, beforeCommit);
 }
 
 /**
@@ -384,6 +392,7 @@ export function deactivateProfile(cwd: string): void {
 export function setSessionWorkspaceProfile(
   sessionId: string,
   profileName: string,
+  beforeCommit?: () => void,
 ): { persisted: boolean } {
   // Empty string = unbind. Binding was one-way before: once a Session had a
   // digital human you could only swap it for another, never go back to the
@@ -399,10 +408,7 @@ export function setSessionWorkspaceProfile(
   if (!sessions.exists(sessionId)) return { persisted: false };
   const state = sessions.readSessionState(sessionId);
   if (!state) return { persisted: false };
-  const persisted = sessions.saveStateOrUpdateFields(state, {
-    workspaceProfile: clearing ? undefined : profileName,
-  });
-  if (!persisted) throw new Error(`Could not switch digital human for Session ${sessionId}`);
+  sessions.setSessionWorkspaceProfile(sessionId, clearing ? undefined : profileName, beforeCommit);
   return { persisted: true };
 }
 
@@ -438,25 +444,25 @@ export function listProfileCatalog(): ProfileCatalogEntry[] {
   return [...bundled, ...fromRepos];
 }
 
-export function installCatalogProfile(name: string): void {
+export function installCatalogProfile(name: string, beforeCommit?: () => void): void {
   const bundled = DIGITAL_HUMAN_CATALOG.find((candidate) => candidate.name === name);
   if (bundled) {
     const { category: _c, tags: _t, samplePrompts: _s, ...profile } = bundled;
-    saveWorkspaceProfile({ ...profile, basePreset: "general" });
+    saveWorkspaceProfile({ ...profile, basePreset: "general" }, beforeCommit);
     return;
   }
   const fromRepo = readAllHumanRepoEntries().entries.find((entry) => entry.profile.name === name);
   if (!fromRepo) throw new Error(`Unknown digital human catalog entry "${name}"`);
-  saveWorkspaceProfile({ ...fromRepo.profile, basePreset: "general" });
+  saveWorkspaceProfile({ ...fromRepo.profile, basePreset: "general" }, beforeCommit);
 }
 
 /** 添加一个数字人仓库（克隆/更新）。会写磁盘并访问网络。 */
-export async function addProfileRepo(repo: string) {
-  return addHumanRepo(repo);
+export async function addProfileRepo(repo: string, beforeCommit?: () => void) {
+  return addHumanRepo(repo, beforeCommit);
 }
 
-export function removeProfileRepo(repo: string): void {
-  removeHumanRepo(repo);
+export function removeProfileRepo(repo: string, beforeCommit?: () => void): void {
+  removeHumanRepo(repo, beforeCommit);
 }
 
 export function listProfileRepos(): HumanRepoListEntry[] {
@@ -475,6 +481,7 @@ export function listProfileRepos(): HumanRepoListEntry[] {
 export function exportProfileRepo(
   names: string[],
   destDir: string,
+  beforeCommit?: () => void,
 ): { ok: true; written: string[] } {
   if (!Array.isArray(names) || names.length === 0) {
     throw new Error("Digital-human repo export requires at least one profile");
@@ -497,6 +504,7 @@ export function exportProfileRepo(
 
   const written: string[] = [];
   const humansDir = join(destDir, "humans");
+  beforeCommit?.();
   ensureRegularExportDirectory(humansDir);
   for (const profile of profiles) {
     const dir = join(humansDir, profile.name);
@@ -590,6 +598,7 @@ export async function installProfileRequirements(
   name: string,
   cwd: string,
   runner?: SkillInstallRunner,
+  beforeCommit?: () => void,
 ): Promise<{ ok: boolean; errors: string[] }> {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   const profile = readWorkspaceProfile(name);
@@ -606,8 +615,16 @@ export async function installProfileRequirements(
   });
 
   const errors: string[] = [];
+  // The reviewed batch is accepted once, at its first validated installer invocation.
+  let accepted = false;
+  const accept = () => {
+    if (!accepted) {
+      beforeCommit?.();
+      accepted = true;
+    }
+  };
   for (const { requirement } of plan.skillInstalls) {
-    const result = await installSkillRequirement(requirement, cwd, runner);
+    const result = await installSkillRequirement(requirement, cwd, runner, accept);
     if (!result.ok) errors.push(`${requirement.repo}: ${result.error}`);
   }
   // 新文件落地后必须让扫描缓存过期，否则本轮仍看不到刚装的 skill。
@@ -638,7 +655,11 @@ export async function installProfileRequirements(
  * snapshot too. Prompt and memory fields are resolved live, but project-default
  * Skills otherwise stay frozen at the last activation.
  */
-export function saveProfile(profile: WorkspaceProfile, cwd?: string): void {
+export function saveProfile(
+  profile: WorkspaceProfile,
+  cwd?: string,
+  beforeCommit?: () => void,
+): void {
   const refreshActiveProject =
     cwd !== undefined &&
     resolveActiveWorkspaceProfile({
@@ -648,7 +669,7 @@ export function saveProfile(profile: WorkspaceProfile, cwd?: string): void {
   // `basePreset` remains in the on-disk schema for definition compatibility,
   // but it is not authored by a digital human. Normalize every local/imported
   // save so an old or remote value cannot silently change CodeShell's runtime.
-  saveWorkspaceProfile({ ...profile, basePreset: "general" });
+  saveWorkspaceProfile({ ...profile, basePreset: "general" }, beforeCommit);
   if (refreshActiveProject && cwd) activateProfile(cwd, profile.name);
 }
 
@@ -680,6 +701,7 @@ export interface ForceDeleteProfileResult {
 export async function forceDeleteProfile(
   name: string,
   options: DeleteProfileOptions = {},
+  beforeCommit?: () => void,
 ): Promise<ForceDeleteProfileResult> {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   if (!readWorkspaceProfile(name)) {
@@ -698,7 +720,7 @@ export async function forceDeleteProfile(
   for await (const sessionId of sessions.iterateSessionIdsByWorkspaceProfile(name)) {
     // Persistence errors propagate before teams/settings/the definition are
     // changed. A concurrently selected different profile is left untouched.
-    if (sessions.clearSessionWorkspaceProfile(sessionId, name)) {
+    if (sessions.clearSessionWorkspaceProfile(sessionId, name, beforeCommit)) {
       unboundSessions.push(sessionId);
     }
   }
@@ -713,24 +735,27 @@ export async function forceDeleteProfile(
     if (!team.members.includes(name)) continue;
     const members = team.members.filter((member) => member !== name);
     if (members.length < 2) {
-      deleteDigitalHumanTeam(team.id);
+      deleteDigitalHumanTeam(team.id, beforeCommit);
       removedTeams.push(team.name);
       continue;
     }
     const { lead: _previousLead, ...rest } = team;
     try {
-      saveDigitalHumanTeam({
-        ...rest,
-        members,
-        // Drop a lead that was this profile; keep it when it was someone else.
-        ...(team.lead && team.lead !== name ? { lead: team.lead } : {}),
-      });
+      saveDigitalHumanTeam(
+        {
+          ...rest,
+          members,
+          // Drop a lead that was this profile; keep it when it was someone else.
+          ...(team.lead && team.lead !== name ? { lead: team.lead } : {}),
+        },
+        beforeCommit,
+      );
       updatedTeams.push(team.name);
     } catch {
       // saveDigitalHumanTeam rejects any member that is not in the library, so a
       // team that already carried a dangling member cannot be rewritten. Removing
       // it beats aborting the deletion the user already confirmed.
-      deleteDigitalHumanTeam(team.id);
+      deleteDigitalHumanTeam(team.id, beforeCommit);
       removedTeams.push(team.name);
     }
   }
@@ -740,7 +765,7 @@ export async function forceDeleteProfile(
     try {
       const settings = new SettingsManager(options.cwd, "full");
       if (resolveActiveWorkspaceProfile({ cwd: options.cwd, settings })?.name === name) {
-        deactivateWorkspaceProfile(settings, options.cwd);
+        deactivateWorkspaceProfile(settings, options.cwd, beforeCommit);
         clearedProjectDefault = true;
       }
     } catch {
@@ -751,7 +776,7 @@ export async function forceDeleteProfile(
   for await (const _sessionId of sessions.iterateSessionIdsByWorkspaceProfile(name)) {
     throw new Error(`Session bindings changed; profile ${name} was preserved`);
   }
-  deleteWorkspaceProfile(name);
+  deleteWorkspaceProfile(name, beforeCommit);
   return { unboundSessions, updatedTeams, removedTeams, clearedProjectDefault };
 }
 
@@ -827,7 +852,11 @@ export function previewProfileDeletion(name: string, cwd?: string): ProfileDelet
   };
 }
 
-export function deleteProfile(name: string, options: DeleteProfileOptions = {}): void {
+export function deleteProfile(
+  name: string,
+  options: DeleteProfileOptions = {},
+  beforeCommit?: () => void,
+): void {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   if (!readWorkspaceProfile(name)) return;
 
@@ -860,9 +889,9 @@ export function deleteProfile(name: string, options: DeleteProfileOptions = {}):
       if (!options.clearActiveProject) {
         throw new Error(`Digital human "${name}" is the active project default`);
       }
-      deactivateWorkspaceProfile(settings, options.cwd);
+      deactivateWorkspaceProfile(settings, options.cwd, beforeCommit);
     }
   }
 
-  deleteWorkspaceProfile(name);
+  deleteWorkspaceProfile(name, beforeCommit);
 }

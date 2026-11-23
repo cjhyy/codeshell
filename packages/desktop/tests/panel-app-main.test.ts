@@ -403,11 +403,32 @@ describeIsolated("Panel App protocol", () => {
         isMainFrame,
         mediaType,
       });
+    const displayPermission = async (isMainFrame: boolean) => {
+      const details = { requestingUrl: prepared.src, isMainFrame };
+      const checked = panelAppElectronMock.permissionCheckHandler!(
+        webContents,
+        "display-capture",
+        prepared.src,
+        details,
+      );
+      const requested = await new Promise<boolean>((resolve) =>
+        panelAppElectronMock.permissionRequestHandler!(
+          webContents,
+          "display-capture",
+          resolve,
+          details,
+        ),
+      );
+      return [checked, requested];
+    };
+    expect(await displayPermission(true)).toEqual([true, true]);
+    expect(await displayPermission(false)).toEqual([false, false]);
     expect(check("video")).toBe(true);
     expect(check("audio")).toBe(true);
     expect(check("video", false)).toBe(false);
     api.setPanelAppCaptureAuthorizer(() => false);
     expect(check("video")).toBe(false);
+    expect(await displayPermission(true)).toEqual([false, false]);
     api.setPanelAppCaptureAuthorizer(undefined);
     expect(check("audio")).toBe(false);
     api.setPanelAppCaptureAuthorizer(() => true);
@@ -484,6 +505,12 @@ describeIsolated("Panel App protocol", () => {
       }),
     ).toBe(false);
 
+    expect(
+      await request("display-capture", {
+        requestingUrl: prepared.src,
+        isMainFrame: true,
+      }),
+    ).toBe(false);
     const denied = await arrange("noaudiohost");
     expect(
       await request("media", {

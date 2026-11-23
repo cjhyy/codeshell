@@ -616,14 +616,18 @@ describe("createPetDeliveryResolver", () => {
     const plan = await resolver().plan({ sessionId: SID, event: "blocked", at: NOW });
     expect(rows(plan.entries)).toEqual([["template", "owner", "auto", ["delegation"], false]]);
     // A pending decision names its task: the IM chat that started it answers.
-    const prompt = resolver().planBlocked({ sessionId: SID, task: tasks[0]! });
+    const prompt = await resolver().planBlocked({ sessionId: SID, task: tasks[0]! });
     expect(rows(prompt.entries)).toEqual([
       ["template", "lark:chat-9", "lark", ["delegation"], true],
     ]);
     // A Session rules may not watch still prompts the chat that started its task.
-    const unwatched = resolver().planBlocked({ sessionId: SID, task: tasks[0]!, useRules: false });
+    const unwatched = await resolver().planBlocked({
+      sessionId: SID,
+      task: tasks[0]!,
+      useRules: false,
+    });
     expect(rows(unwatched.entries)).toEqual([["template", "lark:chat-9", "lark", [], true]]);
-    expect(resolver().planBlocked({ sessionId: SID, useRules: false }).entries).toEqual([]);
+    expect((await resolver().planBlocked({ sessionId: SID, useRules: false })).entries).toEqual([]);
   });
 
   test("routes that cannot be read: the plan sends the notice, the bridge retries", async () => {

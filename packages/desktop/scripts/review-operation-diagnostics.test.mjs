@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
+import { observeReviewPort } from "./review-host-observer.mjs";
 import { createReviewOperationDiagnostics } from "./review-operation-diagnostics.mjs";
 
 const ts = createRequire(import.meta.url)("typescript");
@@ -400,7 +401,36 @@ test("actual LF and CRLF driver sources execute identical success, late-failure 
   }
 });
 
-test("original eleven-operation body, all assertions and budgets retain their frozen syntax", () => {
+test("a held Review reply returns unchanged to its requesting workbench even with overlapping RPC ids", () => {
+  const parent = new EventEmitter();
+  const messages = [];
+  parent.postMessage = (message) => messages.push(message);
+  observeReviewPort(parent, { method: "review/prompt" });
+  function bind() {
+    const port = new EventEmitter();
+    const results = [];
+    port.postMessage = (reply) => results.push(reply);
+    parent.emit("message", { data: { type: "bind" }, ports: [port] });
+    port.emit("message", {
+      data: { id: 1, method: "review/prompt", params: { sessionId: "owned" } },
+    });
+    return { port, results };
+  }
+  const a = bind(),
+    b = bind();
+  const ok = { id: 1, result: { prompt: "original" } };
+  const rejected = { id: 1, error: { message: "original failure" } };
+  a.port.postMessage(ok);
+  b.port.postMessage(rejected);
+  assert.deepEqual([a.results, b.results], [[], []]);
+  parent.emit("message", { data: { type: "fixture-review-release", id: messages[1].id } });
+  assert.equal(b.results[0], rejected);
+  a.port.emit("close");
+  parent.emit("message", { data: { type: "fixture-review-release", id: messages[0].id } });
+  assert.deepEqual(a.results, []);
+});
+
+test("eleven Review operations retain the verified Host receipt, assertions and budgets", () => {
   function normalizeReviewScopeMenuBarrier(source) {
     const originalSelection = [
       '  await review.getByRole("button", { name: /^(选择审查范围|Choose review scope)$/ }).click();',
@@ -441,7 +471,7 @@ test("original eleven-operation body, all assertions and budgets retain their fr
     .replace(/^\s*diagnostics\.caseCompleted[^\n]*\n/gm, "");
   assert.equal(
     digest(JSON.stringify(shape(parse(`async function proof(){\n${body}\n}`)))),
-    "d14e9354f2d72da3666807d3d85dbf18625d4764ff91dcd6710d127f05cf050c",
+    "b14ba843b9df68c5c72bb346da5369de32737e1b4980481014cffed90e54ccad",
   );
   const setup = driver.slice(
     driver.indexOf("  await mkdir(projectPath, { mode: 0o700 });"),
@@ -453,7 +483,8 @@ test("original eleven-operation body, all assertions and budgets retain their fr
     digest(
       JSON.stringify(withoutDiagnosticStatements(parse(`async function proof(){\n${setup}\n}`))),
     ),
-    "2aaaa9f49fbc1e9f98942dfca807ceeaf9d5e87c489f6fcfdd24e3e174ca78d6",
+    // Includes the persisted view-only decision for both owned Review paths.
+    "4a7802a0ba1da05f83f38c14b1b4b1237279d7f87cb2013efb049a62ff216a30",
   );
   const assertions = [];
   const visit = (node) => {
@@ -464,7 +495,7 @@ test("original eleven-operation body, all assertions and budgets retain their fr
   visit(parse(normalizedDriver));
   assert.equal(
     digest(JSON.stringify(assertions)),
-    "b41c4e5b7abcf9862c7222f0ab383d815ac440cd26a7b650d07bc8b24613917e",
+    "52978ac335d38c1746c5905af772d77d25ae7d14983fdcbd1e96470c664f7468",
   );
   for (const literal of [
     "timeout: 5000",

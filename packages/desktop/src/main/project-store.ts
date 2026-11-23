@@ -125,16 +125,20 @@ export interface MigratedSessionMainRoot {
   workspace: SessionWorkspace;
 }
 
+export interface ProjectMigrationTarget {
+  sessionId: string;
+  projectId: ProjectId;
+  mainRootId: ProjectRootId;
+  mainRoot: string;
+  workspaceContext: WorkspaceContext;
+}
+
 export interface MigrateSessionMainRootOptions {
+  beforeOwnerRequest?: (target: ProjectMigrationTarget) => void;
+  beforeOfflineCommit?: () => void;
   /** Prove resident ownership or fence a not-resident durable fallback. */
   owner?: {
-    migrate: (input: {
-      sessionId: string;
-      projectId: ProjectId;
-      mainRootId: ProjectRootId;
-      mainRoot: string;
-      workspaceContext: WorkspaceContext;
-    }) => Promise<MigrateSessionMainRootResult>;
+    migrate: (input: ProjectMigrationTarget) => Promise<MigrateSessionMainRootResult>;
     complete: (input: { sessionId: string; ownershipToken: string }) => Promise<void>;
   };
 }
@@ -182,11 +186,6 @@ export class ProjectStore {
     return () => this.listeners.delete(listener);
   }
 
-  async warm(): Promise<void> {
-    this.ensureInitialized();
-    await this.sessionIndex.ensureLoaded();
-  }
-
   async sessionMainRoots(projectId: string): Promise<Record<string, string[]>> {
     const project = (await this.list()).find((candidate) => candidate.id === projectId);
     if (!project) throw new Error("project not found");
@@ -207,8 +206,8 @@ export class ProjectStore {
   }
 
   /** Register a path selected by Main's native picker, including explicit tombstone restoration. */
-  async createFromPath(pickedPath: string): Promise<LocalProject> {
-    const registered = await this.registerFromPath(pickedPath, true);
+  async createFromPath(pickedPath: string, commit?: () => void): Promise<LocalProject> {
+    const registered = await this.registerFromPath(pickedPath, true, commit);
     if (!registered) throw new Error("picker-authorized project registration failed");
     return registered.project;
   }
@@ -216,6 +215,7 @@ export class ProjectStore {
   private async registerFromPath(
     pickedPath: string,
     restoreTombstone: boolean,
+    commit?: () => void,
   ): Promise<{ project: LocalProject; created: boolean } | null> {
     const root = this.resolvePickedRoot(pickedPath);
     let changed = false;
@@ -259,12 +259,16 @@ export class ProjectStore {
       changed = true;
       createdNew = true;
       return newProject;
-    });
+    }, commit);
     if (changed) await this.didChange();
     return project ? { project: cloneProject(project), created: createdNew } : null;
   }
 
-  async addRoot(projectId: string, pickedPath: string): Promise<AddedProjectRoot> {
+  async addRoot(
+    projectId: string,
+    pickedPath: string,
+    commit?: () => void,
+  ): Promise<AddedProjectRoot> {
     const root = this.resolvePickedRoot(pickedPath);
     const picked = resolve(pickedPath);
     const project = this.mutate((registry) => {
@@ -296,7 +300,7 @@ export class ProjectStore {
       });
       touchProject(target, timestamp);
       return target;
-    });
+    }, commit);
     await this.didChange();
     return {
       project: cloneProject(project),
@@ -304,21 +308,37 @@ export class ProjectStore {
     };
   }
 
-  async removeRoot(projectId: string, rootId: string): Promise<LocalProject> {
+  async removeRoot(
+    projectId: string,
+    rootId: string,
+    commit?: () => void,
+    observedSessions?: { path: string; ids: string[] },
+  ): Promise<LocalProject> {
     await this.sessionIndex.ensureLoaded();
     const current = await this.requireLive(projectId);
     const removedRoot = current.roots.find((root) => root.id === rootId);
     if (!removedRoot) throw new Error("project root not found");
     const removedKey = canonicalKey(removedRoot.path);
-    const affected = this.sessionIndex
-      .confirmedEntries()
-      .filter(
-        (entry) =>
-          this.sessionManager.readSessionArchivedAt(entry.sessionId) === undefined &&
-          ((entry.projectId === projectId && entry.mainRootId === rootId) ||
-            (!entry.projectId && canonicalKey(entry.cwd) === removedKey)),
-      )
-      .map((entry) => entry.sessionId);
+    if (observedSessions && canonicalKey(observedSessions.path) !== removedKey)
+      throw new Error("project root changed during removal");
+    const candidates = this.sessionIndex.confirmedIdsForProjectRoot(
+      projectId,
+      rootId,
+      removedRoot.path,
+    );
+    const affected = [...new Set([...candidates, ...(observedSessions?.ids ?? [])])].filter(
+      (id) => {
+        const state = this.sessionManager.readSessionState(id);
+        if (typeof state?.archivedAt === "number") return false;
+        // A confirmed process-local Session can have no durable state in the Host.
+        return (
+          !state ||
+          (state.project
+            ? state.project.projectId === projectId && state.project.mainRootId === rootId
+            : canonicalKey(state.cwd) === removedKey)
+        );
+      },
+    );
     if (affected.length > 0) {
       throw new Error(`folder is the main root for sessions: ${affected.join(", ")}`);
     }
@@ -334,7 +354,7 @@ export class ProjectStore {
       target.roots.splice(index, 1);
       touchProject(target, this.now());
       return target;
-    });
+    }, commit);
     await this.didChange();
     return cloneProject(project);
   }
@@ -382,6 +402,7 @@ export class ProjectStore {
       };
 
       if (options.owner) {
+        options.beforeOwnerRequest?.(commit);
         let ownership: MigrateSessionMainRootResult;
         try {
           ownership = await options.owner.migrate(commit);
@@ -437,6 +458,7 @@ export class ProjectStore {
               { projectId: durableProject.id, mainRootId: durableTarget.id },
               durableTarget.path,
               durable.stateRevision,
+              options.beforeOfflineCommit,
             );
           } finally {
             try {
@@ -493,7 +515,7 @@ export class ProjectStore {
     }
   }
 
-  async setPrimary(projectId: string, rootId: string): Promise<LocalProject> {
+  async setPrimary(projectId: string, rootId: string, commit?: () => void): Promise<LocalProject> {
     const project = this.mutate((registry) => {
       const target = requireLiveProject(registry, projectId);
       const primary = target.roots.find((root) => root.id === rootId);
@@ -504,12 +526,12 @@ export class ProjectStore {
         touchProject(target, this.now());
       }
       return target;
-    });
+    }, commit);
     await this.didChange();
     return cloneProject(project);
   }
 
-  async rename(projectId: string, name: string): Promise<LocalProject> {
+  async rename(projectId: string, name: string, commit?: () => void): Promise<LocalProject> {
     const normalized = checkedName(name);
     const project = this.mutate((registry) => {
       const target = requireLiveProject(registry, projectId);
@@ -519,24 +541,24 @@ export class ProjectStore {
         touchProject(target, this.now());
       }
       return target;
-    });
+    }, commit);
     await this.didChange();
     return cloneProject(project);
   }
 
-  async setPinned(projectId: string, pinned: boolean): Promise<LocalProject> {
+  async setPinned(projectId: string, pinned: boolean, commit?: () => void): Promise<LocalProject> {
     if (typeof pinned !== "boolean") throw new Error("invalid pinned state");
     const project = this.mutate((registry) => {
       const target = requireLiveProject(registry, projectId);
       target.pinned = pinned || undefined;
       touchProject(target, this.now());
       return target;
-    });
+    }, commit);
     await this.didChange();
     return cloneProject(project);
   }
 
-  async remove(projectId: string): Promise<void> {
+  async remove(projectId: string, commit?: () => void): Promise<void> {
     if ([...this.migratingRoots.keys()].some((key) => key.startsWith(`${projectId}\0`))) {
       throw new Error("project has an in-progress Session migration");
     }
@@ -546,7 +568,7 @@ export class ProjectStore {
       target.deletedAt = timestamp;
       touchProject(target, timestamp);
       return target;
-    });
+    }, commit);
     await this.didChange();
   }
 
@@ -561,40 +583,57 @@ export class ProjectStore {
   async resolveProjectForCwdBatch(
     cwds: readonly string[],
     _source: ProjectResolveSource = "live",
+    restoreHistorical = (cwd: string) => this.restoreHistoricalCwd(cwd),
   ): Promise<ProjectCwdResolution[]> {
     this.ensureInitialized();
-    await this.sessionIndex.ensureLoaded();
     const registry = readRegistryFile(this.file);
     const noRepoKey = canonicalKey(this.noRepoPath);
     const normalized = cwds.map((cwd) => checkedComparablePath(cwd));
-    const confirmed = this.sessionIndex.resolveConfirmedCwds(normalized.map((entry) => entry.path));
     const results: ProjectCwdResolution[] = [];
 
-    for (let index = 0; index < normalized.length; index += 1) {
-      const candidate = normalized[index]!;
+    for (const candidate of normalized) {
       const found = findRoot(registry.projects, candidate.path);
-      if (found?.project.deletedAt !== undefined) {
-        results.push(null);
-      } else if (found && validateMountedProjectRoot(found.root).status === "ok") {
-        results.push({ projectId: found.project.id, rootId: found.root.id, created: false });
-      } else if (candidate.key === noRepoKey) {
-        results.push({ noRepo: true });
-      } else if (confirmed[index]) {
-        const registered = await this.registerFromPath(candidate.path, false);
+      if (found) {
         results.push(
-          registered
-            ? {
-                projectId: registered.project.id,
-                rootId: registered.project.primaryRootId,
-                created: registered.created,
-              }
+          found.project.deletedAt === undefined &&
+            validateMountedProjectRoot(found.root).status === "ok"
+            ? { projectId: found.project.id, rootId: found.root.id, created: false }
             : null,
         );
+      } else if (candidate.key === noRepoKey) {
+        results.push({ noRepo: true });
       } else {
-        results.push(null);
+        results.push(await restoreHistorical(candidate.path));
       }
     }
     return results;
+  }
+
+  /** Restore an unregistered legacy project only with a persisted Session witness. */
+  async restoreHistoricalCwd(
+    cwd: string,
+    commit?: () => void,
+    indexedIds?: readonly string[],
+  ): Promise<ProjectCwdResolution> {
+    const candidate = checkedComparablePath(cwd);
+    const registeredRoot = this.validateRegisteredRootPathSync(candidate.path);
+    if (registeredRoot && registeredRoot.status !== "ok") return null;
+    const witness = await this.sessionIndex.findPersistedCwdWitness(candidate.path, indexedIds);
+    if (!witness) return null;
+    const registered = await this.registerFromPath(candidate.path, false, () => {
+      const latest = this.sessionIndex.refreshSync(witness);
+      if (!latest || canonicalKey(latest.cwd) !== candidate.key) {
+        throw new Error("Persisted Session workspace changed during project recovery");
+      }
+      commit?.();
+    });
+    return registered
+      ? {
+          projectId: registered.project.id,
+          rootId: registered.project.primaryRootId,
+          created: registered.created,
+        }
+      : null;
   }
 
   isLegacyMigrationComplete(): boolean {
@@ -650,9 +689,6 @@ export class ProjectStore {
     requestedRootId?: string,
   ): ProjectRunResolution {
     this.ensureInitialized();
-    if (!this.sessionIndex.isLoaded()) {
-      throw new Error("session cwd index is not ready");
-    }
     const registry = readRegistryFile(this.file);
     const project = registry.projects.find(
       (candidate) => candidate.id === projectId && candidate.deletedAt === undefined,
@@ -847,7 +883,7 @@ export class ProjectStore {
     return { version: 2, projects };
   }
 
-  private mutate<T>(mutation: (registry: LocalProjectRegistryV2) => T): T {
+  private mutate<T>(mutation: (registry: LocalProjectRegistryV2) => T, commit?: () => void): T {
     this.ensureInitialized();
     const result = mutateJsonFile<LocalProjectRegistryV2, T>(this.file, {
       parse: (raw) => {
@@ -855,7 +891,11 @@ export class ProjectStore {
         return parseRegistryText(raw, this.file);
       },
       serialize: serializeRegistry,
-      mutation: (registry) => ({ value: registry, result: mutation(registry) }),
+      mutation: (registry) => {
+        const result = mutation(registry);
+        commit?.();
+        return { value: registry, result };
+      },
       mode: 0o600,
       maxBytes: MAX_FILE_BYTES,
     });

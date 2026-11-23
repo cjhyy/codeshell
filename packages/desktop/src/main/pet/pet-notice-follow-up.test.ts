@@ -83,7 +83,7 @@ describe("follow-up reminders go through the notice router", () => {
     expect(current.outbox.events).toHaveLength(0);
     // Shown as the owner wrote it: their title, their text.
     expect(current.desktop).toEqual([
-      expect.objectContaining({ title: "看一下发布", body: "检查 0.10.1 的发布结果" }),
+      expect.objectContaining({ title: "看一下发布", body: "检查 0.10.1 的发布结果", urgent: true }),
     ]);
   });
 
@@ -239,7 +239,7 @@ describe("a follow-up rule coming due", () => {
   /** Register through the host action, as Mimi's ManageFollowUp does, then let it fire. */
   async function wakeOnce(h: Harness, context: Record<string, unknown> = {}) {
     const jobs: CronJob[] = [];
-    const runtime = await createPetFollowUpRules({
+    const runtime = createPetFollowUpRules({
       rules: h.wiring.ruleStore,
       sessions: () => [],
       summaryStore: {
@@ -277,6 +277,7 @@ describe("a follow-up rule coming due", () => {
       now: () => env.clock,
       onError: () => undefined,
     });
+    await runtime.ready;
     await runtime.coordinator.start();
     const receipt = await runtime.followUpHost(
       {

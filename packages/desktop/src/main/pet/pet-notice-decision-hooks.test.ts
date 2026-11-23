@@ -37,7 +37,7 @@ describe("decision prompts through the router", () => {
     d.raise();
     await settle();
     await d.poll(() => current!.ownerSends.length > 0);
-    const code = d.code()!;
+    const code = (await d.code())!;
     await reachedIm(code);
     expect(code).toMatch(/^[0-9A-F]{12}$/u);
     expect(current.ownerSends).toHaveLength(1);
@@ -68,7 +68,7 @@ describe("decision prompts through the router", () => {
     expect(current.ownerSends).toHaveLength(1);
     const text = current.ownerSends[0]!.text;
     expect(text).toContain("请打开桌面 Session 处理");
-    expect(text).not.toContain(d.code()!);
+    expect(text).not.toContain((await d.code())!);
     expect(text).not.toContain("ls");
     // Nothing answerable went out, so a bare number is ordinary chat.
     expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toBeUndefined();
@@ -160,9 +160,9 @@ describe("decision prompts through the router", () => {
     expect(timers.pending()).toContain(raisedAt + 15_000);
     timers.advance(raisedAt + 15_000);
     await settle(() => current!.ownerSends.length > 0);
-    await reachedIm(d.code());
+    await reachedIm(await d.code());
     expect(current.ownerSends).toHaveLength(1);
-    expect(promptOf(d.code())).toMatchObject({ phase: "im", channel: "wechat" });
+    expect(promptOf(await d.code())).toMatchObject({ phase: "im", channel: "wechat" });
     d.relay.stop();
   });
 
@@ -174,7 +174,7 @@ describe("decision prompts through the router", () => {
     before.raise();
     await settle();
     await before.poll(() => current!.ownerSends.length > 0);
-    const code = before.code()!;
+    const code = (await before.code())!;
     await reachedIm(code);
     expect(promptOf(code)).toMatchObject({ phase: "im", channel: "wechat" });
 
@@ -184,9 +184,9 @@ describe("decision prompts through the router", () => {
     await d.relay.scan();
     expect(current.ownerSends).toEqual([]);
     // The record says the owner's chat got the prompt: it is open there (the model reads it).
-    expect(await d.relay.reply({ message: `回答 ${d.code()} 9`, origin: OWNER_DM })).toContain(
-      "请回复选项",
-    );
+    expect(
+      await d.relay.reply({ message: `回答 ${await d.code()} 9`, origin: OWNER_DM }),
+    ).toContain("请回复选项");
     env.clock = raisedAt + 10 * 60_000;
     await d.relay.scan();
     await settle(() => current!.ownerSends.length > 0);
@@ -223,9 +223,10 @@ describe("decision prompts through the router", () => {
     d.raise();
     await settle();
     timers.advance(raisedAt + 15_000);
-    await settle(() => promptOf(d.code()) !== undefined);
+    const pendingCode = await d.code();
+    await settle(() => promptOf(pendingCode) !== undefined);
     expect(current.ownerSends).toEqual([]);
-    expect(promptOf(d.code())).toMatchObject({ phase: "desktop" });
+    expect(promptOf(await d.code())).toMatchObject({ phase: "desktop" });
     return { d, presence, focus, timers, overrides, raisedAt };
   }
 
@@ -236,10 +237,10 @@ describe("decision prompts through the router", () => {
     focus.emit("browser-window-blur");
     timers.advance(env.clock + 1_000);
     await settle(() => current!.ownerSends.length > 0);
-    await reachedIm(d.code());
+    await reachedIm(await d.code());
     expect(current!.ownerSends).toHaveLength(1);
     expect(current!.ownerSends[0]!.text).toContain("只允许这一次吗？直接回我就行。");
-    expect(promptOf(d.code())).toMatchObject({
+    expect(promptOf(await d.code())).toMatchObject({
       phase: "im",
       channel: "wechat",
       escalatedAt: raisedAt + 16_000,
@@ -265,7 +266,7 @@ describe("decision prompts through the router", () => {
     timers.advance(env.clock + 1_000);
     await settle();
     expect(current!.ownerSends).toEqual([]);
-    expect(promptOf(d.code())).toMatchObject({ phase: "desktop" });
+    expect(promptOf(await d.code())).toMatchObject({ phase: "desktop" });
     presence.present = false;
     focus.emit("browser-window-blur");
     timers.advance(env.clock + 1_000);
@@ -287,9 +288,9 @@ describe("decision prompts through the router", () => {
     presence.present = false;
     timers.advance(crossing);
     await settle(() => current!.ownerSends.length > 0);
-    await reachedIm(d.code());
+    await reachedIm(await d.code());
     expect(current!.ownerSends).toHaveLength(1);
-    expect(promptOf(d.code())).toMatchObject({ phase: "im" });
+    expect(promptOf(await d.code())).toMatchObject({ phase: "im" });
     d.relay.stop();
   });
 
@@ -310,7 +311,7 @@ describe("decision prompts through the router", () => {
     d.raise();
     await settle();
     await d.poll(() => current!.ownerSends.length > 0);
-    const code = d.code()!;
+    const code = (await d.code())!;
     await reachedIm(code);
     // One failed snapshot: the aggregator empties pending and reports disconnected.
     const [held] = current.pending.splice(0);
@@ -340,7 +341,7 @@ describe("decision prompts through the router", () => {
     d.raise();
     await settle();
     await d.poll(() => current!.ownerSends.length > 0);
-    const code = d.code()!;
+    const code = (await d.code())!;
     await reachedIm(code);
     current.pending.length = 0;
     live = false;
@@ -388,11 +389,11 @@ describe("decision prompts through the router", () => {
     d.raise();
     await settle();
     await d.poll(() => current!.ownerSends.length > 0);
-    const oldCode = d.code()!;
+    const oldCode = (await d.code())!;
     await reachedIm(oldCode);
     // The worker connection changed: the same request is republished with a new code.
     d.raise("req-1", raisedAt, "worker-2");
-    const newCode = d.code()!;
+    const newCode = (await d.code())!;
     expect(newCode).not.toBe(oldCode);
     d.relay.start();
     await settle(() => promptOf(newCode) !== undefined);
@@ -459,7 +460,7 @@ describe("decision prompts through the router", () => {
     await settle();
     expect(current.ownerSends).toEqual([]);
     expect(current.wiring.ledger.get(old.id)?.prompt).toMatchObject({
-      code: d.code(),
+      code: await d.code(),
       phase: "im",
       channel: "wechat",
     });
@@ -504,8 +505,8 @@ describe("decision prompts through the router", () => {
     expect(current.ownerSends).toEqual([]);
     expect(current.published).toEqual([]);
     expect(current.desktop).toEqual([]);
-    current.wiring.router.start();
-    expect(current.wiring.attention.getSnapshot().surfaceablePendingCount).toBe(1);
+    await current.wiring.attention.start();
+    expect((await current.wiring.attention.getSnapshot()).surfaceablePendingCount).toBe(1);
     // A code the owner never received answers nothing, and a bare number is ordinary chat.
     expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toBeUndefined();
   });

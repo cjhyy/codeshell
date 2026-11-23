@@ -51,6 +51,7 @@ export interface TaskInboxRecordV1 {
   terminalAt?: number;
   sourceRevision: string;
   stale?: boolean;
+  hidden?: boolean;
 }
 export interface TaskInboxSourceError {
   source: TaskSource;
@@ -61,7 +62,9 @@ export interface TaskInboxSnapshot {
   records: TaskInboxRecordV1[];
   errors: TaskInboxSourceError[];
 }
+export type TaskInboxVisibility = "visible" | "hidden" | "all";
 export interface TaskInboxListQuery {
+  visibility?: TaskInboxVisibility;
   status?: TaskStatus;
   source?: TaskSource;
   projectId?: string;
@@ -85,6 +88,15 @@ export interface TaskInboxActionResult {
   status: "ok" | "stale" | "unavailable" | "rejected" | "failed";
   message?: string;
   record?: TaskInboxRecordV1;
+}
+
+export type TaskInboxIntent =
+  | { type: "hide" | "unhide" | "delete"; taskKey: string; expectedRevision: string }
+  | { type: "clear"; before?: number };
+export interface TaskInboxIntentResult {
+  status: TaskInboxActionResult["status"];
+  message?: string;
+  count?: number;
 }
 
 const RECORD_FIELDS = new Set([
@@ -111,6 +123,7 @@ const RECORD_FIELDS = new Set([
   "terminalAt",
   "sourceRevision",
   "stale",
+  "hidden",
 ]);
 export function checkedTaskObject(
   value: unknown,
@@ -227,6 +240,10 @@ export function parseTaskInboxRecord(value: unknown): TaskInboxRecordV1 {
     result.externalCli = raw.externalCli;
   }
   if (raw.terminalAt !== undefined) result.terminalAt = checkedTime(raw.terminalAt, "terminalAt");
+  if (raw.hidden !== undefined) {
+    if (typeof raw.hidden !== "boolean") throw new Error("Invalid task hidden flag");
+    if (raw.hidden) result.hidden = true;
+  }
   if (raw.stale !== undefined) {
     if (typeof raw.stale !== "boolean") throw new Error("Invalid task stale flag");
     if (raw.stale) result.stale = true;
@@ -236,9 +253,14 @@ export function parseTaskInboxRecord(value: unknown): TaskInboxRecordV1 {
 export function parseTaskInboxListQuery(value: unknown = {}): TaskInboxListQuery {
   const raw = checkedTaskObject(
     value,
-    new Set(["status", "source", "projectId", "search", "cursor", "limit"]),
+    new Set(["status", "source", "projectId", "search", "cursor", "limit", "visibility"]),
   );
   const result: TaskInboxListQuery = {};
+  if (raw.visibility !== undefined) {
+    if (raw.visibility !== "visible" && raw.visibility !== "hidden" && raw.visibility !== "all")
+      throw new Error("Invalid task visibility");
+    result.visibility = raw.visibility;
+  }
   if (raw.status !== undefined) {
     if (!isTaskStatus(raw.status)) throw new Error("Invalid task status");
     result.status = raw.status;
@@ -263,6 +285,26 @@ export function parseTaskInboxActionRequest(value: unknown): TaskInboxActionRequ
   return {
     taskKey: checkedTaskText(raw.taskKey, "key", 1100),
     action: raw.action,
+    expectedRevision: checkedTaskText(raw.expectedRevision, "revision", 1024),
+  };
+}
+
+/** Only user-owned record changes cross the workbench boundary. */
+export function parseTaskInboxIntent(value: unknown): TaskInboxIntent {
+  const raw = checkedTaskObject(value, new Set(["type", "taskKey", "expectedRevision", "before"]));
+  if (raw.type === "clear") {
+    if ("taskKey" in raw || "expectedRevision" in raw) throw new Error("Invalid bulk task intent");
+    if (raw.before === undefined) return { type: "clear" };
+    if (typeof raw.before !== "number" || !Number.isSafeInteger(raw.before) || raw.before < 0)
+      throw new Error("Invalid task cutoff");
+    return { type: "clear", before: raw.before };
+  }
+  if (raw.type !== "hide" && raw.type !== "unhide" && raw.type !== "delete")
+    throw new Error("Invalid task record intent");
+  if ("before" in raw) throw new Error("Invalid task record intent");
+  return {
+    type: raw.type,
+    taskKey: checkedTaskText(raw.taskKey, "key", 1100),
     expectedRevision: checkedTaskText(raw.expectedRevision, "revision", 1024),
   };
 }

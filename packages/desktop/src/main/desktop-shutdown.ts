@@ -141,13 +141,12 @@ export function registerDesktopShutdown(
       options: ReturnType<typeof desktopShutdownFailureDialog>,
     ): Promise<{ response: number }>;
     restoreMainWindow(): Promise<unknown>;
-    platform?: NodeJS.Platform;
   },
 ): void {
   let disposing = false;
-  app.on("window-all-closed", () => {
-    if (deps.ownsInstance() && (deps.platform ?? process.platform) !== "darwin") app.quit();
-  });
+  // Registering a listener overrides Electron’s default last-window quit on Windows/Linux.
+  // Background services stay available until an explicit quit goes through the save barrier.
+  app.on("window-all-closed", () => {});
   app.on(
     "before-quit",
     createDesktopShutdownHandler({

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import assert from "node:assert/strict";
+import { ActivityHistoryWorker } from "./activity-history-worker-client.js";
+import { readFileSync, existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileHistory, SessionManager, sessionsRoot } from "@cjhyy/code-shell-core";
@@ -38,6 +40,34 @@ describe("desktop cold session paths honor CODE_SHELL_HOME", () => {
       redoable: false,
       fileCount: 0,
     });
+  });
+
+  test("the history worker claims a live permit under the undo/redo lock", async () => {
+    const root = sessionsRoot();
+    const changed = join(cwd, "worker-change.txt");
+    writeFileSync(changed, "before");
+    const history = new FileHistory(join(root, sessionId));
+    history.saveSnapshot(changed, 1);
+    writeFileSync(changed, "after");
+    const worker = new ActivityHistoryWorker({ sessionsDir: root });
+    const permit = () => new Int32Array(new SharedArrayBuffer(4));
+    try {
+      const revoked = permit();
+      Atomics.store(revoked, 0, -1);
+      await assert.rejects(worker.turnHistory({ sessionId, action: "undo" }, revoked), /revoked/);
+      expect(readFileSync(changed, "utf8")).toBe("after");
+      await worker.turnHistory({ sessionId, action: "undo" }, permit());
+      expect(readFileSync(changed, "utf8")).toBe("before");
+      expect(await worker.turnHistory({ sessionId, action: "state" }, permit())).toEqual({
+        undoable: false, redoable: true, fileCount: 1,
+      });
+      await assert.rejects(worker.turnHistory({ sessionId, action: "redo" }, revoked), /revoked/);
+      expect(readFileSync(changed, "utf8")).toBe("before");
+      await worker.turnHistory({ sessionId, action: "redo" }, permit());
+      expect(readFileSync(changed, "utf8")).toBe("after");
+    } finally {
+      await worker.close();
+    }
   });
 
   test("cold transcript, raw replay, and desktop undo use the canonical sessions root", async () => {

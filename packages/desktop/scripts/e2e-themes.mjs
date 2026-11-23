@@ -19,6 +19,8 @@ import { officeZip as createZip } from "../../../tests/fixtures/upload-documents
 import {
   assert,
   captureRendererErrors,
+  chooseViewOnlyIfPrompted,
+  seedViewOnlyWorkbench,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -26,6 +28,7 @@ import {
   navigateSettingsMenu,
   seedSessionCatalog,
 } from "./electron-harness.mjs";
+import { checkDockedPetWindow } from "./docked-pet-window.mjs";
 import { settingsNetworkGuard } from "./settings-network-guard.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -187,17 +190,6 @@ async function screenshot(name) {
   });
   if (screenshotDir) console.log(`Theme visual: ${join(screenshotDir, name)}`);
   return bytes;
-}
-
-async function dismissTrust() {
-  const trust = win.getByRole("button", { name: /仅查看|View only/i });
-  if (
-    await trust.waitFor({ state: "visible", timeout: 2000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await trust.click();
 }
 
 async function appearance() {
@@ -450,8 +442,12 @@ async function sampleChatPixel(bytes) {
     ({ nativeImage }, { data, point }) => {
       const image = nativeImage.createFromBuffer(Buffer.from(data, "base64"));
       const bitmap = image.toBitmap();
-      const offset = (point.y * image.getSize().width + point.x) * 4;
-      return [...bitmap.subarray(offset, offset + 4)];
+      const { width, height } = image.getSize();
+      if (point.x < 0 || point.x >= width || point.y < 0 || point.y >= height)
+        throw new Error("Theme sample outside screenshot");
+      const offset = (point.y * width + point.x) * 4;
+      // Electron 43+ returns sRGB BGRA. Compare color channels, excluding opacity.
+      return [...bitmap.subarray(offset, offset + 3)];
     },
     { data: bytes.toString("base64"), point },
   );
@@ -459,6 +455,7 @@ async function sampleChatPixel(bytes) {
 
 try {
   if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
+  await seedViewOnlyWorkbench(isolated);
   await mkdir(isolated.codeShellHome, { recursive: true });
   await writeFile(
     join(isolated.codeShellHome, "settings.json"),
@@ -507,7 +504,7 @@ try {
   win.setDefaultTimeout(20_000);
   const errors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1440, height: 960 });
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   await seedSessionCatalog(
     win,
     {
@@ -528,7 +525,7 @@ try {
   );
   await win.reload();
   await win.getByRole("button", { name: sessionTitle, exact: true }).click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   await win.getByRole("heading", { name: "Character Theme Preview" }).waitFor();
   await appearance();
   await chooseMode("light");
@@ -749,29 +746,7 @@ try {
   await screenshot("theme-narrow-chat.png");
   await win.setViewportSize({ width: 1440, height: 960 });
 
-  await win.evaluate(() => window.codeshell.pet.setWidgetVisible(true));
-  const pet =
-    app.windows().find((page) => new URL(page.url()).searchParams.get("popout") === "pet") ??
-    (await app.waitForEvent("window", {
-      predicate: (page) => new URL(page.url()).searchParams.get("popout") === "pet",
-    }));
-  await pet.waitForFunction(() => document.documentElement.classList.contains("pet-widget-window"));
-  report.pet = await pet.evaluate(() => ({
-    backgrounds: [document.documentElement, document.body, document.getElementById("root")].map(
-      (node) => getComputedStyle(node).backgroundColor,
-    ),
-    wallpaper: getComputedStyle(document.body, "::before").backgroundImage,
-    surfaces: document.querySelectorAll("[data-theme-surface]").length,
-  }));
-  assert(
-    report.pet.backgrounds.every((color) => color === "rgba(0, 0, 0, 0)"),
-    "Pet window keeps transparent roots",
-  );
-  assert(
-    report.pet.wallpaper === "none" && report.pet.surfaces === 0,
-    "Pet window receives no surface wallpaper or frame",
-  );
-  await win.evaluate(() => window.codeshell.pet.setWidgetVisible(false));
+  report.pet = await checkDockedPetWindow(app, win);
 
   await appearance();
   await win.locator('[data-theme-pack="default"] button[aria-pressed]').click();

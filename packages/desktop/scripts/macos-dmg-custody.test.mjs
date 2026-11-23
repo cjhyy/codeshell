@@ -5,6 +5,7 @@ import {
   assertOwnedReadonlyVolume,
   authorizeDmgCommand,
   ownedImageFromInfo,
+  ownedBuildAttachment,
 } from "./macos-dmg-custody.mjs";
 
 // The production entry requires macOS; these fixtures use POSIX mount paths.
@@ -20,12 +21,11 @@ const state = () => ({
   temporary: `${root}/tmp`,
   artifacts: `${root}/artifacts`,
   readonlyMount: `${root}/readonly`,
-  stageImage: `${root}/tmp/stage.dmg`,
+  stageImage: `${root}/artifacts/.tempx0_abc12owned.dmg`,
   artifact: `${root}/artifacts/owned.dmg`,
   attachments: [],
   commands: [],
 });
-const fs = { exists: () => false, canonicalParent: (path) => path.slice(0, path.lastIndexOf("/")) };
 const row = (image, mountpoint, devices = ["/dev/disk90", "/dev/disk91s1"]) => ({
   "image-path": image,
   "system-entities": devices.map((device, index) => ({
@@ -34,50 +34,33 @@ const row = (image, mountpoint, devices = ["/dev/disk90", "/dev/disk91s1"]) => (
   })),
 });
 
-posixTest(
-  "production create/attach accepts only a new owned image and fresh unique build mount",
-  () => {
-    const value = state();
-    delete value.stageImage;
-    const args = [
-      "create",
-      "-srcfolder",
-      value.sourceApp,
-      "-volname",
-      value.volumeName,
-      "-anyowners",
-      "-nospotlight",
-      "-format",
-      "UDRW",
-      "-quiet",
-      "-fs",
-      "APFS",
-      `${root}/tmp/stage.dmg`,
-    ];
-    assert.equal(authorizeDmgCommand(args, value, fs).kind, "create");
+posixTest("dmgbuild scratch recovery requires both the private image and unique volume", () => {
+  const value = state();
+  const foreign = row("/operator/.tempx0_abc12owned.dmg", value.stageMount);
+  const own = row(value.stageImage, value.stageMount);
+  const final = row(value.artifact, value.readonlyMount);
+  assert.equal(ownedBuildAttachment({ images: [foreign, final] }, value), null);
+  assert.deepEqual(
+    ownedBuildAttachment({ images: [foreign, own, final] }, value),
+    ownedImageFromInfo({ images: [own] }, value.stageImage),
+  );
+  assert.throws(() => ownedBuildAttachment({ images: [own, own] }, value), /Ambiguous/);
+  for (const [image, mountpoint] of [
+    [value.artifacts + "/other.dmg", value.stageMount],
+    [value.artifacts + "/.tempabcowned.dmg", value.stageMount],
+    [value.artifacts + "/.tempx0_abc12other.dmg", value.stageMount],
+    [value.stageImage, "/Volumes/foreign"],
+  ])
     assert.throws(
-      () => authorizeDmgCommand(args, value, { ...fs, exists: () => true }),
-      /Preexisting/,
+      () => ownedBuildAttachment({ images: [row(image, mountpoint)] }, value),
+      /Unexpected/,
     );
-    assert.throws(() => authorizeDmgCommand([...args, "-attach"], value, fs), /Unexpected/);
-    const current = state();
-    const attach = ["attach", "-noverify", "-noautoopen", "-readwrite", current.stageImage];
-    assert.equal(authorizeDmgCommand(attach, current, fs).mountpoint, current.stageMount);
-    assert.throws(
-      () => authorizeDmgCommand(attach, current, { ...fs, exists: () => true }),
-      /Preexisting build mountpoint/,
-    );
-    assert.throws(
-      () => authorizeDmgCommand([...attach.slice(0, -1), "/operator/foreign.dmg"], current, fs),
-      /Foreign/,
-    );
-  },
-);
+});
 
 posixTest("foreign mount/device and forced detach are refused before execution", () => {
   const value = state();
   assert.throws(
-    () => authorizeDmgCommand(["detach", "-quiet", value.stageMount], value, fs),
+    () => authorizeDmgCommand(["detach", "-quiet", value.stageMount], value),
     /Foreign or preexisting/,
   );
   value.attachments.push({
@@ -87,20 +70,17 @@ posixTest("foreign mount/device and forced detach are refused before execution",
     detached: false,
   });
   assert.equal(
-    authorizeDmgCommand(["detach", "-quiet", "/dev/disk90"], value, fs).image,
+    authorizeDmgCommand(["detach", "-quiet", "/dev/disk90"], value).image,
     value.stageImage,
   );
   assert.throws(
-    () => authorizeDmgCommand(["detach", "-quiet", "/dev/disk91"], value, fs),
+    () => authorizeDmgCommand(["detach", "-quiet", "/dev/disk91"], value),
     /Foreign or preexisting/,
   );
-  assert.throws(
-    () => authorizeDmgCommand(["detach", "-force", "/dev/disk90"], value, fs),
-    /Forced/,
-  );
+  assert.throws(() => authorizeDmgCommand(["detach", "-force", "/dev/disk90"], value), /Forced/);
   value.attachments[0].detached = true;
   assert.throws(
-    () => authorizeDmgCommand(["detach", "-quiet", "/dev/disk90"], value, fs),
+    () => authorizeDmgCommand(["detach", "-quiet", "/dev/disk90"], value),
     /Foreign or preexisting/,
   );
 });
@@ -117,12 +97,11 @@ posixTest("read-only final mount cannot become writable or escape its owned moun
     "-plist",
     value.artifact,
   ];
-  assert.equal(authorizeDmgCommand(args, value, fs).readonly, true);
+  assert.equal(authorizeDmgCommand(args, value).readonly, true);
   assert.throws(() =>
     authorizeDmgCommand(
       args.map((arg) => (arg === "-readonly" ? "-readwrite" : arg)),
       value,
-      fs,
     ),
   );
   assert.throws(
@@ -130,9 +109,8 @@ posixTest("read-only final mount cannot become writable or escape its owned moun
       authorizeDmgCommand(
         args.map((arg) => (arg === value.readonlyMount ? "/Applications" : arg)),
         value,
-        fs,
       ),
-    /strictly equal/,
+    /Expected read-only/,
   );
 });
 
@@ -231,37 +209,16 @@ posixTest(
   },
 );
 
-posixTest(
-  "conversion rejects foreign source and preexisting artifact even with production -ov",
-  () => {
-    const value = state();
-    value.attachments.push({ image: value.stageImage, detached: true });
-    const args = [
-      "convert",
-      value.stageImage,
-      "-ov",
-      "-format",
-      "UDZO",
-      "-o",
-      value.artifact,
-      "-imagekey",
-      "zlib-level=9",
-      "-quiet",
-    ];
-    assert.equal(authorizeDmgCommand(args, value, fs).kind, "convert");
-    assert.throws(
-      () => authorizeDmgCommand(args, value, { ...fs, exists: () => true }),
-      /Preexisting/,
-    );
-    assert.throws(
-      () =>
-        authorizeDmgCommand(
-          args.map((arg) => (arg === value.stageImage ? "/operator/old.dmg" : arg)),
-          value,
-          fs,
-        ),
-      /Foreign convert/,
-    );
-    assert.throws(() => authorizeDmgCommand(["eject", "/dev/disk90"], value, fs), /Unsupported/);
-  },
-);
+posixTest("only the final artifact may be verified or inspected", () => {
+  const value = state();
+  for (const args of [
+    ["verify", value.artifact],
+    ["imageinfo", "-plist", value.artifact],
+  ]) {
+    assert.equal(authorizeDmgCommand(args, value).image, value.artifact);
+    assert.throws(() => authorizeDmgCommand([...args.slice(0, -1), "/foreign.dmg"], value));
+  }
+  for (const kind of ["create", "resize", "convert", "eject"]) {
+    assert.throws(() => authorizeDmgCommand([kind, value.stageImage], value), /Unsupported/);
+  }
+});

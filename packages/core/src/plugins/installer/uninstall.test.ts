@@ -1,9 +1,10 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { uninstallPluginByName, uninstallPluginByNameAsync } from "./uninstall.js";
 import { installPluginFromPath } from "./install.js";
+import { withLocalPluginMutation } from "./mutation-lock.js";
 import { readInstalledPlugins } from "../installedPlugins.js";
 
 describe("uninstallPluginByName", () => {
@@ -45,6 +46,23 @@ describe("uninstallPluginByName", () => {
     expect(finished).toBe(false);
     await removal;
     expect(existsSync(join(dir, "replacement"))).toBe(true);
+  });
+
+  test("a competing publication cannot turn a queued removal into removing its replacement", async () => {
+    const dir = await installPluginFromPath(src, "gone", "t");
+    const published = Promise.withResolvers<void>();
+    const publishing = withLocalPluginMutation("gone", async () => {
+      await published.promise;
+      renameSync(dir, join(home, "previous"));
+      mkdirSync(dir);
+      writeFileSync(join(dir, "replacement"), "new install");
+    });
+    const removal = uninstallPluginByNameAsync("gone");
+    published.resolve();
+    await publishing;
+    await expect(removal).rejects.toThrow("changed while waiting for removal");
+    expect(existsSync(join(dir, "replacement"))).toBe(true);
+    expect(readInstalledPlugins().plugins["gone@local"]).toBeDefined();
   });
 
   test("throws on unknown plugin", () => {

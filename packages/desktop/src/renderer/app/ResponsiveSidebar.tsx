@@ -94,7 +94,7 @@ export function ResponsiveSidebar({
         }}
       >
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed z-40 bg-black/35" style={bounds} />
+          <Dialog.Overlay data-sidebar-backdrop className="fixed z-40 bg-black/35" style={bounds} />
           <Dialog.Content
             ref={contentRef}
             id={SIDEBAR_NAVIGATION_ID}

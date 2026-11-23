@@ -1,3 +1,4 @@
+import { guardedWorkerTree } from "./guarded-worker-tree.mjs";
 /* Real Main composition → preload → Native App → explicit review → durable checkpoint.
  * Synthetic records, private HOME, deny-all model network; no current user App is touched. */
 /* global window, localStorage */
@@ -81,6 +82,7 @@ async function verifyProcesses() {
     home: isolated.home,
   });
   const receipts = await rows(fixture.env.CODESHELL_COST_GUI_GUARD_LOG);
+  const tree = await guardedWorkerTree(isolated.home, mainPid, receipts);
   const spawned = await rows(join(isolated.home, "spawned-workers.jsonl"));
   for (const receipt of receipts) {
     assert.equal(receipt.kind, "cost-gui-deny-all");
@@ -90,7 +92,7 @@ async function verifyProcesses() {
   }
   assert.ok(receipts.some((item) => item.pid === mainPid));
   for (const worker of spawned) {
-    assert.ok(receipts.some((item) => item.pid === worker.pid && item.ppid === mainPid));
+    assert.ok(tree.hasWorker(worker));
     await writeFile(join(isolated.home, `worker-${worker.pid}.permit`), "verified", {
       mode: 0o600,
     });

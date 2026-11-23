@@ -1,3 +1,4 @@
+import { claimRootMigration } from "../storage/root-migration-permit.js";
 import type { Dirent } from "node:fs";
 /**
  * Session lifecycle manager.
@@ -577,12 +578,34 @@ export class SessionManager {
   }
 
   /** Clear this binding only while its latest durable value still matches. */
-  clearSessionWorkspaceProfile(sessionId: string, expectedProfile: string): boolean {
+  setSessionWorkspaceProfile(
+    sessionId: string,
+    profile: string | undefined,
+    beforeCommit?: () => void,
+  ): void {
+    this.mergeSessionState(
+      sessionId,
+      () => ({ workspaceProfile: profile }),
+      undefined,
+      beforeCommit,
+    );
+  }
+
+  clearSessionWorkspaceProfile(
+    sessionId: string,
+    expectedProfile: string,
+    beforeCommit?: () => void,
+  ): boolean {
     let cleared = false;
-    this.mergeSessionState(sessionId, (current) => {
-      cleared = current.workspaceProfile === expectedProfile;
-      return cleared ? { workspaceProfile: undefined } : undefined;
-    });
+    this.mergeSessionState(
+      sessionId,
+      (current) => {
+        cleared = current.workspaceProfile === expectedProfile;
+        return cleared ? { workspaceProfile: undefined } : undefined;
+      },
+      undefined,
+      beforeCommit,
+    );
     return cleared;
   }
 
@@ -750,6 +773,7 @@ export class SessionManager {
     sessionId: string,
     project: import("../types.js").SessionProjectBinding,
     mainRoot: string,
+    commitTicket?: string,
   ): number {
     if (
       !project ||
@@ -762,11 +786,13 @@ export class SessionManager {
     ) {
       throw new SessionError(`invalid main-root migration for ${sessionId}`);
     }
-    return this.updateSessionState(sessionId, {
-      project: { ...project },
-      cwd: mainRoot,
-      workspace: { root: mainRoot, kind: "main" },
-    });
+    return this.mergeSessionState(
+      sessionId,
+      () => ({ project: { ...project }, cwd: mainRoot, workspace: { root: mainRoot, kind: "main" } }),
+      undefined,
+      commitTicket === undefined ? undefined : () =>
+        claimRootMigration(this.sessionsDir, sessionId, commitTicket, { ...project, mainRoot }),
+    );
   }
 
   /**
@@ -780,6 +806,7 @@ export class SessionManager {
     project: import("../types.js").SessionProjectBinding,
     mainRoot: string,
     expectedStateRevision: number | undefined,
+    beforeCommit?: () => void,
   ): number {
     assertSafeSessionId(sessionId);
     if (
@@ -802,7 +829,7 @@ export class SessionManager {
       cwd: mainRoot,
       workspace: { root: mainRoot, kind: "main" } as SessionWorkspace,
     });
-    const result = this.saveStateAttempt(state);
+    const result = this.saveStateAttempt(state, undefined, beforeCommit);
     if (result.ok) return state.stateRevision!;
     if (result.reason === "generation_conflict") {
       throw new SessionError(`Session generation conflict for ${sessionId}`);
@@ -1279,6 +1306,7 @@ export class SessionManager {
     sessionId: string,
     update: (current: Readonly<SessionState>) => SessionStateFieldPatch | undefined,
     expectedRunId?: string,
+    beforeCommit?: () => void,
   ): number {
     assertSafeSessionId(sessionId);
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
@@ -1300,7 +1328,7 @@ export class SessionManager {
       }
       Object.assign(state, partial);
       state.sessionId = sessionId;
-      const result = this.saveStateAttempt(state);
+      const result = this.saveStateAttempt(state, undefined, beforeCommit);
       if (result.ok) return state.stateRevision!;
       if (result.reason === "generation_conflict") {
         throw new SessionError(`Session generation conflict for ${sessionId}`);
@@ -1680,7 +1708,11 @@ export class SessionManager {
     }
   }
 
-  private saveStateAttempt(state: SessionState, generation?: number): StateSaveAttempt {
+  private saveStateAttempt(
+    state: SessionState,
+    generation?: number,
+    beforeCommit?: () => void,
+  ): StateSaveAttempt {
     // state.sessionId could come from a deserialized state.json that was
     // tampered with on disk. Validate before joining.
     assertSafeSessionId(state.sessionId);
@@ -1715,6 +1747,7 @@ export class SessionManager {
       if (persisted.title !== undefined && !("title" in state)) state.title = persisted.title;
       state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
       const next = hydrateGoalLifecycle(structuredClone(stateForPersistence(state)));
+      beforeCommit?.();
       rebaseLiveState(processLocal.state, next);
       if (state !== processLocal.state) rebaseLiveState(state, next);
       return { ok: true };
@@ -1768,8 +1801,13 @@ export class SessionManager {
         state.title = persisted.title;
       }
       preservePersistedRecoveryFields(state, persisted);
+      state.runActivityAt =
+        persisted && (persisted.status !== state.status || persisted.runId !== state.runId)
+          ? Date.now()
+          : (persisted?.runActivityAt ?? state.startedAt);
 
       state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
+      beforeCommit?.();
       this.writeStateAtomically(target, stateForPersistence(state));
       return { ok: true };
     } finally {

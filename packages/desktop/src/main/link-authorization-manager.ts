@@ -75,15 +75,17 @@ export function createNativeLinkAuthorizationManager(options: {
     const authorization = new URL(job.step.authorizationUrl);
     try {
       if (await service.openHostAuthorization(guarded(flow), job.id)) return;
+      const catalog = await service.snapshotAsync();
+      await service.assertAuthorized(guarded(flow));
+      flow.abort.signal.throwIfAborted();
       flow.window = await options.open({
         authorizationUrl: authorization.href,
         ...(navigationUrl ? { navigationUrl } : {}),
         redirectUri: authorization.searchParams.get("redirect_uri")!,
         expiresAt: job.expiresAt ?? job.step.expiresAt,
         signal: flow.abort.signal,
-        providerName: service
-          .snapshot()
-          .providers.find((provider) => provider.id === job.providerId)?.displayName,
+        providerName: catalog.providers.find((provider) => provider.id === job.providerId)
+          ?.displayName,
         onCancel: () => {
           if (!flow.finished) cancelFlow(context, flow);
         },

@@ -9,6 +9,7 @@
  */
 /* global document, getComputedStyle, window */
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { installWorkbenchReadFixture } from "./workbench-read-fixture.mjs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -91,6 +92,7 @@ async function dismissStartupTrustDialog(win) {
 async function seedFixture() {
   await mkdir(isolated.codeShellHome, { recursive: true });
   await mkdir(fixtureProjectPath, { recursive: true });
+  await writeFile(join(fixtureProjectPath, "CODESHELL.md"), "# Fixture instructions\n");
   await writeFile(
     join(isolated.codeShellHome, "settings.json"),
     `${JSON.stringify({ autoUpdates: false }, null, 2)}\n`,
@@ -270,6 +272,90 @@ async function checkResponsiveLayouts(id, heading) {
   console.log(`PASS: ${id} light/dark layouts at 1280, 820, and 390px`);
 }
 
+async function checkReviewedLinkSource() {
+  const projectRoot = await realpath(fixtureProjectPath);
+  const target = await win.evaluate(async (path) => {
+    const project = (await window.codeshell.projectRegistry.list()).find((p) =>
+      p.roots.some((r) => r.path === path),
+    );
+    if (!project) throw Error("Missing owned Link fixture project");
+    return { projectId: project.id };
+  }, projectRoot);
+  const id = "fixture-repositories",
+    ref = "owned-link-review";
+  const source = {
+    id,
+    kind: "link",
+    enabled: true,
+    label: "Owned repositories",
+    credentialRef: ref,
+    adapterConfig: { providerId: "github", action: "list_repositories", params: { limit: 1 } },
+  };
+  await writeFile(
+    join(isolated.codeShellHome, "sources.json"),
+    JSON.stringify({ version: 1, sources: [source] }),
+    { mode: 0o600 },
+  );
+  const settings = JSON.parse((await projectSettingsBytes()) ?? "{}");
+  settings.sources = [{ sourceId: id, scopes: ["github:list_repositories"], readPolicy: "ask" }];
+  await writeFile(projectSettingsPath, JSON.stringify(settings), { mode: 0o600 });
+  const save = async (grant, token) => {
+    const secret = JSON.stringify({ accessToken: token, expiresAt: "2099-01-01T00:00:00Z" });
+    await writeFile(
+      join(dirname(projectSettingsPath), "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          {
+            id: ref,
+            type: "oauth",
+            label: "Owned link",
+            secret: "plain:" + secret,
+            meta: {
+              linkProvider: "github",
+              linkExecutionRuntime: "server",
+              linkExecutionBackend: "remote",
+              linkRemoteState: "connected",
+              linkRemoteGrantId: grant,
+              linkCapabilityIds: ["github.list_repositories"],
+              linkLastVerifiedAt: "2026-10-09T00:00:00Z",
+            },
+          },
+        ],
+      }),
+      { mode: 0o600 },
+    );
+  };
+  const preview = () =>
+    win.evaluate((request) => window.codeshell.previewProfileSwitch(request, null), target);
+  await save("fixture-grant-alpha", "synthetic-bearer-alpha");
+  const reviewed = await preview();
+  assert(
+    reviewed.sources.after.some((s) => s.sourceId === id && s.status === "ok"),
+    "Host preview lost its approved Link action",
+  );
+  assert(
+    !/fixture-grant|synthetic-bearer|owned-link-review/.test(JSON.stringify(reviewed)),
+    "Host preview disclosed internal credential data",
+  );
+  await save("fixture-grant-alpha", "synthetic-bearer-beta");
+  assert(
+    (await preview()).revision === reviewed.revision,
+    "Bearer rotation invalidated an unchanged Link grant",
+  );
+  await save("fixture-grant-beta", "synthetic-bearer-beta");
+  const prior = await projectSettingsBytes();
+  const adoption = await win.evaluate(
+    ({ target, revision }) => window.codeshell.adoptProfileSwitch(target, null, revision),
+    { target, revision: reviewed.revision },
+  );
+  assert(
+    adoption.status === "stale" && (await projectSettingsBytes()) === prior,
+    "Changed Link grant applied an old review",
+  );
+  console.log("PASS: Host Link source preview and grant revision with native credential authority");
+}
+
 async function checkProjectConfiguration(projectButton) {
   const target = await win.evaluate(
     async (paths) => {
@@ -284,10 +370,9 @@ async function checkProjectConfiguration(projectButton) {
     [fixtureProjectPath, await realpath(fixtureProjectPath)],
   );
   await app.evaluate(({ ipcMain }, fixtureTarget) => {
-    const exists = ipcMain._invokeHandlers.get("fsRoot:exists");
     const editor = ipcMain._invokeHandlers.get("shell:openInEditor");
-    if (!exists || !editor) throw new Error("Project fixture IPC handlers were not ready");
-    const fixture = { ...fixtureTarget, fail: true, reads: [], opens: 0, exists, editor };
+    if (!editor) throw new Error("Project fixture IPC handlers were not ready");
+    const fixture = { ...fixtureTarget, fail: true, reads: [], opens: 0, editor };
     fixture.switchHandlers = [];
     fixture.switchEnabled = false;
     fixture.switchRecords = [];
@@ -356,17 +441,16 @@ async function checkProjectConfiguration(projectButton) {
       });
     }
     globalThis.__projectConfigFixture = fixture;
-    ipcMain.removeHandler("fsRoot:exists");
-    ipcMain.handle("fsRoot:exists", (event, projectId, rootId, path) => {
+    globalThis.__workbenchFixtureReads.set("files/exists", ({ owner, rootId, path }, forward) => {
       if (
-        projectId !== fixture.projectId ||
-        rootId !== fixture.rootId ||
-        !["CODESHELL.md", "CLAUDE.md", "AGENTS.md"].includes(path)
-      )
-        return exists(event, projectId, rootId, path);
-      fixture.reads.push({ projectId, rootId, path });
-      if (fixture.fail) throw new Error("synthetic project instruction read failure");
-      return path === "CODESHELL.md";
+        owner.projectId === fixture.projectId &&
+        rootId === fixture.rootId &&
+        ["CODESHELL.md", "CLAUDE.md", "AGENTS.md"].includes(path)
+      ) {
+        fixture.reads.push({ projectId: owner.projectId, rootId, path });
+        if (fixture.fail) throw new Error("synthetic project instruction read failure");
+      }
+      return forward();
     });
     ipcMain.removeHandler("shell:openInEditor");
     ipcMain.handle("shell:openInEditor", () => {
@@ -575,8 +659,7 @@ async function checkProjectConfiguration(projectButton) {
           ipcMain.handle(channel, original);
         } catch {}
       }
-      ipcMain.removeHandler("fsRoot:exists");
-      ipcMain.handle("fsRoot:exists", fixture.exists);
+      globalThis.__workbenchFixtureReads.delete("files/exists");
       ipcMain.removeHandler("shell:openInEditor");
       ipcMain.handle("shell:openInEditor", fixture.editor);
       delete globalThis.__projectConfigFixture;
@@ -632,6 +715,8 @@ require("node:module").syncBuiltinESMExports();
     env: { NODE_OPTIONS: `--require ${networkGuard}` },
   });
   win = await findCodeShellWindow(app);
+  await app.evaluate(installWorkbenchReadFixture);
+  await win.reload();
   const rendererErrors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1_440, height: 960 });
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
@@ -1347,6 +1432,7 @@ require("node:module").syncBuiltinESMExports();
 
   assert(rendererErrors.length === 0, `renderer emitted ${rendererErrors.length} page error(s)`);
   await assertOfflinePluginBootstrapHeld(isolated.codeShellHome);
+  await checkReviewedLinkSource();
   console.log("CodeShell Electron digital-human E2E: passed");
 } catch (error) {
   if (win) {

@@ -1,5 +1,7 @@
+import { assertSafeSessionId } from "@cjhyy/code-shell-server/storage";
+import { readBoundedJson } from "./bounded-json-store.js";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 export interface LocalPetMetadata {
@@ -35,15 +37,18 @@ export class PetMetadataStore {
 
   private async loadOrCreate(): Promise<LocalPetMetadata> {
     try {
-      const parsed = JSON.parse(await readFile(this.filePath, "utf8")) as Partial<LocalPetMetadata>;
+      const parsed = (await readBoundedJson(this.filePath, 16 * 1024)) as
+        | Partial<LocalPetMetadata>
+        | undefined;
       if (
-        parsed.version === 1 &&
+        parsed?.version === 1 &&
         parsed.owner === "local-user" &&
         parsed.petId === "local-pet" &&
         typeof parsed.petSessionId === "string" &&
         parsed.petSessionId.startsWith("pet-") &&
         typeof parsed.createdAt === "number"
       ) {
+        assertSafeSessionId(parsed.petSessionId);
         return parsed as LocalPetMetadata;
       }
       throw new Error("invalid local pet metadata");

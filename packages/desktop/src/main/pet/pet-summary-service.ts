@@ -22,7 +22,7 @@ import {
   resolveLLMConfigForTag,
 } from "@cjhyy/code-shell-core";
 import { join } from "node:path";
-import { readLatestAssistantText, LATEST_RESULT_MAX_CHARS } from "@cjhyy/code-shell-pet/disclosure";
+import { readPetSummaryInput } from "./pet-summary-input.js";
 import type { PetSummaryStore } from "./pet-summary-store.js";
 import { dlog } from "../desktop-logger.js";
 import { withDesktopSessionModelTrace } from "../auxiliary-model-tracing.js";
@@ -33,7 +33,11 @@ export interface PetSessionSummary {
 }
 
 export interface PetSummaryService {
-  summarize(sessionId: string, terminalAt: number): Promise<PetSessionSummary | null>;
+  summarize(
+    sessionId: string,
+    terminalAt: number,
+    allowed?: () => boolean,
+  ): Promise<PetSessionSummary | null>;
 }
 
 const CLOSURE_SUMMARY_SYSTEM_PROMPT = [
@@ -54,8 +58,8 @@ const CLOSURE_SUMMARY_SYSTEM_PROMPT = [
  * a restart. Returns "" (no summary) when no text model is configured, logging
  * once, so the service records an empty-marker instead of throwing.
  */
-function createDefaultGenerate(cwd: string): (closureText: string) => Promise<string> {
-  return async (closureText: string): Promise<string> => {
+function createDefaultGenerate(cwd: string) {
+  return async (closureText: string, allowed: () => boolean): Promise<string> => {
     const settings = new SettingsManager(cwd, "full").get();
     const auxId = resolveAuxKey(settings);
     // resolveLLMConfigForTag already falls back to defaults.text when the aux
@@ -66,6 +70,7 @@ function createDefaultGenerate(cwd: string): (closureText: string) => Promise<st
       return "";
     }
     const client = await createLLMClient(resolved);
+    if (!allowed()) throw new Error("Mimi summary generation is no longer allowed");
     const response = await client.createMessage({
       systemPrompt: CLOSURE_SUMMARY_SYSTEM_PROMPT,
       messages: [{ role: "user", content: closureText }],
@@ -76,13 +81,6 @@ function createDefaultGenerate(cwd: string): (closureText: string) => Promise<st
     });
     return response.text ?? "";
   };
-}
-
-/** Default closure-input reader: the tail assistant text of the session. */
-async function defaultReadClosureInput(sessionDir: string): Promise<string | null> {
-  const latest = await readLatestAssistantText(sessionDir, { maxChars: LATEST_RESULT_MAX_CHARS });
-  const text = latest?.text?.trim();
-  return text ? text : null;
 }
 
 /**
@@ -119,7 +117,7 @@ export function createPetSummaryService(deps: {
   /** cwd used to seed the default generator's settings read. */
   cwd?: string;
 }): PetSummaryService {
-  const readClosureInput = deps.readClosureInput ?? defaultReadClosureInput;
+  const readClosureInput = deps.readClosureInput ?? readPetSummaryInput;
   const generate = deps.generate ?? createDefaultGenerate(deps.cwd ?? process.cwd());
   const store = deps.store;
   // Dedup concurrent generation for the same (sessionId, terminalAt): overlapping
@@ -149,11 +147,12 @@ export function createPetSummaryService(deps: {
   async function generateAndStore(
     sessionId: string,
     terminalAt: number,
+    allowed: () => boolean,
   ): Promise<PetSessionSummary | null> {
     const closure = await readClosureInput(join(deps.sessionsRootDir, sessionId));
     // The owner may select an external manager while the transcript read is
     // pending. Do not start inference or persist an empty cache marker then.
-    if (!generationAllowed()) return null;
+    if (!allowed()) return null;
     if (closure === null) {
       // No readable closure → record a no-value marker so we do not retry
       // until the transcript (and its terminalAt) changes.
@@ -167,7 +166,7 @@ export function createPetSummaryService(deps: {
         deps.sessionsRootDir,
         sessionId,
         "session_follow_up",
-        () => generate(closure),
+        () => generate(closure, allowed),
       );
     } catch (error) {
       // Do not persist on failure: a transient aux error should be retryable
@@ -176,26 +175,28 @@ export function createPetSummaryService(deps: {
       return null;
     }
 
+    if (!allowed()) return null;
     const text = normalizePetFollowUpText(raw);
     storeIfNewest(sessionId, terminalAt, text);
     return text ? { text } : null;
   }
 
   return {
-    async summarize(sessionId, terminalAt) {
+    async summarize(sessionId, terminalAt, current) {
+      const allowed = () => generationAllowed() && (current?.() ?? true);
       const cached = store.get(sessionId);
       // A hit is fresh only when it was generated for this exact terminalAt; a
       // newer terminalAt means the session finished again and must re-summarize.
       if (cached && cached.terminalAt === terminalAt) {
         return cached.text ? { text: cached.text } : null;
       }
-      if (!generationAllowed()) return null;
+      if (!allowed()) return null;
 
       const key = `${sessionId}:${terminalAt}`;
       const pending = inFlight.get(key);
       if (pending) return pending;
 
-      const run = generateAndStore(sessionId, terminalAt).finally(() => {
+      const run = generateAndStore(sessionId, terminalAt, allowed).finally(() => {
         inFlight.delete(key);
       });
       inFlight.set(key, run);

@@ -1,29 +1,46 @@
+import type { DesktopHostClient } from "./desktop-host-client.js";
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import type { SessionCatalogApi, SessionCatalogSnapshot } from "../shared/session-catalog";
 
 /** The renderer keeps a projection; Main acknowledges every durable edit. */
 export function createSessionCatalogApi(
   ipc: Pick<IpcRenderer, "invoke" | "on" | "removeListener">,
+  host?: Pick<DesktopHostClient, "readBusiness">,
 ): SessionCatalogApi {
+  const flushListeners = new Set<() => Promise<void>>();
+  const waitingForRenderer = new Set<string>();
+  const flush = (requestId: string) => {
+    if (!flushListeners.size) {
+      waitingForRenderer.add(requestId);
+      return;
+    }
+    void Promise.all([...flushListeners].map((listener) => Promise.resolve().then(listener)))
+      .then(
+        () => ipc.invoke("sessionCatalog:flushComplete", { requestId, ok: true }),
+        () => ipc.invoke("sessionCatalog:flushComplete", { requestId, ok: false }),
+      )
+      .catch(() => undefined);
+  };
+  // A reopened workbench can receive Quit before React mounts its persistence gate.
+  ipc.on("sessionCatalog:flushRequested", (_event: IpcRendererEvent, requestId: string) =>
+    flush(requestId),
+  );
+  const load = () => ipc.invoke("sessionCatalog:load");
   return {
-    load: () => ipc.invoke("sessionCatalog:load"),
+    load: () => (host ? host.readBusiness("catalog/load", {}, load) : load()),
     importLegacy: (indices) => ipc.invoke("sessionCatalog:importLegacy", indices),
     apply: (patch) => ipc.invoke("sessionCatalog:apply", patch),
     writeTranscript: (input) => ipc.invoke("sessionCatalog:writeTranscript", input),
     readTranscript: (input) => ipc.invoke("sessionCatalog:readTranscript", input),
     deleteTranscript: (input) => ipc.invoke("sessionCatalog:deleteTranscript", input),
     onFlushRequested(listener) {
-      const handler = (_event: IpcRendererEvent, requestId: string) => {
-        void Promise.resolve()
-          .then(listener)
-          .then(
-            () => ipc.invoke("sessionCatalog:flushComplete", { requestId, ok: true }),
-            () => ipc.invoke("sessionCatalog:flushComplete", { requestId, ok: false }),
-          )
-          .catch(() => undefined);
+      const save = () => listener();
+      flushListeners.add(save);
+      for (const requestId of waitingForRenderer) flush(requestId);
+      waitingForRenderer.clear();
+      return () => {
+        flushListeners.delete(save);
       };
-      ipc.on("sessionCatalog:flushRequested", handler);
-      return () => ipc.removeListener("sessionCatalog:flushRequested", handler);
     },
     onChanged(listener) {
       const handler = (_event: IpcRendererEvent, snapshot: SessionCatalogSnapshot) =>

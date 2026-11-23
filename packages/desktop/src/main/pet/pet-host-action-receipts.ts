@@ -66,11 +66,7 @@ const MAX_RECEIPT_KIND_LENGTH = 128;
 const MAX_RECEIPT_ERROR_LENGTH = 8_000;
 
 function isReceiptId(value: string): boolean {
-  return (
-    value.length > 0 &&
-    value.length <= MAX_RECEIPT_ID_LENGTH &&
-    !/[\u0000\r\n]/u.test(value)
-  );
+  return value.length > 0 && value.length <= MAX_RECEIPT_ID_LENGTH && !/[\u0000\r\n]/u.test(value);
 }
 
 function receiptKey(petSessionId: string, clientMessageId: string, actionIndex: number): string {
@@ -91,7 +87,10 @@ export class PetHostActionReceiptStore {
   private loadPromise: Promise<void> | undefined;
   private mutationQueue: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly path: string) {}
+  constructor(
+    private readonly path: string,
+    private readonly replaceFile?: (from: string, to: string) => Promise<void>,
+  ) {}
 
   load(): Promise<void> {
     if (!this.loadPromise) {
@@ -238,7 +237,7 @@ export class PetHostActionReceiptStore {
     const temporary = `${this.path}.${process.pid}.${randomUUID()}.tmp`;
     try {
       await writeFile(temporary, serialized, { encoding: "utf-8", mode: 0o600 });
-      await rename(temporary, this.path);
+      await (this.replaceFile ?? rename)(temporary, this.path);
       await chmod(this.path, 0o600).catch(() => undefined);
     } catch (error) {
       await rm(temporary, { force: true }).catch(() => undefined);
@@ -286,9 +285,7 @@ function isReceipt(value: unknown): value is PetHostActionReceipt {
     receipt.kind.length <= MAX_RECEIPT_KIND_LENGTH &&
     !/[\u0000-\u001f\u007f]/u.test(receipt.kind) &&
     typeof receipt.ok === "boolean" &&
-    (receipt.phase === undefined ||
-      receipt.phase === "claimed" ||
-      receipt.phase === "completed") &&
+    (receipt.phase === undefined || receipt.phase === "claimed" || receipt.phase === "completed") &&
     (receipt.result === undefined ||
       (Boolean(receipt.result) &&
         typeof receipt.result === "object" &&

@@ -11,4 +11,5 @@ export function __setSessionTitlesFileForTest(next: string | null): void {
   store = createSessionTitlesStore(next ?? defaultFile());
 }
 export const listTitles = () => store.listTitles();
-export const setTitle = (id: string, title: string) => store.setTitle(id, title);
+export const setTitle = (id: string, title: string, beforeCommit?: () => void) =>
+  store.setTitle(id, title, { beforeCommit });

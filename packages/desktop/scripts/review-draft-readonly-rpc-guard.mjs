@@ -1,6 +1,6 @@
 /** Fixture-only admission for the existing production no-Worker read routes.
  * No reply, process or filesystem authority is created here. */
-function installReadonlyReviewRpcGuard(ipcMain, sessionIds, record, refuse) {
+export function createReviewAgentGuard(sessionIds, record, refuse) {
   if (
     !Array.isArray(sessionIds) ||
     sessionIds.length !== 2 ||
@@ -10,6 +10,73 @@ function installReadonlyReviewRpcGuard(ipcMain, sessionIds, record, refuse) {
     throw new Error("Expected two owned Review Session ids");
   const allowed = new Set(sessionIds);
   let admitted = 0;
+  return (line) => {
+    let message;
+    if (typeof line === "string" && Buffer.byteLength(line) <= 4096 && !/[\r\n]/.test(line)) {
+      try {
+        message = JSON.parse(line);
+      } catch {
+        // Invalid frames receive fixed metadata, never their raw bytes.
+      }
+    }
+    const object = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+    const method =
+      object(message) &&
+      typeof message.method === "string" &&
+      /^agent\/[A-Za-z][A-Za-z0-9]{0,63}$/.test(message.method)
+        ? message.method
+        : "<invalid>";
+    const params = object(message?.params) ? message.params : null;
+    const sessionId =
+      typeof params?.sessionId === "string" && /^[A-Za-z0-9._-]{1,128}$/.test(params.sessionId)
+        ? params.sessionId
+        : "<invalid>";
+    const id =
+      typeof message?.id === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(message.id)
+        ? message.id
+        : typeof message?.id === "number" && Number.isSafeInteger(message.id) && message.id >= 0
+          ? message.id
+          : null;
+    const metadata = { method, sessionId, id };
+    const keys = params ? Object.keys(params).sort().join(",") : "";
+    const readonly =
+      (method === "agent/goalGet" && keys === "sessionId") ||
+      (method === "agent/backgroundWork" &&
+        (keys === "sessionId" ||
+          (keys === "scope,sessionId" && ["session", "all"].includes(params.scope)))) ||
+      (method === "agent/backgroundShells" &&
+        keys === "action,sessionId" &&
+        params.action === "list");
+    if (
+      !object(message) ||
+      Object.keys(message).sort().join(",") !== "id,jsonrpc,method,params" ||
+      message.jsonrpc !== "2.0" ||
+      id === null ||
+      !allowed.has(sessionId) ||
+      !readonly ||
+      admitted >= 128
+    ) {
+      refuse(metadata);
+      throw new Error("Owned Review RPC refused");
+    }
+    admitted++;
+    try {
+      if (record(metadata) !== undefined)
+        throw new Error("Review RPC metadata sink must be synchronous");
+    } catch (error) {
+      // Preserve the original IO failure, and latch the same denial path
+      // used for forbidden requests even if this occurs after Main snapshot.
+      try {
+        refuse(metadata);
+      } catch {
+        // A failed refusal sink must not replace the original IO error.
+      }
+      throw error;
+    }
+  };
+}
+
+function installReadonlyReviewRpcGuard(ipcMain, admit) {
   const on = ipcMain.on.bind(ipcMain);
   ipcMain.on = (channel, listener) =>
     on(
@@ -17,77 +84,7 @@ function installReadonlyReviewRpcGuard(ipcMain, sessionIds, record, refuse) {
       channel !== "agent:msg"
         ? listener
         : function (event, line) {
-            let message;
-            if (
-              typeof line === "string" &&
-              Buffer.byteLength(line) <= 4096 &&
-              !/[\r\n]/.test(line)
-            ) {
-              try {
-                message = JSON.parse(line);
-              } catch {
-                // Invalid frames receive fixed metadata, never their raw bytes.
-              }
-            }
-            const object = (value) =>
-              value !== null && typeof value === "object" && !Array.isArray(value);
-            const method =
-              object(message) &&
-              typeof message.method === "string" &&
-              /^agent\/[A-Za-z][A-Za-z0-9]{0,63}$/.test(message.method)
-                ? message.method
-                : "<invalid>";
-            const params = object(message?.params) ? message.params : null;
-            const sessionId =
-              typeof params?.sessionId === "string" &&
-              /^[A-Za-z0-9._-]{1,128}$/.test(params.sessionId)
-                ? params.sessionId
-                : "<invalid>";
-            const id =
-              typeof message?.id === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(message.id)
-                ? message.id
-                : typeof message?.id === "number" &&
-                    Number.isSafeInteger(message.id) &&
-                    message.id >= 0
-                  ? message.id
-                  : null;
-            const metadata = { method, sessionId, id };
-            const keys = params ? Object.keys(params).sort().join(",") : "";
-            const readonly =
-              (method === "agent/goalGet" && keys === "sessionId") ||
-              (method === "agent/backgroundWork" &&
-                (keys === "sessionId" ||
-                  (keys === "scope,sessionId" && ["session", "all"].includes(params.scope)))) ||
-              (method === "agent/backgroundShells" &&
-                keys === "action,sessionId" &&
-                params.action === "list");
-            if (
-              !object(message) ||
-              Object.keys(message).sort().join(",") !== "id,jsonrpc,method,params" ||
-              message.jsonrpc !== "2.0" ||
-              id === null ||
-              !allowed.has(sessionId) ||
-              !readonly ||
-              admitted >= 128
-            ) {
-              refuse(metadata);
-              throw new Error("Owned Review RPC refused");
-            }
-            admitted++;
-            try {
-              if (record(metadata) !== undefined)
-                throw new Error("Review RPC metadata sink must be synchronous");
-            } catch (error) {
-              // Preserve the original IO failure, and latch the same denial path
-              // used for forbidden requests even if this occurs after Main snapshot.
-              try {
-                refuse(metadata);
-              } catch {
-                // A failed refusal sink must not replace the original IO error.
-              }
-              throw error;
-            }
-            // Preserve the exact receiver, event, line and listener return/rejection.
+            admit(line);
             return listener.call(this, event, line);
           },
     );
@@ -95,7 +92,7 @@ function installReadonlyReviewRpcGuard(ipcMain, sessionIds, record, refuse) {
 
 /** Exact fragment inserted into the pre-Core native fixture guard and VM-tested. */
 export function reviewDraftReadonlyRpcGuardSource(sessionIds) {
-  return `(${installReadonlyReviewRpcGuard.toString()})(ipcMain, ${JSON.stringify(sessionIds)},
+  return `(${installReadonlyReviewRpcGuard.toString()})(ipcMain, (${createReviewAgentGuard.toString()})(${JSON.stringify(sessionIds)},
     (metadata) => {
       state.readonlyAgentRequests.push(metadata);
       return recordReviewIpc({kind:"readonly-agent-rpc",...metadata});
@@ -103,7 +100,7 @@ export function reviewDraftReadonlyRpcGuardSource(sessionIds) {
     (metadata) => {
       if(state.agentMessages.length<16)state.agentMessages.push(metadata);
       return deny("agent:msg",metadata);
-    });`;
+    }));`;
 }
 
 /** Final durable metadata can extend the earlier Main snapshot during close.

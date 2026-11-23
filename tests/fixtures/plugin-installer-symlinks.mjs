@@ -130,6 +130,9 @@ const marketRepo = bareRepository(
 
 const ownedRepos = new Set([marketRepo, ...(pluginRepo ? [pluginRepo] : [])]);
 const clones = new Set();
+const installedMarket = join(home, ".code-shell", "plugins", "marketplaces", "fixture-market");
+let marketClone;
+let simulateSparseFailure = false;
 const children = [];
 function refuse() {
   throw new Error("Plugin installer fixture refused transport/process");
@@ -169,7 +172,12 @@ function checkGit(file, args, cwd, env) {
     clones.add(args[7]);
     return;
   }
-  if (!clones.has(cwd)) refuse();
+  if (!clones.has(cwd)) {
+    if (cwd !== installedMarket || !marketClone || realpathSync(cwd) !== cwd) refuse();
+    const dir = lstatSync(cwd, { bigint: true });
+    if (!dir.isDirectory() || dir.dev !== marketClone.dev || dir.ino !== marketClone.ino) refuse();
+  }
+  if (simulateSparseFailure && args[0] === "sparse-checkout" && args[1] === "add") refuse();
   const allowed = [
     ["checkout"],
     ["rev-parse", "HEAD"],
@@ -184,7 +192,9 @@ childProcess.spawn = function (file, args, options) {
   const child = spawn.call(this, file, args, options);
   const record = { pid: child.pid, closed: false };
   record.completion = new Promise((resolveClose) =>
-    child.once("close", () => {
+    child.once("close", (code) => {
+      if (code === 0 && args[0] === "clone" && args[6] === marketRepo)
+        marketClone = lstatSync(args[7], { bigint: true });
       record.closed = true;
       resolveClose();
     }),
@@ -251,6 +261,16 @@ try {
   const { installPlugin } = await import(pathToFileURL(join(root, "pluginInstaller.mjs")).href);
   const added = await addMarketplace("fixture-market", { source: "git", url: marketRepo });
   assert.equal(added.ok, true, added.error);
+  if (source === "path") {
+    simulateSparseFailure = true;
+    const incomplete = await installPlugin("fixture", "fixture-market");
+    assert.equal(
+      incomplete.ok,
+      false,
+      "A failed sparse expansion must not publish a partial install",
+    );
+    simulateSparseFailure = false;
+  }
   const installed = await installPlugin("fixture", "fixture-market");
   assert.equal(installed.ok, true, installed.error);
   const path = installed.entry.installPath;

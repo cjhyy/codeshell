@@ -6,7 +6,7 @@ import {
   type OutputJournalOptions,
 } from "@cjhyy/code-shell-core/internal";
 import { listDiskSessions } from "@cjhyy/code-shell-server/storage";
-import { assertDesktopSessionId } from "./session-validation.js";
+import { assertDesktopSessionId, rendererDiskSessionQuery } from "../shared/disk-session-query.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import {
   getSessionTranscript,
@@ -23,32 +23,8 @@ export function registerSessionTranscriptIpc(
     getSessionEvents?: typeof getSessionEvents;
   } = {},
 ): void {
-  ipcMain.handle(
-    "sessions:listDisk",
-    async (
-      _e,
-      opts: { limit?: number; cursor?: string; parentSessionId?: string; sessionId?: string },
-    ) => {
-      const limit =
-        typeof opts?.limit === "number" && Number.isSafeInteger(opts.limit) && opts.limit > 0
-          ? Math.min(opts.limit, 200)
-          : 30;
-      if (
-        opts?.cursor !== undefined &&
-        (typeof opts.cursor !== "string" || opts.cursor.length > 512 || opts.cursor.includes("\0"))
-      ) {
-        throw new Error("invalid session cursor");
-      }
-      if (opts?.parentSessionId !== undefined) assertDesktopSessionId(opts.parentSessionId);
-      // A targeted read checks one opened Session under the same catalog rules.
-      if (opts?.sessionId !== undefined) assertDesktopSessionId(opts.sessionId);
-      return (readers.listDiskSessions ?? listDiskSessions)({
-        limit,
-        cursor: typeof opts?.cursor === "string" ? opts.cursor : undefined,
-        parentSessionId: opts?.parentSessionId,
-        ...(opts?.sessionId !== undefined ? { sessionId: opts.sessionId } : {}),
-      });
-    },
+  ipcMain.handle("sessions:listDisk", async (_e, opts: unknown) =>
+    (readers.listDiskSessions ?? listDiskSessions)(rendererDiskSessionQuery(opts)),
   );
   ipcMain.handle("sessions:rawEvents", async (_e, sessionId: string, sinceId?: string) => {
     assertDesktopSessionId(sessionId);

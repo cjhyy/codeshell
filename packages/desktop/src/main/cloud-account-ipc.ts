@@ -8,7 +8,21 @@ import { accountProfileRequest } from "./cloud-account-profile.js";
 
 export function registerCloudAccountIpc(options: {
   ipcMain: Pick<IpcMain, "handle">;
-  manager: CloudAccountManager;
+  manager: Pick<
+    CloudAccountManager,
+    | "status"
+    | "resume"
+    | "capabilities"
+    | "signIn"
+    | "signInWithBrowser"
+    | "signInWithGitHub"
+    | "linkGitHub"
+    | "profile"
+    | "manageLinks"
+    | "cancelSignIn"
+    | "logout"
+  > & { restoredStatus?: () => Promise<ReturnType<CloudAccountManager["status"]>> };
+  withDocument?: (event: IpcMainInvokeEvent, callback: () => unknown) => unknown;
   openExternal?: (url: string) => Promise<void>;
   isMainWindow: (sender: WebContents) => boolean;
   focusMainWindow?: (sender: WebContents) => void;
@@ -20,24 +34,26 @@ export function registerCloudAccountIpc(options: {
   const owner = (event: IpcMainInvokeEvent) => {
     if (!allowed(event)) throw new Error("云账号只能由桌面主窗口管理。");
   };
-  options.ipcMain.handle("cloudAccount:status", (event) => {
-    owner(event);
-    return options.manager.status();
+  const handle: IpcMain["handle"] = (channel, listener) =>
+    options.ipcMain.handle(channel, (event, ...args) => {
+      owner(event);
+      return options.withDocument
+        ? options.withDocument(event, () => listener(event, ...args))
+        : listener(event, ...args);
+    });
+  handle("cloudAccount:status", () => {
+    return options.manager.restoredStatus?.() ?? options.manager.status();
   });
-  options.ipcMain.handle("cloudAccount:resume", (event) => {
-    owner(event);
+  handle("cloudAccount:resume", (event) => {
     return options.manager.resume(() => allowed(event));
   });
-  options.ipcMain.handle("cloudAccount:capabilities", (event, origin: string) => {
-    owner(event);
+  handle("cloudAccount:capabilities", (event, origin: string) => {
     return options.manager.capabilities(origin);
   });
-  options.ipcMain.handle("cloudAccount:login", (event, input: CloudAccountLogin) => {
-    owner(event);
+  handle("cloudAccount:login", (event, input: CloudAccountLogin) => {
     return options.manager.signIn("login", input, () => allowed(event));
   });
-  options.ipcMain.handle("cloudAccount:openRegistration", (event, origin: string) => {
-    owner(event);
+  handle("cloudAccount:openRegistration", (event, origin: string) => {
     const url = accountRegistrationUrl(origin);
     return (async () => {
       const capabilities = await options.manager.capabilities(origin);
@@ -47,8 +63,7 @@ export function registerCloudAccountIpc(options: {
       await options.openExternal(url);
     })();
   });
-  options.ipcMain.handle("cloudAccount:openManagement", (event, section: unknown) => {
-    owner(event);
+  handle("cloudAccount:openManagement", (event, section: unknown) => {
     if (
       typeof section !== "string" ||
       !["profile", "security", "sessions", "connections"].includes(section)
@@ -62,8 +77,7 @@ export function registerCloudAccountIpc(options: {
     if (!options.openExternal) throw new Error("网页账号管理入口暂不可用。");
     return options.openExternal(`${origin}/settings/account/${section}`);
   });
-  options.ipcMain.handle("cloudAccount:browser", (event, input: CloudAccountBrowserLogin) => {
-    owner(event);
+  handle("cloudAccount:browser", (event, input: CloudAccountBrowserLogin) => {
     return options.manager
       .signInWithBrowser({ ...input, deviceName: hostname().slice(0, 100) }, () => allowed(event))
       .then((status) => {
@@ -77,12 +91,10 @@ export function registerCloudAccountIpc(options: {
         return status;
       });
   });
-  options.ipcMain.handle("cloudAccount:register", (event, input: CloudAccountLogin) => {
-    owner(event);
+  handle("cloudAccount:register", (event, input: CloudAccountLogin) => {
     return options.manager.signIn("register", input, () => allowed(event));
   });
-  options.ipcMain.handle("cloudAccount:github", (event, raw: unknown) => {
-    owner(event);
+  handle("cloudAccount:github", (event, raw: unknown) => {
     const input = accountGitHubRequest(raw);
     const operation =
       input.mode === "link"
@@ -100,20 +112,16 @@ export function registerCloudAccountIpc(options: {
       return status;
     });
   });
-  options.ipcMain.handle("cloudAccount:links", (event, raw: unknown) => {
-    owner(event);
+  handle("cloudAccount:links", (event, raw: unknown) => {
     return options.manager.manageLinks(accountLinksRequest(raw), () => allowed(event));
   });
-  options.ipcMain.handle("cloudAccount:profile", (event, raw: unknown) => {
-    owner(event);
+  handle("cloudAccount:profile", (event, raw: unknown) => {
     return options.manager.profile(accountProfileRequest(raw), () => allowed(event));
   });
-  options.ipcMain.handle("cloudAccount:cancelSignIn", (event) => {
-    owner(event);
+  handle("cloudAccount:cancelSignIn", () => {
     return options.manager.cancelSignIn();
   });
-  options.ipcMain.handle("cloudAccount:logout", (event) => {
-    owner(event);
+  handle("cloudAccount:logout", () => {
     return options.manager.logout();
   });
 }

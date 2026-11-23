@@ -63,7 +63,10 @@ describe("Desktop shared Link transaction adapter", () => {
     await first.connectLocal(input);
     const existingId = store.list()[0]!.id;
     first.close();
-    let entered = false;
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
     let finish!: () => void;
     const gate = new Promise<void>((resolve) => {
       finish = resolve;
@@ -71,7 +74,7 @@ describe("Desktop shared Link transaction adapter", () => {
     const adapter = createDesktopLinkConnections({
       store,
       validateToken: async () => {
-        entered = true;
+        started();
         await gate;
         return validation;
       },
@@ -82,7 +85,7 @@ describe("Desktop shared Link transaction adapter", () => {
         existingId,
         token: "replacement",
       });
-      expect(entered).toBe(true);
+      await entered;
       const current = store.list()[0]!;
       store.save("user", { ...current, secret: "changed-by-another-host" });
       finish();

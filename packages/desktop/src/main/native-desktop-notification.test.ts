@@ -23,7 +23,11 @@ test("each native notification opens its own conversation only when clicked", ()
   const opened: string[] = [];
   let shown = 0;
   const dependencies = {
+    fallback: () => {
+      throw new Error("unexpected fallback");
+    },
     create: () => ({
+      once: () => {},
       on: (_event: "click", listener: () => void) => clicks.push(listener),
       show: () => {
         shown += 1;
@@ -52,7 +56,11 @@ test("notifications without a valid conversation still display without navigatio
     showNativeDesktopNotification(
       { title: "notice", body: "details", sessionId },
       {
+        fallback: () => {
+          throw new Error("unexpected fallback");
+        },
         create: () => ({
+          once: () => {},
           on: () => {
             throw new Error("unexpected click binding");
           },
@@ -67,4 +75,38 @@ test("notifications without a valid conversation still display without navigatio
     );
   }
   expect(shown).toBe(3);
+});
+
+test("native refusal delivers the original notice through the application exactly once", () => {
+  const text = { title: "Completed", subtitle: "Task", body: "Your result is ready" };
+  let refused: (() => void) | undefined;
+  const delivered: unknown[] = [];
+  const fallback = (notice: unknown) => delivered.push(notice);
+  showNativeDesktopNotification(
+    { ...text, sessionId: "session-1" },
+    {
+      create: () => ({
+        once: (event, listener) => {
+          expect(event).toBe("failed");
+          refused = listener;
+        },
+        on: () => {},
+        show: () => {
+          expect(refused).toBeDefined();
+        },
+      }),
+      fallback,
+    },
+  );
+  expect(delivered).toEqual([]);
+  refused!();
+  refused!();
+  expect(delivered).toEqual([text]);
+  showNativeDesktopNotification(text, {
+    create: () => {
+      throw new Error("No notification presenter");
+    },
+    fallback,
+  });
+  expect(delivered).toEqual([text, text]);
 });

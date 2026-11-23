@@ -125,7 +125,7 @@ export async function panelListCookieCredentials(
   const accounts = (await host.list(binding.cwd)).filter((credential) =>
     cookieCredentialDomainMatches(url, credential),
   );
-  return { accounts };
+  return { accounts: accounts.map(({ approvalIdentity: _nativeOnly, ...account }) => account) };
 }
 
 export async function panelLoginAndSaveCookieCredential(
@@ -269,7 +269,18 @@ export async function panelAuthorizeCookieCredentialForProcess(
   if (!host.materialize) {
     throw new Error("Cookie process authorization is unavailable in this CodeShell host");
   }
-  const account = (await host.list(binding.cwd)).find(
+  const cwd = binding.cwd;
+  const assertCurrent = () => {
+    if (
+      bridge.guests.get(binding.guest.id) !== binding ||
+      binding.guest.isDestroyed() ||
+      binding.cwd !== cwd ||
+      !bridge.options.isWorkspaceTrusted(cwd ?? binding.projectPath)
+    )
+      throw new PanelBridgeError("REVOKED", "Panel scope changed during Cookie access");
+    bridge.assertProjectBinding(binding);
+  };
+  const account = (await host.list(cwd)).find(
     (credential) =>
       credential.id === credentialId && cookieCredentialDomainMatches(url, credential),
   );
@@ -296,16 +307,24 @@ export async function panelAuthorizeCookieCredentialForProcess(
     if (decision.response !== 0) return { authorized: false, cancelled: true };
   }
 
-  const materialized = await host.materialize({ credentialId, cwd: binding.cwd });
+  assertCurrent();
+  const materialized = await host.materialize({
+    credentialId,
+    cwd: binding.cwd,
+    expectedApprovalIdentity: account.approvalIdentity,
+    assertCurrent,
+  });
   if ("invalid" in materialized) {
     return { authorized: false, invalid: true };
   }
   try {
+    assertCurrent();
     const grant = await bridge.processService.grantFileArgument(owner, {
       executableHandle: input?.executableHandle,
       argumentName: "--cookies",
       path: materialized.filePath,
       cleanup: materialized.cleanup,
+      validate: async () => assertCurrent(),
     });
     return { authorized: true, fileArgumentHandle: grant.handle, count: materialized.count };
   } catch (error) {

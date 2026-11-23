@@ -93,10 +93,10 @@ export interface DeliveryQuery {
 }
 
 export interface DeliveryPlanSources {
-  rules: { activeForSession(sessionId: string): EventNoticeRule[] };
+  rules: { activeForSession(sessionId: string): EventNoticeRule[] | Promise<EventNoticeRule[]> };
   longTasks: {
-    activeForSession(sessionId: string): PetLongTask | undefined;
-    getSnapshot(): { tasks: readonly PetLongTask[] };
+    activeForSession(sessionId: string): PetLongTask | undefined | Promise<PetLongTask | undefined>;
+    getSnapshot(): { tasks: readonly PetLongTask[] } | Promise<{ tasks: readonly PetLongTask[] }>;
   };
   /** Every IM conversation that receives the Session's turn replies (bound, left, suspended). */
   replyRoutes(sessionId: string): Promise<readonly ConversationSessionRoute[]>;
@@ -108,8 +108,8 @@ export interface DeliveryPlanSources {
 export interface PetDeliveryResolver {
   /** The delivery plan for one outcome of a Session. Never rejects. */
   plan(query: DeliveryQuery): Promise<DeliveryPlan>;
-  /** A blocked plan, synchronously: a decision is never served by a Session reply. */
-  planBlocked(query: Omit<DeliveryQuery, "event">): DeliveryPlan;
+  /** A blocked plan: a decision is never served by a Session reply. */
+  planBlocked(query: Omit<DeliveryQuery, "event">): Promise<DeliveryPlan>;
   /**
    * Who hears a Session's own progress report (ReportToMimi): an IM-started
    * task's origin and the conversations watching it, each once. Never rejects.
@@ -396,9 +396,9 @@ function errorText(error: unknown): string {
 }
 
 export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeliveryResolver {
-  const matchingRules = (query: DeliveryQuery): NoticeRule[] => {
+  const matchingRules = async (query: DeliveryQuery): Promise<NoticeRule[]> => {
     if (query.useRules === false) return [];
-    return sources.rules.activeForSession(query.sessionId).filter((rule) => {
+    return (await sources.rules.activeForSession(query.sessionId)).filter((rule) => {
       if (!rule.when.events.includes(query.event)) return false;
       if (rule.when.kind !== "session") return query.includeSystem !== false;
       if (query.at !== undefined && rule.when.armedAt > query.at) return false;
@@ -407,18 +407,18 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
   };
 
   // A long task owns its Session while active, and owns the run it closed.
-  const owningTask = (sessionId: string, runKey: string): PetLongTask | undefined =>
-    sources.longTasks.activeForSession(sessionId) ??
-    sources.longTasks
-      .getSnapshot()
-      .tasks.find((task) => task.sessionId === sessionId && task.runId === runKey);
+  const owningTask = async (sessionId: string, runKey: string): Promise<PetLongTask | undefined> =>
+    (await sources.longTasks.activeForSession(sessionId)) ??
+    (await sources.longTasks.getSnapshot()).tasks.find(
+      (task) => task.sessionId === sessionId && task.runId === runKey,
+    );
 
-  const build = (
+  const build = async (
     query: DeliveryQuery,
     task: PetLongTask | undefined,
     replyRoutes: readonly ConversationSessionRoute[],
-  ): DeliveryPlan => {
-    const rules = matchingRules(query);
+  ): Promise<DeliveryPlan> => {
+    const rules = await matchingRules(query);
     return {
       rules,
       entries: buildDeliveryPlan({
@@ -455,7 +455,7 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
       const rules =
         query.useRules === false
           ? []
-          : sources.rules.activeForSession(query.sessionId).filter(answersIm);
+          : (await sources.rules.activeForSession(query.sessionId)).filter(answersIm);
       return {
         rules,
         entries: buildReportPlan({ rules, ...(query.task ? { task: query.task } : {}) }),
@@ -465,7 +465,7 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
       if (query.event === "blocked") return planBlocked(query);
       const task =
         query.task ??
-        (query.runKey !== undefined ? owningTask(query.sessionId, query.runKey) : undefined);
+        (query.runKey !== undefined ? await owningTask(query.sessionId, query.runKey) : undefined);
       return build(query, task, await replyRoutesOrNone(query.sessionId));
     },
     planBlocked,
@@ -474,7 +474,7 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
       const routes = await replyRoutesOrNone(sessionId);
       const bound = routes.find((route) => route.mode === "bound" && route.status === "active");
       if (bound) return routeTarget(bound);
-      const origin = sources.longTasks.activeForSession(sessionId)?.completionTarget;
+      const origin = (await sources.longTasks.activeForSession(sessionId))?.completionTarget;
       return origin ? { kind: "route", route: origin } : { kind: "owner" };
     },
     taskOrigin: (task) => taskOrigin(task, sources.delegatedFromDesktop()),

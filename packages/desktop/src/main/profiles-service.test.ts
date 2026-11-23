@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as fsPromises from "node:fs/promises";
-import { saveWorkspaceProfile } from "@cjhyy/code-shell-core/internal";
+import { saveWorkspaceProfile, readWorkspaceProfile } from "@cjhyy/code-shell-core/internal";
 import {
   activateProfile,
   clearProfileImportReviewsForTests,
@@ -108,6 +108,31 @@ afterEach(() => {
 });
 
 describe("desktop profiles service", () => {
+  test("a reviewed import belongs to its document through the actual publication", () => {
+    const path = join(home, "picked.json");
+    writeFileSync(path, JSON.stringify({ ...readWorkspaceProfile("seedance"), name: "reviewed" }));
+    const { reviewToken } = previewProfileDefinitionImport(path, "original");
+    expect(() =>
+      importReviewedProfileDefinition({ reviewToken }, undefined, undefined, "other"),
+    ).toThrow(/review expired/);
+    expect(() =>
+      importReviewedProfileDefinition(
+        { reviewToken },
+        undefined,
+        () => {
+          throw Error("revoked");
+        },
+        "original",
+      ),
+    ).toThrow(/revoked/);
+    expect(readWorkspaceProfile("reviewed")).toBeUndefined();
+    expect(
+      importReviewedProfileDefinition({ reviewToken }, undefined, undefined, "original"),
+    ).toMatchObject({ ok: true });
+    expect(() =>
+      importReviewedProfileDefinition({ reviewToken }, undefined, undefined, "original"),
+    ).toThrow(/review expired/);
+  });
   test("lists library profiles with active mark for a cwd", () => {
     activateProfile(cwd, "seedance");
     const profiles = listProfiles(cwd);
@@ -134,6 +159,24 @@ describe("desktop profiles service", () => {
 
   test("lists the library without a selected workspace", () => {
     expect(listProfiles()[0]).toMatchObject({ name: "seedance", active: false });
+  });
+
+  test("revoked activation, session rebinding, and cascade cannot change durable references", async () => {
+    const revoked = () => {
+      throw Error("revoked");
+    };
+    const sessions = new SessionManager();
+    sessions.create(cwd, "model", "provider", "profile-lease");
+    expect(() => activateProfile(cwd, "seedance", revoked)).toThrow(/revoked/);
+    expect(listProfiles(cwd)[0]?.active).toBe(false);
+    expect(() => setSessionWorkspaceProfile("profile-lease", "seedance", revoked)).toThrow(
+      /revoked/,
+    );
+    expect(sessions.readSessionWorkspaceProfile("profile-lease")).toBeUndefined();
+    setSessionWorkspaceProfile("profile-lease", "seedance");
+    await expect(forceDeleteProfile("seedance", { cwd }, revoked)).rejects.toThrow(/revoked/);
+    expect(sessions.readSessionWorkspaceProfile("profile-lease")).toBe("seedance");
+    expect(readWorkspaceProfile("seedance")?.name).toBe("seedance");
   });
 
   test("switches an existing Session digital human and tolerates a planned Session", () => {

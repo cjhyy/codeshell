@@ -9,12 +9,41 @@
  */
 import { encryptDesktopCredential } from "./credential-cipher-policy.js";
 import { safeStorage } from "electron";
-import type { EncryptionCipher } from "@cjhyy/code-shell-core";
+import type { AsyncEncryptionCipher, EncryptionCipher } from "@cjhyy/code-shell-core";
 
 const ENC_PREFIX = "enc:safeStorage:";
 const PLAIN_PREFIX = "plain:";
 
 export class SafeStorageCipher implements EncryptionCipher {
+  readonly asynchronous: AsyncEncryptionCipher = {
+    storagePrefix: ENC_PREFIX,
+    encrypt: async (plaintext) => {
+      if (
+        !(await safeStorage.isAsyncEncryptionAvailable()) ||
+        (process.platform === "linux" &&
+          ["basic_text", "unknown"].includes(safeStorage.getSelectedStorageBackend()))
+      )
+        throw new Error(
+          "系统钥匙串不可用，无法安全保存凭据。请解锁钥匙串或启用系统密钥服务后重试。",
+        );
+      const encrypted = await safeStorage.encryptStringAsync(plaintext);
+      return ENC_PREFIX + encrypted.toString("base64");
+    },
+    decrypt: async (stored) => {
+      if (stored.startsWith(ENC_PREFIX)) {
+        const { result } = await safeStorage.decryptStringAsync(
+          Buffer.from(stored.slice(ENC_PREFIX.length), "base64"),
+        );
+        return result;
+      }
+      if (stored.startsWith("enc:")) throw new Error("Unrecognized encrypted credential");
+      return stored.startsWith(PLAIN_PREFIX) ? stored.slice(PLAIN_PREFIX.length) : stored;
+    },
+    canDecrypt: async (stored) =>
+      stored.startsWith(ENC_PREFIX)
+        ? safeStorage.isAsyncEncryptionAvailable()
+        : !stored.startsWith("enc:"),
+  };
   private available(): boolean {
     try {
       return safeStorage.isEncryptionAvailable();

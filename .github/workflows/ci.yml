@@ -93,6 +93,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22.16.0"
+      - name: Durable session index recovery and WAL reads during live output
+        run: node scripts/run-isolated-node-smoke.mjs scripts/smoke-session-index.mjs
       - name: Owned external CLI output through authenticated Mobile WS and actual hook
         run: bun run test:mobile-external-output-journal
       - name: Bounded operation retention, actual process crash and cold write barrier
@@ -185,6 +187,7 @@ jobs:
             # Cross-channel defaults and external-manager boundaries run in bounded
             # groups below; the general Desktop process is already at its ceiling.
             ignore: >-
+              --path-ignore-patterns '**/desktop/src/host/**'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
               --path-ignore-patterns '**/browser-library/puppeteer-browser-driver.test.ts'
               --path-ignore-patterns '**/browser-library/browser-inspector.integration.test.ts'
@@ -198,6 +201,9 @@ jobs:
               --path-ignore-patterns '**/cc-room/transcript-recovery.test.ts'
               --path-ignore-patterns '**/src/main/browser-host/index.test.ts'
               --path-ignore-patterns '**/src/main/computer-use/**'
+              --path-ignore-patterns '**/src/main/desktop-host/**'
+              --path-ignore-patterns '**/src/main/task-inbox/**'
+              --path-ignore-patterns '**/src/preload/desktop-host-client.test.ts'
               --path-ignore-patterns '**/renderer/pet/createPetTargetNavigator.test.ts'
               --path-ignore-patterns '**/src/main/pet/mimi-presence*.test.ts'
               --path-ignore-patterns '**/src/main/pet/pet-widget-surface.test.ts'
@@ -246,7 +252,7 @@ jobs:
             # file's electron mock (no `screen`) wins in a shared process, the import
             # fails, and its fake child_process then outlives the file, so every later
             # spawn in the shard hangs to its timeout.
-            ignore: "--path-ignore-patterns tests/mimi-native-trial-cancel.test.ts"
+            ignore: "--path-ignore-patterns tests/mimi-native-trial-cancel.test.ts --path-ignore-patterns 'tests/desktop-host-*.test.ts' --path-ignore-patterns tests/release-recovery.test.ts --path-ignore-patterns tests/release-push-guard.test.ts"
           - shard: rest-server
             paths: packages/server packages/web packages/tui
             # Hub panels run in bounded Bun processes below. Late in this shard's Bun process
@@ -263,7 +269,7 @@ jobs:
             # The panels-only process later hit another native lifecycle failure at
             # 34 files. Bound every Panel group below; lint:test-shards checks exact
             # coverage and budgets while lifecycle diagnostics remain enabled.
-            ignore: "--path-ignore-patterns '**/server/src/panels/**' --path-ignore-patterns '**/server/src/account/**' --path-ignore-patterns '**/web/src/account/**' --path-ignore-patterns '**/web/app/WebsiteEntry.test.tsx' --path-ignore-patterns '**/web/app/WebsiteDestinations.test.tsx' --path-ignore-patterns '**/web/app/DesktopRemoteAccess.test.tsx' --path-ignore-patterns '**/web/app/website-devices.test.ts' --path-ignore-patterns '**/web/app/passkey-browser.test.ts' --path-ignore-patterns '**/web/app/admin-data.test.ts' --path-ignore-patterns '**/web/app/ProcessActivity.test.tsx' --path-ignore-patterns '**/web/app/processActivityProjection.test.ts'"
+            ignore: "--path-ignore-patterns '**/server/src/indexed-disk-sessions.test.ts' --path-ignore-patterns '**/server/src/session-history-index.test.ts' --path-ignore-patterns '**/server/src/panels/**' --path-ignore-patterns '**/server/src/account/**' --path-ignore-patterns '**/web/src/account/**' --path-ignore-patterns '**/web/app/WebsiteEntry.test.tsx' --path-ignore-patterns '**/web/app/WebsiteDestinations.test.tsx' --path-ignore-patterns '**/web/app/DesktopRemoteAccess.test.tsx' --path-ignore-patterns '**/web/app/website-devices.test.ts' --path-ignore-patterns '**/web/app/passkey-browser.test.ts' --path-ignore-patterns '**/web/app/admin-data.test.ts' --path-ignore-patterns '**/web/app/ProcessActivity.test.tsx' --path-ignore-patterns '**/web/app/processActivityProjection.test.ts'"
           # Browser fixtures, not a Bun shard. The overlay and Web suites took 28 of the
           # desktop shard's 44 minutes (2026-10-22) and share nothing with its Bun tests,
           # so they run beside it instead of after it.
@@ -342,6 +348,9 @@ jobs:
           # Mimi notice rules, delivery plan, session outcomes, watcher, router, ledger, proactive (briefs, heartbeat) and Mimi's own notice tools run as one bounded process;
           # the general Desktop shard is at its budget.
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/pet/pet-delivery-plan.test.ts packages/desktop/src/main/pet/pet-notice-compose.test.ts packages/desktop/src/main/pet/pet-notice-ipc.test.ts packages/desktop/src/main/pet/pet-notice-ledger.test.ts packages/desktop/src/main/pet/pet-notice-media.test.ts packages/desktop/src/main/pet/pet-notice-policy.test.ts packages/desktop/src/main/pet/pet-notice-router.test.ts packages/desktop/src/main/pet/pet-notice-timers.test.ts packages/desktop/src/main/pet/pet-notice-wiring.test.ts packages/desktop/src/main/pet/pet-notice-attention.test.ts packages/desktop/src/main/pet/pet-notice-bound-replies.test.ts packages/desktop/src/main/pet/pet-notice-decision-hooks.test.ts packages/desktop/src/main/pet/pet-notice-external-decisions.test.ts packages/desktop/src/main/pet/pet-notice-external-sessions.test.ts packages/desktop/src/main/pet/pet-notice-external-stream.test.ts packages/desktop/src/main/pet/pet-notice-host-action.test.ts packages/desktop/src/main/pet/pet-notice-outbox.test.ts packages/desktop/src/main/pet/pet-notice-outlets.test.ts packages/desktop/src/main/pet/pet-notice-replay.test.ts packages/desktop/src/main/pet/pet-notice-settings.test.ts packages/desktop/src/main/pet/pet-notice-task-closure.test.ts packages/desktop/src/main/pet/pet-notice-follow-up.test.ts packages/desktop/src/main/pet/pet-notice-session-report.test.ts packages/desktop/src/main/pet/pet-notice-session-watch.test.ts packages/desktop/src/main/pet/pet-notice-action-codes.test.ts packages/desktop/src/main/pet/pet-notice-action-controls.test.ts packages/desktop/src/main/pet/pet-notice-action-sources.test.ts packages/desktop/src/main/pet/pet-notice-actions.test.ts packages/desktop/src/main/pet/pet-notice-reply-interpreter.test.ts packages/desktop/src/main/pet/pet-rule-store.test.ts packages/desktop/src/main/pet/pet-rule-schedule.test.ts packages/desktop/src/main/pet/pet-session-rule-watcher.test.ts packages/desktop/src/main/pet/session-outcome.test.ts packages/desktop/src/main/pet/pet-presence.test.ts packages/desktop/src/main/pet/pet-notice-digest.test.ts packages/desktop/src/main/pet/pet-notice-defer.test.ts packages/desktop/src/main/pet/pet-proactive.test.ts packages/desktop/src/main/pet/pet-proactive-brief.test.ts packages/desktop/src/main/pet/pet-proactive-heartbeat.test.ts packages/desktop/src/main/pet/pet-proactive-rules.test.ts packages/desktop/src/main/pet/pet-proactive-state.test.ts packages/desktop/src/main/pet/pet-notice-rule-list.test.ts packages/desktop/src/main/pet/pet-notice-world.test.ts packages/desktop/src/main/pet/pet-mimi-notice-tools.test.ts
+      - name: test Desktop Host services and native peers
+        if: matrix.shard == 'desktop'
+        run: node scripts/run-bun-test-shard.mjs --timeout 60000 packages/desktop/src/host
       - name: test Desktop application state hooks
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/useMimiPresence.test.tsx' packages/desktop/src/renderer/app
@@ -357,12 +366,21 @@ jobs:
       # shard hit Bun's resolver/pidfd EBADF in a late history-recovery child.
       # Keep account imports and the existing in-process Cloud bundler bounded;
       # the original recovery assertions still run in the broad Desktop shard.
+      - name: test release recovery and protected push workflows
+        if: matrix.shard == 'rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 tests/release-recovery.test.ts tests/release-push-guard.test.ts
+      - name: test Desktop Host transport and authority
+        if: matrix.shard == 'desktop'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/desktop-host packages/desktop/src/main/task-inbox packages/desktop/src/preload/desktop-host-client.test.ts tests/desktop-host-operation-review.test.ts tests/desktop-host-run-ledger.test.ts
       - name: test Desktop native account boundaries
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cloud-account-links.test.ts packages/desktop/src/main/link-account-access.test.ts packages/desktop/src/main/cloud-account-manager.test.ts packages/desktop/src/main/cloud-management-http.test.ts packages/desktop/src/main/cloud-account-http.test.ts packages/desktop/src/main/desktop-remote-services.test.ts packages/desktop/src/main/cloud-account.native.test.ts packages/desktop/src/main/cloud-account-relay.test.ts packages/desktop/src/main/cloud-account-ipc.test.ts packages/desktop/src/main/cloud-account-store.test.ts
       - name: test Desktop Cloud bundle boundary
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cloud-management.test.ts
+      - name: test indexed and file session catalog compatibility
+        if: matrix.shard == 'rest-server'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/indexed-disk-sessions.test.ts packages/server/src/session-history-index.test.ts
       - name: test account policy and native credential lifecycles
         if: matrix.shard == 'rest-server'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/account packages/web/src/account packages/web/app/WebsiteEntry.test.tsx packages/web/app/WebsiteDestinations.test.tsx packages/web/app/DesktopRemoteAccess.test.tsx packages/web/app/website-devices.test.ts packages/web/app/passkey-browser.test.ts packages/web/app/admin-data.test.ts
@@ -539,10 +557,10 @@ jobs:
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins
       - name: test core session in its own Bun process
         if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/*.privacy.test.ts' packages/core/src/session
-      - name: test context privacy export boundary
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/*.privacy.test.ts' --path-ignore-patterns '**/src/session/session-state-file.test.ts' packages/core/src/session
+      - name: test durable session publication and context privacy
         if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session/context-messages.privacy.test.ts
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session/context-messages.privacy.test.ts packages/core/src/session/session-state-file.test.ts
       - name: Compiled isolated instruction adoption lifecycle
         if: matrix.shard == 'rest'
         run: |
@@ -632,8 +650,16 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.5"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.22.1"
+          package-manager-cache: false
       - name: install
+        env:
+          FORCE_REBUILD_NATIVE: "1"
         run: bun install --frozen-lockfile
+      - name: prepare locked Electron binary
+        run: node packages/desktop/scripts/prepare-electron.mjs
       - name: build runtime and desktop
         run: |
           bun run build
@@ -648,6 +674,23 @@ jobs:
           sudo chown root:root "$electron_sandbox"
           sudo chmod 4755 "$electron_sandbox"
           test "$(stat -c '%u %a' "$electron_sandbox")" = '0 4755'
+      - name: verify compiled sandbox preload dependencies
+        run: node packages/desktop/scripts/check-sandbox-preloads.mjs
+      - name: exercise worker, Desktop Web Panel task and CUA proxy with Electron Node
+        timeout-minutes: 3
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-electron-runtime.mjs
+      - name: Install the private desktop keyring and native display tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools weston
+      - name: desktop Host across windows, Main stalls and utility restart
+        timeout-minutes: 3
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/smoke-desktop-host.mjs
+      - name: quit during a first-run marketplace clone and retry on restart
+        timeout-minutes: 2
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-marketplace-shutdown.mjs
+      - name: encrypted operation ledger through the real stdio worker
+        run: ELECTRON_RUN_AS_NODE=1 packages/desktop/node_modules/electron/dist/electron scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-run-operation-ledger.mjs
       - name: real Electron isolated PDF with verified managed Node
         run: |
           bun run --cwd packages/desktop runtime:prepare
@@ -655,10 +698,15 @@ jobs:
           bun run --cwd packages/desktop predist
           bun run --cwd packages/desktop test:upload-asar
       - name: Native Account Cloud project chooser with private SecretService
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools
-          xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench
+        run: xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench
+      - name: direct worker streaming and approval recovery in a reloaded workbench
+        timeout-minutes: 4
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-desktop-host-stream.mjs
+      - name: Scheduled Host Engine streams while Main is busy
+        timeout-minutes: 4
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-hosted-automation.mjs
+      - name: Docked Mimi window on native Wayland
+        run: node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-wayland-docked-pet.mjs
       - name: Native built-in theme and surface backgrounds with private SecretService
         run: xvfb-run -a bun run --cwd packages/desktop test:e2e:themes
       # Same commands as packages/desktop test:e2e, each in its own log group: a failing

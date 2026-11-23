@@ -105,6 +105,7 @@ assert.equal(
   report.fixtureSHA256,
   hash(git("show", `${sourceHead}:packages/web/scripts/test-subagent-state-browser.mjs`)),
 );
+assert.equal(report.reducerExportAlias, "reduceStream as reduceScopedStream");
 const sources = Object.entries(report.productSources);
 assert.ok(sources.length > 0 && sources.length <= 512);
 for (const [relative, expected] of sources) {

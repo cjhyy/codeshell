@@ -40,10 +40,11 @@ import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding/git";
 import { readAutomationMemory, appendAutomationMemory } from "./automationMemory.js";
 import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
 import { stablePromptHash } from "@cjhyy/code-shell-server/storage";
-import { browserRuntime, type BrowserRuntimeLike } from "./browser-runtime/index.js";
+import type { HostRunOperations, OperationCap } from "../host/composition/run-operations.js";
+import type { BrowserRuntimeLike } from "./browser-runtime/configured-runtime.js";
 import { getProjectStore } from "./project-store.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
-import { getTrustCachedSync } from "./trust-store.js";
+import { getTrustCachedSync, warmTrustCache } from "./trust-store.js";
 import {
   desktopAutomationAuthorityDeps,
   validateAutomationResumeAuthority,
@@ -66,17 +67,17 @@ export interface AutomationWorkspaceDeps {
     projectId: string,
     rootId: string,
   ) => { cwd: string; trustCwd: string; workspaceContext: WorkspaceContext } | undefined;
-  hasPersistedSessionCwd: (cwd: string) => boolean;
+  hasPersistedSessionCwd: (cwd: string) => boolean | Promise<boolean>;
   validatePersistedRoot?: (cwd: string) => void;
   isProjectTrusted: (cwd: string) => boolean;
   isNoRepoCwd: (cwd: string) => boolean;
   isDirectory: (cwd: string) => boolean;
 }
 
-export function resolveAutomationWorkspace(
+export async function resolveAutomationWorkspace(
   job: Pick<CronJob, "cwd" | "projectId" | "rootId">,
   deps: AutomationWorkspaceDeps,
-): AutomationWorkspaceResolution | null {
+): Promise<AutomationWorkspaceResolution | null> {
   const hasStableId = job.projectId !== undefined || job.rootId !== undefined;
   if (hasStableId) {
     if (!job.projectId || !job.rootId) return null;
@@ -116,15 +117,16 @@ export function resolveAutomationWorkspace(
       workspaceContext: project.workspaceContext,
     };
   }
-  if (deps.hasPersistedSessionCwd(cwd)) {
+  if (await deps.hasPersistedSessionCwd(cwd)) {
     return { cwd, projectTrusted: deps.isProjectTrusted(cwd) };
   }
   return null;
 }
 
-function resolveDesktopAutomationWorkspace(
+async function resolveDesktopAutomationWorkspace(
   job: Pick<CronJob, "cwd" | "projectId" | "rootId">,
-): AutomationWorkspaceResolution | null {
+): Promise<AutomationWorkspaceResolution | null> {
+  await warmTrustCache();
   return resolveAutomationWorkspace(job, {
     noRepoCwd: automationNoRepoCwd,
     foldProjectRoot: resolveProjectRoot,
@@ -150,8 +152,8 @@ function resolveDesktopAutomationWorkspace(
         return undefined;
       }
     },
-    hasPersistedSessionCwd: (candidate) =>
-      getSessionCwdIndex().resolveConfirmedCwds([candidate])[0] === true,
+    hasPersistedSessionCwd: async (candidate) =>
+      (await getSessionCwdIndex().findPersistedCwdWitness(candidate)) !== undefined,
     validatePersistedRoot: (candidate) => {
       const validation = getProjectStore().validateRegisteredRootPathSync(candidate);
       if (validation && validation.status !== "ok") {
@@ -244,12 +246,14 @@ export interface AutomationSessionMeta {
  * backfill from disk.
  */
 export function buildDesktopAutomationRunner(
-  emit?: (sessionId: string, event: unknown) => void,
-  onSession?: (meta: AutomationSessionMeta) => void,
-  runtime: BrowserRuntimeLike = browserRuntime,
+  emit: (sessionId: string, event: unknown) => void,
+  onSession: (meta: AutomationSessionMeta) => void,
+  runtime: Pick<BrowserRuntimeLike, "acquire">,
+  sessionFinished?: (id: string) => Promise<void>,
+  operations?: Pick<HostRunOperations, "open">,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
-    const workspace = resolveDesktopAutomationWorkspace(req.job);
+    const workspace = await resolveDesktopAutomationWorkspace(req.job);
     if (!workspace) {
       return {
         text: "",
@@ -294,6 +298,9 @@ export function buildDesktopAutomationRunner(
       title: `CodeShell 自动化 · ${req.job.name?.trim() || req.job.id}`,
     });
     let engine: Engine | undefined;
+    let sid: string | undefined;
+    let runId: string | undefined;
+    let cap: OperationCap | undefined;
     try {
       engine = new Engine({
         llm,
@@ -326,6 +333,13 @@ export function buildDesktopAutomationRunner(
         // depth on top of the approval backend (§5.6 #9).
         sandbox: defaultSandboxConfig(req.sandboxMode),
         browserBridge: browserLease.bridge,
+        ...(operations && {
+          operationLedger: async (request) => {
+            if (!cap || request.sessionId !== sid || request.runId !== runId)
+              throw new Error("Automation operation Run unavailable");
+            return cap.run(request);
+          },
+        }),
       });
 
       // Let the run persist a one-paragraph summary for the NEXT scheduled run.
@@ -339,39 +353,49 @@ export function buildDesktopAutomationRunner(
       // Key emitted events by the REAL engine sessionId (carried on the first
       // `session_started` event) so renderer routing/reconnect matches interactive
       // chat. Fall back to job.id until that event is seen.
-      let sid: string | undefined;
+
       const output = new SessionOutputPublisher(
         () => engine!.getSessionManager().getStorageDir(),
         "host",
       );
       const publish = (sessionId: string, event: unknown) => {
-        emit?.(sessionId, output.project(sessionId, event));
+        emit(sessionId, output.project(sessionId, event));
       };
-      const onStream =
-        emit || onSession
-          ? (e: unknown) => {
-              const ev = e as { type?: string; sessionId?: string };
-              if (ev.type === "session_started" && typeof ev.sessionId === "string") {
-                const firstBind = sid === undefined;
-                sid = ev.sessionId;
-                // Announce the session ONCE so the renderer can attribute this
-                // live run to the project owning jobCwd and title it nicely.
-                if (firstBind && onSession) {
-                  const name = req.job.name?.trim() || req.job.id;
-                  const date = new Date().toLocaleDateString();
-                  onSession({
-                    sessionId: sid,
-                    cwd: jobCwd,
-                    title: `${name} ${date}`,
-                    prompt: req.job.prompt,
-                    cronJobId: req.job.id,
-                    clientMessageId,
-                  });
-                }
+      const onStream = (e: unknown) => {
+        const ev = e as { type?: string; sessionId?: string; runId?: string };
+        if (ev.type === "session_started" && typeof ev.sessionId === "string") {
+          const firstBind = sid === undefined;
+          sid = ev.sessionId;
+          // Announce the session ONCE so the renderer can attribute this
+          // live run to the project owning jobCwd and title it nicely.
+          if (firstBind) {
+            const name = req.job.name?.trim() || req.job.id;
+            const date = new Date().toLocaleDateString();
+            onSession({
+              sessionId: sid,
+              cwd: jobCwd,
+              title: `${name} ${date}`,
+              prompt: req.job.prompt,
+              cronJobId: req.job.id,
+              clientMessageId,
+            });
+            if (operations && typeof ev.runId === "string") {
+              const boundId = sid;
+              const boundRun = (runId = ev.runId);
+              try {
+                cap = operations.open(
+                  boundId,
+                  boundRun,
+                  () => sid === boundId && runId === boundRun,
+                );
+              } catch {
+                // A stale scope must fail ledger operations without stopping ordinary text output.
               }
-              publish(sid ?? req.job.id, e);
             }
-          : undefined;
+          }
+        }
+        publish(sid ?? req.job.id, e);
+      };
       try {
         const result = await engine.run(req.prompt, {
           cwd: jobCwd,
@@ -404,7 +428,10 @@ export function buildDesktopAutomationRunner(
       try {
         await engine?.dispose();
       } finally {
+        runId = undefined;
+        cap?.close();
         browserLease.release();
+        if (sid) await sessionFinished?.(sid);
       }
     }
   };

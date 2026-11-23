@@ -1,3 +1,4 @@
+import { externalSessions } from "../../host/composition/cc-room-history.js";
 import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -8,6 +9,7 @@ import {
   type MobileDeviceState,
   type OrchestratorCtx,
 } from "./handle-client-event.js";
+import { listDiskSessions } from "@cjhyy/code-shell-server/storage";
 import { handleCcRoomEvent } from "./handle-cc-room-event.js";
 
 test("mobile CLI discovery exposes its total and can load sessions beyond both default limits", async () => {
@@ -32,6 +34,7 @@ test("mobile CLI discovery exposes its total and can load sessions beyond both d
       utimesSync(file, new Date(modified), new Date(modified));
     }
     const ctx = {
+      readCcRoom: (_method: string, input: Parameters<typeof externalSessions>[0]) => externalSessions(input),
       remote: { sendToViewer: (_viewer: string, event: unknown) => replies.push(event) },
     } as unknown as OrchestratorCtx;
     await handleCcRoomEvent(ctx, {
@@ -92,7 +95,12 @@ test("mobile session pages retain older project sessions and reply only to the r
     for (let index = 0; index < 105; index++) seed(`other-${index}`, unrelated, 20_000 + index);
     for (let index = 0; index < 101; index++)
       seed(`selected-${index}`, project, 10_000 + index, index % 2 ? "codex" : "claude-code");
+    const indexedQueries: Parameters<typeof listDiskSessions>[0][] = [];
     const ctx = {
+      listDiskSessions: (options: Parameters<typeof listDiskSessions>[0]) => {
+        indexedQueries.push(options);
+        return listDiskSessions(options);
+      },
       remote: {
         sendToViewer: (viewer: string, event: unknown) => replies.push({ viewer, event }),
         sendToDevice: () => {
@@ -135,6 +143,10 @@ test("mobile session pages retain older project sessions and reply only to the r
       `${prefix}selected-0`,
     ]);
     expect(replies[1]!.event.nextCursor).toBeNull();
+    expect(indexedQueries).toEqual([
+      { limit: 100, cwds: [project], cursor: undefined },
+      { limit: 100, cwds: [project], cursor: first.event.nextCursor },
+    ]);
   } finally {
     for (const directory of owned) rmSync(directory, { recursive: true, force: true });
     rmSync(workspace, { recursive: true, force: true });

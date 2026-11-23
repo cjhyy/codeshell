@@ -1092,6 +1092,8 @@ export type ImGatewayUiEvent =
       conversation: DingTalkDiscoveredConversation;
     };
 
+export type DesktopHostStatus = "connecting" | "ready" | "reconnecting" | "unavailable";
+
 export interface CodeshellApi
   extends
     GoalControlApi,
@@ -1100,6 +1102,8 @@ export interface CodeshellApi
     ProjectPanelVersionApi,
     ProfilePluginExportApi,
     ProfileMemoryPromotionApi {
+  /** Workbench only. Subscribers receive the current connection state immediately. */
+  onDesktopHostStatus?(listener: (status: DesktopHostStatus) => void): () => void;
   /** Main-owned sidebar catalogue and transcript checkpoints. Optional for older hosts. */
   sessionCatalog?: SessionCatalogApi;
   /** Read-only bounded Pet projection. */
@@ -2274,6 +2278,7 @@ export interface CodeshellApi
     configs: McpServerProbeInput[],
     force?: boolean,
     target?: RendererConfigurationTarget | null,
+    scope?: "user" | "project",
   ): Promise<McpProbeResult[]>;
   listMergedMcpServers(
     base: Record<string, unknown>,
@@ -2281,7 +2286,14 @@ export interface CodeshellApi
     /** Main resolves this identity before folding project capabilityOverrides. */
     target?: RendererConfigurationTarget | null,
   ): Promise<
-    Record<string, McpServerProbeInput & { source?: "settings" | "plugin"; editable?: boolean }>
+    Record<
+      string,
+      Omit<McpServerProbeInput, "transport"> & {
+        transport?: McpServerProbeInput["transport"] | "inprocess";
+        source?: "settings" | "plugin";
+        editable?: boolean;
+      }
+    >
   >;
   /** Read-only list of plugin-provided hooks (for the settings 钩子 page). */
   listPluginHooks(disabledPlugins?: string[]): Promise<PluginHookEntry[]>;
@@ -2361,6 +2373,9 @@ export interface CodeshellApi
   onWindowFullscreenChange(cb: (state: { fullscreen: boolean }) => void): Unsubscribe;
   setBadgeCount(count: number): Promise<void>;
   onMenuEvent(cb: (event: string, payload?: unknown) => void): Unsubscribe;
+  onNotificationFallback(
+    cb: (notice: import("../shared/notification-fallback").NotificationFallback) => void,
+  ): Unsubscribe;
   onNotificationOpenSession(cb: (sessionId: string) => void): Unsubscribe;
   newWindow(): Promise<void>;
   /** The running app version (from Electron `app.getVersion()`). */
@@ -2866,7 +2881,7 @@ export interface PluginDetail extends PluginSummary {
       permissionLevel: AutomationPermissionLevel;
       workspace: "current" | "none";
     }>;
-    panels: Array<{
+    panels?: Array<{
       id: string;
       title: { default: string; en?: string; "zh-CN"?: string };
       entry: string;

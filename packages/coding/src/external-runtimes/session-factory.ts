@@ -1,3 +1,4 @@
+import type { ClaudeRuntimeOptions } from "./claude-code/runtime.js";
 /**
  * The composition root for an external-runtime session.
  *
@@ -69,7 +70,26 @@ const RUNTIME_ACCEPTS_TOOL_IMAGES: Readonly<Record<ExternalRuntimeKind, boolean>
  * rule is enforced and tested. A default here would reintroduce the fail-open
  * shape one layer up.
  */
+type ProviderKeys = "runtimeSessionId" | "resolvedModel" | "send" | "interrupt" | "close";
+export type CodexProvider = Pick<CodexRuntime, ProviderKeys | "start">;
+export type ClaudeProvider = Pick<ClaudeCodeRuntime, ProviderKeys | "releaseIdle">;
+/** A desktop Host may own provider processes while the same scoped MCP bridge authorizes tools. */
+export interface ExternalProviderFactories {
+  codex(
+    options: CodexRuntimeOptions,
+    hooks: CodexRuntimeHooks,
+    disconnected: () => void,
+  ): Promise<CodexProvider>;
+  claude(
+    options: ClaudeRuntimeOptions,
+    hooks: ClaudeRuntimeHooks,
+    disconnected: () => void,
+  ): Promise<ClaudeProvider>;
+}
+
 export interface ExternalRuntimeSessionOptions {
+  providerFactories?: ExternalProviderFactories;
+  onProviderDisconnect?: () => void;
   kind: ExternalRuntimeKind;
   cwd: string;
   businessSessionId: string;
@@ -209,7 +229,7 @@ export async function startExternalRuntimeSession(
   });
 
   let host: SessionToolHost | undefined;
-  let runtime: CodexRuntime | ClaudeCodeRuntime | undefined;
+  let runtime: CodexProvider | ClaudeProvider | undefined;
   let claudeGrants: ReturnType<typeof rememberClaudePermissionGrants> | undefined;
   let closed = false;
   let turnSink: ((event: StreamEvent) => void) | undefined;
@@ -220,10 +240,28 @@ export async function startExternalRuntimeSession(
     // Unregister BEFORE disposing: a late request must find nothing rather than a
     // disposed host (§13.4).
     store.unregister(pinnedThreadId);
-    await runtime?.close();
-    await host?.dispose();
-    claudeGrants?.clear();
-    await bridge.close();
+    try {
+      await runtime?.close();
+    } finally {
+      try {
+        await host?.dispose();
+      } finally {
+        claudeGrants?.clear();
+        await bridge.close();
+      }
+    }
+  };
+
+  const disconnected = () => {
+    // Revoke the pinned MCP registration synchronously when its provider disappears.
+    if (closed) return;
+    try {
+      options.onProviderDisconnect?.();
+    } finally {
+      void close().catch((error) =>
+        log("runtime.disconnected_cleanup_failed", { error: String(error) }),
+      );
+    }
   };
 
   try {
@@ -300,7 +338,9 @@ export async function startExternalRuntimeSession(
       options.disableNativeTools || options.planMode ? [] : (options.hostMcpServers ?? []);
     const approvalBackend = options.approvalBackend;
     if (options.kind === "codex") {
-      const codex = new CodexRuntime(
+      const createCodex =
+        options.providerFactories?.codex ?? ((opts, hooks) => new CodexRuntime(opts, hooks));
+      const codex = await createCodex(
         {
           cwd: options.cwd,
           businessSessionId: options.businessSessionId,
@@ -340,13 +380,16 @@ export async function startExternalRuntimeSession(
             : {}),
           ...options.hooks,
         },
+        disconnected,
       );
       // Own the process before its handshake can fail, so the catch path also
       // closes an app-server that launched but could not initialize a thread.
       runtime = codex;
       await codex.start();
     } else {
-      runtime = new ClaudeCodeRuntime(
+      const createClaude =
+        options.providerFactories?.claude ?? ((opts, hooks) => new ClaudeCodeRuntime(opts, hooks));
+      runtime = await createClaude(
         {
           cwd: options.cwd,
           businessSessionId: options.businessSessionId,
@@ -372,6 +415,7 @@ export async function startExternalRuntimeSession(
           log,
         },
         options.hooks ?? {},
+        disconnected,
       );
       // Claude Code is one process per turn; the first send() is the start.
     }

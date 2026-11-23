@@ -1,9 +1,10 @@
+import type { PetRuleAccess } from "../../shared/mimi-rules.js";
 import type { PetLongTask, PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
 import { NOTICE_EVENTS } from "@cjhyy/code-shell-pet/protocol";
 import type { PetHostActionExecutor } from "./pet-dispatch-service.js";
 import { errorText } from "./pet-notice-types.js";
 import type { DesktopPetSession } from "./pet-state-aggregator.js";
-import { noticeTargetKey, type NoticeRule, type PetRuleStore } from "./pet-rule-store.js";
+import { noticeTargetKey, type NoticeRule } from "./pet-rule-store.js";
 
 /**
  * Mimi's WatchSession host action: "tell this IM conversation when that
@@ -24,7 +25,7 @@ export interface SessionWatchHostDeps {
   refreshCatalog(): Promise<unknown>;
   sessions(): readonly DesktopPetSession[];
   longTasks: {
-    activeForSession(sessionId: string): PetLongTask | undefined;
+    activeForSession(sessionId: string): PetLongTask | undefined | Promise<PetLongTask | undefined>;
     /** Point an active long task at the conversation (`PetLongTaskCoordinator.watchSession`). */
     watchSession(input: {
       originClientMessageId: string;
@@ -41,7 +42,7 @@ export interface SessionWatchHostDeps {
 }
 
 export interface SessionWatchDeps extends SessionWatchHostDeps {
-  rules: Pick<PetRuleStore, "load" | "activeForSession" | "upsertSessionRule" | "update">;
+  rules: Pick<PetRuleAccess, "load" | "activeForSession" | "upsertSessionRule" | "update">;
   isEligibleSession(sessionId: string): boolean;
   /** Mimi's own Sessions are never watched, by rule or long task. */
   isMimiSession?: (sessionId: string) => boolean;
@@ -112,7 +113,7 @@ export function createSessionWatchAction(deps: SessionWatchDeps): PetHostActionE
     // A delegated Session's long task already reports its result: point it
     // here. A Session rules cannot watch (a tailed CLI rollout) keeps the
     // long-task watch it always had.
-    if (deps.longTasks.activeForSession(sessionId) || !deps.isEligibleSession(sessionId)) {
+    if ((await deps.longTasks.activeForSession(sessionId)) || !deps.isEligibleSession(sessionId)) {
       const watched = await deps.longTasks.watchSession({
         originClientMessageId: context.originClientMessageId,
         requestedAt: context.requestedAt,
@@ -136,9 +137,9 @@ export function createSessionWatchAction(deps: SessionWatchDeps): PetHostActionE
     await deps.rules.load();
     const target: NoticeRule["target"] = { kind: "route", route };
     const key = noticeTargetKey(target);
-    const existing = deps.rules
-      .activeForSession(sessionId)
-      .find((rule) => rule.when.kind === "session" && noticeTargetKey(rule.target) === key);
+    const existing = (await deps.rules.activeForSession(sessionId)).find(
+      (rule) => rule.when.kind === "session" && noticeTargetKey(rule.target) === key,
+    );
     if (existing)
       return {
         watching: true,

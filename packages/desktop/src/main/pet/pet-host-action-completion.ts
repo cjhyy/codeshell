@@ -104,35 +104,36 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
       // (that would fork the prompt prefix and its cache after every restart).
       // The worker appends to the same file; whole-line O_APPEND writes keep
       // the two processes from overwriting each other, and nothing rewrites it.
-      const transcript = Transcript.loadTailForAppend(join(sessionDir, "transcript.jsonl"));
-      if (input.userMessage?.trim() && !transcript.hasClientMessageId(input.clientMessageId)) {
-        transcript.appendMessage("user", input.userMessage.trim(), {
-          clientMessageId: input.clientMessageId,
-          displayOnly: true,
-        });
-      }
-      const assistantClientMessageId =
-        replaceAssistant && input.receiptId
-          ? `${PET_HOST_ACTION_REPLACE_VERSIONED_CLIENT_ID_PREFIX}${encodeURIComponent(
-              JSON.stringify({
-                sourceClientMessageId: input.clientMessageId,
-                receiptId: input.receiptId,
-                ...(deliveryChannel ? { deliveryChannel } : {}),
-              }),
-            )}`
-          : replaceAssistant
-            ? deliveryChannel
-              ? `${PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX}${encodeURIComponent(
-                  deliveryChannel,
-                )}:${input.clientMessageId}`
-              : `${PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX}${input.clientMessageId}`
-            : `${PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX}${input.clientMessageId}`;
-      if (!transcript.hasClientMessageId(assistantClientMessageId)) {
-        transcript.appendMessage("assistant", message, {
-          clientMessageId: assistantClientMessageId,
-          displayOnly: true,
-        });
-      }
+      Transcript.withTailForAppend(join(sessionDir, "transcript.jsonl"), (transcript) => {
+        if (input.userMessage?.trim() && !transcript.hasClientMessageId(input.clientMessageId)) {
+          transcript.appendMessage("user", input.userMessage.trim(), {
+            clientMessageId: input.clientMessageId,
+            displayOnly: true,
+          });
+        }
+        const assistantClientMessageId =
+          replaceAssistant && input.receiptId
+            ? `${PET_HOST_ACTION_REPLACE_VERSIONED_CLIENT_ID_PREFIX}${encodeURIComponent(
+                JSON.stringify({
+                  sourceClientMessageId: input.clientMessageId,
+                  receiptId: input.receiptId,
+                  ...(deliveryChannel ? { deliveryChannel } : {}),
+                }),
+              )}`
+            : replaceAssistant
+              ? deliveryChannel
+                ? `${PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX}${encodeURIComponent(
+                    deliveryChannel,
+                  )}:${input.clientMessageId}`
+                : `${PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX}${input.clientMessageId}`
+              : `${PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX}${input.clientMessageId}`;
+        if (!transcript.hasClientMessageId(assistantClientMessageId)) {
+          transcript.appendMessage("assistant", message, {
+            clientMessageId: assistantClientMessageId,
+            displayOnly: true,
+          });
+        }
+      });
     } catch (error) {
       this.options.onPersistError?.(error, input);
     }
@@ -157,7 +158,7 @@ export async function completePetHostActionReceipt(options: {
 }): Promise<PetHostActionReceiptResult | null> {
   const receipt = await options.recorder.record(options.input);
   if (!receipt) return null;
-  options.publish({
+  await options.publish({
     kind: "host-action-completed",
     clientMessageId: options.input.clientMessageId,
     message: receipt.message,

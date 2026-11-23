@@ -1,3 +1,4 @@
+import { guardedWorkerTree } from "./guarded-worker-tree.mjs";
 import { createHash } from "node:crypto";
 import { readFile, realpath, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -13,6 +14,8 @@ export async function prepareConfinedElectronFixture({
   origin,
   guardModule,
   guardReceiptReady = () => true,
+  receiptDirectory = isolated.home,
+  enableWorkerCrash = false,
 }) {
   isolated.home = await realpath(isolated.home);
   isolated.codeShellHome = join(isolated.home, ".code-shell");
@@ -20,9 +23,12 @@ export async function prepareConfinedElectronFixture({
   const guardUrl =
     guardModule ??
     new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url).href;
-  const receiptFile = join(isolated.home, "network-guard.jsonl");
-  const spawnedWorkerFile = join(isolated.home, "spawned-workers.jsonl");
+  const receiptFile = join(receiptDirectory, "network-guard.jsonl");
+  const spawnedWorkerFile = join(receiptDirectory, "spawned-workers.jsonl");
   const mainEntry = join(isolated.home, "guarded-main.mjs");
+  const hostEntry = join(isolated.home, "guarded-host.mjs");
+  const workerSpawnGuard = join(isolated.home, "guard-worker-spawn.mjs");
+  const hostedProcesses = join(receiptDirectory, "spawned-hosts.jsonl");
   const preload = join(isolated.home, "guarded-runtime.mjs");
   const preloadUrl = pathToFileURL(preload).href;
   // Preserve toolchain/locale/display and the actual OS keyring session. All
@@ -81,13 +87,10 @@ await import(${JSON.stringify(guardUrl)});
     { mode: 0o600 },
   );
   await writeFile(
-    mainEntry,
-    `import { app } from "electron";
-import children from "node:child_process";
+    workerSpawnGuard,
+    `import children from "node:child_process";
 import { appendFileSync, existsSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
-await import(${JSON.stringify(preloadUrl)});
-app.setAppPath(${JSON.stringify(appDir)});
 const spawn = children.spawn;
 children.spawn = function (command, args, options) {
   const worker = args?.some((argument) => argument.includes("agent-server-stdio"));
@@ -99,17 +102,57 @@ children.spawn = function (command, args, options) {
     // bootstrap receipt. Core can load, but no model task reaches the worker.
     child.stdin.cork();
     const timer = setInterval(() => {
-      if (existsSync(${JSON.stringify(join(isolated.home, "worker-"))} + child.pid + ".permit")) {
+      if (existsSync(${JSON.stringify(join(receiptDirectory, "worker-"))} + child.pid + ".permit")) {
         clearInterval(timer);
         child.stdin.uncork();
       }
     }, 10);
     timer.unref();
     child.once("exit", () => clearInterval(timer));
-    appendFileSync(${JSON.stringify(spawnedWorkerFile)}, JSON.stringify({ pid: child.pid }) + "\\n", { mode: 0o600 });
+    if (${JSON.stringify(enableWorkerCrash)}) {
+      const crashFile = ${JSON.stringify(join(receiptDirectory, "worker-"))} + child.pid + ".crash";
+      const crash = setInterval(() => {
+        if (existsSync(crashFile)) { clearInterval(crash); child.kill("SIGKILL"); }
+      }, 25).unref();
+      child.once("exit", () => clearInterval(crash));
+    }
+    appendFileSync(${JSON.stringify(spawnedWorkerFile)}, JSON.stringify({ pid: child.pid, ppid: process.pid }) + "\\n", { mode: 0o600 });
   }
   return child;
 };
+syncBuiltinESMExports();
+`,
+    { mode: 0o600 },
+  );
+  await writeFile(
+    hostEntry,
+    `import https from "node:https";
+import { syncBuiltinESMExports } from "node:module";
+await import(${JSON.stringify(preloadUrl)});
+// Account capabilities are read on ready/focus. Serve the fixed anonymous
+// status in memory; every other request still uses this fixture's network guard.
+const { withOwnedAccountDiscovery } = (await import(${JSON.stringify(new URL("./owned-account-discovery.cjs", import.meta.url).href)})).default;
+https.request = withOwnedAccountDiscovery(https.request.bind(https));
+syncBuiltinESMExports();
+await import(${JSON.stringify(pathToFileURL(workerSpawnGuard).href)});
+await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/desktop-host.mjs")).href)});`,
+    { mode: 0o600 },
+  );
+  await writeFile(
+    mainEntry,
+    `import { app, utilityProcess } from "electron";
+import { appendFileSync } from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
+await import(${JSON.stringify(preloadUrl)});
+app.setAppPath(${JSON.stringify(appDir)});
+const originalFork = utilityProcess.fork;
+utilityProcess.fork = function(entry, args, options) {
+  if (entry !== ${JSON.stringify(join(appDir, "out/main/desktop-host.mjs"))}) return originalFork.call(this, entry, args, options);
+  const host = originalFork.call(this, ${JSON.stringify(hostEntry)}, args, options);
+  host.once("spawn", () => appendFileSync(${JSON.stringify(hostedProcesses)}, JSON.stringify({ pid: host.pid, ppid: process.pid }) + "\\n", { mode: 0o600 }));
+  return host;
+};
+await import(${JSON.stringify(pathToFileURL(workerSpawnGuard).href)});
 syncBuiltinESMExports();
 await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).href)});
 `,
@@ -149,6 +192,7 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
           .split("\n")
           .filter(Boolean)
           .map((line) => JSON.parse(line));
+        const tree = await guardedWorkerTree(receiptDirectory, pid, receipts, guardReceiptReady);
         lastReceipts = receipts;
         lastSpawned = spawned;
         if (receipts.some((receipt) => receipt.origin !== origin || receipt.homeId !== homeId))
@@ -156,15 +200,10 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
         if (
           receipts.some((receipt) => receipt.pid === pid && guardReceiptReady(receipt)) &&
           (!requireWorker || spawned.length > 0) &&
-          spawned.every((worker) =>
-            receipts.some(
-              (receipt) =>
-                receipt.pid === worker.pid && receipt.ppid === pid && guardReceiptReady(receipt),
-            ),
-          )
+          spawned.every(tree.hasWorker)
         ) {
           for (const worker of spawned)
-            await writeFile(join(isolated.home, `worker-${worker.pid}.permit`), "verified", {
+            await writeFile(join(receiptDirectory, `worker-${worker.pid}.permit`), "verified", {
               mode: 0o600,
             });
           console.log(

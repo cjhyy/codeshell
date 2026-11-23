@@ -8,18 +8,32 @@
 
 ---
 
-## 0. 一句话总览
+## 0. 0.12 桌面进程与通信
 
-Desktop main 是一个**组合根（composition root）+ 权限中介**：
+每个 Desktop 实例创建一个 Electron utility process。Main 在应用窗口完成导航后交付经身份校验的端口。Host 管理 stdio worker、PTY、外部 Claude/Codex 子进程和存储线程。Main 负责窗口、系统钥匙环和原生授权对话框。最后一个工作台关闭后 Host 继续运行，显式退出时等待 Host 完成清理。[Main 监督器](../../packages/desktop/src/main/desktop-host/main-supervisor.ts) · [Host 入口](../../packages/desktop/src/main/desktop-host/utility.ts)
 
-- **Engine 不在 main 进程里**。交互式会话全部跑在一个全局单例的 **agent worker 子进程**里（Electron 二进制以 `ELECTRON_RUN_AS_NODE=1` 运行 `@cjhyy/code-shell-core/bin/agent-server-stdio`），通过 stdio NDJSON JSON-RPC 通信；`AgentBridge`（`main/agent-bridge.ts`）是 main 侧的 Electron 适配层，底层的 spawn/分帧/关联逻辑在 `@cjhyy/code-shell-server/worker` 的 `WorkerBridgeCore`。
-- **例外（main 进程内的 Engine）**只有两处，且在 `scripts/lint-engine-bypass` 白名单内：定时自动化的无头只读 Engine（`main/automation-host.ts:298`）和手动「整理/Dream」的 seed Engine（`main/dream-service.ts:98`）。
-- renderer 只能通过 preload 暴露的 `window.codeshell.*` 访问一切；聊天协议是**透明中继**：preload 把 JSON-RPC 行塞进 `ipcRenderer.send("agent:msg")`，main 在少数点上校验/改写（`agent/run` 的信任与工作区元数据）后原样写入 worker stdin。
-- worker 需要「只有宿主能做的事」（驱动浏览器、注入 Cookie、切换工作区、调用 Panel、解密凭证、签名模型请求、创建自动化）时，走**宿主回环（host loopback）**：要么伪装成 `agent/approvalRequest`（`toolName: "__browser_action__"` 等），要么发 `desktop/*` 私有方法；main 拦截后执行并用 `agent/approve` 或 JSON-RPC 回复写回 stdin，**这些行永远不会到达 renderer**。
+工作台的创建、渲染器加载和窗口位置在 `main/shell/workbench-window.ts`。浏览器面板和独立弹窗共用 guest 安全设置与分区检查，弹窗的锚点回到创建它的工作台。[工作台窗口](../../packages/desktop/src/main/shell/workbench-window.ts) · [浏览器窗口](../../packages/desktop/src/main/shell/browser-windows.ts)
 
----
+工作台通过 preload 的 MessagePort 把请求交给 Host。Host 校验当前文档和会话的权限，写入本地索引、发送 worker 请求并分发输出。需要原生对话框、系统通知、浏览器窗口或系统钥匙环时，Host 通过私有通道请求 Main。配对设备的输入先经手机网关校验，再接入同一套 worker 和终端。[工作台入口](../../packages/desktop/src/main/desktop-host/ingress-methods.ts) · [审批状态](../../packages/desktop/src/main/desktop-host/approval-state.ts)
 
-## 1. 进程模型
+```mermaid
+flowchart LR
+  UI[工作台 preload] <-->|每个文档的 MessagePort| HOST[Desktop Host]
+  MAIN[Electron Main] -->|交付端口 / 监督进程| HOST
+  HOST -->|原生能力请求| MAIN
+  MAIN --> NATIVE[窗口 / 菜单 / 通知 / 钥匙环]
+  HOST <-->|stdio JSON-RPC| WORKER[Agent worker]
+  HOST <-->|查询 / 事务| DB[存储线程]
+  DB --> SQLITE[(SQLite 索引与任务)]
+  HOST --> PTY[终端和外部运行时]
+  MOBILE[配对设备] <-->|HTTP / WS| GATEWAY[原生手机网关]
+  GATEWAY <-->|经设备授权的请求| HOST
+```
+
+## 1. 迁移前的进程模型
+
+以下文件清单、旧 IPC 调用链和行号记录 0.9.45，用于定位旧客户端和回退路径。0.12 的入口和进程归属见本章第 0 节及[第 17 章](17-host-process-and-storage.md)。
+
 
 ### 1.1 进程 / 执行上下文清单
 
@@ -49,7 +63,7 @@ Desktop main 是一个**组合根（composition root）+ 权限中介**：
 
 > 注意「多窗口 ≠ 多 agent」：`index.ts:665-670` 的注释写明 bridge 是进程全局的，所有窗口共享同一个 worker，窗口只是同一 worker 的不同视图。
 
-### 1.2 进程拓扑图
+### 1.2 0.9.45 进程拓扑图
 
 ```mermaid
 flowchart LR

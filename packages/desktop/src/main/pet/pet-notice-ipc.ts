@@ -1,3 +1,4 @@
+import { withMimiRuleDocument } from "../desktop-host/mimi-rules-client.js";
 import {
   NOTICE_CHANNEL_MAX_LENGTH,
   NOTICE_EVENTS,
@@ -15,7 +16,7 @@ import type {
   PetSessionBellState,
 } from "../../shared/pet-notices.js";
 import {
-  noticeRuleSummaries,
+  readNoticeRuleSummaries,
   updateNoticeRule,
   type NoticeRuleUpdaterDeps,
   type NotificationSettingsWrite,
@@ -70,7 +71,7 @@ export interface PetNoticeControlsDeps {
    */
   goals: { readActiveGoal(sessionId: string): { paused?: boolean } | undefined };
   /** Briefs' and heartbeat's state today (counts at their caps), once they run. */
-  proactive?: () => PetProactiveStatus | undefined;
+  proactive?: () => PetProactiveStatus | undefined | Promise<PetProactiveStatus | undefined>;
   /** Writes `pet.notifications` (briefs / heartbeat switches from the rule list). */
   writeNotificationSettings?: NotificationSettingsWrite;
   /** The follow-up control's cancel, used when the list cancels a follow-up. */
@@ -141,8 +142,8 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
    * The owner's own rule speaks for the bell; Mimi's delegation rule, or an
    * IM chat's watch, alone is read-only.
    */
-  const describe = (sessionId: string): PetSessionBellState => {
-    const active = store.activeForSession(sessionId);
+  const describe = async (sessionId: string): Promise<PetSessionBellState> => {
+    const active = await store.activeForSession(sessionId);
     const delegation = newest(sessionRules(active, sessionId, "delegation"));
     const user = newest(sessionRules(active, sessionId, "owner"));
     const watch = newest(sessionRules(active, sessionId, "watch"));
@@ -151,15 +152,13 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
       (source) => sessionRules(active, sessionId, source).length > 0,
     );
     const since = now() - FIRED_RECENTLY_MS;
-    const fired = store
-      .list()
-      .some(
-        (candidate) =>
-          candidate.when.kind === "session" &&
-          candidate.when.sessionId === sessionId &&
-          candidate.state === "spent" &&
-          candidate.updatedAt >= since,
-      );
+    const fired = (await store.list()).some(
+      (candidate) =>
+        candidate.when.kind === "session" &&
+        candidate.when.sessionId === sessionId &&
+        candidate.state === "spent" &&
+        candidate.updatedAt >= since,
+    );
     if (!rule)
       return {
         available: true,
@@ -191,14 +190,14 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
       await store.update(rule.id, rule.version, { state: "cancelled" });
     } catch (error) {
       if (!(error instanceof PetRuleStoreError) || error.code !== "version_conflict") throw error;
-      const fresh = store.get(rule.id);
+      const fresh = await store.get(rule.id);
       if (!fresh || (fresh.state !== "active" && fresh.state !== "paused")) return;
       await store.update(fresh.id, fresh.version, { state: "cancelled" });
     }
   };
 
-  const systemRule = (): PetNoticeSystemRule => {
-    const rule = store.systemRule("all-sessions");
+  const systemRule = async (): Promise<PetNoticeSystemRule> => {
+    const rule = await store.systemRule("all-sessions");
     return {
       state: rule.state === "active" ? "active" : "paused",
       channel: rule.channel,
@@ -224,16 +223,16 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
       await notices.ready;
       let proactive: PetProactiveStatus | undefined;
       try {
-        proactive = deps.proactive?.();
+        proactive = await deps.proactive?.();
       } catch {
         proactive = undefined;
       }
       return {
         channels: channels(),
-        systemRule: systemRule(),
+        systemRule: await systemRule(),
         settings: notices.settingsView(),
         ...(proactive ? { proactive } : {}),
-        rules: noticeRuleSummaries(listSource),
+        rules: await readNoticeRuleSummaries(listSource),
       };
     },
     async updateRule(request) {
@@ -264,7 +263,7 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
         // Only the owner's own rules: Mimi's delegation rule follows its task, and
         // an IM chat's watch is that chat's (both are managed in the rule list).
         // Paused ones too: the bell is off, so they must not pile up to be resumed.
-        const owned = sessionRules(store.list(), sessionId, "owner").filter(
+        const owned = sessionRules(await store.list(), sessionId, "owner").filter(
           (rule) => rule.state === "active" || rule.state === "paused",
         );
         for (const rule of owned) await cancel(rule);
@@ -383,28 +382,37 @@ export function registerPetNoticeIpc(options: {
   ipcMain: PetNoticeIpcMainLike;
   windows: () => readonly PetNoticeIpcWindowLike[];
   controls: PetNoticeControls;
+  document?(event: unknown): AbortSignal;
 }): () => void {
   const { controls } = options;
   options.ipcMain.handle(PET_NOTICES_GET_STATE_CHANNEL, (_event, ...args) => {
     if (args.length !== 0) throw new Error("pet notices state does not accept arguments");
-    return controls.getState();
+    return withMimiRuleDocument(options.document?.(_event), () => controls.getState());
   });
   options.ipcMain.handle(PET_NOTICES_SESSION_BELL_CHANNEL, (_event, ...args) => {
     if (args.length !== 1) throw new Error("invalid session bell query");
-    return controls.sessionBell(parseSessionId(args[0], "invalid session bell query"));
+    return withMimiRuleDocument(options.document?.(_event), () =>
+      controls.sessionBell(parseSessionId(args[0], "invalid session bell query")),
+    );
   });
   options.ipcMain.handle(PET_NOTICES_SET_SESSION_BELL_CHANNEL, (_event, ...args) => {
     if (args.length !== 1) throw new Error("invalid session bell request");
     const request = parseSessionBellRequest(args[0]);
-    return controls.setSessionBell(request.sessionId, request.on);
+    return withMimiRuleDocument(options.document?.(_event), () =>
+      controls.setSessionBell(request.sessionId, request.on),
+    );
   });
   options.ipcMain.handle(PET_NOTICES_UPDATE_RULE_CHANNEL, (_event, ...args) => {
     if (args.length !== 1) throw new Error("invalid notice rule update");
     const payload = args[0];
     // A listed rule's action, or the every-Session rule's original patch.
     if (isRecord(payload) && "ruleId" in payload)
-      return controls.updateRule(parseRuleUpdate(payload));
-    return controls.setSystemRule(parseSystemRulePatch(payload));
+      return withMimiRuleDocument(options.document?.(_event), () =>
+        controls.updateRule(parseRuleUpdate(payload)),
+      );
+    return withMimiRuleDocument(options.document?.(_event), () =>
+      controls.setSystemRule(parseSystemRulePatch(payload)),
+    );
   });
   const unsubscribe = controls.subscribe(() => {
     for (const window of options.windows()) {

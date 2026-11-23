@@ -1,79 +1,33 @@
 import { BrowserWindow, ipcMain } from "electron";
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
-import { requireRendererProjectPrimary } from "./renderer-project-path.js";
+import type { IpcMainInvokeEvent } from "electron";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
+import type { StaleWorktreeCleanupSkipped } from "./git-services.js";
 import { dlog } from "./desktop-logger.js";
-import {
-  getGitStatus,
-  getGitBranches,
-  switchGitBranch,
-  stashAndSwitchGitBranch,
-  cleanupStaleWorktrees,
-  type StaleWorktreeCleanupSkipped,
-} from "./desktop-services.js";
-import { assertDesktopSessionId } from "./session-validation.js";
-import { reviewService } from "./review-service.js";
 
 export interface GitReviewIpcDeps {
   knownGitRoots: Set<string>;
+  business: CallShellBusiness;
+  documentSignal(event: IpcMainInvokeEvent): AbortSignal;
 }
 
 /** Project git/branch routes, Session review routes and the stale-worktree sweep. */
 export function registerGitReviewIpc(deps: GitReviewIpcDeps) {
   const { knownGitRoots } = deps;
-  ipcMain.handle("git:projectStatus", async (_e, projectId: string) => {
-    const { path } = await requireRendererProjectPrimary(projectId);
-    return getGitStatus(path);
-  });
-
-  ipcMain.handle("git:projectBranches", async (_e, projectId: string) => {
-    const { path } = await requireRendererProjectPrimary(projectId);
-    return getGitBranches(path);
-  });
-
-  ipcMain.handle("git:projectSwitchBranch", async (_e, projectId: string, branch: string) => {
-    if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
-      throw new Error("git:projectSwitchBranch requires a bounded branch");
-    }
-    const { path } = await requireRendererProjectPrimary(projectId);
-    return switchGitBranch(path, branch);
-  });
-
-  ipcMain.handle(
-    "git:projectStashAndSwitchBranch",
-    async (_e, projectId: string, branch: string) => {
-      if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
-        throw new Error("git:projectStashAndSwitchBranch requires a bounded branch");
-      }
-      const { path } = await requireRendererProjectPrimary(projectId);
-      return stashAndSwitchGitBranch(path, branch);
-    },
+  ipcMain.handle("git:projectSwitchBranch", (event, projectId: string, branch: string) =>
+    deps.business(
+      "git/switchProjectBranch",
+      { projectId, branch, stash: false },
+      deps.documentSignal(event),
+    ),
   );
-
-  ipcMain.handle("review:status", async (_e, sessionId: string) => {
-    assertDesktopSessionId(sessionId);
-    return reviewService.getStatus(sessionId);
-  });
-
-  ipcMain.handle("review:diff", async (_e, sessionId: string, request: unknown) => {
-    assertDesktopSessionId(sessionId);
-    return reviewService.getDiff(
-      sessionId,
-      request as import("../shared/review.js").ReviewGitDiffRequest,
-    );
-  });
-
-  ipcMain.handle("review:recentCommits", async (_e, sessionId: string, limit?: number) => {
-    assertDesktopSessionId(sessionId);
-    return reviewService.getRecentCommits(sessionId, limit);
-  });
-
-  ipcMain.handle("review:preparePrompt", async (_e, sessionId: string, request: unknown) => {
-    assertDesktopSessionId(sessionId);
-    return reviewService.preparePrompt(
-      sessionId,
-      request as import("../shared/review.js").ReviewAiPromptRequest,
-    );
-  });
+  ipcMain.handle("git:projectStashAndSwitchBranch", (event, projectId: string, branch: string) =>
+    deps.business(
+      "git/switchProjectBranch",
+      { projectId, branch, stash: true },
+      deps.documentSignal(event),
+    ),
+  );
 
   interface MainGitPrefs {
     branchPrefix: string;
@@ -132,7 +86,11 @@ export function registerGitReviewIpc(deps: GitReviewIpcDeps) {
     const branchPrefix = gitPrefsCache.branchPrefix;
     for (const root of knownGitRoots) {
       try {
-        const result = await cleanupStaleWorktrees(root, grace, branchPrefix);
+        const result = await deps.business("git/sweepTracked", {
+          root,
+          graceMinutes: grace,
+          prefix: branchPrefix,
+        });
         if (result.removed.length > 0) {
           dlog("main", "git.worktree.cleanup", { reason, root, removed: result.removed });
         }

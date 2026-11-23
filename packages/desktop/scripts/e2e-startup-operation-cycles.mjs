@@ -9,6 +9,7 @@ import { createRequire, syncBuiltinESMExports } from "node:module";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  acceptanceMockKeychainRequested,
   assertSourceElectronTransportSettled,
   captureRendererErrors,
   createElectronTestDiagnostics,
@@ -85,6 +86,44 @@ async function bounded(promise, timeout, label) {
     ]);
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/** A new, visible BrowserWindow can answer IPC before Viz can copy its first surface. */
+export async function captureStartupWindow(app, page, path) {
+  await page.bringToFront();
+  const native = await app.browserWindow(page);
+  try {
+    for (let attempt = 1; ; attempt++) {
+      await bounded(
+        page.evaluate(
+          () =>
+            new Promise((done) =>
+              window.requestAnimationFrame(() => window.requestAnimationFrame(done)),
+            ),
+        ),
+        3000,
+        "Startup workbench did not paint after activation",
+      );
+      let png;
+      try {
+        png = await native.evaluate(async (win) => {
+          if (!win.isVisible()) throw Error("Startup workbench is hidden");
+          const frame = await win.webContents.capturePage();
+          if (frame.isEmpty()) throw Error("Startup workbench has no compositor frame");
+          return frame.toPNG().toString("base64");
+        });
+      } catch (error) {
+        // Electron's CopyFromSurface can race a newly presented surface on macOS.
+        // Retry just that readback on the next paint. All other failures are final.
+        if (attempt < 3 && /(?:^|: )UnknownVizError$/.test(error.message)) continue;
+        throw error;
+      }
+      await writeFile(path, Buffer.from(png, "base64"), { mode: 0o600 });
+      return;
+    }
+  } finally {
+    await native.dispose();
   }
 }
 
@@ -202,20 +241,23 @@ export async function runStartupOperationCycles(args) {
       assertStartupCycleSettled(resource.proof);
       // The first launch pins metadata. Reuse that exact reference after each
       // shutdown; never refresh a changed identity or substitute native crypto.
-      resource.diagnostics.phase("startup-post-exit-keychain-preflight");
-      const context = ensureElectronKeychainContext({
-        home: isolated.home,
-        environment: {
-          ...fixture.env,
-          HOME: isolated.home,
-          USERPROFILE: isolated.home,
-          CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE:
-            process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE,
-        },
-      });
-      resource.diagnostics.phase("startup-cycle-gates");
-      if (process.platform === "darwin") assert.equal(context?.reused, true);
-      resource.proof.keychainMetadataRechecked = process.platform === "darwin";
+      resource.proof.keychainMetadataRechecked = false;
+      if (process.platform === "darwin" && !acceptanceMockKeychainRequested(fixture.env)) {
+        resource.diagnostics.phase("startup-post-exit-keychain-preflight");
+        const context = ensureElectronKeychainContext({
+          home: isolated.home,
+          environment: {
+            ...fixture.env,
+            HOME: isolated.home,
+            USERPROFILE: isolated.home,
+            CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE:
+              process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE,
+          },
+        });
+        assert.equal(context?.reused, true);
+        resource.proof.keychainMetadataRechecked = true;
+        resource.diagnostics.phase("startup-cycle-gates");
+      }
     } catch (error) {
       observeElectronDiagnostic(resource.diagnostics, "error", error, resource.child);
       errors.push(error);
@@ -246,18 +288,29 @@ import {appendFileSync} from "node:fs";
 import {syncBuiltinESMExports} from "node:module";
 await import(${JSON.stringify(new URL("./runtime-cost-gui-guard.mjs", import.meta.url).href)});
 const attempts=${JSON.stringify(join(isolated.home, "startup-denied-attempts.jsonl"))};
-const deny=kind=>{appendFileSync(attempts,JSON.stringify({pid:process.pid,kind})+"\\n",{mode:0o600});throw Error("Startup fixture denied "+kind);};
+const deny=kind=>{
+  const error=new Error("Startup fixture denied "+kind);
+  // Store source locations only. Request arguments, environment and URLs do not belong in receipts.
+  const frames=(error.stack??"").split("\\n").slice(1,12).flatMap(line=>{
+    const match=line.match(/(?:^|[/\\\\])([\\w.-]+\\.(?:mjs|cjs|js):\\d+:\\d+)\\)?$/);
+    return match?[match[1]]:[];
+  });
+  appendFileSync(attempts,JSON.stringify({pid:process.pid,kind,frames})+"\\n",{mode:0o600});
+  throw error;
+};
 globalThis.fetch=()=>deny("network");
 for(const transport of [http,https])for(const name of ["get","request"])transport[name]=()=>deny("network");
 const spawn=children.spawn;
 children.spawn=function(command,args,options){if(args?.some(arg=>String(arg).includes("agent-server-stdio")))return deny("worker");return spawn.call(this,command,args,options);};
 syncBuiltinESMExports();
+if (process.type === "browser") {
 const {app,BrowserWindow,ipcMain,net,safeStorage,shell}=await import("electron");
 net.request=net.fetch=()=>deny("network");
 for(const name of ["isEncryptionAvailable","getSelectedStorageBackend","encryptString","decryptString"])if(typeof safeStorage[name]==="function")safeStorage[name]=()=>deny("crypto");
 for(const name of ["openPath","openExternal","showItemInFolder"])shell[name]=()=>deny("OS-open");
 app.on("web-contents-created",(_event,contents)=>contents.session.webRequest.onBeforeRequest({urls:["http://*/*","https://*/*"]},()=>deny("network")));
 for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototype[method];BrowserWindow.prototype[method]=function(...args){const missing=["pet:get-snapshot","pet:set-active-session","pet:get-attention"].filter(channel=>!ipcMain._invokeHandlers.has(channel));appendFileSync(${JSON.stringify(loadLog)},JSON.stringify({pid:process.pid,method,source:String(args[0]).slice(0,1024),missing,windowId:this.id})+"\\n",{mode:0o600});return original.apply(this,args);};}
+}
 `,
     );
     fixture = await prepareConfinedElectronFixture({
@@ -391,6 +444,12 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
           new URL(pathToFileURL(join(appDir, "out/renderer/index.html"))).pathname,
         );
         await page.waitForFunction(() => Boolean(window.codeshell?.pet));
+        await page.evaluate(() =>
+          window.codeshell.onDesktopHostStatus((value) => {
+            window.__startupHostStatus = value;
+          }),
+        );
+        await page.waitForFunction(() => window.__startupHostStatus === "ready");
         const result = await page.evaluate(async () => ({
           active: await window.codeshell.pet.setActiveSession(null),
           snapshot: await window.codeshell.pet.getSnapshot(),
@@ -413,7 +472,7 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
         operation: "renderer reload real Pet IPC",
         result: await checkPet(win),
       });
-      await win.screenshot({ path: join(evidence, `cycle-${cycle}-reload.png`) });
+      await captureStartupWindow(app, win, join(evidence, `cycle-${cycle}-reload.png`));
       if (cycle === 1) {
         diagnostics.phase("startup-second-window");
         const opened = app.waitForEvent("window", { timeout: 15000 });
@@ -426,7 +485,7 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
           operation: "production second window real Pet IPC",
           result: await checkPet(other),
         });
-        await other.screenshot({ path: join(evidence, "second-window.png") });
+        await captureStartupWindow(app, other, join(evidence, "second-window.png"));
         diagnostics.phase("startup-second-window-close");
         await other.close();
       }

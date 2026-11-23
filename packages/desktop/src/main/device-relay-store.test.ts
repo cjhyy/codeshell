@@ -3,7 +3,13 @@ import { mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomBytes, randomUUID, createCipheriv, createDecipheriv } from "node:crypto";
-import { DeviceRelayStore, type RelaySecretCipher } from "./device-relay-store.js";
+import { AsyncEncryptedGrantStore } from "@cjhyy/code-shell-core/internal/storage";
+import {
+  DeviceRelayStore,
+  relayGrantCustody,
+  validRegistration,
+  type RelaySecretCipher,
+} from "./device-relay-store.js";
 import { validateRelayEnrollment } from "./device-relay-enrollment.js";
 const roots: string[] = [];
 afterEach(() => {
@@ -85,4 +91,64 @@ test("enrollment accepts only canonical HTTPS origins and bounded tickets/names"
     expect(() => validateRelayEnrollment({ ...input, relayOrigin })).toThrow();
   expect(() => validateRelayEnrollment({ ...input, ticket: "short" })).toThrow();
   expect(() => validateRelayEnrollment({ ...input, name: "\ncomputer" })).toThrow();
+});
+
+test("asynchronous keyring restores a legacy grant and delayed encryption cannot undo forget", async () => {
+  const { path, registration, cipher, store } = setup();
+  store.save(registration);
+  let begin!: () => void, finish!: () => void;
+  const entered = new Promise<void>((r) => {
+    begin = r;
+  });
+  const pause = new Promise<void>((r) => {
+    finish = r;
+  });
+  let blocked = false;
+  const asyncStore = new AsyncEncryptedGrantStore(
+    path,
+    {
+      available: async () => true,
+      encrypt: async (value) => {
+        if (blocked) {
+          begin();
+          await pause;
+        }
+        return cipher.encrypt(value);
+      },
+      decrypt: async (bytes) => cipher.decrypt(bytes),
+    },
+    validRegistration,
+  );
+  expect(await asyncStore.load()).toEqual(registration);
+  await asyncStore.preflight();
+  await asyncStore.save({ ...registration, name: "updated" });
+  expect(store.load()?.name).toBe("updated");
+  blocked = true;
+  const pending = asyncStore.save(registration);
+  await entered;
+  asyncStore.forget();
+  finish();
+  await expect(pending).rejects.toThrow("已变更");
+  expect(store.load()).toBeUndefined();
+  await expect(
+    asyncStore.save(registration, () => {
+      throw new Error("retired");
+    }),
+  ).rejects.toThrow("retired");
+  expect(store.load()).toBeUndefined();
+});
+
+test("relay custody discards unrelated fields on OS encryption and legacy-file reads", async () => {
+  const { path, cipher, registration, store } = setup();
+  const custody = relayGrantCustody(path, {
+    available: async () => true,
+    encrypt: async (text) => cipher.encrypt(text),
+    decrypt: async (bytes) => cipher.decrypt(bytes),
+  });
+  const extra = { ...registration, unrelated: { payload: "fixture" } };
+  store.save(extra);
+  expect(await custody.readSaved()).not.toHaveProperty("unrelated");
+  const bytes = await custody.seal(extra);
+  expect(cipher.decrypt(Buffer.from(bytes))).not.toContain("fixture");
+  expect(JSON.parse(cipher.decrypt(Buffer.from(bytes)))).toEqual(registration);
 });

@@ -21,7 +21,15 @@ export interface GoalRpcRequest {
 export type ExternalGoalRpcHandler = (
   request: GoalRpcRequest,
   callerWebContentsId: number,
-) => Promise<Record<string, unknown>> | undefined;
+  assertCurrent?: () => void,
+) => Promise<Record<string, unknown> | undefined> | undefined;
+
+export function isExternalGoalRequest(request: GoalRpcRequest): boolean {
+  return (
+    GOAL_METHODS.has(request.method ?? "") ||
+    (request.method === "agent/query" && request.params?.type === "compact")
+  );
+}
 
 function objective(value: unknown): string {
   if (typeof value !== "string" || !value.trim() || value.length > MAX_OBJECTIVE_CHARS) {
@@ -75,7 +83,14 @@ export function createExternalGoalRpcHandler(deps: {
   isExternalSession(sessionId: string): boolean;
   authorize(sessionId: string, callerWebContentsId: number): void | Promise<void>;
   prepareResume(sessionId: string, callerWebContentsId: number): Promise<void>;
-  service(): Pick<ExternalRuntimeService, "getGoal" | "updateGoal" | "deleteGoal" | "extendGoal">;
+  service(): Pick<ExternalRuntimeService, "updateGoal" | "deleteGoal" | "extendGoal"> & {
+    getGoal(
+      id: string,
+      ownerId: number,
+    ):
+      | ReturnType<ExternalRuntimeService["getGoal"]>
+      | Promise<ReturnType<ExternalRuntimeService["getGoal"]>>;
+  };
   /**
    * A client read the Session's Goal: it opened (or reloaded) the Session.
    * Main takes the moment to check that a pause or open question of that Goal
@@ -83,11 +98,11 @@ export function createExternalGoalRpcHandler(deps: {
    */
   onGoalRead?(sessionId: string): void;
 }): ExternalGoalRpcHandler {
-  return (request, callerWebContentsId) => {
+  return (request, callerWebContentsId, assertCurrent = () => {}) => {
     const params = request.params ?? {};
     const sessionId = params.sessionId;
     const compact = request.method === "agent/query" && params.type === "compact";
-    if (!compact && !GOAL_METHODS.has(request.method ?? "")) return undefined;
+    if (!isExternalGoalRequest(request)) return undefined;
     if (typeof sessionId !== "string" || !deps.isExternalSession(sessionId)) return undefined;
     // The native Engine would "compact" a transcript the Codex / Claude thread
     // never reads, reporting success while the provider keeps its context.
@@ -102,11 +117,13 @@ export function createExternalGoalRpcHandler(deps: {
     return (async () => {
       try {
         await deps.authorize(sessionId, callerWebContentsId);
+        assertCurrent();
         const service = deps.service();
         let result: unknown;
         switch (request.method) {
           case "agent/goalGet":
             result = await service.getGoal(sessionId, callerWebContentsId);
+            assertCurrent();
             deps.onGoalRead?.(sessionId);
             break;
           case "agent/goalUpdate": {
@@ -125,6 +142,7 @@ export function createExternalGoalRpcHandler(deps: {
             // Reject stale UI before starting a runtime. The service repeats
             // the CAS at persistence to fence races during asynchronous ensure.
             const current = await service.getGoal(sessionId, callerWebContentsId);
+            assertCurrent();
             if (
               current.goalId !== expected.expectedGoalId ||
               current.revision !== expected.expectedRevision
@@ -133,6 +151,7 @@ export function createExternalGoalRpcHandler(deps: {
               break;
             }
             if (update.paused === false) await deps.prepareResume(sessionId, callerWebContentsId);
+            assertCurrent();
             result = await service.updateGoal(sessionId, update, callerWebContentsId);
             break;
           }
@@ -169,6 +188,7 @@ export function createExternalGoalRpcHandler(deps: {
             break;
           }
         }
+        assertCurrent();
         return { jsonrpc: "2.0", id: request.id, result };
       } catch (error) {
         return {

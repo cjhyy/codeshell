@@ -1,3 +1,5 @@
+import { SessionManager, SettingsManager } from "@cjhyy/code-shell-core";
+import { resolveNoRepoCwd } from "../no-repo-cwd.js";
 import {
   petChatModelKeyFromSettings,
   petMemoryAutoExtractFromSettings,
@@ -23,4 +25,15 @@ export function allowNativePetExtraction(
   return (
     allowNativePetAuxiliary(settings, actualManager) && petMemoryAutoExtractFromSettings(settings)
   );
+}
+
+export function nativeExtractionAllowed(sessionId: string) {
+  try {
+    return allowNativePetExtraction(
+      new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
+      new SessionManager().readSessionState(sessionId),
+    );
+  } catch {
+    return false;
+  }
 }

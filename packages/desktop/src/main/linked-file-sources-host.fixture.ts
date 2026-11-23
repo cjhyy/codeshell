@@ -61,6 +61,9 @@ mock.module("@cjhyy/code-shell-server/links", () => ({ ...realService, ...remote
 const { CredentialStore, PlaintextCipher, SettingsManager } =
   await import("@cjhyy/code-shell-core");
 const { listSourceDefinitions } = await import("@cjhyy/code-shell-core/internal");
+const { commitLinkedFileSources, linkedFileSourceOperation } =
+  await import("../host/composition/linked-file-sources.js");
+const { HostBusinessCalls } = await import("../host/composition/business-calls.js");
 const { registerRemoteLinkIpc } = await import("./remote-link-ipc.js");
 const { openLinkedFileSourceOperation } = await import("./linked-file-sources-host.js");
 const { registerLinkedFileSourceIpc } = await import("./linked-file-sources-ipc.js");
@@ -87,6 +90,7 @@ const ipcMain = {
   },
 };
 const remote = registerRemoteLinkIpc({
+  withCaller: (_event, work) => work(),
   ipcMain,
   requireRendererProjectPath: async (path) => {
     assert.ok(project.roots.some((root) => root.path === path));
@@ -96,10 +100,55 @@ const remote = registerRemoteLinkIpc({
   withMutation: async (_cwd, run) => run(),
   onChanged() {},
 });
+let sequence = 0;
+let beforeCommit: (() => void) | undefined;
+let afterCatalog: (() => void) | undefined;
+const primary = (id: string) => {
+  assert.equal(id, project.id);
+  const root = project.roots.find((r) => r.id === project.primaryRootId)!;
+  return {
+    projectId: id,
+    rootId: root.id,
+    cwd: root.path,
+    canonicalIdentity: root.canonicalIdentity,
+  };
+};
+const storage = {
+  async request<T>(_method: string, work?: unknown) {
+    beforeCommit?.();
+    const request = work as Parameters<typeof commitLinkedFileSources>[0];
+    return (await commitLinkedFileSources(request, (id) => {
+      if (afterCatalog && Atomics.load(request.catalogPermit, 0) === 1) {
+        const effect = afterCatalog;
+        afterCatalog = undefined;
+        effect();
+      }
+      return primary(id);
+    })) as T;
+  },
+};
+const business = new HostBusinessCalls({
+  "sources/addLinkedFiles": linkedFileSourceOperation(Promise.resolve(storage)),
+});
+const call: import("../shared/linked-file-sources.js").CommitLinkedFiles = async (
+  method,
+  input,
+  signal,
+) => {
+  signal?.throwIfAborted();
+  const id = String(++sequence),
+    revoke = () => business.revoke(id);
+  signal?.addEventListener("abort", revoke, { once: true });
+  try {
+    return (await business.run(id, method, input)) as { sourceIds: string[] };
+  } finally {
+    signal?.removeEventListener("abort", revoke);
+  }
+};
 registerLinkedFileSourceIpc({
   ipcMain,
   open: (invocation) =>
-    openLinkedFileSourceOperation(invocation, () => true, remote.storedSnapshot),
+    openLinkedFileSourceOperation(invocation, () => true, remote.storedSnapshot, call),
 });
 try {
   const snapshot = await handlers.get("sources:linkedFiles:snapshot")!(event, "project-a");
@@ -120,6 +169,59 @@ try {
   assert.deepEqual(
     await handlers.get("sources:linkedFiles:add")!(event, "project-a", input),
     added,
+  );
+
+  // A project-layer rotation after unlock and before storage dispatch invalidates
+  // even a previously approved user-layer connection. No catalog or binding changes.
+  const vault = new CredentialStore(cwd, new PlaintextCipher());
+  beforeCommit = () => {
+    beforeCommit = undefined;
+    vault.save("project", {
+      id: "concurrent",
+      type: "token",
+      label: "fixture",
+      secret: "synthetic",
+    });
+  };
+  await assert.rejects(
+    handlers.get("sources:linkedFiles:add")!(event, "project-a", {
+      ...input,
+      files: [{ kind: "github-file", owner: "owner", repo: "docs", path: "concurrent.md" }],
+    }),
+    /授权已改变/,
+  );
+  assert.equal(listSourceDefinitions().length, 1);
+  assert.equal(new SettingsManager(cwd, "full").getForScope("project", cwd).sources?.length, 1);
+
+  for (const scope of ["user", "project"] as const) {
+    afterCatalog = () =>
+      vault.save(scope, {
+        id: "raced-" + scope,
+        type: "token",
+        label: "test-only",
+        secret: "fixture",
+      });
+    await assert.rejects(
+      handlers.get("sources:linkedFiles:add")!(event, "project-a", {
+        ...input,
+        priority: "normal",
+      }),
+      /授权已改变/,
+    );
+    assert.equal(
+      new SettingsManager(cwd, "full").getForScope("project", cwd).sources?.[0]?.priority,
+      "high",
+    );
+    assert.equal(afterCatalog, undefined);
+  }
+  afterCatalog = () => business.revoke(String(sequence));
+  await assert.rejects(
+    handlers.get("sources:linkedFiles:add")!(event, "project-a", { ...input, priority: "normal" }),
+    /窗口已关闭或导航|revoked/,
+  );
+  assert.equal(
+    new SettingsManager(cwd, "full").getForScope("project", cwd).sources?.[0]?.priority,
+    "high",
   );
 
   mkdirSync(join(scratch, "other-root"));
@@ -155,6 +257,7 @@ try {
           await blocked;
           return read;
         },
+        call,
       ),
   });
   const pending = handlers.get("sources:linkedFiles:add")!(event, "project-a", {
@@ -172,6 +275,7 @@ try {
   assert.equal(requests, 0);
   process.stdout.write(JSON.stringify({ passed: true, requests }));
 } finally {
+  business.close();
   sender.emit("destroyed");
   rmSync(scratch, { recursive: true, force: true });
 }

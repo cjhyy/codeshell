@@ -97,11 +97,13 @@ export interface GatewayControlServerOptions {
     | { pairingUrl: string; expiresAt: number };
   petChat?: (request: PetChatControlRequest) => Promise<PetChatControlResult>;
   /** Return false until Mimi can accept a turn without losing its message. */
-  isPetChatReady?: () => boolean;
+  isPetChatReady?: () => boolean | Promise<boolean>;
   /** Where one inbound IM message should go: a bound Session, or Mimi. */
   routeSession?: (request: SessionRouteControlRequest) => Promise<unknown>;
   /** Return false until persisted conversation bindings have been restored. */
-  isSessionRouteReady?: () => boolean;
+  isSessionRouteReady?: () => boolean | Promise<boolean>;
+  /** Prepare a copy for its currently authorized recipient, including retry and long-poll sends. */
+  projectEvent?: (event: GatewayControlEvent) => GatewayControlEvent | undefined;
   /** Test seam: the outbox clock (expiry, retry backoff). */
   now?: () => number;
 }
@@ -448,7 +450,10 @@ export class GatewayControlServer {
     }
   }
 
-  publish(event: GatewayControlEventInput): Promise<GatewayControlEvent> {
+  publish(
+    event: GatewayControlEventInput,
+    publication?: { check(): void; prepare(event: GatewayControlEvent): GatewayControlEvent },
+  ): Promise<GatewayControlEvent> {
     // Once stop() has begun, only mutations already accepted by the live owner
     // may flush under its lease. A later publication must wait for a new start.
     if (!this.descriptor || !this.server || this.stopPromise) {
@@ -458,6 +463,7 @@ export class GatewayControlServer {
       if (!this.eventOutboxReady || !this.eventStreamId) {
         throw new Error("Gateway control event stream is not started");
       }
+      publication?.check();
       const key = event.deliveryKey;
       // Publishing is idempotent by deliveryKey: a delivery still under way is
       // the same delivery (a publisher re-driving it after a restart), and a
@@ -474,7 +480,7 @@ export class GatewayControlServer {
           `Gateway control event outbox is full (${MAX_GATEWAY_EVENTS} unacknowledged events)`,
         );
       }
-      const stored = parseGatewayControlEvent({
+      const parsed = parseGatewayControlEvent({
         ...event,
         ...(waiting ? { attempt: waiting.event.attempt } : {}),
         // Every event needs an identity independent of streamId:id. This keeps
@@ -484,6 +490,7 @@ export class GatewayControlServer {
         id: this.nextEventId,
         createdAt: this.now(),
       });
+      const stored = publication ? publication.prepare(parsed) : parsed;
       // Persist before making the event observable. Once publish() resolves, a
       // process restart can recover the same stream/id and retry the notification.
       await this.commitOutbox({
@@ -605,14 +612,15 @@ export class GatewayControlServer {
     if (streamId !== this.eventStreamId) return false;
     const event = this.events.find((entry) => entry.id === eventId);
     const now = this.now();
-    if (!event || !this.isServable(event, now)) return false;
+    if (!event || !this.eventForDelivery(event, now)) return false;
     // About to be sent: it must not quietly expire mid-send.
     this.servedAt.set(event.id, now);
     return true;
   }
 
-  private isServable(event: GatewayControlEvent, now: number): boolean {
-    return !event.closed && (event.expiresAt === undefined || now < event.expiresAt);
+  eventForDelivery(event: GatewayControlEvent, now = this.now()): GatewayControlEvent | undefined {
+    if (event.closed || (event.expiresAt !== undefined && now >= event.expiresAt)) return;
+    return this.opts.projectEvent ? this.opts.projectEvent(event) : event;
   }
 
   private settle(
@@ -862,7 +870,7 @@ export class GatewayControlServer {
       }
       if (req.method === "POST" && req.url === "/v1/session/route" && this.opts.routeSession) {
         const body = parseSessionRouteRequest(await readJsonBody(req, 64 * 1024));
-        if (this.opts.isSessionRouteReady?.() === false) {
+        if ((await this.opts.isSessionRouteReady?.()) === false) {
           throw new GatewayControlRequestError("会话路由正在启动，消息将稍后重试", 503);
         }
         sendJson(res, 200, await this.opts.routeSession(body));
@@ -870,7 +878,7 @@ export class GatewayControlServer {
       }
       if (req.method === "POST" && req.url === "/v1/pet/chat/start" && this.opts.petChat) {
         const body = parsePetChatRequest(await readJsonBody(req, 32 * 1024 * 1024));
-        this.assertPetChatReady();
+        await this.assertPetChatReady();
         sendJson(res, 202, this.chatRequests.start(body));
         return;
       }
@@ -896,7 +904,7 @@ export class GatewayControlServer {
       }
       if (req.method === "POST" && req.url === "/v1/pet/chat" && this.opts.petChat) {
         const body = parsePetChatRequest(await readJsonBody(req, 32 * 1024 * 1024));
-        this.assertPetChatReady();
+        await this.assertPetChatReady();
         sendJson(res, 200, await this.opts.petChat(body));
         return;
       }
@@ -914,8 +922,8 @@ export class GatewayControlServer {
     }
   }
 
-  private assertPetChatReady(): void {
-    if (this.opts.isPetChatReady?.() === false) {
+  private async assertPetChatReady(): Promise<void> {
+    if ((await this.opts.isPetChatReady?.()) === false) {
       // Reject before creating a correlated ticket: a cached startup failure
       // would otherwise prevent the durable inbox from retrying once ready.
       throw new GatewayControlRequestError("Mimi Pet 正在启动，消息将稍后重试", 503);
@@ -1199,7 +1207,7 @@ export class GatewayControlServer {
     const read = () => {
       const now = this.now();
       const pending = this.events.filter((event) => event.id > after);
-      const served = pending.filter((event) => this.isServable(event, now));
+      const served = pending.flatMap((event) => this.eventForDelivery(event, now) ?? []);
       for (const event of served) this.servedAt.set(event.id, now);
       return {
         events: served.map(({ closed: _closed, ...event }) => event),
@@ -1457,7 +1465,7 @@ function parseGatewayControlEventRetry(value: unknown): GatewayControlEventRetry
   };
 }
 
-function parseGatewayControlEvent(value: unknown): GatewayControlEvent {
+export function parseGatewayControlEvent(value: unknown): GatewayControlEvent {
   if (!isPlainRecord(value)) throw new Error("Invalid Gateway control event");
   const rawAttachments = value.attachments ?? [];
   if (

@@ -14,6 +14,7 @@ export interface ParsedRpc {
     cwd?: string;
     sessionId?: string;
     clientMessageId?: string;
+    injected?: boolean;
     sourceSessionId?: string;
     targetSessionId?: string;
     forkKind?: "side";

@@ -8,22 +8,28 @@ import {
   type TaskInboxRecordV1,
   type TaskSource,
 } from "./task-inbox-types.js";
-import type { TaskInboxProjector } from "./task-inbox-projector.js";
 
+/** Main-only authorization lease. Renderer inputs cannot supply callbacks. */
+export interface TaskExecutorContext extends TaskInboxActionContext {
+  assertCurrent?(): void;
+}
 export interface TaskInboxActionAdapter {
   source: TaskSource;
   reread(
     record: TaskInboxRecordV1,
-    context?: TaskInboxActionContext,
+    context?: TaskExecutorContext,
   ): TaskInboxRecordV1 | undefined | Promise<TaskInboxRecordV1 | undefined>;
   act(
     record: TaskInboxRecordV1,
     action: TaskAction,
-    context?: TaskInboxActionContext,
+    context?: TaskExecutorContext,
   ): TaskInboxActionResult | Promise<TaskInboxActionResult>;
 }
 export interface TaskInboxActionsOptions {
-  projector: Pick<TaskInboxProjector, "get" | "ingest">;
+  projector: {
+    get(key: string): TaskInboxRecordV1 | undefined | Promise<TaskInboxRecordV1 | undefined>;
+    ingest(record: TaskInboxRecordV1): unknown;
+  };
   adapters: TaskInboxActionAdapter[];
   onProjectionError?: (error: unknown) => void;
 }
@@ -39,10 +45,11 @@ export class TaskInboxActions {
   }
   act(
     value: TaskInboxActionRequest,
-    context?: TaskInboxActionContext,
+    context?: TaskExecutorContext,
   ): Promise<TaskInboxActionResult> {
     let request: TaskInboxActionRequest;
     try {
+      context?.assertCurrent?.();
       request = parseTaskInboxActionRequest(value);
       if (context && (!Number.isSafeInteger(context.webContentsId) || context.webContentsId < 1))
         throw new Error("Invalid task action caller");
@@ -75,10 +82,10 @@ export class TaskInboxActions {
   }
   private async perform(
     request: TaskInboxActionRequest,
-    context?: TaskInboxActionContext,
+    context?: TaskExecutorContext,
   ): Promise<TaskInboxActionResult> {
     try {
-      const projected = this.options.projector.get(request.taskKey);
+      const projected = await this.options.projector.get(request.taskKey);
       if (!projected) return { status: "unavailable", message: "Task no longer exists" };
       const adapter = this.adapters.get(projected.source);
       if (!adapter || (projected.source === "legacy-run" && request.action !== "open"))
@@ -119,6 +126,7 @@ export class TaskInboxActions {
         this.completed.has(operationKey)
       )
         return structuredClone(this.completed.get(operationKey)!);
+      context?.assertCurrent?.();
       const result = await adapter.act(current, request.action, context);
       if (!["ok", "stale", "unavailable", "rejected", "failed"].includes(result.status))
         return { status: "failed", message: "Invalid task controller response" };
@@ -143,16 +151,17 @@ export class TaskInboxActions {
     }
   }
   private publish(record: TaskInboxRecordV1): void {
-    try {
-      this.options.projector.ingest(record);
-    } catch (error) {
-      // Projection is expendable. A failed cache write must not cancel or repeat
-      // an accepted authoritative operation.
+    const report = (error: unknown) => {
       try {
         this.options.onProjectionError?.(error);
       } catch {
         /* Diagnostics only. */
       }
+    };
+    try {
+      void Promise.resolve(this.options.projector.ingest(record)).catch(report);
+    } catch (error) {
+      report(error);
     }
   }
 }

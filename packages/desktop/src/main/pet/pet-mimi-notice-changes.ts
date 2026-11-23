@@ -56,7 +56,7 @@ export interface MimiNoticeChangesDeps {
   settingsView(): PetNotificationSettingsView;
   /** `pet.notifications` deep-merge write (null deletes); main re-syncs after it. */
   writeNotificationSettings?: NotificationSettingsWrite;
-  isOwnerConversation(channel: string, target: string): boolean;
+  isOwnerConversation(channel: string, target: string): boolean | Promise<boolean>;
   now?: () => number;
   timezoneOffsetMin?: (ms: number) => number;
 }
@@ -67,17 +67,17 @@ export interface MimiNoticeChangesDeps {
  * that the adapter reports as a private chat counts. A turn without
  * authenticated routing facts never does.
  */
-export function ownerTurnRefusal(
+export async function ownerTurnRefusal(
   context: PetHostActionContext | undefined,
-  isOwnerConversation: (channel: string, target: string) => boolean,
-): string | undefined {
+  isOwnerConversation: (channel: string, target: string) => boolean | Promise<boolean>,
+): Promise<string | undefined> {
   const unverified = "这次请求的来源无法核实，没有修改。";
   if (!context) return unverified;
   const route = context.completionTarget;
   if (!route) return context.originRef?.kind === "desktop" ? undefined : unverified;
   if (context.isDirectMessage !== true)
     return "群聊里不能修改提醒和通知设置，没有修改。请在桌面或和 Mimi 的私聊里说。";
-  if (!isOwnerConversation(route.channel, route.target))
+  if (!(await isOwnerConversation(route.channel, route.target)))
     return "只有主人本人能修改提醒和通知设置，没有修改。";
   return undefined;
 }
@@ -133,7 +133,7 @@ export function createMimiNoticeChanges(deps: MimiNoticeChangesDeps) {
     payload: Record<string, unknown>,
     context?: PetHostActionContext,
   ): Promise<Record<string, unknown>> {
-    const refusal = ownerTurnRefusal(context, deps.isOwnerConversation);
+    const refusal = await ownerTurnRefusal(context, deps.isOwnerConversation);
     if (refusal) throw new Error(refusal);
     if (!isPetTriggerMutationRequest(payload)) throw new Error("invalid trigger change");
     const controls = deps.controls();
@@ -312,7 +312,7 @@ export function createMimiNoticeChanges(deps: MimiNoticeChangesDeps) {
     payload: Record<string, unknown>,
     context?: PetHostActionContext,
   ): Promise<Record<string, unknown>> {
-    const refusal = ownerTurnRefusal(context, deps.isOwnerConversation);
+    const refusal = await ownerTurnRefusal(context, deps.isOwnerConversation);
     if (refusal) throw new Error(refusal);
     if (!isPetNotificationSettingsMutation(payload)) throw new Error("invalid settings change");
     const { write, lines } = settingsWrite(payload, deps.settingsView());

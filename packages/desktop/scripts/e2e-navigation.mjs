@@ -223,7 +223,18 @@ try {
   await waitForToggleFocus(win);
 
   drawer = await openDrawer();
-  await win.mouse.click(385, 400);
+  const backdrop = win.locator("[data-sidebar-backdrop]");
+  const [drawerBounds, backdropBounds] = await Promise.all([
+    drawer.boundingBox(),
+    backdrop.boundingBox(),
+  ]);
+  const uncoveredWidth =
+    backdropBounds.x + backdropBounds.width - (drawerBounds.x + drawerBounds.width);
+  assert(uncoveredWidth > 0, "The drawer leaves part of its backdrop exposed");
+  // Click the exposed backdrop after it is stable and receives pointer events.
+  await backdrop.click({
+    position: { x: backdropBounds.width - uncoveredWidth / 2, y: backdropBounds.height / 2 },
+  });
   await drawer.waitFor({ state: "hidden" });
   await waitForToggleFocus(win);
   assert(

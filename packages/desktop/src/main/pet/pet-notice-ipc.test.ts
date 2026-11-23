@@ -1,3 +1,5 @@
+import { testAttention } from "./test-utils/test-attention.js";
+import { PetNoticeLedger } from "./pet-notice-ledger.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,7 +13,7 @@ import {
   type PetNoticeControls,
 } from "./pet-notice-ipc.js";
 import { wirePetNotices, type PetNoticeWiring } from "./pet-notice-wiring.js";
-import { PetRuleStoreError } from "./pet-rule-store.js";
+import { PetRuleStore, PetRuleStoreError } from "./pet-rule-store.js";
 import type { DesktopPetSession } from "./pet-state-aggregator.js";
 
 const SID = "s-work";
@@ -52,22 +54,26 @@ function fixture(): Fixture {
   const tasks: PetLongTask[] = [];
   const goals = new Set<string>();
   const settings = { value: {} as unknown };
+  const projection: import("./pet-notice-types.js").PetAttentionOptions["source"] = {
+    // Mimi's own Session is never in the work-Session projection.
+    getSnapshot: () => ({
+      version: 1,
+      generation: 1,
+      workerState: "active",
+      sessions: [session(SID)],
+      pending: [],
+      observedAt: NOW,
+      workMemorySegments: [],
+    }),
+    subscribe: () => () => undefined,
+  };
   const created = wirePetNotices({
     userDataDir: dir,
+    ledger: new PetNoticeLedger({ path: join(dir, "pet", "notices.json"), now: () => NOW }),
+    rules: new PetRuleStore({ path: join(dir, "pet", "rules.json"), now: () => NOW }),
     bridge: { setHostActionHandler: () => () => undefined },
-    projection: {
-      // Mimi's own Session is never in the work-Session projection.
-      getSnapshot: () => ({
-        version: 1,
-        generation: 1,
-        workerState: "active",
-        sessions: [session(SID)],
-        pending: [],
-        observedAt: NOW,
-        workMemorySegments: [],
-      }),
-      subscribe: () => () => undefined,
-    },
+    projection,
+    attention: testAttention(projection, () => NOW),
     longTasks: {
       activeForSession: (id) => tasks.find((task) => task.sessionId === id),
       getSnapshot: () => ({ tasks }),

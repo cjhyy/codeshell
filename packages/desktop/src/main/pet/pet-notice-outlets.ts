@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import type { DesktopNotificationInput } from "../desktop-notifier.js";
+import type { ImNoticeOwner } from "../../host/im/private-notices.js";
 import type { GatewayControlEventInput } from "../im-gateway-control-server.js";
 import type { ImGatewayOwnerChannel, ImGatewayOwnerTarget } from "../im-gateway-service.js";
-import type { ImReadiness } from "./pet-notice-policy.js";
+import { usesP0Budget, type ImReadiness } from "./pet-notice-policy.js";
 import {
   errorText,
   noticeDeliveryKey,
@@ -26,10 +27,15 @@ export interface PetNoticeWiringGateway {
   /** Owner targets with their outbound attachment capabilities. */
   listOwnerMessageTargets(): ImGatewayOwnerTarget[];
   /** The raw destination behind an owner target id (host-only), re-checked against the allowlist. */
-  resolveOwnerTarget(targetId: string): { channel: string; target: string } | undefined;
+  resolveOwnerTarget?(targetId: string): { channel: string; target: string } | undefined;
+  liveOwnerChannel?(
+    channel: string,
+  ): Promise<
+    { target: ImGatewayOwnerTarget; address: { channel: string; target: string } } | undefined
+  >;
   lastOwnerInboundChannel(): string | undefined;
   /** An allowlisted owner conversation on this channel (callers also require a direct message). */
-  isOwnerConversation(channel: string, target: string): boolean;
+  isOwnerConversation(channel: string, target: string): boolean | Promise<boolean>;
 }
 
 /** `read()`'s result for a short while (wall time), so a burst of notices reads it once. */
@@ -100,10 +106,12 @@ function attachmentsFor(
 /** The durable gateway outbox, as the notices use it (main's GatewayControlServer). */
 export interface PetNoticeOutbox {
   /** `publishGatewayControlEvent`: idempotent by deliveryKey; accepted = enqueued. */
-  publish(event: GatewayControlEventInput): Promise<void>;
+  publish(event: GatewayControlEventInput, owner?: ImNoticeOwner): Promise<void>;
   /** Withdraw a delivery not yet made; it is never sent after this resolves. */
   revoke(deliveryKey: string): Promise<void>;
-  state(deliveryKey: string): NoticeOutboxState | undefined;
+  state(
+    deliveryKey: string,
+  ): NoticeOutboxState | undefined | Promise<NoticeOutboxState | undefined>;
 }
 
 export interface PetNoticeOutletDeps {
@@ -143,7 +151,8 @@ export function createNoticeOutlets(deps: PetNoticeOutletDeps): PetNoticeOutletS
         title: text.title,
         // Clicking opens the Session, where the files are.
         body: files > 0 ? `${text.body}\n（含 ${files} 个附件，打开会话查看）` : text.body,
-        ...(notice.priority === "P0" ? { urgent: true } : {}),
+        // A reminder requested for this moment must also reach a focused workbench.
+        ...(usesP0Budget(notice) ? { urgent: true } : {}),
         ...(notice.sessionId ? { sessionId: notice.sessionId } : {}),
       }),
     ).catch((error) =>
@@ -172,38 +181,52 @@ export function createNoticeOutlets(deps: PetNoticeOutletDeps): PetNoticeOutletS
     try {
       let destination: { channel: string; target: string };
       let files = media?.attachments ?? [];
+      let owner: ImNoticeOwner | undefined;
       let maxAttempts: number | undefined;
       if (target.kind === "route") {
         destination = { channel: target.route.channel, target: target.route.target };
       } else {
-        const targetId = ownerChannels().find((entry) => entry.id === channel)?.targetId;
-        if (!targetId) return { accepted: false, error: "no-owner-target" };
-        const ownerTarget = ownerTargets().find((entry) => entry.id === targetId);
-        const resolved = deps.gateway.resolveOwnerTarget(targetId);
+        const live = await deps.gateway.liveOwnerChannel?.(channel);
+        const targetId =
+          live?.target.id ?? ownerChannels().find((entry) => entry.id === channel)?.targetId;
+        const ownerTarget = deps.gateway.liveOwnerChannel
+          ? live?.target
+          : ownerTargets().find((entry) => entry.id === targetId);
+        const resolved = deps.gateway.liveOwnerChannel
+          ? live?.address
+          : targetId && deps.gateway.resolveOwnerTarget?.(targetId);
         if (!resolved) return { accepted: false, error: "no-owner-target" };
         destination = resolved;
+        if (live)
+          owner = {
+            targetId: live.target.id,
+            nonDirectBody: live.target.isDirect ? payload.nonDirectBody : undefined,
+          };
         // A group (or unconfirmed) owner target never gets private decision details.
         if (ownerTarget?.isDirect !== true && payload.nonDirectBody) body = payload.nonDirectBody;
         files = attachmentsFor(ownerTarget, media?.attachments);
         maxAttempts = ownerTarget?.proactiveReady === "ready" ? OWNER_OUTBOX_ATTEMPTS : 1;
       }
       const title = DESKTOP_TITLES[payload.kind];
-      await deps.outbox.publish({
-        deliveryKey: noticeDeliveryKey(
-          key ?? createHash("sha256").update(body).digest("hex").slice(0, 24),
-          target,
-        ),
-        type: ROUTE_EVENT_TYPES[payload.kind] ?? "pet.task.reported",
-        ...(title ? { title } : {}),
-        text: body,
-        ...(media?.button ? { button: media.button } : {}),
-        ...(files.length > 0
-          ? { attachments: files.map(({ sha256: _digest, ...file }) => file) }
-          : {}),
-        target: destination,
-        ...(payload.expiresAt !== undefined ? { expiresAt: payload.expiresAt } : {}),
-        ...(maxAttempts !== undefined ? { maxAttempts } : {}),
-      });
+      await deps.outbox.publish(
+        {
+          deliveryKey: noticeDeliveryKey(
+            key ?? createHash("sha256").update(body).digest("hex").slice(0, 24),
+            target,
+          ),
+          type: ROUTE_EVENT_TYPES[payload.kind] ?? "pet.task.reported",
+          ...(title ? { title } : {}),
+          text: body,
+          ...(media?.button ? { button: media.button } : {}),
+          ...(files.length > 0
+            ? { attachments: files.map(({ sha256: _digest, ...file }) => file) }
+            : {}),
+          target: destination,
+          ...(payload.expiresAt !== undefined ? { expiresAt: payload.expiresAt } : {}),
+          ...(maxAttempts !== undefined ? { maxAttempts } : {}),
+        },
+        owner,
+      );
       return { accepted: true, enqueued: true };
     } catch (error) {
       return { accepted: false, error: errorText(error) };

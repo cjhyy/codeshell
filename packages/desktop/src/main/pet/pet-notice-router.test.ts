@@ -1,3 +1,5 @@
+import type { PetPeek } from "./pet-notice-types.js";
+import { MimiAttentionTracker } from "../../host/composition/mimi-attention-tracker.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -71,7 +73,7 @@ describe("PetNoticeRouter attention", () => {
     let current = snapshot();
     let sourceListener: ((event: DesktopPetProjectionEvent) => void) | undefined;
     const events: unknown[] = [];
-    const policy = new PetNoticeRouter({
+    const policy = new MimiAttentionTracker({
       source: {
         getSnapshot: () => current,
         subscribe: (listener) => {
@@ -79,7 +81,10 @@ describe("PetNoticeRouter attention", () => {
           return () => {};
         },
       },
-      receipts: { has: () => false, mark: () => {} },
+      claim: async (rows) => rows.map((row) => row.key),
+      report: (error) => {
+        throw error;
+      },
       now: () => clock.now,
       setTimeout: clock.setTimeout,
       clearTimeout: clock.clearTimeout,
@@ -97,14 +102,21 @@ describe("PetNoticeRouter attention", () => {
     expect(policy.getSnapshot().surfaceablePendingCount).toBe(0);
   });
 
-  test("dedupes receipts, suppresses the active target and aggregates a burst", () => {
+  test("dedupes receipts, suppresses the active target and aggregates a burst", async () => {
     const clock = new FakeClock();
     let current = snapshot(1);
     const marked: string[] = [];
     const peeks: unknown[] = [];
-    const policy = new PetNoticeRouter({
+    const policy = new MimiAttentionTracker({
       source: { getSnapshot: () => current, subscribe: () => () => {} },
-      receipts: { has: (key) => marked.includes(key), mark: (key) => marked.push(key) },
+      claim: async (rows) => {
+        const keys = rows.map((row) => row.key).filter((key) => !marked.includes(key));
+        marked.push(...keys);
+        return keys;
+      },
+      report: (error) => {
+        throw error;
+      },
       now: () => clock.now,
       setTimeout: clock.setTimeout,
       clearTimeout: clock.clearTimeout,
@@ -115,6 +127,7 @@ describe("PetNoticeRouter attention", () => {
     policy.setActiveSession("work-0");
     policy.start();
     clock.advance(15_000);
+    await Promise.resolve();
     clock.advance(2_000);
 
     expect(policy.getSnapshot().surfaceablePendingCount).toBe(1);
@@ -124,11 +137,49 @@ describe("PetNoticeRouter attention", () => {
     current = snapshot(3);
     policy.setActiveSession(null);
     policy.reconcile();
+    await Promise.resolve();
     clock.advance(2_000);
     expect(policy.getSnapshot().surfaceablePendingCount).toBe(3);
     expect(peeks).toHaveLength(1);
     expect(peeks[0]).toMatchObject({ action: { type: "open_pet_pending", count: 2 } });
     expect(marked).toHaveLength(3);
+  });
+  test("never peeks resolved, acknowledged, or newly focused work while the receipt is committing", async () => {
+    const clock = new FakeClock();
+    let current = snapshot(4);
+    const pendingKeys: string[] = [];
+    let finish!: (keys: string[]) => void;
+    const peeks: PetPeek[] = [];
+    const policy = new MimiAttentionTracker({
+      source: { getSnapshot: () => current, subscribe: () => () => {} },
+      report: (error) => {
+        throw error;
+      },
+      claim: (rows) => {
+        pendingKeys.push(...rows.map((row) => row.key));
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      },
+      now: () => clock.now,
+      setTimeout: clock.setTimeout,
+      clearTimeout: clock.clearTimeout,
+    });
+    policy.subscribe((event) => {
+      if (event.kind === "peek") peeks.push(event.peek);
+    });
+    policy.start();
+    clock.advance(15_000);
+    expect(pendingKeys).toHaveLength(4);
+    current = { ...current, pending: current.pending.slice(1) };
+    policy.reconcile();
+    policy.markAcknowledged([pendingKeys[1]!]);
+    finish(pendingKeys);
+    await Promise.resolve();
+    policy.setActiveSession("work-2");
+    clock.advance(2_000);
+    expect(peeks.map((row) => row.receiptKeys)).toEqual([[pendingKeys[3]]]);
+    policy.stop();
   });
 });
 
@@ -211,18 +262,6 @@ function harness(
       })
     : ledger;
   const router = new PetNoticeRouter({
-    source: {
-      getSnapshot: () => ({
-        version: 1,
-        generation: 1,
-        workerState: "active",
-        observedAt: 0,
-        sessions: [],
-        pending: [],
-      }),
-      subscribe: () => () => {},
-    },
-    receipts: { has: () => false, mark: () => {} },
     now: () => clock.now,
     setTimeout: clock.setTimeout,
     clearTimeout: clock.clearTimeout,
@@ -400,8 +439,6 @@ describe("PetNoticeRouter.submit", () => {
     expect(decision).toMatchObject({ outlet: "desktop", im: "lark", queued: true });
     expect(h.desktop).toHaveLength(1);
     const viewed = new PetNoticeRouter({
-      source: { getSnapshot: () => ({}) as never, subscribe: () => () => {} },
-      receipts: { has: () => false, mark: () => {} },
       ledger: h.ledger,
       now: () => h.clock.now,
       wasSessionViewedSince: () => true,
@@ -427,8 +464,6 @@ describe("PetNoticeRouter.submit", () => {
     await h.router.submit(pause({ attention: "digest" }));
     const ids = [only(h.ledger.queued()).id, only(h.ledger.held()).id];
     const cancelled = new PetNoticeRouter({
-      source: { getSnapshot: () => ({}) as never, subscribe: () => () => {} },
-      receipts: { has: () => false, mark: () => {} },
       ledger: h.ledger,
       now: () => h.clock.now,
       setTimeout: h.clock.setTimeout,
@@ -1130,7 +1165,7 @@ describe("decision prompt records", () => {
     const h = harness();
     h.state.present = true;
     expect(await h.router.submit(prompt())).toMatchObject({ reason: "present-desktop" });
-    expect(h.router.decisionRecord("0123456789AB")).toMatchObject({
+    expect(await h.router.decisionRecord("0123456789AB")).toMatchObject({
       sessionId: "s-q",
       requestId: "req-1",
       target: { kind: "owner" },
@@ -1141,8 +1176,8 @@ describe("decision prompt records", () => {
     h.state.present = false;
     // The escalation copy carries no prompt of its own.
     await h.router.submit(prompt({ dedupeKey: "s-q:req-1:away", prompt: undefined }));
-    expect(h.router.decisionRecords()).toHaveLength(1);
-    expect(h.router.decisionRecord("0123456789AB")?.copies).toEqual([
+    expect(await h.router.decisionRecords()).toHaveLength(1);
+    expect((await h.router.decisionRecord("0123456789AB"))?.copies).toEqual([
       {},
       { status: "accepted", channel: "lark" },
     ]);
@@ -1170,12 +1205,12 @@ describe("decision prompt records", () => {
     expect(
       await h.router.adoptDecision("s-q", "req-1", "s-q:req-1", { code: "BA9876543210" }),
     ).toBeUndefined();
-    expect(h.router.decisionRecord("0123456789AB")).toBeDefined();
+    expect(await h.router.decisionRecord("0123456789AB")).toBeDefined();
   });
 
   test("a notice without a request id never carries a prompt", async () => {
     const h = harness();
     await h.router.submit(prompt({ requestId: undefined }));
-    expect(h.router.decisionRecords()).toEqual([]);
+    expect(await h.router.decisionRecords()).toEqual([]);
   });
 });

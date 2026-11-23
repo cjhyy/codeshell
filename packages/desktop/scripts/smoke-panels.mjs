@@ -110,7 +110,7 @@ async function acceptancePhase(phase) {
 
 function inspectNativeStorage() {
   return app.evaluate(
-    ({ app, safeStorage }, evidence) => {
+    async ({ app, safeStorage }, evidence) => {
       const fs = process.getBuiltinModule("node:fs");
       const path = process.getBuiltinModule("node:path");
       const mark = (phase) => {
@@ -122,10 +122,11 @@ function inspectNativeStorage() {
         );
       };
       mark("before-encryption-available");
-      const available = safeStorage.isEncryptionAvailable();
+      const available = await safeStorage.isAsyncEncryptionAvailable();
       mark("after-encryption-available");
       return {
         available,
+        pid: process.pid,
         backend: process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : null,
         backendInspection:
           process.platform === "linux" ? "native API" : "not exposed on this platform",
@@ -151,8 +152,14 @@ async function verifiedProcesses({ requireWorker = true } = {}) {
           verified.some(
             (receipt) =>
               receipt.pid === worker.pid &&
-              receipt.ppid === result.mainPid &&
-              receipt.role === "worker",
+              receipt.ppid === worker.ppid &&
+              receipt.role === "worker" &&
+              verified.some(
+                (host) =>
+                  host.role === "desktop-host" &&
+                  host.pid === worker.ppid &&
+                  host.ppid === result.mainPid,
+              ),
           ),
         ),
       "Main/worker seven pre-Core negative probes are missing",
@@ -549,23 +556,38 @@ try {
   const beforeUnavailable = mock.requests.length;
   const beforeUnavailableRequests = fixtureRequestReceipts();
   await app.evaluate(({ safeStorage }) => {
-    globalThis.__codeshellFixtureEncryptionAvailable = safeStorage.isEncryptionAvailable;
+    globalThis.__codeshellFixtureEncryptionAvailable = safeStorage.isAsyncEncryptionAvailable;
     globalThis.__codeshellFixtureUnavailableCalls = {
       injectedAt: Date.now(),
       calls: 0,
       pid: process.pid,
       ppid: process.ppid,
     };
-    safeStorage.isEncryptionAvailable = () => {
+    safeStorage.isAsyncEncryptionAvailable = async () => {
       globalThis.__codeshellFixtureUnavailableCalls.calls++;
       globalThis.__codeshellFixtureUnavailableCalls.lastCalledAt = Date.now();
       return false;
     };
   });
   try {
-    await sendScenario(win, "mock-plain-text", unavailablePrompt, {
-      expectedError: "Host could not securely sign this Session",
-    });
+    // Observe the notification from the start of this request. Clicking it
+    // after the next model picker opens would dismiss that picker as well.
+    const dismissRejection = win
+      .getByRole("status")
+      .locator(":scope > div")
+      .filter({
+        hasText: /本轮请求被拒绝|This request was rejected|Host could not securely sign this Session/,
+      })
+      .getByRole("button", { name: /^(关闭提示|Dismiss notification)$/ })
+      .first();
+    await Promise.all([
+      sendScenario(win, "mock-plain-text", unavailablePrompt, {
+        expectedError: "Host could not securely sign this Session",
+      }),
+      dismissRejection.click({ timeout: 30_000 }),
+    ]);
+    await dismissRejection.waitFor({ state: "hidden" });
+    console.log("smoke L2: dismissed the expected signing rejection notice");
     assert(
       mock.requests.length === beforeUnavailable,
       "Unavailable custody sent a provider request",
@@ -573,11 +595,15 @@ try {
   } finally {
     const nativeCalls = await app.evaluate(({ safeStorage }) => {
       const calls = globalThis.__codeshellFixtureUnavailableCalls;
-      safeStorage.isEncryptionAvailable = globalThis.__codeshellFixtureEncryptionAvailable;
+      safeStorage.isAsyncEncryptionAvailable = globalThis.__codeshellFixtureEncryptionAvailable;
       delete globalThis.__codeshellFixtureEncryptionAvailable;
       delete globalThis.__codeshellFixtureUnavailableCalls;
       return calls;
     });
+    assert(
+      nativeCalls.calls > 0 && nativeCalls.pid === storage.pid,
+      "Main did not observe unavailable native signing custody",
+    );
     unavailableCustodyAudit = {
       nativeCalls,
       before: beforeUnavailableRequests,
@@ -637,7 +663,7 @@ try {
 
   const verifyMainCustody = () =>
     app.evaluate(
-      ({ safeStorage }, { home, requests }) => {
+      async ({ safeStorage }, { home, requests }) => {
         // Recompute inside Main: the OS-decrypted key never leaves its Host.
         const fs = process.getBuiltinModule("node:fs");
         const path = process.getBuiltinModule("node:path");
@@ -657,11 +683,12 @@ try {
             .createHash("sha256")
             .update(JSON.stringify(ordered(JSON.parse(JSON.stringify(value)))))
             .digest("hex");
+        const decrypt = async (bytes) => (await safeStorage.decryptStringAsync(bytes)).result;
         const syntheticFile = path.join(home, "keychain-synthetic-roundtrip.json");
         if (!fs.existsSync(syntheticFile)) {
           const synthetic = crypto.randomBytes(32).toString("base64");
-          const ciphertext = safeStorage.encryptString(synthetic);
-          if (safeStorage.decryptString(ciphertext) !== synthetic)
+          const ciphertext = await safeStorage.encryptStringAsync(synthetic);
+          if ((await decrypt(ciphertext)) !== synthetic)
             throw new Error("Native safeStorage synthetic round trip failed");
           fs.writeFileSync(
             syntheticFile,
@@ -673,10 +700,7 @@ try {
           );
         }
         const synthetic = JSON.parse(fs.readFileSync(syntheticFile, "utf8"));
-        if (
-          digest(safeStorage.decryptString(Buffer.from(synthetic.ciphertext, "base64"))) !==
-          synthetic.digest
-        )
+        if (digest(await decrypt(Buffer.from(synthetic.ciphertext, "base64"))) !== synthetic.digest)
           throw new Error(
             "Native safeStorage could not recover its persisted synthetic ciphertext",
           );
@@ -701,7 +725,7 @@ try {
           keys.set(
             record.keyId,
             Buffer.from(
-              safeStorage.decryptString(
+              await decrypt(
                 Buffer.from(record.protectedKey.slice("enc:safeStorage:".length), "base64"),
               ),
               "base64",

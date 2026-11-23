@@ -37,6 +37,7 @@ export const COMPOSER_GUARD_FILES = Object.freeze([
   "network-guard.jsonl",
   "real-keyring-bootstrap.jsonl",
   "spawned-workers.jsonl",
+  "spawned-hosts.jsonl",
 ]);
 const filesystem = {
   appendFileSync,
@@ -51,7 +52,7 @@ const filesystem = {
 const sameFile = (left, right) =>
   ["dev", "ino", "size", "mtimeNs", "ctimeNs"].every((key) => left[key] === right[key]);
 
-/** Only three already-created owned records; no directory traversal or content generation. */
+/** Only already-created owned records; no directory traversal or content generation. */
 function readOwnedGuard(home, name, io) {
   const file = join(home, name);
   const parent = io.lstatSync(home, { bigint: true });
@@ -255,7 +256,7 @@ export function createComposerOperationDiagnostics({
       event("guard-records-exported");
     },
     hasRequiredGuards: () =>
-      COMPOSER_GUARD_FILES.slice(0, 2).every((name) => receipt.guards[name]?.status === "copied"),
+      COMPOSER_GUARD_FILES.every((name) => receipt.guards[name]?.status === "copied"),
     homeRemoved(value) {
       receipt.privateHomeRemoved = value;
       event("home-removal-observed", { removed: value });

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { IpcMainInvokeEvent, WebContents } from "electron";
 import type { TaskInboxBackgroundEntry } from "../task-inbox/task-inbox-sources.js";
+import { workbenchRoomActions } from "../../host/rooms/workbench.js";
 import { registerLinkedSessionObservationIpc } from "./linked-session-observation-ipc.js";
 
 const roots: string[] = [];
@@ -65,36 +66,61 @@ async function fixture() {
     if (!registered || value !== cwd) throw new Error("path is not registered");
     return cwd;
   };
-  registerLinkedSessionObservationIpc({
-    ipcMain: { handle: (channel, handler) => void handlers.set(channel, handler) },
-    windows,
-    roomManager: {
-      openLinkedSession: (...args) => {
-        calls.open.push(args);
-        return { roomId: "room-1", cwd, status: "observing", mode: "default" };
+  const actions = workbenchRoomActions(
+    {
+      manager: {
+        openLinkedSession: (...args) => {
+          calls.open.push(args);
+          return { roomId: "room-1", cwd, status: "observing", mode: "default" };
+        },
+        takeOverLinkedSession: async (...args) => {
+          calls.takeover.push(args);
+          return { roomId: "room-1", cwd, status: "running", mode: "default" };
+        },
+        close: (roomId) => void calls.close.push(roomId),
       },
-      takeOverLinkedSession: async (...args) => {
-        calls.takeover.push(args);
-        return { roomId: "room-1", cwd, status: "running", mode: "default" };
+      transcripts: {
+        subscribe: (request) => {
+          calls.subscribe.push(request);
+          return { active: true, messages: [], hasMore: false, totalCount: 0, roomCursor: 7 };
+        },
+        unsubscribe: (...args) => void calls.unsubscribe.push(args),
+        unsubscribeSubscriber: (id) => void calls.unsubscribeSender.push(id),
+        endRoom: (roomId) => void calls.end.push(roomId),
       },
-      close: (roomId) => void calls.close.push(roomId),
+      matches: (roomId: string, path: string, sessionId: string, kind: string) =>
+        roomId === "room-1" && path === cwd && sessionId === "thread-1" && kind === "codex",
+      approvals: { pendingRequests: () => [{ requestId: "approval-1" }] },
+      modes: { cancelRequester() {} },
+      changed() {},
+    } as unknown as Parameters<typeof workbenchRoomActions>[0],
+    () => list(),
+    { readLocal: () => local, requirePath: (value) => requirePath(value) },
+  );
+  const owned = new WeakMap<WebContents, string>();
+  registerLinkedSessionObservationIpc(
+    { handle: (name, fn) => void handlers.set(name, fn) },
+    async (event, call) => {
+      const sender = event.sender;
+      if (
+        !windows.some((w) => !w.isDestroyed() && w.webContents === sender) ||
+        event.senderFrame !== sender.mainFrame
+      )
+        throw Error("requires an application window");
+      const key = owned.get(sender) ?? "desktop:" + sender.id;
+      if (!owned.has(sender)) {
+        owned.set(sender, key);
+        sender.once("destroyed", () => actions.release(key));
+      }
+      return actions.run(call, {
+        id: sender.id,
+        key,
+        assertCurrent() {
+          if (sender.isDestroyed()) throw Error("window was closed");
+        },
+      });
     },
-    listBackgroundWork: () => list(),
-    readLocalBackgroundWork: () => local,
-    requirePath: (value) => requirePath(value),
-    subscriptions: {
-      subscribe: (request) => {
-        calls.subscribe.push(request);
-        return { active: true, messages: [], hasMore: false, totalCount: 0, roomCursor: 7 };
-      },
-      unsubscribe: (...args) => void calls.unsubscribe.push(args),
-      unsubscribeSubscriber: (id) => void calls.unsubscribeSender.push(id),
-      endRoom: (roomId) => void calls.end.push(roomId),
-    },
-    roomMatchesTranscript: (roomId, path, sessionId, kind) =>
-      roomId === "room-1" && path === cwd && sessionId === "thread-1" && kind === "codex",
-    pendingApprovals: () => [{ requestId: "approval-1" }],
-  });
+  );
   const invoke = (channel: string, event: IpcMainInvokeEvent, ...args: unknown[]) =>
     handlers.get(channel)!(event, ...args);
   return {

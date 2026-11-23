@@ -110,7 +110,7 @@ for (const transport of [http, https]) { transport.request = deny; transport.get
 const { withOwnedAccountDiscovery } = (await import(${JSON.stringify(new URL("./owned-account-discovery.cjs", import.meta.url).href)})).default;
 https.request = withOwnedAccountDiscovery(deny);
 syncBuiltinESMExports();
-if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
+if (process.type === "browser") {
   globalThis.__promotionImport = (url) => import(url);
   const { app, ipcMain, net } = await import("electron");
   net.request = deny; net.fetch = deny;

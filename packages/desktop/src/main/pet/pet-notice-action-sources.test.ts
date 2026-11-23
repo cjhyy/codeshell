@@ -38,9 +38,9 @@ function sources(
 }
 
 describe("what each notice's open item offers", () => {
-  test("a Goal waiting for the owner, and a limit stop", () => {
+  test("a Goal waiting for the owner, and a limit stop", async () => {
     expect(
-      sources({ task: true }).forDraft(
+      await sources({ task: true }).forDraft(
         draft({ context: { reason: "user", goalId: "g-1", revision: 3 } }),
       ),
     ).toEqual({
@@ -53,7 +53,7 @@ describe("what each notice's open item offers", () => {
       taskId: "task-7",
     });
     expect(
-      sources({ external: true }).forDraft(draft({ context: { reason: "goal_exhausted" } })),
+      await sources({ external: true }).forDraft(draft({ context: { reason: "goal_exhausted" } })),
     ).toEqual({ sessionId: SID, runtime: "external", family: "limit", reason: "goal_exhausted" });
   });
 
@@ -75,9 +75,9 @@ describe("what each notice's open item offers", () => {
     expect(await sources().forDraft(failed)).not.toHaveProperty("retry");
   });
 
-  test("a result offers open for its changed files (never links read from prose), or nothing", () => {
+  test("a result offers open for its changed files (never links read from prose), or nothing", async () => {
     expect(
-      sources().forDraft(
+      await sources().forDraft(
         draft({
           kind: "session.done",
           facts: { summary: "PR：https://github.com/o/r/pull/2" },
@@ -90,9 +90,9 @@ describe("what each notice's open item offers", () => {
       family: "open",
       artifacts: [{ kind: "file", path: "/w/a.ts" }],
     });
-    expect(sources().forDraft(draft({ kind: "session.done", facts: { summary: "好了" } }))).toBe(
-      undefined,
-    );
+    expect(
+      await sources().forDraft(draft({ kind: "session.done", facts: { summary: "好了" } })),
+    ).toBe(undefined);
   });
 
   test("a task closure: retry a failed task; open what a completed one made", () => {
@@ -159,7 +159,7 @@ describe("open items on routed notices", () => {
     expect(text).toBe(
       "「修登录」已暂停：本轮额度用完了，现在没有在运行。\n回我“继续”就接着做；也可以让它停下，或交给 Mimi。",
     );
-    const [item] = current.wiring.router.openActionItems("wechat");
+    const [item] = await current.wiring.router.openActionItems("wechat");
     expect(item?.actions).toMatchObject({
       family: "limit",
       reason: "limit",

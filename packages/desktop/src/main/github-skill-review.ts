@@ -6,7 +6,7 @@ export interface ReviewedRepoInspection extends RepoInspection {
 }
 
 interface ReviewEntry {
-  ownerWebContentsId: number;
+  owner: AbortSignal;
   inspection: RepoInspection;
   expiresAt: number;
   issuedAt: number;
@@ -22,7 +22,8 @@ export class GithubSkillReviewStore {
     private readonly maxEntries = 128,
   ) {}
 
-  issue(ownerWebContentsId: number, inspection: RepoInspection): ReviewedRepoInspection {
+  issue(owner: AbortSignal, inspection: RepoInspection): ReviewedRepoInspection {
+    owner.throwIfAborted();
     this.prune();
     while (this.entries.size >= this.maxEntries) {
       const oldest = [...this.entries.entries()].sort(
@@ -35,7 +36,7 @@ export class GithubSkillReviewStore {
     const snapshot = structuredClone(inspection);
     const issuedAt = this.now();
     this.entries.set(reviewToken, {
-      ownerWebContentsId,
+      owner,
       inspection: snapshot,
       issuedAt,
       expiresAt: issuedAt + this.ttlMs,
@@ -44,7 +45,7 @@ export class GithubSkillReviewStore {
   }
 
   consume(
-    ownerWebContentsId: number,
+    owner: AbortSignal,
     reviewToken: unknown,
     selected: unknown,
   ): { inspection: RepoInspection; selected: DetectedSkill } {
@@ -52,12 +53,12 @@ export class GithubSkillReviewStore {
       throw new Error("a valid GitHub skill review token is required");
     }
     const entry = this.entries.get(reviewToken);
-    if (!entry || entry.expiresAt <= this.now()) {
+    if (!entry || entry.owner.aborted || entry.expiresAt <= this.now()) {
       this.entries.delete(reviewToken);
       throw new Error("GitHub skill review expired; inspect the repository again");
     }
-    if (entry.ownerWebContentsId !== ownerWebContentsId) {
-      throw new Error("GitHub skill review belongs to another window");
+    if (entry.owner !== owner) {
+      throw new Error("GitHub skill review belongs to another window document");
     }
     // Same-window confirmation is single use, including malformed attempts.
     this.entries.delete(reviewToken);
@@ -81,7 +82,7 @@ export class GithubSkillReviewStore {
   private prune(): void {
     const now = this.now();
     for (const [token, entry] of this.entries) {
-      if (entry.expiresAt <= now) this.entries.delete(token);
+      if (entry.owner.aborted || entry.expiresAt <= now) this.entries.delete(token);
     }
   }
 }

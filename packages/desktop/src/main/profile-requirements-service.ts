@@ -69,6 +69,7 @@ export async function installSkillRequirement(
   requirement: SkillRequirement,
   workspaceCwd: string,
   runner: SkillInstallRunner = defaultRunner,
+  beforeStart?: () => void,
 ): Promise<SkillInstallResult> {
   const checked = WorkspaceProfileRequirementsSchema.safeParse({ skills: [requirement] });
   if (!checked.success) {
@@ -79,6 +80,7 @@ export async function installSkillRequirement(
   }
   // `--yes` 是 npx 自己的「别提示是否下载 skills 包」；skills CLI 的 --yes 由
   // buildSkillInstallArgs 负责，两者不是同一个。
+  beforeStart?.();
   const result = await runner(
     "npx",
     ["--yes", ...buildSkillInstallArgs(checked.data.skills[0]!)],

@@ -1,21 +1,27 @@
+import { migrateHostedSession } from "./project-migration-client.js";
+import { getSessionCwdIndex } from "./session-cwd-index.js";
+import type { IpcMainInvokeEvent } from "electron";
+import type {
+  ProjectRegistryCommand,
+  ProjectRegistryOperations,
+} from "../shared/project-registry-operations.js";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
+import { projectRegistryEdits } from "./hosted-project-registry.js";
+import type { LocalProject } from "./project-store.js";
 import type { AgentBridge } from "./agent-bridge.js";
 import type { ExternalRuntimeService } from "./external-runtime-service.js";
 import { createLegacyProjectMigrationService } from "./legacy-project-migration.js";
-import type { ProjectStore } from "./project-store.js";
+import type { ProjectStore, ProjectResolveSource } from "./project-store.js";
 import { requireRendererProjectRoot } from "./renderer-project-path.js";
 import {
   cleanupSessionWorktreeForUi,
-  getSessionWorktreeDiffForUi,
   getSessionWorkspaceAuthorityForUi,
   getSessionWorkspaceForUi,
-  listSessionWorktreesForUi,
   releaseSessionWorkspaceForUi,
-  requireUsableSessionRootAuthority,
   switchSessionWorkspaceForUi,
   type SessionWorkspaceReleaseResult,
   type WorkspaceCleanupAction,
 } from "./session-workspace-service.js";
-import { listProfiles } from "./profiles-service.js";
 
 interface ProjectAuthorityWindow {
   isDestroyed(): boolean;
@@ -23,6 +29,13 @@ interface ProjectAuthorityWindow {
 }
 
 export interface ProjectAuthorityIpcDependencies {
+  host?: {
+    callBusiness: CallShellBusiness;
+    documentSignal(event: IpcMainInvokeEvent): AbortSignal;
+    generationSignal(document: AbortSignal): Promise<AbortSignal>;
+    projectRegistryListeners: Set<(projects: LocalProject[]) => Promise<void>>;
+  };
+
   ipcMain: Pick<typeof import("electron").ipcMain, "handle">;
   getAllWindows(): ProjectAuthorityWindow[];
   showOpenDialog(options: {
@@ -37,8 +50,6 @@ export interface ProjectAuthorityIpcDependencies {
   assertSessionId(value: unknown): asserts value is string;
   trackGitRoot(root: string): void;
   broadcastMobileProjects(): Promise<void>;
-  getGitStatus: typeof import("./desktop-services.js").getGitStatus;
-  getGitBranches: typeof import("./desktop-services.js").getGitBranches;
   revealInFinder: typeof import("./desktop-services.js").revealInFinder;
   openPath: typeof import("./desktop-services.js").openPath;
 }
@@ -87,12 +98,27 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
     pickDirectory: pickProjectDirectory,
   });
 
-  async function broadcastProjectRegistry(): Promise<void> {
-    const projects = await deps.projectStore.list();
+  async function broadcastProjectRegistry(snapshot?: LocalProject[]): Promise<void> {
+    const projects = snapshot ?? (await deps.projectStore.list());
     for (const window of deps.getAllWindows()) {
       if (!window.isDestroyed()) window.webContents.send("projectRegistry:changed", projects);
     }
     await deps.broadcastMobileProjects();
+  }
+
+  deps.host?.projectRegistryListeners.add(broadcastProjectRegistry);
+  const localEdits = projectRegistryEdits(deps.projectStore, deps.getTrust);
+  function edits(event: IpcMainInvokeEvent) {
+    const signal = deps.host?.documentSignal(event);
+    return async <K extends ProjectRegistryCommand>(
+      method: K,
+      input: ProjectRegistryOperations[K]["input"],
+    ): Promise<ProjectRegistryOperations[K]["result"]> => {
+      if (deps.host) return deps.host.callBusiness(method, input, signal);
+      const result = await localEdits[method](input);
+      await broadcastProjectRegistry();
+      return result;
+    };
   }
 
   function broadcastWorkspaceChanged(payload: {
@@ -109,23 +135,37 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
   deps.ipcMain.handle("projectRegistry:sessionMainRoots", async (_event, projectId: string) =>
     deps.projectStore.sessionMainRoots(projectId),
   );
-  deps.ipcMain.handle("projectRegistry:createFromPicker", async () => {
+  deps.ipcMain.handle("projectRegistry:createFromPicker", async (event) => {
+    const call = edits(event);
     const picked = await pickProjectDirectory();
     if (!picked) return null;
-    const project = await deps.projectStore.createFromPath(picked);
-    await broadcastProjectRegistry();
-    return project;
+    return call("projects/createPicked", { pickedPath: picked });
   });
-  deps.ipcMain.handle("projectRegistry:addRootFromPicker", async (_event, projectId: string) => {
+  deps.ipcMain.handle("projectRegistry:addRootFromPicker", async (event, projectId: string) => {
+    const call = edits(event);
     const picked = await pickProjectDirectory();
     if (!picked) return null;
-    const result = await deps.projectStore.addRoot(projectId, picked);
-    await broadcastProjectRegistry();
-    return result;
+    return call("projects/addPickedRoot", { projectId, pickedPath: picked });
   });
   deps.ipcMain.handle(
     "projectRegistry:removeRoot",
-    async (_event, projectId: string, rootId: string) => {
+    async (event, projectId: string, rootId: string) => {
+      if (deps.host) {
+        const signal = deps.host.documentSignal(event);
+        const path = await deps.host.callBusiness(
+          "projects/removalPath",
+          { projectId, rootId },
+          signal,
+        );
+        const index = getSessionCwdIndex();
+        await index.ensureLoaded();
+        const observedIds = index.confirmedIdsForProjectRoot(projectId, rootId, path);
+        return deps.host.callBusiness(
+          "projects/removeRoot",
+          { projectId, rootId, path, observedIds },
+          signal,
+        );
+      }
       const project = await deps.projectStore.removeRoot(projectId, rootId);
       await broadcastProjectRegistry();
       return project;
@@ -133,12 +173,32 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
   );
   deps.ipcMain.handle(
     "projectRegistry:migrateSessionMainRoot",
-    async (_event, sessionId: string, targetRootId: string) => {
+    async (event, sessionId: string, targetRootId: string) => {
       deps.assertSessionId(sessionId);
       if (typeof targetRootId !== "string" || !targetRootId || targetRootId.length > 512) {
         throw new Error("target root id is required");
       }
       const currentBridge = deps.getBridge();
+      if (deps.host) {
+        const signal = deps.host.documentSignal(event);
+        if (!currentBridge) throw Error("Session migration owner is unavailable");
+        const migrated = await migrateHostedSession(
+          sessionId,
+          targetRootId,
+          signal,
+          await deps.host.generationSignal(signal),
+          deps.host.callBusiness,
+          currentBridge,
+          deps.getTrust,
+        );
+        broadcastWorkspaceChanged({
+          sessionId,
+          workspace: migrated.workspace,
+          mainRoot: migrated.mainRoot,
+        });
+        signal.throwIfAborted();
+        return migrated;
+      }
       const migrated = await deps.projectStore.migrateSessionMainRoot(sessionId, targetRootId, {
         owner: currentBridge
           ? {
@@ -166,17 +226,8 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
       return migrated;
     },
   );
-  deps.ipcMain.handle(
-    "projectRegistry:setPrimary",
-    async (_event, projectId: string, rootId: string) => {
-      const root = await requireRendererProjectRoot(projectId, rootId);
-      if ((await deps.getTrust(root.path)) !== "trusted") {
-        throw new Error("project root must be trusted before it can become primary");
-      }
-      const project = await deps.projectStore.setPrimary(projectId, rootId);
-      await broadcastProjectRegistry();
-      return project;
-    },
+  deps.ipcMain.handle("projectRegistry:setPrimary", (event, projectId: string, rootId: string) =>
+    edits(event)("projects/setPrimary", { projectId, rootId }),
   );
   deps.ipcMain.handle(
     "projectRegistry:revealRoot",
@@ -192,47 +243,40 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
       return deps.openPath(root.path, root.path);
     },
   );
-  deps.ipcMain.handle("projectRegistry:rename", async (_event, projectId: string, name: string) => {
-    const project = await deps.projectStore.rename(projectId, name);
-    await broadcastProjectRegistry();
-    return project;
-  });
-  deps.ipcMain.handle(
-    "projectRegistry:setPinned",
-    async (_event, projectId: string, pinned: boolean) => {
-      const project = await deps.projectStore.setPinned(projectId, pinned);
-      await broadcastProjectRegistry();
-      return project;
-    },
+  deps.ipcMain.handle("projectRegistry:rename", (event, projectId: string, name: string) =>
+    edits(event)("projects/rename", { projectId, name }),
   );
-  deps.ipcMain.handle("projectRegistry:remove", async (_event, projectId: string) => {
-    await deps.projectStore.remove(projectId);
-    await broadcastProjectRegistry();
-  });
+  deps.ipcMain.handle("projectRegistry:setPinned", (event, projectId: string, pinned: boolean) =>
+    edits(event)("projects/setPinned", { projectId, pinned }),
+  );
+  deps.ipcMain.handle("projectRegistry:remove", (event, projectId: string) =>
+    edits(event)("projects/remove", { projectId }),
+  );
+  async function resolveCwds(
+    event: IpcMainInvokeEvent,
+    cwds: string[],
+    source: ProjectResolveSource,
+  ) {
+    const host = deps.host;
+    const signal = host?.documentSignal(event);
+    const resolutions = await deps.projectStore.resolveProjectForCwdBatch(
+      cwds,
+      source,
+      host
+        ? (cwd) => host.callBusiness("projects/restoreHistoricalCwd", { cwd }, signal)
+        : undefined,
+    );
+    if (!host && resolutions.some((row) => row && "created" in row && row.created)) {
+      await broadcastProjectRegistry();
+    }
+    return resolutions;
+  }
   deps.ipcMain.handle(
     "projectRegistry:resolveForCwd",
-    async (_event, cwd: string, source: "disk-rebuild" | "automation-import" | "live") => {
-      const resolution = await deps.projectStore.resolveProjectForCwd(cwd, source);
-      if (resolution && "created" in resolution && resolution.created) {
-        await broadcastProjectRegistry();
-      }
-      return resolution;
-    },
+    async (event, cwd: string, source: ProjectResolveSource) =>
+      (await resolveCwds(event, [cwd], source))[0] ?? null,
   );
-  deps.ipcMain.handle(
-    "projectRegistry:resolveForCwdBatch",
-    async (_event, cwds: string[], source: "disk-rebuild" | "automation-import" | "live") => {
-      const resolutions = await deps.projectStore.resolveProjectForCwdBatch(cwds, source);
-      if (
-        resolutions.some(
-          (resolution) => resolution && "created" in resolution && resolution.created,
-        )
-      ) {
-        await broadcastProjectRegistry();
-      }
-      return resolutions;
-    },
-  );
+  deps.ipcMain.handle("projectRegistry:resolveForCwdBatch", resolveCwds);
   deps.ipcMain.handle("projectRegistry:beginLegacyMigration", async (_event, paths: string[]) =>
     legacyProjectMigration.begin(paths),
   );
@@ -273,45 +317,6 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
         return { mainRoot: current.mainRoot ?? current.cwd, cwd: current.cwd };
       },
     });
-  });
-  deps.ipcMain.handle("workspace:gitStatus", async (_event, sessionId: string) => {
-    deps.assertSessionId(sessionId);
-    const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
-    requireUsableSessionRootAuthority(authority);
-    deps.trackGitRoot(authority.mainRoot);
-    return deps.getGitStatus(authority.mainRoot);
-  });
-  deps.ipcMain.handle("workspace:gitBranches", async (_event, sessionId: string) => {
-    deps.assertSessionId(sessionId);
-    const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
-    requireUsableSessionRootAuthority(authority);
-    deps.trackGitRoot(authority.mainRoot);
-    return deps.getGitBranches(authority.mainRoot);
-  });
-  deps.ipcMain.handle("workspace:profiles", async (_event, sessionId: string) => {
-    deps.assertSessionId(sessionId);
-    const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
-    requireUsableSessionRootAuthority(authority);
-    return listProfiles(authority.mainRoot);
-  });
-  deps.ipcMain.handle("workspace:list", async (_event, sessionId: string, cwd: string) => {
-    deps.assertSessionId(sessionId);
-    if (typeof cwd !== "string" || !cwd) throw new Error("workspace:list requires cwd");
-    const list = await listSessionWorktreesForUi(sessionId, cwd);
-    deps.trackGitRoot(list.mainRoot);
-    return list;
-  });
-  deps.ipcMain.handle("workspace:diff", async (_event, sessionId: string, worktreePath: string) => {
-    deps.assertSessionId(sessionId);
-    if (
-      typeof worktreePath !== "string" ||
-      !worktreePath ||
-      worktreePath.length > 32_768 ||
-      worktreePath.includes("\0")
-    ) {
-      throw new Error("workspace:diff requires worktreePath");
-    }
-    return getSessionWorktreeDiffForUi(sessionId, worktreePath);
   });
   deps.ipcMain.handle(
     "workspace:switch",

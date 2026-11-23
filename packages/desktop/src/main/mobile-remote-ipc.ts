@@ -1,5 +1,5 @@
 import type { MobileRemoteController } from "./mobile-remote-controller.js";
-import { ipcMain } from "electron";
+import { ipcMain, type IpcMainInvokeEvent } from "electron";
 import {
   AccessPasscode,
   CloudflaredBinary,
@@ -16,8 +16,12 @@ export interface MobileRemoteIpcDeps {
   cloudflaredBinary: CloudflaredBinary;
   tunnelManager: TunnelManager;
   accessPasscode: AccessPasscode;
-  mobileRemoteController: MobileRemoteController;
+  mobileRemoteController: Pick<MobileRemoteController, "status" | "pairingUrl" | "start" | "stop">;
   mobileOrchestrator: MobileRemoteOrchestrator;
+  approvalCaller(
+    event: IpcMainInvokeEvent,
+    sessionId: string,
+  ): { owner: number; signal: AbortSignal };
   remoteTerminals: Pick<RemoteTerminals, "enabled" | "setEnabled">;
 }
 
@@ -89,7 +93,7 @@ export function registerMobileRemoteIpc(deps: MobileRemoteIpcDeps) {
   ipcMain.handle(
     "mobileRemote:approvalResolved",
     async (
-      _e,
+      event,
       input: {
         requestId?: unknown;
         sessionId?: unknown;
@@ -100,15 +104,19 @@ export function registerMobileRemoteIpc(deps: MobileRemoteIpcDeps) {
       },
     ) => {
       const requestId = typeof input?.requestId === "string" ? input.requestId : "";
-      if (!requestId) return false;
-      mobileOrchestrator.broadcastApprovalResolved({
-        requestId,
-        sessionId: typeof input?.sessionId === "string" ? input.sessionId : undefined,
-        connectionId: typeof input?.connectionId === "string" ? input.connectionId : undefined,
-        generation: typeof input?.generation === "number" ? input.generation : undefined,
-        approved: typeof input?.approved === "boolean" ? input.approved : undefined,
-        answer: typeof input?.answer === "string" ? input.answer : undefined,
-      });
+      if (!requestId || typeof input.sessionId !== "string") return false;
+      const caller = deps.approvalCaller(event, input.sessionId);
+      // Routed workers publish their own authoritative resolution.
+      if (input.connectionId !== undefined || input.generation !== undefined) return false;
+      await mobileOrchestrator.broadcastApprovalResolved(
+        {
+          requestId,
+          sessionId: input.sessionId,
+          approved: typeof input?.approved === "boolean" ? input.approved : undefined,
+          answer: typeof input?.answer === "string" ? input.answer : undefined,
+        },
+        caller,
+      );
       return true;
     },
   );

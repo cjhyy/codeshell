@@ -73,7 +73,7 @@ interface MobileRecoveryHost {
     sessionId: string,
     caller: Extract<OutputHistoryRecoveryCaller, { kind: "mobile" }>,
   ): Promise<OutputHistoryRecoveryAuthorization>;
-  retireOutputHistorySession(sessionId: string): void;
+  retireOutputHistorySession(sessionId: string): void | Promise<void>;
 }
 
 /** Every open Desktop projection must retire the previous journal domain. */
@@ -96,6 +96,8 @@ export function registerDesktopOutputHistoryHost(deps: {
   ipcMain: Pick<IpcMain, "handle" | "removeHandler">;
   windows: () => BrowserWindow[];
   historyWindows: () => BrowserWindow[];
+  archive?: Parameters<typeof registerActivityHistoryIpc>[2];
+  activityHost: Parameters<typeof registerActivityHistoryIpc>[3];
   bridge: () => AgentBridge | null;
   external: () => ExternalRuntimeService | null;
   mobile: MobileRecoveryHost;
@@ -109,13 +111,18 @@ export function registerDesktopOutputHistoryHost(deps: {
       caller.kind === "desktop"
         ? desktop(sessionId, caller)
         : deps.mobile.authorizeOutputHistoryRecovery(sessionId, caller),
-    retire: (sessionId) => {
-      deps.mobile.retireOutputHistorySession(sessionId);
+    retire: async (sessionId) => {
+      await deps.mobile.retireOutputHistorySession(sessionId);
       broadcastOutputHistoryReset(deps.windows(), sessionId);
     },
   });
   deps.mobile.setOutputHistoryRecoveryService(service);
-  const history = registerActivityHistoryIpc(deps.ipcMain, deps.historyWindows);
+  const history = registerActivityHistoryIpc(
+    deps.ipcMain,
+    deps.historyWindows,
+    deps.archive,
+    deps.activityHost,
+  );
   deps.registerCleanup?.(() => history.dispose());
   registerSessionOutputHistoryIpc(deps.ipcMain, deps.windows, service);
   return service;

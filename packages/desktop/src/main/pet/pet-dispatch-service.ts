@@ -187,7 +187,7 @@ export interface PetHostActionExecution {
 export interface PetPendingNoticeSource {
   take(): Promise<readonly { kind: string; title?: string; body: string }[]>;
   /** The turn is starting with them in its runtime context. */
-  started(): void;
+  started(): void | Promise<void>;
 }
 
 export type PetDispatchCommand =
@@ -306,7 +306,7 @@ export type PetDispatchResult =
 export interface PetDispatchOptions {
   metadata: { ensure(): Promise<{ petSessionId: string }> };
   aggregator: {
-    getSnapshot(): DesktopPetProjectionSnapshot;
+    getSnapshot(): DesktopPetProjectionSnapshot | Promise<DesktopPetProjectionSnapshot>;
     resolveNavigation(request: PetNavigationRequest): Promise<PetNavigationResult>;
     refreshCatalog?(emit?: boolean, opts?: { full?: boolean }): Promise<void>;
   };
@@ -380,7 +380,7 @@ export interface PetDispatchOptions {
    * proactive message). Optional: when absent, behaviour is the pre-existing at-least-once
    * one.
    */
-  hostActionReceipts?: PetHostActionReceiptStore;
+  hostActionReceipts?: Pick<PetHostActionReceiptStore,"claim"|"record">;
   /** Mimi's own recent briefs / heartbeat for the conversation a chat turn answers. */
   recentProactive?: PetRecentProactiveSource;
   /** Whose turn it is, for Mimi's notice tools (shown and readable only in the owner's). */
@@ -1040,8 +1040,9 @@ export class PetDispatchService {
       active.resolveRunStarted(true);
     }
     try {
-      return await noticeGate.withNoticeTurn(this.options.noticeTurns, params, () =>
-        this.requestRoutedRun(params, "pet-dispatch"),
+      return await noticeGate.withNoticeTurn(this.options.noticeTurns, params,
+        () => this.requestRoutedRun(params, "pet-dispatch"),
+        () => noticeGate.isNoticeOwnerTurn(command, this.options.noticeTurns),
       );
     } finally {
       if (active) {
@@ -1264,7 +1265,7 @@ export class PetDispatchService {
     try {
       if (!knownTasks.length && input.eventKind !== "follow-up-wake") {
         const previous = await links.query({ originId: input.originRef.id, limit: 8 });
-        const context = this.options.longTasks?.context() as
+        const context = (await this.options.longTasks?.context()) as
           | {
               active?: PetGroundedTaskRef[];
               recent?: PetGroundedTaskRef[];
@@ -1383,7 +1384,7 @@ export class PetDispatchService {
     switch (command.type) {
       case "get_global_status": {
         const taskInbox = await this.readTaskInbox();
-        const snapshot = this.options.aggregator.getSnapshot();
+        const snapshot = (await this.options.aggregator.getSnapshot());
         const metadata = await this.options.metadata.ensure();
         const pending = snapshot.pending.filter((entry) => entry.status === "pending");
         return {
@@ -1427,8 +1428,7 @@ export class PetDispatchService {
         return {
           ok: true,
           type: "pending_list",
-          pending: this.options.aggregator
-            .getSnapshot()
+          pending: (await this.options.aggregator.getSnapshot())
             .pending.filter((pending) => pending.status === "pending")
             .slice(0, 100),
           ...(taskInbox
@@ -1541,7 +1541,7 @@ export class PetDispatchService {
         ) {
           leaderTurn.inputAttachments = structuredClone(attachments);
         }
-        const wakeTaskContext = this.options.longTasks?.context() as
+        const wakeTaskContext = (await this.options.longTasks?.context()) as
           | { active?: PetGroundedTaskRef[]; recent?: PetGroundedTaskRef[] }
           | undefined;
         const wakeTasks = command.hostWake
@@ -1675,7 +1675,7 @@ export class PetDispatchService {
           });
         }
         await catalogTask;
-        const snapshot = this.options.aggregator.getSnapshot();
+        const snapshot = (await this.options.aggregator.getSnapshot());
         const unavailableSessionIds = new Set(
           snapshot.sessions
             .filter(
@@ -1774,7 +1774,7 @@ export class PetDispatchService {
           "noticeTriggerMutation",
           "notificationSettingsMutation",
         ]);
-        const noticeOwner = noticeGate.isNoticeOwnerTurn(command, this.options.noticeTurns);
+        const noticeOwner = await noticeGate.isNoticeOwnerTurn(command, this.options.noticeTurns);
         const hostActionKinds = command.hostWake
           ? []
           : command.source?.kind === "im-gateway"
@@ -1817,7 +1817,7 @@ export class PetDispatchService {
             .filter(([key]) => !reservedWorldKeys.has(key))
             .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)),
         );
-        const longTaskContext = this.options.longTasks?.context();
+        const longTaskContext = (await this.options.longTasks?.context());
         const taskInbox = await taskInboxTask;
         const noticeWorld = await petNoticeWorld(command, this.options.recentProactive);
         const world = {
@@ -1908,7 +1908,7 @@ export class PetDispatchService {
         this.lastLedgerContext = ledgerContext;
         timer.done();
         const activeChat = this.activeChatTurn;
-        command.pendingNotices?.started();
+        await command.pendingNotices?.started();
         const response = await this.requestChatRun(command, {
           sessionId: metadata.petSessionId,
           task: command.message.trim(),
@@ -2120,8 +2120,7 @@ export class PetDispatchService {
                 const selectionError = selectionErrors[index];
                 if (selectionError) throw selectionError;
                 if (command.hostWake) {
-                  const source = this.options.aggregator
-                    .getSnapshot()
+                  const source = (await this.options.aggregator.getSnapshot())
                     .sessions.find(
                       (row) => row.agentSessionId === command.hostWake!.sourceSessionId,
                     );

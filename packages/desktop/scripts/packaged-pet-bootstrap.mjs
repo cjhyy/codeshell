@@ -3,6 +3,7 @@
 import children from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, realpathSync } from "node:fs";
+import threads from "node:worker_threads";
 import http from "node:http";
 import https from "node:https";
 import { syncBuiltinESMExports } from "node:module";
@@ -50,9 +51,11 @@ for (const probe of probes) {
 }
 const role = process.argv.some((argument) => argument.includes("agent-server-stdio"))
   ? "worker"
-  : process.versions.electron
-    ? "Main"
-    : "auxiliary";
+  : process.type === "utility"
+    ? "Host"
+    : process.versions.electron
+      ? "Main"
+      : "auxiliary";
 if (
   role === "worker" &&
   (realpathSync(process.execPath) !== process.env.CODESHELL_OFFICIAL_WORKER_EXECUTABLE ||
@@ -79,15 +82,76 @@ appendFileSync(
   { mode: 0o600 },
 );
 
+const legacyMainWorker = process.env.CODESHELL_OFFICIAL_011_MAIN_WORKER === "1";
+let workerSpawnCount = 0;
 if (role === "Main") {
   // The actual supplied Electron executable loads its own packaged entry.
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- This source is bundled as a synchronous CJS preload, also tested under plain Node.
-  const { app, safeStorage } = require("electron");
-  app.setName("code-shell");
-  app.commandLine.removeSwitch("password-store");
-  app.commandLine.removeSwitch("use-mock-keychain");
-  if (process.platform === "linux")
-    app.commandLine.appendSwitch("password-store", "gnome-libsecret");
+  const { app, safeStorage, utilityProcess } = require("electron");
+  if (legacyMainWorker && !app.getVersion().startsWith("0.11."))
+    throw Error("Expected the 0.11 direct worker parent");
+  // Only Main is intentionally paused for guard installation. A worker that
+  // inherits --inspect-brk waits forever for a second debugger, including
+  // while quit waits for the transcript cache to flush.
+  const Worker = threads.Worker;
+  threads.Worker = class extends Worker {
+    constructor(entry, options = {}) {
+      super(entry, {
+        ...options,
+        execArgv: (options.execArgv ?? process.execArgv).filter(
+          (flag) => !/^--inspect(?:-brk|-wait)?(?:=|$)/.test(flag),
+        ),
+      });
+    }
+  };
+  syncBuiltinESMExports();
+  const fork = utilityProcess.fork;
+  let hostSpawnCount = 0;
+  utilityProcess.fork = function (entry, args, options) {
+    if (entry !== join(app.getAppPath(), "out", "main", "desktop-host.mjs"))
+      return fork.call(this, entry, args, options);
+    const host = fork.call(this, process.env.CODESHELL_OFFICIAL_HOST_WRAPPER, args, {
+      ...options,
+      env: {
+        ...process.env,
+        ...options?.env,
+        CODESHELL_OFFICIAL_HOST_ENTRY: entry,
+        CODESHELL_OFFICIAL_MAIN_PID: String(process.pid),
+      },
+    });
+    host.once("spawn", () => {
+      hostSpawnCount++;
+      appendFileSync(
+        join(home, "spawned-hosts.jsonl"),
+        JSON.stringify({ pid: host.pid, ppid: process.pid }) + "\n",
+        { mode: 0o600 },
+      );
+    });
+    return host;
+  };
+  process.once("exit", (code) =>
+    appendFileSync(
+      join(home, "main-exits.jsonl"),
+      JSON.stringify({
+        pid: process.pid,
+        code,
+        hostSpawnCount,
+        workerSpawnCount,
+      }) + "\n",
+      { mode: 0o600 },
+    ),
+  );
+  if (process.env.CODESHELL_OFFICIAL_MOCK_KEYCHAIN === "1") {
+    // The cold-start benchmark and its private profile never bind the operator's Keychain.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- Install before the first app instruction.
+    require(join(home, "packaged-mock-keychain.cjs"));
+  } else {
+    app.setName("code-shell");
+    app.commandLine.removeSwitch("password-store");
+    app.commandLine.removeSwitch("use-mock-keychain");
+    if (process.platform === "linux")
+      app.commandLine.appendSwitch("password-store", "gnome-libsecret");
+  }
   app.commandLine.appendSwitch("disable-background-networking");
   app.setPath("userData", process.env.CODESHELL_OFFICIAL_USER_DATA);
   installPackagedChromiumGuard(app, origin);
@@ -114,20 +178,22 @@ if (role === "Main") {
       }
     };
   }
+}
+if (role === "Host" || (legacyMainWorker && role === "Main")) {
   const spawn = children.spawn;
-  let workerSpawnCount = 0;
-  process.once("exit", (code) => {
-    appendFileSync(
-      join(home, "main-exits.jsonl"),
-      JSON.stringify({ pid: process.pid, code, workerSpawnCount }) + "\n",
-      { mode: 0o600 },
-    );
-  });
+  if (role === "Host")
+    process.once("exit", (code) => {
+      appendFileSync(
+        join(home, "host-exits.jsonl"),
+        JSON.stringify({ pid: process.pid, ppid: process.ppid, code, workerSpawnCount }) + "\n",
+        { mode: 0o600 },
+      );
+    });
   children.spawn = function (command, args, options) {
     const worker = args?.some((argument) => argument.includes("agent-server-stdio"));
     if (worker) {
       if (
-        realpathSync(command) !== realpathSync(process.execPath) ||
+        realpathSync(command) !== process.env.CODESHELL_OFFICIAL_WORKER_EXECUTABLE ||
         options?.env?.ELECTRON_RUN_AS_NODE !== "1" ||
         options?.env?.HOME !== home
       )
@@ -167,7 +233,8 @@ if (role === "Main") {
         join(home, "spawned-workers.jsonl"),
         JSON.stringify({
           pid: child.pid,
-          mainPid: process.pid,
+          ppid: process.pid,
+          mainPid: legacyMainWorker ? process.pid : Number(process.env.CODESHELL_OFFICIAL_MAIN_PID),
           command: realpathSync(command),
           args: args.filter((argument) => argument.includes("agent-server-stdio")),
         }) + "\n",

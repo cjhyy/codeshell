@@ -38,12 +38,8 @@ export function createRoomTranscriptSubscriptions(options: {
   >;
   checkpointDir: string;
   broadcast(event: { type: "room.recovery"; roomId: string; message: string }): void;
-  windows(): Iterable<{
-    isDestroyed(): boolean;
-    webContents: { send(channel: string, payload: unknown): void };
-  }>;
 }): TranscriptSubscriptionManager {
-  const { roomManager, checkpointDir, broadcast, windows } = options;
+  const { roomManager, checkpointDir, broadcast } = options;
   return new TranscriptSubscriptionManager({
     checkpointDir,
     hasTranscriptHistory: (roomId) => roomManager.hasTranscriptHistory(roomId),
@@ -53,10 +49,6 @@ export function createRoomTranscriptSubscriptions(options: {
     onMessages: (roomId, messages) => roomManager.ingestTranscriptMessages(roomId, messages),
     onFailure: (roomId, message) => {
       broadcast({ type: "room.recovery", roomId, message });
-      for (const window of windows()) {
-        if (!window.isDestroyed())
-          window.webContents.send("ccRoom:transcriptRecovery", { roomId, message });
-      }
     },
   });
 }

@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import type { RoomProcessLauncher } from "./room-process-owner.js";
 import {
   releaseStdioAfterExit,
   stopRoomProcess,
@@ -153,6 +154,7 @@ export function parseStreamJsonLine(line: string): ResidentAgentEvent[] {
 }
 
 export interface ResidentAgentOptions {
+  launch?: RoomProcessLauncher;
   command: string; // e.g. "claude"
   cwd: string;
   permissionMode: "default" | "acceptEdits" | "bypassPermissions";
@@ -204,7 +206,7 @@ export class ResidentAgentProcess {
   start(): void {
     if (this.child) return;
     const args = ResidentAgentProcess.argsFor(this.opts);
-    const child = spawn(this.opts.command, args, {
+    const child = (this.opts.launch ?? spawn)(this.opts.command, args, {
       cwd: this.opts.cwd,
       env: { ...process.env, PATH: pathWithCommonBins() },
       detached: true,

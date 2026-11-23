@@ -1,23 +1,15 @@
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
+import type { IpcMainInvokeEvent } from "electron";
 import { ipcMain } from "electron";
-import {
-  defaultCacheDir,
-  fetchModelList,
-  PROVIDER_KINDS,
-  reasoningControlFor,
-  type ProviderKindName,
-  getMergedCatalog,
-  saveCatalogEntry,
-  deleteUserCatalogEntry,
-  userCatalogPath,
-  catalogEntryOrigins,
-} from "@cjhyy/code-shell-core/internal";
-import { resolveModelMeta } from "./model-meta-service.js";
 import { invalidateMcpProbeCache } from "./mcp-probe-service.js";
 import { probeSearch, type SearchProbeInput } from "./search-probe-service.js";
 import { probeImage, type ImageProbeInput } from "./image-probe-service.js";
 
 /** MCP probe cache, search/image probes, model catalog and provider model-list routes. */
-export function registerModelCatalogIpc() {
+export function registerModelCatalogIpc(host: {
+  callBusiness: CallShellBusiness;
+  documentSignal(event: IpcMainInvokeEvent): AbortSignal;
+}) {
   ipcMain.handle("mcp:invalidate", async (_e, name?: string) => {
     invalidateMcpProbeCache(typeof name === "string" ? name : undefined);
   });
@@ -44,54 +36,10 @@ export function registerModelCatalogIpc() {
     return probeImage(r);
   });
 
-  ipcMain.handle("catalog:list", async () => getMergedCatalog());
-
-  ipcMain.handle("catalog:save", async (_e, entry: unknown) =>
-    saveCatalogEntry(entry, { path: userCatalogPath(), stamp: String(Date.now()) }),
+  ipcMain.handle("catalog:save", (event, entry: unknown) =>
+    host.callBusiness("models/saveEntry", { entry }, host.documentSignal(event)),
   );
-  ipcMain.handle("catalog:delete", async (_e, id: string) =>
-    deleteUserCatalogEntry(id, { path: userCatalogPath(), stamp: String(Date.now()) }),
+  ipcMain.handle("catalog:delete", (event, id: string) =>
+    host.callBusiness("models/deleteEntry", { id }, host.documentSignal(event)),
   );
-  ipcMain.handle("catalog:origins", async () => catalogEntryOrigins());
-
-  ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {
-    if (!Array.isArray(models) || !Array.isArray(providers)) return [];
-    return resolveModelMeta(models as never, providers as never);
-  });
-
-  ipcMain.handle("models:reasoning-control", async (_e, rawKind: unknown, rawModel: unknown) => {
-    const kind: ProviderKindName =
-      typeof rawKind === "string" && Object.prototype.hasOwnProperty.call(PROVIDER_KINDS, rawKind)
-        ? (rawKind as ProviderKindName)
-        : "custom";
-    const model = typeof rawModel === "string" ? rawModel : "";
-    return reasoningControlFor(kind, model);
-  });
-
-  ipcMain.handle("models:list", async (_e, rawProvider: unknown, refresh?: boolean) => {
-    const provider =
-      rawProvider && typeof rawProvider === "object"
-        ? (rawProvider as Record<string, unknown>)
-        : {};
-    const rawKind = typeof provider.kind === "string" ? provider.kind : "custom";
-    const kind = Object.prototype.hasOwnProperty.call(PROVIDER_KINDS, rawKind)
-      ? (rawKind as ProviderKindName)
-      : "custom";
-    const meta = PROVIDER_KINDS[kind];
-    const rawBaseUrl =
-      typeof provider.baseUrl === "string" && provider.baseUrl.trim()
-        ? provider.baseUrl.trim()
-        : meta.defaultBaseUrl;
-    const baseUrl = kind === "ollama" ? rawBaseUrl.replace(/\/v1\/?$/, "") : rawBaseUrl;
-    return fetchModelList(
-      {
-        key: typeof provider.key === "string" && provider.key ? provider.key : kind,
-        kind,
-        baseUrl,
-        apiKey: typeof provider.apiKey === "string" ? provider.apiKey : undefined,
-        modelsPath: typeof provider.modelsPath === "string" ? provider.modelsPath : undefined,
-      },
-      { cacheDir: defaultCacheDir(), refresh: refresh === true },
-    );
-  });
 }

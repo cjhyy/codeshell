@@ -5,7 +5,7 @@
 /* global document, localStorage, window */
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -17,6 +17,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedOfflinePluginBootstrap,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(
@@ -66,6 +67,7 @@ async function json(file, value) {
 }
 async function seedAuthority() {
   await mkdir(project, { recursive: true });
+  await seedOfflinePluginBootstrap(isolated.codeShellHome);
   // Playwright's evaluate VM cannot dynamically import ESM. Load the exact
   // production module through a CJS test loader, without replacing any
   // handler or reader. The normal application entry stays unchanged and
@@ -189,6 +191,20 @@ async function launch() {
 async function list() {
   return win.evaluate(() => window.codeshell.taskInbox.list({ limit: 200 }));
 }
+async function storedTaskStatus(taskKey) {
+  const storage = join(isolated.codeShellHome, ".codeshell-state");
+  const roots = await readdir(storage);
+  assert.equal(roots.length, 1);
+  const { DatabaseSync } = await import("node:sqlite");
+  const db = new DatabaseSync(join(storage, roots[0], "current", "state.sqlite"), {
+    readOnly: true,
+  });
+  try {
+    return db.prepare("SELECT status FROM tasks WHERE task_key=?").get(taskKey)?.status;
+  } finally {
+    db.close();
+  }
+}
 async function until(read, message, timeout = 20_000) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
@@ -293,6 +309,31 @@ try {
       ? value
       : undefined;
   }, "Durable task sources were not reconciled");
+  // The IPC fallback returns the same records. Complete both reads while Main
+  // is blocked to demonstrate that this workbench is using its negotiated port.
+  const nativeWindow = await app.browserWindow(win);
+  const measured = await nativeWindow.evaluate(async ({ webContents }) => {
+    await webContents.executeJavaScript(`window.__taskHostProbe = new Promise((resolve,reject) =>
+      setTimeout(async () => {
+        try {
+          const begin=Date.now();
+          const {records}=await window.codeshell.taskInbox.list({limit:1});
+          const row=await window.codeshell.taskInbox.get(records[0].taskKey);
+          resolve({begin,end:Date.now(),sameRecord:row?.taskKey===records[0].taskKey});
+        } catch(error) { reject(error); }
+      },250)); void 0`);
+    const begin = Date.now();
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1600);
+    const end = Date.now();
+    return { begin, end, probe: await webContents.executeJavaScript("window.__taskHostProbe") };
+  });
+  await nativeWindow.dispose();
+  assert(
+    measured.probe.sameRecord &&
+      measured.probe.begin >= measured.begin &&
+      measured.probe.end < measured.end,
+    "Both list and get must answer on the Host port while Main is busy",
+  );
   assert.deepEqual(initial.errors, [], "Every authoritative source reconciles successfully");
   assert.equal(
     initial.records.find((record) => record.source === "session" && record.sourceId === ids.done)
@@ -343,6 +384,35 @@ try {
     await readFile(join(isolated.userDataDir, "pet", "long-tasks.json"), "utf8"),
   );
   assert.equal(ledger.tasks.find((task) => task.id === mimi.sourceId)?.status, "paused");
+  await win.evaluate((id) => {
+    window.__mimiTaskReads = [];
+    window.__mimiTaskReadTimer = setInterval(async () => {
+      const from = Date.now();
+      try {
+        const { tasks } = await window.codeshell.pet.getLongTasks();
+        if (tasks.find((task) => task.id === id)?.status === "paused")
+          window.__mimiTaskReads.push({ from, to: Date.now() });
+      } catch {
+        /* Host may reconnect between probes. */
+      }
+    }, 80);
+  }, mimi.sourceId);
+  const hold = await app.evaluate(() => {
+    const from = Date.now();
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1800);
+    return { from, to: Date.now() };
+  });
+  const reads = await win.evaluate(() => {
+    clearInterval(window.__mimiTaskReadTimer);
+    return window.__mimiTaskReads;
+  });
+  assert(
+    reads.some((read) => read.from > hold.from && read.to < hold.to),
+    "The Host must serve the committed paused task while Main is blocked",
+  );
+  console.log(
+    "PASS: Mimi task control commits in the Host and its workbench read completes during a Main hold",
+  );
 
   const job = await win.evaluate(() =>
     window.codeshell.createAutomation({
@@ -419,14 +489,11 @@ try {
   );
 
   const projectionPath = join(isolated.userDataDir, "task-inbox", "v1.json");
-  const stored = JSON.parse(await readFile(projectionPath, "utf8"));
-  assert.equal(stored.schemaVersion, 1);
-  assert.ok(
-    stored.records.some(
-      (record) => record.taskKey === shell.taskKey && record.status === "cancelled",
-    ),
+  assert.equal(
+    await storedTaskStatus(shell.taskKey),
+    "cancelled",
+    "Shell cancellation was committed before exit",
   );
-  if (process.platform !== "win32") assert.equal((await stat(projectionPath)).mode & 0o777, 0o600);
   const screenshotDir = process.env.CODESHELL_TASK_INBOX_SOURCES_SCREENSHOT_DIR;
   if (screenshotDir) {
     await mkdir(screenshotDir, { recursive: true });
@@ -438,6 +505,14 @@ try {
   }
   await app.close();
   app = undefined;
+  const stored = JSON.parse(await readFile(projectionPath, "utf8"));
+  assert.equal(stored.schemaVersion, 1);
+  assert.ok(
+    stored.records.some(
+      (record) => record.taskKey === shell.taskKey && record.status === "cancelled",
+    ),
+  );
+  if (process.platform !== "win32") assert.equal((await stat(projectionPath)).mode & 0o777, 0o600);
   await launch();
   const restored = await list();
   assert.equal(
@@ -477,11 +552,10 @@ try {
       record.sourceId.startsWith(`${abandoned.shellId}:`) &&
       record.status === "running",
   );
-  assert.ok(
-    JSON.parse(await readFile(projectionPath, "utf8")).records.some(
-      (record) => record.taskKey === abandonedRow.taskKey && record.status === "running",
-    ),
-    "Running source state must be durable before the crash",
+  assert.equal(
+    await storedTaskStatus(abandonedRow.taskKey),
+    "running",
+    "The authoritative WAL contains the running source before the crash",
   );
   const ownedElectron = app.process();
   await new Promise((done, reject) => {
@@ -513,6 +587,49 @@ try {
     "done",
   );
   console.log("PASS: SIGKILL recovery interrupts absent executors and preserves terminal results");
+  await win.setViewportSize({ width: 1440, height: 900 });
+  await openTaskCenter();
+  const child = afterCrash.records.find(
+    (record) => record.source === "subagent" && record.sessionId === ids.child,
+  );
+  assert.ok(child);
+  const childTranscript = join(isolated.codeShellHome, "sessions", ids.child, "transcript.jsonl");
+  const originalTranscript = await readFile(childTranscript, "utf8");
+  const childCard = win.getByRole("article", { name: child.title, exact: true });
+  await childCard.getByRole("button", { name: /^隐藏记录/ }).click();
+  await childCard.waitFor({ state: "hidden" });
+  const visibility = win.getByRole("combobox", { name: "显示范围", exact: true });
+  await visibility.click();
+  await win.getByRole("option", { name: "已隐藏", exact: true }).click();
+  await childCard.getByRole("button", { name: /^取消隐藏/ }).click();
+  await childCard.waitFor({ state: "hidden" });
+  await visibility.click();
+  await win.getByRole("option", { name: "可见任务", exact: true }).click();
+  await childCard.getByRole("button", { name: /^永久删除任务记录/ }).click();
+  await win.getByRole("dialog").getByRole("button", { name: "永久删除", exact: true }).click();
+  await childCard.waitFor({ state: "hidden" });
+  await app.close();
+  app = undefined;
+  await launch();
+  const all = await win.evaluate(() =>
+    window.codeshell.taskInbox.list({ visibility: "all", limit: 200 }),
+  );
+  assert.ok(
+    all.records.some((record) => record.taskKey === shell.taskKey),
+    "Retained projection loaded after restart",
+  );
+  assert.ok(
+    !all.records.some((record) => record.taskKey === child.taskKey),
+    "Deleted task stays absent after restart",
+  );
+  assert.equal(
+    await readFile(childTranscript, "utf8"),
+    originalTranscript,
+    "Deleting a task record preserves the exact original transcript",
+  );
+  console.log(
+    "PASS: task hide/unhide and permanent deletion survive refresh and retain the session transcript",
+  );
   const rendererErrors = rendererErrorLists.flat();
   assert.equal(rendererErrors.length, 0, rendererErrors.map((error) => error.message).join("\n"));
 } catch (error) {

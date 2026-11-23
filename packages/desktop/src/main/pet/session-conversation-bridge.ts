@@ -16,7 +16,7 @@ import {
   parseBoundSessionCommand,
   type ConversationSessionRoute,
 } from "@cjhyy/code-shell-pet";
-import type { ConversationSessionRouteStore } from "./conversation-session-route-store.js";
+import type { MimiConversationRoutes } from "../../shared/mimi-conversation-routes.js";
 import { imConversationRouteKey } from "./session-turn-scheduler.js";
 
 export type BoundSessionDisposition =
@@ -75,7 +75,7 @@ export interface BoundSessionHealth {
 }
 
 export interface SessionConversationBridgeDeps {
-  routes: ConversationSessionRouteStore;
+  routes: MimiConversationRoutes;
   runner: BoundSessionRunner;
   health: BoundSessionHealth;
   /** Snapshot for /session, kept separate so status never starts a turn. */
@@ -164,7 +164,11 @@ export class SessionConversationBridge {
     }
 
     try {
-      await this.deliver(route, inbound);
+      if (!(await this.deliver(route, inbound)))
+        return {
+          kind: "suspended",
+          text: "当前私聊的 Session 绑定已变更，这条消息未发送。可以发送 /session 查看当前状态。",
+        };
     } catch {
       // Never report success for a message that did not land. Telling the user
       // is the whole point: a silent "accepted" loses their input with no
@@ -188,10 +192,13 @@ export class SessionConversationBridge {
   private async deliver(
     route: ConversationSessionRoute,
     inbound: BoundSessionInbound,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const clientMessageId = boundClientMessageId(route.id, inbound);
     const text = inbound.text.trim();
     const running = await this.deps.runner.isRunning(route.sessionId);
+    // Health and admission checks may have waited while this conversation switched Sessions.
+    const current = await this.deps.routes.boundRoute(route.routeKey);
+    if (current?.id !== route.id || current.sessionId !== route.sessionId) return false;
 
     if (running) {
       await this.deps.runner.queueNextTurn({
@@ -199,7 +206,7 @@ export class SessionConversationBridge {
         text,
         clientMessageId,
       });
-      return;
+      return true;
     }
 
     const started = await this.deps.runner.run({
@@ -210,6 +217,7 @@ export class SessionConversationBridge {
     if (!started.started) {
       throw new Error(started.reason ?? "the Session refused the message");
     }
+    return true;
   }
 }
 

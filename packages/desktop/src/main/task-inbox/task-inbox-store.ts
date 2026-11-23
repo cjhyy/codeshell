@@ -32,6 +32,46 @@ const MAX_FILE_BYTES = 64 * 1024 * 1024;
 const clone = <T>(value: T): T => structuredClone(value);
 const empty = (): ProjectionFile => ({ schemaVersion: 1, version: 0, records: [], errors: [] });
 
+export function listTaskInboxSnapshot(
+  snapshot: TaskInboxSnapshot,
+  query: TaskInboxListQuery = {},
+): TaskInboxListResult {
+  const checked = parseTaskInboxListQuery(query);
+  const search = checked.search?.trim().toLocaleLowerCase();
+  const records = deduplicateTaskInboxRecords(snapshot.records)
+    .filter(
+      (record) =>
+        (checked.visibility === "all" ||
+          Boolean(record.hidden) === (checked.visibility === "hidden")) &&
+        (!checked.status || record.status === checked.status) &&
+        (!checked.source || record.source === checked.source) &&
+        (!checked.projectId || record.projectId === checked.projectId) &&
+        (!search || record.title.toLocaleLowerCase().includes(search)),
+    )
+    .sort(compareTaskInboxRecords);
+  let offset = 0;
+  if (checked.cursor) {
+    const match = /^(\d+):(\d+)$/.exec(checked.cursor);
+    if (
+      !match ||
+      !Number.isSafeInteger(Number(match[1])) ||
+      !Number.isSafeInteger(Number(match[2]))
+    )
+      throw new Error("Invalid task cursor");
+    // A concurrent update invalidates offsets; restart rather than silently omit rows.
+    if (Number(match[1]) === snapshot.version) offset = Number(match[2]);
+  }
+  const limit = checked.limit ?? 200;
+  const page = records.slice(offset, offset + limit);
+  return {
+    ...snapshot,
+    records: page,
+    ...(offset + limit < records.length
+      ? { nextCursor: `${snapshot.version}:${offset + limit}` }
+      : {}),
+  };
+}
+
 /** Rebuildable read model, guarded by the same atomic directory mutex as other host stores. */
 export class TaskInboxStore {
   private readonly listeners = new Set<(snapshot: TaskInboxSnapshot) => void>();
@@ -52,39 +92,7 @@ export class TaskInboxStore {
     return this.load().records.find((record) => record.taskKey === taskKey);
   }
   list(query: TaskInboxListQuery = {}): TaskInboxListResult {
-    const checked = parseTaskInboxListQuery(query);
-    const snapshot = this.load();
-    const search = checked.search?.trim().toLocaleLowerCase();
-    const records = deduplicateTaskInboxRecords(snapshot.records)
-      .filter(
-        (record) =>
-          (!checked.status || record.status === checked.status) &&
-          (!checked.source || record.source === checked.source) &&
-          (!checked.projectId || record.projectId === checked.projectId) &&
-          (!search || record.title.toLocaleLowerCase().includes(search)),
-      )
-      .sort(compareTaskInboxRecords);
-    let offset = 0;
-    if (checked.cursor) {
-      const match = /^(\d+):(\d+)$/.exec(checked.cursor);
-      if (
-        !match ||
-        !Number.isSafeInteger(Number(match[1])) ||
-        !Number.isSafeInteger(Number(match[2]))
-      )
-        throw new Error("Invalid task cursor");
-      // A concurrent update invalidates offsets; restart rather than silently omit rows.
-      if (Number(match[1]) === snapshot.version) offset = Number(match[2]);
-    }
-    const limit = checked.limit ?? 200;
-    const page = records.slice(offset, offset + limit);
-    return {
-      ...snapshot,
-      records: page,
-      ...(offset + limit < records.length
-        ? { nextCursor: `${snapshot.version}:${offset + limit}` }
-        : {}),
-    };
+    return listTaskInboxSnapshot(this.load(), query);
   }
   upsert(record: TaskInboxRecordV1): TaskInboxSnapshot {
     return this.upsertMany([record]);

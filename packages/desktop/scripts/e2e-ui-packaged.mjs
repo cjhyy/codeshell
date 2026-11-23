@@ -249,14 +249,13 @@ try {
       rendererErrors.push(captureRendererErrors(win));
       win.setDefaultTimeout(15_000);
       await win.locator("#root").waitFor();
-      const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
-      if (
-        await viewOnly.waitFor({ state: "visible", timeout: 2_000 }).then(
-          () => true,
-          () => false,
-        )
-      )
-        await viewOnly.click();
+      // The no-repo trust lookup can finish after the first workbench paint.
+      // Respond through its real view-only button when it blocks a UI action.
+      const viewOnly = win
+        .getByRole("dialog")
+        .filter({ hasText: join(isolated.codeShellHome, "no-repo") })
+        .getByRole("button", { name: /^(仅查看|View only)/i });
+      await win.addLocatorHandler(viewOnly, (button) => button.click(), { times: 1 });
       const keyring = await app.evaluate(({ app }) => ({
         mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
         passwordStore: app.commandLine.getSwitchValue("password-store"),

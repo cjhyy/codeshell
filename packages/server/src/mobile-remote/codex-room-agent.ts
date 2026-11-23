@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import type { RoomProcessLauncher } from "./room-process-owner.js";
 import {
   releaseStdioAfterExit,
   stopRoomProcess,
@@ -94,6 +95,7 @@ export function sealEventOnExit(opts: {
 }
 
 export interface CodexRoomAgentOptions {
+  launch?: RoomProcessLauncher;
   command: string; // e.g. "codex"
   cwd: string;
   permissionMode: RoomPermissionMode;
@@ -140,7 +142,7 @@ export class CodexRoomAgent implements RoomAgent {
       threadId: this.threadId,
       model: this.opts.model,
     });
-    const child = spawn(this.opts.command, args, {
+    const child = (this.opts.launch ?? spawn)(this.opts.command, args, {
       cwd: this.opts.cwd,
       env: { ...process.env, PATH: pathWithCommonBins() },
       detached: true,

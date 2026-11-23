@@ -281,8 +281,8 @@ try {
       }),
     { project },
   );
-  assert.equal(work.error, undefined, JSON.stringify(work));
-  assert.equal(work.result.reason, "completed");
+  assert.equal(work.reason, "completed");
+  assert.equal(work.sessionId, "runtime-work-proof");
   const continuedWork = await win.evaluate(
     ({ project }) =>
       window.codeshell.run("RUNTIME_WORK_CONTINUE: continue this same work", {
@@ -292,9 +292,8 @@ try {
       }),
     { project },
   );
-  assert.equal(continuedWork.error, undefined, JSON.stringify(continuedWork));
-  assert.equal(continuedWork.result.reason, "completed");
-  assert.equal(continuedWork.result.sessionId, work.result.sessionId);
+  assert.equal(continuedWork.reason, "completed");
+  assert.equal(continuedWork.sessionId, work.sessionId);
   assert.ok(
     model.requests.some(
       (entry) =>

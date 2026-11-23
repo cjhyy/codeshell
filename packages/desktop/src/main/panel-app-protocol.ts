@@ -455,7 +455,7 @@ async function installProtocolForPartition(partition: string): Promise<void> {
           webContents.getURL(),
           details.requestingUrl,
           details.isMainFrame,
-          String(permission) === "display-capture"
+          permission === "display-capture"
             ? ["screen"]
             : permission === "media" && Array.isArray(mediaTypes)
               ? mediaTypes
@@ -470,7 +470,7 @@ async function installProtocolForPartition(partition: string): Promise<void> {
         webContents?.getURL() ?? "",
         details.requestingUrl,
         details.isMainFrame,
-        String(permission) === "display-capture"
+        permission === "display-capture"
           ? ["screen"]
           : permission === "media" && details.mediaType
             ? [details.mediaType]

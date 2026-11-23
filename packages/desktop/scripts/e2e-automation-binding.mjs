@@ -7,7 +7,7 @@
  */
 /* global document, getComputedStyle, localStorage, window */
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -16,6 +16,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  seedOfflinePluginBootstrap,
   seedSessionCatalog,
   waitForSessionCatalogSelection,
 } from "./electron-harness.mjs";
@@ -166,7 +167,13 @@ async function checkStartupReminder(reminder) {
     state.projection.sessions.length === 0 && state.longTasks.tasks.length === 0,
     "Reminder waking creates no Work Session or long task",
   );
-  console.log("PASS: cold-start follow-up rule settles once without a Work Session");
+  await win.waitForFunction(({ title, text }) => {
+    const rows = JSON.parse(window.sessionStorage.getItem("codeshell.notificationHistory.v1") ?? "[]");
+    return rows.filter((row) => row.message === title && row.detail?.includes(text)).length === 1;
+  }, reminder.then);
+  console.log(
+    "PASS: cold-start reminder settles and failed OS delivery appears once in workbench history",
+  );
 }
 
 async function screenshot(name) {
@@ -191,6 +198,29 @@ async function dismissTrustDialog() {
   }
 }
 
+async function seedDiskSessions() {
+  const cwd = join(isolated.home, "发布项目");
+  await mkdir(cwd, { recursive: true });
+  for (const [id, title, parentSessionId] of [
+    ["engine-binding-review", diskTitle, null],
+    ["engine-binding-child", "不应出现在选择器的子任务", "engine-binding-review"],
+  ]) {
+    const dir = join(cwd, id);
+    await mkdir(dir);
+    await writeFile(
+      join(dir, "state.json"),
+      JSON.stringify({
+        sessionId: id,
+        cwd,
+        title,
+        parentSessionId,
+        origin: parentSessionId ? "subagent" : "desktop",
+      }),
+    );
+    await rename(dir, join(isolated.codeShellHome, "sessions", id));
+  }
+}
+
 async function installFixture() {
   await app.evaluate(({ ipcMain }) => {
     const now = Date.now();
@@ -212,25 +242,6 @@ async function installFixture() {
         once: false,
         resumeSessionId: null,
       },
-      diskSessions: [
-        {
-          id: "disk-binding-review",
-          engineSessionId: "engine-binding-review",
-          cwd: "/fixture/发布项目",
-          title: "发布前的对话回顾",
-          updatedAt: now - 60_000,
-          origin: "desktop",
-        },
-        {
-          id: "disk-binding-child",
-          engineSessionId: "engine-binding-child",
-          cwd: "/fixture/发布项目",
-          title: "不应出现在选择器的子任务",
-          updatedAt: now - 120_000,
-          origin: "subagent",
-          parentSessionId: "engine-binding-review",
-        },
-      ],
       updates: [],
       failNextSave: false,
       holdNextSave: false,
@@ -270,9 +281,7 @@ async function installFixture() {
       throw new Error("Automation execution is forbidden in this metadata-only fixture");
     });
     replace("runs:list", () => []);
-    replace("sessions:list", () => []);
     replace("sessions:titles", () => ({}));
-    replace("sessions:listDisk", () => ({ sessions: fixture.diskSessions, nextCursor: null }));
     replace("sessions:transcript", (_event, sessionId) => {
       fixture.transcriptReads.push(sessionId);
       return [];
@@ -603,9 +612,15 @@ async function checkBinding() {
 }
 
 async function checkNoResumableSessions() {
-  await app.evaluate(() => {
-    globalThis.__automationBindingFixture.diskSessions = [];
-  });
+  for (const id of ["engine-binding-review", "engine-binding-child"]) {
+    await rm(join(isolated.codeShellHome, "sessions", id), { recursive: true });
+  }
+  await win.waitForFunction(
+    async () =>
+      !(await window.codeshell.listDiskSessions({ limit: 200 })).sessions.some(
+        (row) => row.id === "engine-binding-review",
+      ),
+  );
   await seedSessionCatalog(
     win,
     {
@@ -649,6 +664,8 @@ try {
     `${JSON.stringify({ autoUpdates: false })}\n`,
     { mode: 0o600 },
   );
+  await seedOfflinePluginBootstrap(isolated.codeShellHome);
+  await mkdir(join(isolated.codeShellHome, "sessions"), { recursive: true });
   const startupReminder = await seedStartupReminder();
   // Deny remote execution before Main/Core imports and in inherited Node
   // workers. The reminder path only needs the local ledger and desktop notice.
@@ -656,6 +673,11 @@ try {
   await writeFile(
     networkGuard,
     `const deny = () => { throw new Error("Automation binding fixture forbids network"); };
+if (process.type === "browser") {
+  const { Notification } = require("electron");
+  Notification.isSupported = () => true;
+  Notification.prototype.show = function () { this.emit("failed", {}, "Synthetic OS refusal"); };
+}
 globalThis.fetch = async () => deny();
 for (const name of ["node:http", "node:https"]) {
   const transport = require(name);
@@ -682,6 +704,12 @@ require("node:module").syncBuiltinESMExports();
   await win.setViewportSize({ width: 1280, height: 820 });
   await dismissTrustDialog();
   await checkStartupReminder(startupReminder);
+  await seedDiskSessions();
+  await win.waitForFunction(async () =>
+    (await window.codeshell.listDiskSessions({ limit: 200 })).sessions.some(
+      (row) => row.id === "engine-binding-review",
+    ),
+  );
   await installFixture();
   await win.reload();
   await openAutomations();

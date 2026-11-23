@@ -1,3 +1,7 @@
+import type {
+  MimiProactiveAccess,
+  MimiProactiveChange,
+} from "../../shared/mimi-proactive-state.js";
 import { dlog } from "../desktop-logger.js";
 import {
   quarantineCorruptJson,
@@ -12,7 +16,7 @@ import {
  * the heartbeat's cursor and daily counts. The counts are durable so a
  * restart never resets the daily caps.
  *
- * Desktop main is the only writer; writes are serialised in-process and
+ * The Desktop Host storage worker is the only writer; writes are serialised in-process and
  * atomic. A file this build cannot read is moved aside and starts empty.
  */
 
@@ -106,12 +110,15 @@ export function parseProactiveState(value: unknown): PetProactiveState | undefin
   return { briefs, heartbeat } as unknown as PetProactiveState;
 }
 
-export class PetProactiveStateStore {
+export class PetProactiveStateStore implements MimiProactiveAccess {
   private state: PetProactiveState = emptyState();
   private loadPromise?: Promise<void>;
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly path: string) {}
+  constructor(
+    private readonly path: string,
+    private readonly replaceFile?: (from: string, to: string) => Promise<void>,
+  ) {}
 
   load(): Promise<void> {
     if (!this.loadPromise) {
@@ -128,19 +135,55 @@ export class PetProactiveStateStore {
     return structuredClone(this.state);
   }
 
+  async read(): Promise<PetProactiveState> {
+    await this.load();
+    await this.queue;
+    return this.get();
+  }
+
+  async change(input: MimiProactiveChange): Promise<boolean> {
+    let committed = true;
+    await this.update((draft) => {
+      if (input.type === "markBrief") {
+        draft.briefs[input.kind] = { sentAt: input.at, day: input.day };
+        return;
+      }
+      const next = heartbeatToday(draft.heartbeat, input.day);
+      if (input.type === "reserveJudgement") {
+        if (next.judged >= HEARTBEAT_JUDGE_CAP || next.said >= HEARTBEAT_SAY_CAP) {
+          committed = false;
+          return false;
+        }
+        next.judged++;
+        next.lastAt ??= input.since;
+      } else if (input.type === "advance") {
+        if (input.said && next.said >= HEARTBEAT_SAY_CAP) {
+          committed = false;
+          return false;
+        }
+        next.lastAt = input.at;
+        next.seen = [...next.seen, ...input.seen];
+        if (input.said) next.said++;
+      } else throw Error("Unknown Mimi heartbeat operation");
+      draft.heartbeat = next;
+    });
+    return committed;
+  }
+
   /** Change the state and persist it before resolving; a failed write changes nothing. */
-  update(change: (draft: PetProactiveState) => void): Promise<PetProactiveState> {
+  update(change: (draft: PetProactiveState) => void | false): Promise<PetProactiveState> {
     const run = this.queue
       .catch(() => undefined)
       .then(() => this.load())
       .then(async () => {
         const draft = structuredClone(this.state);
-        change(draft);
+        if (change(draft) === false) return structuredClone(this.state);
         draft.heartbeat.seen = draft.heartbeat.seen.slice(-HEARTBEAT_SEEN_MAX);
         if (!parseProactiveState({ version: SCHEMA_VERSION, ...draft }))
           throw new Error("invalid proactive state");
         await writeOwnerJsonAtomic(this.path, { version: SCHEMA_VERSION, ...draft }, MAX_BYTES, {
           compact: true,
+          replaceFile: this.replaceFile,
         });
         this.state = draft;
         return structuredClone(draft);

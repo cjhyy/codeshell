@@ -1,5 +1,5 @@
 // Interactive terminal backend (node-pty). Modeled on Codex's TerminalService:
-// main owns the pty, renderer drives it over IPC. One pty per sessionId.
+// The owning process keeps a terminal per renderer-local session handle.
 //
 // node-pty is a native module; the esbuild `build:main` bundle marks all
 // bare requires external and injects a createRequire banner, so we load it
@@ -10,8 +10,23 @@ import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { WebContents } from "electron";
+export interface PtyOwner {
+  readonly id: number;
+  isDestroyed(): boolean;
+  send(
+    channel: "pty:data" | "pty:exit" | "pty:remoteViewers",
+    value: {
+      sessionId: string;
+      data?: string;
+      exitCode?: number;
+      signal?: number;
+      replay?: boolean;
+      count?: number;
+    },
+  ): void;
+}
 import { dlog } from "./desktop-logger.js";
+import { ptyEntryPath } from "./pty-entry.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -40,7 +55,8 @@ interface NodePty {
 
 let nodePty: NodePty | null = null;
 function loadPty(): NodePty {
-  if (!nodePty) nodePty = require("node-pty") as NodePty;
+  if (!nodePty)
+    nodePty = require(ptyEntryPath(require.resolve("node-pty"), process.resourcesPath)) as NodePty;
   return nodePty;
 }
 
@@ -170,7 +186,7 @@ export interface PtyRemoteViewer {
 interface Session {
   pty: IPty;
   /** The Desktop window that opened it; null for a terminal opened remotely. */
-  webContents: WebContents | null;
+  webContents: PtyOwner | null;
   /** Rolling scrollback so a re-attached/re-mounted xterm can be replayed. */
   buffer: string;
   cwd: string;
@@ -217,7 +233,7 @@ function appendBuffer(s: Session, data: string): void {
   if (s.buffer.length > MAX_BUFFER) s.buffer = s.buffer.slice(s.buffer.length - MAX_BUFFER);
 }
 
-function webContentsId(wc: WebContents): number | undefined {
+function webContentsId(wc: PtyOwner): number | undefined {
   try {
     return wc.id;
   } catch {
@@ -225,7 +241,7 @@ function webContentsId(wc: WebContents): number | undefined {
   }
 }
 
-function sessionForOwner(wc: WebContents, sessionId: string, action: string): Session | undefined {
+function sessionForOwner(wc: PtyOwner, sessionId: string, action: string): Session | undefined {
   const s = sessions.get(sessionId);
   if (!s) return undefined;
   if (!s.webContents || s.webContents !== wc) {
@@ -250,7 +266,7 @@ function killSession(sessionId: string): void {
   sessions.delete(sessionId);
 }
 
-function ownerAlive(s: Session): s is Session & { webContents: WebContents } {
+function ownerAlive(s: Session): s is Session & { webContents: PtyOwner } {
   return s.webContents !== null && !s.webContents.isDestroyed();
 }
 
@@ -304,7 +320,7 @@ export function resolvePtyCwd(
  * Start (or reuse) a pty for sessionId, streaming output to `wc` via
  * `pty:data` / `pty:exit`.
  */
-export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
+export function ptyStart(wc: PtyOwner, opts: PtyStartOpts): PtyStartResult {
   const { sessionId } = opts;
   const existing = sessions.get(sessionId);
   if (existing) {
@@ -323,7 +339,7 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
 
 function spawnSession(
   sessionId: string,
-  owner: WebContents | null,
+  owner: PtyOwner | null,
   opts: { cwd?: string; cols?: number; rows?: number },
 ): PtyStartResult {
   const shell = resolveShell();
@@ -366,17 +382,18 @@ function spawnSession(
 
   pty.onData((data) => {
     const s = sessions.get(sessionId);
-    if (!s) return;
+    if (s !== session) return;
     appendBuffer(s, data);
     if (ownerAlive(s)) s.webContents.send("pty:data", { sessionId, data });
     for (const viewer of s.remotes.values()) viewer.onData(data);
   });
   pty.onExit(({ exitCode, signal }) => {
     const s = sessions.get(sessionId);
-    if (s && ownerAlive(s)) {
+    if (s !== session) return;
+    if (ownerAlive(s)) {
       s.webContents.send("pty:exit", { sessionId, exitCode, signal });
     }
-    for (const viewer of s?.remotes.values() ?? []) viewer.onExit(exitCode, signal);
+    for (const viewer of s.remotes.values()) viewer.onExit(exitCode, signal);
     sessions.delete(sessionId);
     dlog("main", "pty.exit", { sessionId, exitCode, signal });
   });
@@ -397,7 +414,7 @@ function writeFrom(sessionId: string, s: Session, key: string, data: string, rep
   s.pty.write(data);
 }
 
-export function ptyWrite(wc: WebContents, sessionId: string, data: string, reply = false): void {
+export function ptyWrite(wc: PtyOwner, sessionId: string, data: string, reply = false): void {
   // Renderer-supplied; a non-string reaching the native addon can crash main.
   if (typeof data !== "string") return;
   const s = sessionForOwner(wc, sessionId, "write");
@@ -418,14 +435,14 @@ export function clampPtyDim(n: number): number {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
 }
 
-export function ptyResize(wc: WebContents, sessionId: string, cols: number, rows: number): void {
+export function ptyResize(wc: PtyOwner, sessionId: string, cols: number, rows: number): void {
   const s = sessionForOwner(wc, sessionId, "resize");
   if (!s) return;
   s.sizes.set(OWNER_SIZE_KEY, { cols: clampPtyDim(cols), rows: clampPtyDim(rows) });
   applyClientSize(sessionId, s, OWNER_SIZE_KEY);
 }
 
-export function ptyKill(wc: WebContents, sessionId: string): void {
+export function ptyKill(wc: PtyOwner, sessionId: string): void {
   if (!sessionForOwner(wc, sessionId, "kill")) return;
   killSession(sessionId);
 }

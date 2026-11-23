@@ -1,4 +1,4 @@
-import type { CronJobLifecycleEvent } from "@cjhyy/code-shell-core/internal";
+import type { CronNotice } from "../host/automation/execution-receipts.js";
 import { createHash } from "node:crypto";
 import type { GatewayControlEventInput } from "./im-gateway-control-server.js";
 
@@ -10,7 +10,7 @@ const CONTROL_CHARACTER_RE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/gu;
  * (live watcher versus direct adapter) remains owned by ImGatewayService.
  */
 export function automationLifecycleNotification(
-  event: CronJobLifecycleEvent,
+  event: CronNotice,
 ): GatewayControlEventInput | undefined {
   if (event.type === "job_start") return undefined;
   const deliveryKey = createHash("sha256")

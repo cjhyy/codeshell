@@ -88,8 +88,12 @@ export function acquireFileLock(file: string): () => void {
  * `timeoutMs` can exceed the default when the critical section legitimately
  * takes a while (network clone + directory swap).
  */
-export function acquireLockOnPath(target: string, timeoutMs = LOCK_WAIT_MS): () => void {
-  return acquireLockOn(target, timeoutMs);
+export function acquireLockOnPath(
+  target: string,
+  timeoutMs = LOCK_WAIT_MS,
+  checkWait?: () => void,
+): () => void {
+  return acquireLockOn(target, timeoutMs, checkWait);
 }
 
 /**
@@ -107,7 +111,7 @@ function isRetryableLockError(err: unknown): boolean {
   return code === "EPERM" && process.platform === "win32";
 }
 
-function acquireLockOn(target: string, timeoutMs: number): () => void {
+function acquireLockOn(target: string, timeoutMs: number, checkWait?: () => void): () => void {
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
   let attempt = 0;
@@ -117,6 +121,7 @@ function acquireLockOn(target: string, timeoutMs: number): () => void {
     } catch (err) {
       lastError = err;
       if (!isRetryableLockError(err) || Date.now() > deadline) throw lastError;
+      checkWait?.();
       // Randomized backoff. A fixed delay makes every waiter wake at the same
       // instant and collide again, so under real contention (dozens of writers)
       // the same unlucky processes kept losing and eventually timed out.
@@ -129,6 +134,30 @@ function acquireLockOn(target: string, timeoutMs: number): () => void {
   }
 }
 
+// A Windows reader or filesystem filter can briefly deny delete sharing.
+// Retry only the rename so callers keep their lock and commit their mutation once.
+export function replaceFileAtomically(tmp: string, target: string): void {
+  let delay = 10;
+  const deadline = performance.now() + 1_000;
+  for (;;) {
+    try {
+      renameSync(tmp, target);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      const remaining = deadline - performance.now();
+      if (
+        process.platform !== "win32" ||
+        (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY") ||
+        remaining <= 0
+      )
+        throw error;
+      sleepSync(Math.min(delay, remaining));
+      delay = Math.min(100, delay * 2);
+    }
+  }
+}
+
 /** Stage to a unique temp file, then rename — never a partially written target. */
 export function writeFileAtomic(file: string, contents: string, mode?: number): void {
   mkdirSync(dirname(file), { recursive: true });
@@ -137,7 +166,7 @@ export function writeFileAtomic(file: string, contents: string, mode?: number): 
   const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
   try {
     writeFileSync(tmp, contents, mode === undefined ? "utf-8" : { encoding: "utf-8", mode });
-    renameSync(tmp, file);
+    replaceFileAtomically(tmp, file);
   } finally {
     rmSync(tmp, { force: true });
   }
@@ -172,26 +201,7 @@ export function mutateJsonFile<T, R = void>(
   }
   const release = acquireFileLock(file);
   try {
-    let raw: string | undefined;
-    try {
-      const pathInfo = lstatSync(file);
-      if (pathInfo.isSymbolicLink() || !pathInfo.isFile() || pathInfo.size > maxBytes) {
-        throw new Error(`JSON state is not a bounded regular file: ${file}`);
-      }
-      const descriptor = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-      try {
-        const opened = fstatSync(descriptor);
-        if (!opened.isFile() || opened.size > maxBytes) {
-          throw new Error(`JSON state is not a bounded regular file: ${file}`);
-        }
-        raw = readFileSync(descriptor, "utf-8");
-      } finally {
-        closeSync(descriptor);
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-      raw = undefined;
-    }
+    const raw = readBoundedJsonFile(file, maxBytes);
     const current = options.parse(raw);
     const { value, result } = options.mutation(current);
     if (value !== undefined) {
@@ -205,4 +215,29 @@ export function mutateJsonFile<T, R = void>(
   } finally {
     release();
   }
+}
+
+/** Read the same bounded, no-symlink image used by JSON CAS. The caller owns locking. */
+export function readBoundedJsonFile(file: string, maxBytes: number): string | undefined {
+  let raw: string | undefined;
+  try {
+    const pathInfo = lstatSync(file);
+    if (pathInfo.isSymbolicLink() || !pathInfo.isFile() || pathInfo.size > maxBytes) {
+      throw new Error(`JSON state is not a bounded regular file: ${file}`);
+    }
+    const descriptor = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    try {
+      const opened = fstatSync(descriptor);
+      if (!opened.isFile() || opened.size > maxBytes) {
+        throw new Error(`JSON state is not a bounded regular file: ${file}`);
+      }
+      raw = readFileSync(descriptor, "utf-8");
+    } finally {
+      closeSync(descriptor);
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    raw = undefined;
+  }
+  return raw;
 }

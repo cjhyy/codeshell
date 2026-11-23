@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-core",
-  "version": "0.11.0-rc.11",
+  "version": "0.12.0-rc.1",
   "description": "Core engine for code-shell — agent orchestration, tool execution, hooks, protocol. UI-agnostic.",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,9 +10,21 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
     "./internal": {
       "types": "./dist/index.internal.d.ts",
       "import": "./dist/index.internal.js"
+    },
+    "./internal/operations": {
+      "types": "./dist/index.operations.d.ts",
+      "import": "./dist/index.operations.js"
+    },
+    "./internal/storage": {
+      "types": "./dist/storage/index.d.ts",
+      "import": "./dist/storage/index.js"
     },
     "./internal/skills": {
       "types": "./dist/index.skills.d.ts",

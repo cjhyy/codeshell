@@ -1,4 +1,5 @@
 import { Menu, MenuItem, app, BrowserWindow } from "electron";
+import { installWorkbenchQuitMenu } from "./workbench-tray.js";
 import { loadRecents } from "./recents-store.js";
 
 /** The project registry whose changes rewrite recents.json. */
@@ -39,17 +40,17 @@ export async function installAppMenu(
   win: BrowserWindow,
   recentsSource?: AppMenuRecentsSource,
 ): Promise<void> {
+  const isMac = process.platform === "darwin";
+  if (!isMac) {
+    installWorkbenchQuitMenu(win);
+    return;
+  }
   installingWindow = win;
   if (recentsSource && !recentsSubscribed) {
     recentsSubscribed = true;
     recentsSource.onChanged(() => {
       if (installingWindow) void installAppMenu(installingWindow);
     });
-  }
-  const isMac = process.platform === "darwin";
-  if (!isMac) {
-    Menu.setApplicationMenu(null);
-    return;
   }
 
   const recents = await loadRecents();

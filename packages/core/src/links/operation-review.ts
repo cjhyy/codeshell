@@ -1,3 +1,4 @@
+import type { EncryptionCipher } from "../credentials/cipher.js";
 import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { constants, closeSync, fstatSync, openSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -35,9 +36,9 @@ interface LegacyLinkOperationOutput {
 /** Host-only Link adapter for existing activity review; provider semantics stay outside generic operations. */
 export function createLinkOperationReviewStore(
   root: string,
-  host?: { hookProcesses?: OperationHookProcesses },
+  host?: { hookProcesses?: OperationHookProcesses; ledgerCipher?: EncryptionCipher },
 ) {
-  const store = new OperationReviewStore(root, legacyLinkOperationEvidence);
+  const store = new OperationReviewStore(root, legacyLinkOperationEvidence, host?.ledgerCipher);
   return {
     review: store.review.bind(store),
     resolve: store.resolve.bind(store),

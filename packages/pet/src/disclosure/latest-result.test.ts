@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync, appendFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync, appendFileSync, symlinkSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildDelegationBrief } from "../delegation-brief.js";
@@ -26,6 +26,23 @@ function makeSessionDir(events: RawEvent[]): string {
 }
 
 describe("readLatestAssistantText", () => {
+  test.skipIf(process.platform === "win32")(
+    "ignores linked session directories and transcript leaves",
+    async () => {
+      const actual = makeSessionDir([{ role: "assistant", content: "outside this session" }]);
+      const dir = mkdtempSync(join(tmpdir(), "pet-linked-transcript-"));
+      try {
+        symlinkSync(actual, join(dir, "linked"));
+        symlinkSync(join(actual, "transcript.jsonl"), join(dir, "transcript.jsonl"));
+        for (const path of [dir, join(dir, "linked")]) {
+          expect(await readLatestAssistantText(path, { maxChars: 40 })).toBeNull();
+        }
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+        rmSync(actual, { recursive: true, force: true });
+      }
+    },
+  );
   test("recent work context excludes injected reminders and system/agent authored user-role inputs", async () => {
     const dir = makeSessionDir([
       { role: "user", content: "Latest real request" },

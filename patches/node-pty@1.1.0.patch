@@ -1,0 +1,25 @@
+diff --git a/lib/windowsPtyAgent.js b/lib/windowsPtyAgent.js
+index a358ffb177357e177661033c1b092f9c9d0e5f5a..19566a91f95b92a5b4e61167f1e6eca414e59b14 100644
+--- a/lib/windowsPtyAgent.js
++++ b/lib/windowsPtyAgent.js
+@@ -243,6 +243,8 @@ var WindowsPtyAgent = /** @class */ (function () {
+         this._inSocket.readable = false;
+         this._outSocket.readable = false;
+         this._outSocket.destroy();
++        this._inSocket.destroy();
++        this._conoutSocketWorker.dispose();
+     };
+     return WindowsPtyAgent;
+ }());
+diff --git a/src/windowsPtyAgent.ts b/src/windowsPtyAgent.ts
+index d7054449516f0c9a62af351c2caa17331206d530..31958af764e518ec72263a245b92b1f3a534ad57 100644
+--- a/src/windowsPtyAgent.ts
++++ b/src/windowsPtyAgent.ts
+@@ -246,5 +246,7 @@ export class WindowsPtyAgent {
+     this._inSocket.readable = false;
+     this._outSocket.readable = false;
+     this._outSocket.destroy();
++    this._inSocket.destroy();
++    this._conoutSocketWorker.dispose();
+   }
+ }

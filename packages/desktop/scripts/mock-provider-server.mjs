@@ -54,9 +54,12 @@ function openAiChunk(model, choices, usage) {
   };
 }
 
-function writeOpenAiSse(res, chunks) {
+async function writeOpenAiSse(res, chunks, afterChunk) {
   openSse(res);
-  for (const chunk of chunks) res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+  for (const [index, chunk] of chunks.entries()) {
+    res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+    if (afterChunk) await afterChunk(index);
+  }
   res.end("data: [DONE]\n\n");
 }
 
@@ -75,15 +78,19 @@ function hasOpenAiToolResult(body) {
   return Array.isArray(body?.messages) && body.messages.some((message) => message?.role === "tool");
 }
 
-function openAiResponse(body, scenario) {
+function openAiResponse(body, scenario, scriptedCall, scriptedText) {
   const model = typeof body.model === "string" ? body.model : `mock-${scenario}`;
   const usage = usageFor(scenario);
-  if (scenario === "tool-call" && !hasOpenAiToolResult(body)) {
+  if (scriptedCall || (scenario === "tool-call" && !hasOpenAiToolResult(body))) {
     const call = {
-      id: "call_codeshell_smoke",
+      id: scriptedCall?.id ?? "call_codeshell_smoke",
       type: "function",
-      function: { name: "Glob", arguments: '{"pattern":"__codeshell_mock_no_match__"}' },
+      function: {
+        name: scriptedCall?.toolName ?? "Glob",
+        arguments: JSON.stringify(scriptedCall?.args ?? { pattern: "__codeshell_mock_no_match__" }),
+      },
     };
+    const split = Math.ceil(call.function.arguments.length / 2);
     if (!body.stream) {
       return {
         id: "chatcmpl-codeshell-smoke",
@@ -111,7 +118,10 @@ function openAiResponse(body, scenario) {
                 index: 0,
                 id: call.id,
                 type: "function",
-                function: { name: call.function.name, arguments: '{"pattern":' },
+                function: {
+                  name: call.function.name,
+                  arguments: call.function.arguments.slice(0, split),
+                },
               },
             ],
           },
@@ -125,7 +135,7 @@ function openAiResponse(body, scenario) {
             tool_calls: [
               {
                 index: 0,
-                function: { arguments: '"__codeshell_mock_no_match__"}' },
+                function: { arguments: call.function.arguments.slice(split) },
               },
             ],
           },
@@ -137,13 +147,14 @@ function openAiResponse(body, scenario) {
   }
 
   const text =
-    scenario === "tool-call"
+    scriptedText ??
+    (scenario === "tool-call"
       ? "The smoke tool call completed."
       : scenario === "usage-with-cache"
         ? "The cache usage smoke response completed."
         : scenario === "error-then-ok"
           ? "The retry smoke response completed."
-          : "The plain streaming smoke response completed.";
+          : "The plain streaming smoke response completed.");
   if (!body.stream) {
     return {
       id: "chatcmpl-codeshell-smoke",
@@ -300,7 +311,8 @@ export async function startMockProviderServer(options = {}) {
       }
 
       const body = await readJson(req);
-      const scenario = scenarioFrom(req, body);
+      const script = await options.scriptResponse?.(body);
+      const scenario = script?.scenario ?? scenarioFrom(req, body);
       const protocol = url.pathname.endsWith("/messages") ? "anthropic" : "openai";
       requests.push({ protocol, scenario, body, at: Date.now() });
       if (requests.length > 100) requests.shift();
@@ -318,8 +330,27 @@ export async function startMockProviderServer(options = {}) {
       }
 
       if (protocol === "anthropic") return writeAnthropicSse(res, body, scenario);
-      const response = openAiResponse(body, scenario);
-      if (Array.isArray(response)) return writeOpenAiSse(res, response);
+      if (body.stream && script?.textChunks) {
+        const chunks = script.textChunks.map((content, index) =>
+          openAiChunk(body.model, [
+            {
+              index: 0,
+              delta: { ...(index === 0 && { role: "assistant" }), content },
+              finish_reason: null,
+            },
+          ]),
+        );
+        chunks.push(
+          openAiChunk(
+            body.model,
+            [{ index: 0, delta: {}, finish_reason: "stop" }],
+            usageFor(scenario),
+          ),
+        );
+        return await writeOpenAiSse(res, chunks, script.afterChunk);
+      }
+      const response = openAiResponse(body, scenario, script?.toolCall, script?.text);
+      if (Array.isArray(response)) return await writeOpenAiSse(res, response, script?.afterChunk);
       return sendJson(res, 200, response);
     } catch (error) {
       if (!res.headersSent) {

@@ -164,9 +164,9 @@ try {
       assert.equal(bridge.maybeHandleCredentialAccessMessage(JSON.stringify(message)), true),
   });
   core.setDefaultCredentialAccess(access);
-  const reset = () => {
+  const reset = async () => {
     store.save("user", credential);
-    bridge.pushCredentialSnapshot(cwd);
+    await bridge.pushCredentialSnapshot(cwd);
   };
   const status = async () => {
     const result = await core.getLinkStatus(
@@ -213,7 +213,7 @@ try {
     assert(!JSON.stringify(reply).includes("DO-NOT-PROJECT"));
   };
 
-  reset();
+  await reset();
   assert.equal((await status()).state, "ready");
   actionStatus = 401;
   await expectFailure(run(), "reconnect");
@@ -221,13 +221,13 @@ try {
   assert.equal((await status()).state, "unavailable");
   assert.equal(access.resolveMeta(cwd, credential.id, "full").meta.linkRemoteState, "reconnect");
 
-  reset();
+  await reset();
   const unauthorized = JSON.parse(await runTool());
   assert.equal(unauthorized.kind, "error");
   assert.equal(unauthorized.code, "reconnect");
   assert.equal((await status()).state, "unavailable");
 
-  reset();
+  await reset();
   actionStatus = 400;
   await expectFailure(run(), "invalid_request");
   assert.equal((await status()).state, "ready");
@@ -245,7 +245,7 @@ try {
 
   // A late failure for the old grant must report changed and publish the new
   // grant, rather than overwrite its store record or roll back Worker metadata.
-  reset();
+  await reset();
   const oldSnapshot = messages.at(-1);
   actionStatus = 401;
   let release;
@@ -267,7 +267,7 @@ try {
     },
   };
   store.save("user", replacement);
-  bridge.pushCredentialSnapshot(cwd);
+  await bridge.pushCredentialSnapshot(cwd);
   release();
   await expectFailure(pending, "changed");
   receive(oldSnapshot);
@@ -286,7 +286,7 @@ try {
 
   // A separate Host snapshot replacing a selected grant cancels the real tool.
   // Its late successful HTTP response cannot publish content for that old grant.
-  reset();
+  await reset();
   actionStatus = 200;
   actionGate = new Promise((done) => {
     release = done;
@@ -297,7 +297,7 @@ try {
   const replacedTool = runTool();
   await replacedStarted;
   store.save("user", replacement);
-  bridge.pushCredentialSnapshot(cwd);
+  await bridge.pushCredentialSnapshot(cwd);
   const replacedOutput = JSON.parse(await replacedTool);
   assert.equal(replacedOutput.kind, "error");
   assert.equal(replacedOutput.data, undefined);
@@ -310,7 +310,7 @@ try {
   actionStarted = undefined;
 
   // Task cancellation wins over a subsequent reviewed provider failure.
-  reset();
+  await reset();
   actionStatus = 401;
   actionGate = new Promise((done) => {
     release = done;
@@ -338,7 +338,7 @@ try {
 
   // Snapshot failures are diagnostic-only, never a replacement for the original
   // remote error. The same is true of failures in the diagnostic logger.
-  reset();
+  await reset();
   rejectSnapshot = true;
   actionStatus = 400;
   await expectFailure(run(), "invalid_request");
@@ -353,7 +353,7 @@ try {
 
   // A reply from an old worker generation cannot settle a replacement worker's
   // reused request ID or send it a snapshot belonging to an unrelated request.
-  reset();
+  await reset();
   actionStatus = 200;
   actionGate = new Promise((done) => {
     release = done;

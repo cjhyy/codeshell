@@ -443,6 +443,34 @@ describe("host subscriptions and recovery", () => {
     else Reflect.deleteProperty(window, "codeshell");
   });
 
+  test("a reconnect discards stale approvals while retaining newer live requests and resolutions", async () => {
+    let status!: (status: "ready" | "reconnecting") => void;
+    window.codeshell.onDesktopHostStatus = (cb) => {
+      status = cb;
+      cb("ready");
+      return () => {};
+    };
+    const gone = approval("gone"),
+      kept = approval("kept"),
+      resolved = approval("resolved"),
+      fresh = approval("fresh");
+    readApprovals = async () => [gone, kept];
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(flushMicrotasks);
+    expect(approvals.value.map((row) => row.requestId)).toEqual(["gone", "kept"]);
+    const next = deferred<ApprovalRequestEnvelope[]>();
+    readApprovals = () => next.promise;
+    await act(async () => {
+      status("reconnecting");
+      status("ready");
+      listeners.get("onApprovalResolved")!({ requestId: resolved.requestId, approved: false });
+      listeners.get("onApprovalRequest")!(fresh);
+      next.resolve([kept, resolved]);
+      await flushMicrotasks();
+    });
+    expect(approvals.value.map((row) => row.requestId).sort()).toEqual(["fresh", "kept"]);
+    expect(approveCalls).toEqual([]);
+  });
   test("restores pending approvals after live listeners register and keeps the originating bucket", async () => {
     const read = deferred<ApprovalRequestEnvelope[]>();
     readApprovals = () => {

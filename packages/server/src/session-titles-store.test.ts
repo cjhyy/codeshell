@@ -18,6 +18,14 @@ function fixture() {
 
 test("independent title stores serialize bounded writes without blocking each other's async lock holder", async () => {
   const { file, store } = fixture();
+  await expect(
+    store.setTitle("session", "discard", {
+      beforeCommit: () => {
+        throw new Error("revoked");
+      },
+    }),
+  ).rejects.toThrow("revoked");
+  expect(await store.listTitles()).toEqual({});
   const other = createSessionTitlesStore(file, { strictMutations: true });
   await Promise.all(
     Array.from({ length: 20 }, (_, index) =>

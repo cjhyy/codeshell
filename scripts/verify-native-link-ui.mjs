@@ -57,19 +57,16 @@ export async function verifyNativeLinkUI({
   let browser;
   try {
     await desktop.evaluate(
-      ({ shell, safeStorage }, config) => {
+      ({ shell }, config) => {
         Object.assign(process.env, config);
         process.__codeshellSystemBrowserFixture = {
           original: shell.openExternal,
-          encryptionAvailable: safeStorage.isEncryptionAvailable,
           urls: [],
         };
         // Intercept only the Electron adapter. Never change OS registrations or user browser profiles.
         shell.openExternal = async (url) => {
           process.__codeshellSystemBrowserFixture.urls.push(String(url));
         };
-        // The temporary store exercises the shipped fallback without touching the user's keychain.
-        safeStorage.isEncryptionAvailable = () => false;
       },
       {
         CODE_SHELL_REMOTE_LINK_ISSUER: issuer,
@@ -130,18 +127,30 @@ export async function verifyNativeLinkUI({
       }
     });
     await win.setViewportSize({ width: 1440, height: 1000 });
+    const section = win.locator('[data-link-provider-card="github"]');
+    const providerDialog = win.locator('[data-link-provider-dialog="github"]');
+    const management = win.locator(".link-authorization-dialog");
+    const openProvider = async () => {
+      if (!(await providerDialog.isVisible()))
+        await section.locator("[data-link-primary-connect], [data-link-provider-toggle]").click();
+      await providerDialog.waitFor();
+    };
     const openLinks = async () => {
       await navigateSettingsMenu(win, /^(凭证|Credentials)$/);
       await win.getByRole("tab", { name: /^Link(?:\s|$)/ }).click();
-      await win.locator('[data-link-integration="github"][data-link-runtime="server"]').waitFor();
+      await section.waitFor();
     };
     await openLinks();
-    const section = win.locator('[data-link-integration="github"][data-link-runtime="server"]');
-    const management = win.getByRole("dialog");
     const manage = async () => {
-      await section.getByRole("button", { name: /^(管理|Manage)$/ }).click();
-      await management.locator("[data-remote-link]").first().waitFor();
+      await openProvider();
+      await providerDialog.locator("[data-remote-link]").first().waitFor();
     };
+    async function accountAction(card, text) {
+      await card.locator('[aria-haspopup="menu"]').click();
+      return win.getByRole("menuitem", { name: text, exact: true });
+    }
+    const addAccount = () =>
+      accountAction(providerDialog.locator("[data-remote-link]").first(), "添加账号");
     const snapshot = () => win.evaluate(() => window.codeshell.links.remoteSnapshot(""));
     const count = async () =>
       (await snapshot()).connections.filter((item) => item.authSource === "remote-link").length;
@@ -177,7 +186,7 @@ export async function verifyNativeLinkUI({
       auth.setDefaultTimeout(15000);
       auth.on("pageerror", onError);
       await auth.goto(url);
-      await auth.getByRole("button", { name: "允许读取和创建 Issue", exact: true }).waitFor();
+      await auth.locator('button[name="decision"][value="allow"]').waitFor();
       assert.ok(new URL(auth.url()).origin === issuer);
       assert.equal(await auth.evaluate(() => typeof window.codeshell), "undefined");
       return auth;
@@ -194,9 +203,15 @@ export async function verifyNativeLinkUI({
       }
       assert.equal(await auth.locator(".account-name").innerText(), account);
       await auth.locator('input[type="checkbox"][value="owner/repo"]').check();
-      const bounds = await auth.getByRole("button", { name: "取消", exact: true }).boundingBox();
+      const cancel = auth.getByRole("button", { name: "取消", exact: true });
+      // The current consent page includes selectable permissions above both actions.
+      await cancel.scrollIntoViewIfNeeded();
+      const bounds = await cancel.boundingBox();
       assert.ok(
-        bounds && bounds.y + bounds.height <= (await auth.evaluate(() => window.innerHeight)),
+        bounds &&
+          bounds.y >= 0 &&
+          bounds.y + bounds.height <= (await auth.evaluate(() => window.innerHeight)),
+        "Consent cancellation must remain reachable",
       );
     }
     async function consent(auth, deny = false, account = "alice") {
@@ -207,7 +222,9 @@ export async function verifyNativeLinkUI({
         animations: "disabled",
       });
       await auth
-        .getByRole("button", { name: deny ? "取消" : "允许读取和创建 Issue", exact: true })
+        .locator(
+          deny ? 'button[name="decision"][value="deny"]' : 'button[name="decision"][value="allow"]',
+        )
         .click();
       if (deny) {
         await auth.getByText("连接未完成", { exact: true }).waitFor();
@@ -220,7 +237,7 @@ export async function verifyNativeLinkUI({
       } else {
         await auth.getByText("连接已完成", { exact: true }).waitFor();
         await management
-          .getByRole("heading", { name: /^(已连接 GitHub|Connected GitHub)$/ })
+          .getByRole("heading", { name: /^(已连接 GitHub|Connected (?:to )?GitHub)$/ })
           .waitFor();
         await management.getByRole("button", { name: /^(完成|Done)$/ }).click();
       }
@@ -233,25 +250,22 @@ export async function verifyNativeLinkUI({
       assert.equal(await windowCount(), originalWindows);
       await auth.close();
     }
-    await consent(await start(section.getByRole("button", { name: /^(连接|Connect)$/ })));
+    await openProvider();
+    await consent(await start(providerDialog.locator('[data-link-dialog-connect="github"]')));
     assert.ok(githubNavigations >= 1, "First authorization must pass through the upstream fixture");
     await manage();
-    await consent(
-      await start(management.getByRole("button", { name: "添加账号", exact: true }), "bob"),
-      false,
-      "bob",
-    );
+    await consent(await start(await addAccount(), "bob"), false, "bob");
     assert.ok(githubNavigations >= 2, "Another account requires its own upstream proof");
     await manage();
-    assert.equal(await management.locator("[data-remote-link]").count(), 2);
-    const alice = management.locator("[data-remote-link]").filter({ hasText: "alice" });
+    assert.equal(await providerDialog.locator("[data-remote-link]").count(), 2);
+    const alice = providerDialog.locator("[data-remote-link]").filter({ hasText: "alice" });
     const id = await alice.getAttribute("data-remote-link");
-    await alice.getByRole("button", { name: "改名", exact: true }).click();
+    await (await accountAction(alice, "改名")).click();
     await alice.getByLabel("新的连接名称", { exact: true }).fill("Renamed native account");
     await alice.getByRole("button", { name: "保存名称", exact: true }).click();
     await alice.getByText("Renamed native account", { exact: true }).waitFor();
     const stateBefore = await readLinkState();
-    await consent(await start(alice.getByRole("button", { name: "重新授权", exact: true })));
+    await consent(await start(await accountAction(alice, "重新授权")));
     const stateAfter = await readLinkState();
     assert.equal(stateAfter.grants.length, stateBefore.grants.length + 1);
     assert.ok(stateAfter.grants.some((grant) => grant.revoked));
@@ -310,18 +324,15 @@ export async function verifyNativeLinkUI({
       fullPage: true,
       animations: "disabled",
     });
-    await consent(
-      await start(management.getByRole("button", { name: "添加账号", exact: true })),
-      true,
-    );
+    await consent(await start(await addAccount()), true);
     assert.equal(await count(), 2);
     async function holdSuccessfulCallback() {
       await manage();
-      const auth = await start(management.getByRole("button", { name: "添加账号", exact: true }));
+      const auth = await start(await addAccount());
       await prepareConsent(auth);
       heldCallback = undefined;
       holdCallback = true;
-      await auth.getByRole("button", { name: "允许读取和创建 Issue", exact: true }).click();
+      await auth.locator('button[name="decision"][value="allow"]').click();
       const url = await until(
         () => Promise.resolve(heldCallback),
         Boolean,
@@ -356,9 +367,7 @@ export async function verifyNativeLinkUI({
     await cancelled.auth.close();
     // Reject old state even when the fixed port belongs to a new authorization attempt.
     await manage();
-    const replacement = await start(
-      management.getByRole("button", { name: "添加账号", exact: true }),
-    );
+    const replacement = await start(await addAccount());
     await rejectLateCallback(cancelled.url, true);
     await management.locator('[data-link-authorization-step="redirect"]').waitFor();
     await management.getByRole("button", { name: /^(取消|Cancel)$/ }).click();
@@ -380,12 +389,12 @@ export async function verifyNativeLinkUI({
     await orphan.auth.close();
     await openLinks();
     await manage();
-    assert.equal(await management.locator("[data-remote-link]").count(), 2);
+    assert.equal(await providerDialog.locator("[data-remote-link]").count(), 2);
     for (const current of (await snapshot()).connections.filter(
       (c) => c.authSource === "remote-link",
     )) {
-      const card = management.locator(`[data-remote-link="${current.id}"]`);
-      await card.getByRole("button", { name: "断开", exact: true }).click();
+      const card = providerDialog.locator(`[data-remote-link="${current.id}"]`);
+      await (await accountAction(card, "断开")).click();
       await card.getByRole("button", { name: "确认断开", exact: true }).click();
       await card.waitFor({ state: "detached" });
     }
@@ -405,7 +414,7 @@ export async function verifyNativeLinkUI({
         realDesktop: true,
         realStandaloneLink: true,
         systemBrowserAdapter: "isolated Chromium fixture",
-        credentialCipher: "isolated temporary store using shipped plaintext fallback",
+        credentialCipher: "isolated desktop credential store",
         noExtraElectronWindow: true,
         loopbackCallback: true,
         callbackPageWaitsForHostSave: true,
@@ -430,11 +439,9 @@ export async function verifyNativeLinkUI({
     win.off("pageerror", onError);
     await browser?.close();
     await desktop
-      .evaluate(({ shell, safeStorage }) => {
+      .evaluate(({ shell }) => {
         if (process.__codeshellSystemBrowserFixture) {
           shell.openExternal = process.__codeshellSystemBrowserFixture.original;
-          safeStorage.isEncryptionAvailable =
-            process.__codeshellSystemBrowserFixture.encryptionAvailable;
           delete process.__codeshellSystemBrowserFixture;
         }
       })

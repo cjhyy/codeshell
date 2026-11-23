@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import { join } from "node:path";
+import { isDesktopSessionId } from "../shared/disk-session-query.js";
 import { sessionsRoot as defaultSessionsRoot } from "@cjhyy/code-shell-core";
 import { canonicalKey } from "@cjhyy/code-shell-core/internal";
 
@@ -48,6 +49,8 @@ interface SessionCwdIndexOptions {
   syncFs?: SessionCwdIndexSyncFs;
   now?: () => number;
   tentativeTtlMs?: number;
+  /** Administrative root removal must include sessions beyond the bounded legacy lookup. */
+  scanAll?: boolean;
 }
 
 export class SessionCwdIndex {
@@ -58,7 +61,8 @@ export class SessionCwdIndex {
   private readonly entries = new Map<string, SessionCwdIndexEntry | TentativeEntry>();
   private readonly confirmedByCwd = new Map<string, Set<string>>();
   private loadPromise?: Promise<void>;
-  private loaded = false;
+  // An explicit bulk lookup may overlap a live run, root migration or deletion.
+  private changedDuringScan?: Set<string>;
 
   constructor(private readonly options: SessionCwdIndexOptions) {
     this.fs = options.fs ?? fs;
@@ -69,15 +73,12 @@ export class SessionCwdIndex {
 
   ensureLoaded(): Promise<void> {
     if (!this.loadPromise) {
-      this.loadPromise = this.scanOnce().finally(() => {
-        this.loaded = true;
+      this.changedDuringScan = new Set();
+      this.loadPromise = this.scanOnce(this.changedDuringScan).finally(() => {
+        this.changedDuringScan = undefined;
       });
     }
     return this.loadPromise;
-  }
-
-  isLoaded(): boolean {
-    return this.loaded;
   }
 
   lookupCached(sessionId: string): SessionCwdIndexEntry | undefined {
@@ -91,37 +92,55 @@ export class SessionCwdIndex {
   }
 
   async lookup(sessionId: string): Promise<SessionCwdIndexEntry | undefined> {
-    await this.ensureLoaded();
     const cached = this.lookupCached(sessionId);
     if (cached) return cached;
     return this.readOne(sessionId, false);
   }
 
   async refresh(sessionId: string): Promise<SessionCwdIndexEntry | undefined> {
-    await this.ensureLoaded();
     return this.readOne(sessionId, true);
   }
 
   /** Main's synchronous frame-rewrite seam: read only one known Session state file. */
   refreshSync(sessionId: string): SessionCwdIndexEntry | undefined {
-    if (!this.loaded || !validSessionId(sessionId)) return undefined;
+    if (!isDesktopSessionId(sessionId)) throw new Error("Invalid session id");
     const file = join(this.options.sessionsRoot, sessionId, "state.json");
     try {
-      if (!this.syncFs.statSync(file).isFile()) return undefined;
+      if (!this.syncFs.statSync(file).isFile()) throw new Error("Expected a session state file");
       const state = JSON.parse(this.syncFs.readFileSync(file, "utf8")) as SessionCwdIndexState;
       const entry = parseState(sessionId, state);
-      if (entry) this.replace(entry);
-      else this.forget(sessionId);
-      return entry ? publicEntry(entry) : undefined;
-    } catch {
+      if (!entry) throw new Error("Invalid session cwd or binding");
+      this.replace(entry);
+      return publicEntry(entry);
+    } catch (error) {
       this.forget(sessionId);
-      return undefined;
+      // Only an absent state may enter the new-session authorization path.
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      throw new Error("Cannot verify persisted Session workspace", { cause: error });
     }
   }
 
   resolveConfirmedCwds(cwds: readonly string[]): boolean[] {
     this.pruneExpired();
     return cwds.map((cwd) => (this.confirmedByCwd.get(canonicalKey(cwd))?.size ?? 0) > 0);
+  }
+
+  async findPersistedCwdWitness(
+    cwd: string,
+    indexedIds: readonly string[] = [],
+  ): Promise<string | undefined> {
+    const key = canonicalKey(cwd);
+    // The SQLite projection is a hint; only the current session file can authorize registration.
+    for (const id of indexedIds) {
+      const current = await this.refresh(id);
+      if (current && canonicalKey(current.cwd) === key) return id;
+    }
+    await this.ensureLoaded();
+    for (const candidate of this.confirmedEntriesForCwd(cwd)) {
+      const current = await this.refresh(candidate.sessionId);
+      if (current && canonicalKey(current.cwd) === key) return current.sessionId;
+    }
+    return undefined;
   }
 
   confirmedEntriesForCwd(cwd: string): SessionCwdIndexEntry[] {
@@ -132,6 +151,17 @@ export class SessionCwdIndex {
       .map((id) => this.entries.get(id))
       .filter((entry): entry is SessionCwdIndexEntry => entry?.status === "confirmed")
       .map(publicEntry);
+  }
+
+  confirmedIdsForProjectRoot(projectId: string, rootId: string, path: string): string[] {
+    const key = canonicalKey(path);
+    return this.confirmedEntries()
+      .filter((entry) =>
+        entry.projectId
+          ? entry.projectId === projectId && entry.mainRootId === rootId
+          : canonicalKey(entry.cwd) === key,
+      )
+      .map((entry) => entry.sessionId);
   }
 
   confirmedEntries(): SessionCwdIndexEntry[] {
@@ -182,7 +212,7 @@ export class SessionCwdIndex {
   evictTentative(sessionId: string): boolean {
     const entry = this.entries.get(sessionId);
     if (!entry || entry.status !== "tentative") return false;
-    this.entries.delete(sessionId);
+    this.forget(sessionId);
     return true;
   }
 
@@ -195,12 +225,13 @@ export class SessionCwdIndex {
   }
 
   forget(sessionId: string): void {
+    this.changedDuringScan?.add(sessionId);
     const prior = this.entries.get(sessionId);
     if (prior?.status === "confirmed") this.removeConfirmedCwd(prior.cwd, sessionId);
     this.entries.delete(sessionId);
   }
 
-  private async scanOnce(): Promise<void> {
+  private async scanOnce(changed: Set<string>): Promise<void> {
     let dirs: Array<{ name: string; isDirectory(): boolean }>;
     try {
       dirs = await this.fs.readdir(this.options.sessionsRoot, { withFileTypes: true });
@@ -209,14 +240,15 @@ export class SessionCwdIndex {
     }
 
     const sessionIds = dirs
-      .slice(0, MAX_SESSION_DIRS_TO_SCAN)
+      .slice(0, this.options.scanAll ? undefined : MAX_SESSION_DIRS_TO_SCAN)
       .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
       .map((entry) => entry.name);
     for (let offset = 0; offset < sessionIds.length; offset += 64) {
       await Promise.all(
         sessionIds.slice(offset, offset + 64).map(async (sessionId) => {
+          if (this.entries.has(sessionId) || changed.has(sessionId)) return;
           const entry = await this.readStateFile(sessionId, false);
-          if (entry) this.replace(entry);
+          if (entry && !changed.has(sessionId)) this.replace(entry);
         }),
       );
     }
@@ -239,7 +271,7 @@ export class SessionCwdIndex {
     sessionId: string,
     checkFile: boolean,
   ): Promise<SessionCwdIndexEntry | undefined> {
-    if (!validSessionId(sessionId)) return undefined;
+    if (!isDesktopSessionId(sessionId)) return undefined;
     const file = join(this.options.sessionsRoot, sessionId, "state.json");
     try {
       if (checkFile && !(await this.fs.stat(file)).isFile()) return undefined;
@@ -251,6 +283,7 @@ export class SessionCwdIndex {
   }
 
   private replace(entry: SessionCwdIndexEntry | TentativeEntry): void {
+    this.changedDuringScan?.add(entry.sessionId);
     const prior = this.entries.get(entry.sessionId);
     if (prior?.status === "confirmed") this.removeConfirmedCwd(prior.cwd, entry.sessionId);
     this.entries.set(entry.sessionId, entry);
@@ -322,10 +355,6 @@ function publicEntry(entry: SessionCwdIndexEntry | TentativeEntry): SessionCwdIn
     ...(mainRootId ? { mainRootId } : {}),
     status,
   };
-}
-
-function validSessionId(sessionId: string): boolean {
-  return Boolean(sessionId) && sessionId.length <= 512 && !/[\\/\0]/u.test(sessionId);
 }
 
 const indexes = new Map<string, SessionCwdIndex>();

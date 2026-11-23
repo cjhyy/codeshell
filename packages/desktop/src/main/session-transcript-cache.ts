@@ -9,6 +9,7 @@ export type { SessionTranscriptCacheOptions } from "./session-transcript-cache-s
 export interface TranscriptCacheWorkerRequest {
   id: number;
   method: "write" | "read" | "delete" | "flush";
+  permit?: Int32Array;
   input?: SessionTranscriptCacheKey & { value?: string; legacy?: boolean; maxBytes?: number };
 }
 export interface TranscriptCacheWorkerReply {
@@ -51,7 +52,13 @@ export class SessionTranscriptCache {
   ) {}
 
   write(input: SessionTranscriptCacheKey & { value: string; legacy?: boolean }): Promise<void> {
-    return this.request("write", input).then(() => undefined);
+    return this.commitWrite(input);
+  }
+  commitWrite(
+    input: SessionTranscriptCacheKey & { value: string; legacy?: boolean },
+    permit?: Int32Array,
+  ): Promise<void> {
+    return this.request("write", input, permit).then(() => undefined);
   }
   read(
     input: SessionTranscriptCacheKey & { maxBytes?: number },
@@ -59,7 +66,10 @@ export class SessionTranscriptCache {
     return this.request("read", input) as Promise<SessionTranscriptCacheRead>;
   }
   delete(input: SessionTranscriptCacheKey): Promise<void> {
-    return this.request("delete", input).then(() => undefined);
+    return this.commitDelete(input);
+  }
+  commitDelete(input: SessionTranscriptCacheKey, permit?: Int32Array): Promise<void> {
+    return this.request("delete", input, permit).then(() => undefined);
   }
   flush(): Promise<void> {
     if (this.closing) return this.closing;
@@ -82,6 +92,7 @@ export class SessionTranscriptCache {
   private request(
     method: TranscriptCacheWorkerRequest["method"],
     input?: TranscriptCacheWorkerRequest["input"],
+    permit?: Int32Array,
   ): Promise<SessionTranscriptCacheRead | undefined> {
     if (this.closing) return Promise.reject(new Error("transcript cache is closed"));
     if (this.failure) return Promise.reject(this.failure);
@@ -91,7 +102,12 @@ export class SessionTranscriptCache {
         const id = ++this.nextId;
         this.pending.set(id, { resolve, reject });
         worker.ref();
-        worker.postMessage({ id, method, input } satisfies TranscriptCacheWorkerRequest);
+        worker.postMessage({
+          id,
+          method,
+          input,
+          ...(permit && { permit }),
+        } satisfies TranscriptCacheWorkerRequest);
       } catch (error) {
         this.fail(error instanceof Error ? error : new Error(String(error)));
         reject(this.failure!);

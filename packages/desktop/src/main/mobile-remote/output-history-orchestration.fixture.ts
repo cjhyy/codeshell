@@ -189,7 +189,7 @@ test("retirement clears all old tabs and only that Session's pending approvals",
       f.pendingApprovals.observeOutboundLine(
         JSON.stringify({ method: "agent/approvalRequest", params: { sessionId, requestId } }),
       );
-    f.orchestrator.retireOutputHistorySession(id);
+    await f.orchestrator.retireOutputHistorySession(id);
     expect(() => a.assertCurrent()).toThrow();
     expect(() => b.assertCurrent()).toThrow();
     expect(f.pendingApprovals.replayLines(id)).toHaveLength(0);

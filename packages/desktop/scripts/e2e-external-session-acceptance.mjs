@@ -11,6 +11,7 @@
  */
 /* global document, window */
 import { createServer } from "node:http";
+import { SessionManager } from "@cjhyy/code-shell-core";
 import { once } from "node:events";
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -51,6 +52,8 @@ async function launch() {
     appDir,
     home: isolated.home,
     userDataDir: isolated.userDataDir,
+    // This suite includes a real 60-second permit timeout, interactive goal and recovery.
+    runtimeTimeoutMs: 300_000,
     env: { PATH: cli.bin + ":" + process.env.PATH, CODE_SHELL_EXTERNAL_CLI_DIR: cli.bin },
   });
   win = await findCodeShellWindow(app);
@@ -122,6 +125,19 @@ async function send(text) {
   await composer.press("Enter");
 }
 
+const providerParents = new Set();
+async function verifyExternalParent(record) {
+  if (providerParents.has(record.ppid)) return;
+  const row = await app.evaluate(
+    ({ app }, parent) => app.getAppMetrics().find((p) => p.pid === parent),
+    record.ppid,
+  );
+  assert(
+    row?.type === "Utility" && row.name === "CodeShell Desktop Host",
+    `Expected an actual Desktop Host parent for provider pid ${record.pid}, got ${JSON.stringify(row)}`,
+  );
+  providerParents.add(record.ppid);
+}
 /** Wait for the scripted CLI's `count`th turn, approving each Host tool call once. */
 async function waitForTurns(count, { timeout = 40_000, until, approve = true } = {}) {
   const once = win.getByRole("button", { name: /^(仅本次批准|Approve once)$/ });
@@ -132,7 +148,9 @@ async function waitForTurns(count, { timeout = 40_000, until, approve = true } =
     if (approve && (await once.first().isVisible())) await once.first().click();
     await new Promise((done) => setTimeout(done, 100));
   }
-  return (await cli.invocations())[count - 1];
+  const record = (await cli.invocations())[count - 1];
+  await verifyExternalParent(record);
+  return record;
 }
 
 try {
@@ -557,6 +575,128 @@ try {
     `acceptance: worker task showed its title and pending approval; cancel withdrew the card (${worker.join(", ")})`,
   );
 
+  await cli.scriptCodex([{ text: "foreground hosted Codex" }]);
+  const sessionId = await win.evaluate(() => window.crypto.randomUUID());
+  async function sendHostedCodex(prompt) {
+    const result = await win.evaluate(
+      async ({ cwd, sessionId, prompt }) => {
+        const api = window.codeshell.externalRuntime;
+        await api.start({ sessionId, cwd, modelKey: "codex/gpt-6-astra" });
+        return api.send({ sessionId, text: prompt, clientMessageId: window.crypto.randomUUID() });
+      },
+      { cwd: projectPath, sessionId, prompt },
+    );
+    assert(result.ok, "Foreground Codex should accept the synthetic turn");
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      const record = (await cli.codexEvents()).findLast(
+        (event) => event.event === "scripted-turn" && event.prompt.includes(prompt),
+      );
+      if (record) {
+        await verifyExternalParent(record);
+        return record;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw Error("Missing foreground Codex invocation");
+  }
+  const before = await sendHostedCodex("Synthetic foreground provider custody");
+  await app.evaluate(({ app }, pid) => {
+    const host = app.getAppMetrics().find((entry) => entry.pid === pid);
+    if (host?.type !== "Utility" || host.name !== "CodeShell Desktop Host")
+      throw Error("Unexpected fixture Host PID");
+    process.kill(pid, "SIGKILL");
+  }, before.ppid);
+  const restartDeadline = Date.now() + 20_000;
+  let successor;
+  while (Date.now() < restartDeadline) {
+    successor = await app.evaluate(
+      ({ app }, previous) =>
+        app
+          .getAppMetrics()
+          .find(
+            (entry) =>
+              entry.pid !== previous &&
+              entry.type === "Utility" &&
+              entry.name === "CodeShell Desktop Host",
+          )?.pid,
+      before.ppid,
+    );
+    let oldChildAlive = true;
+    try {
+      process.kill(before.pid, 0);
+    } catch (error) {
+      if (error.code === "ESRCH") oldChildAlive = false;
+      else throw error;
+    }
+    if (successor && !oldChildAlive) break;
+    successor = undefined;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert(successor, "Host did not recover or the retired Host left its provider alive");
+  // The document's Host port has to reconnect before the new provider can be used.
+  await waitForAsyncFunction(win, async () => {
+    try {
+      await window.codeshell.projectRegistry.list();
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  await cli.scriptCodex([{ text: "recovered hosted Codex" }]);
+  const after = await sendHostedCodex("Synthetic recovered foreground provider");
+  assert(after.ppid === successor, "Recovered provider used the wrong Host generation");
+  await win.evaluate((id) => window.codeshell.externalRuntime.stop(id), sessionId);
+  console.log(
+    "acceptance: foreground Claude and Codex belonged to Desktop Host; Host retirement released the child and the same session reopened on its successor",
+  );
+  // A paused provider Session on disk has no live task, worker turn or renderer binding.
+  const coldId = "fixture-cold-external-resume";
+  const manager = new SessionManager(join(isolated.codeShellHome, "sessions"));
+  const { state } = manager.create(projectPath, modelKey, "claude-code", coldId);
+  state.origin = "desktop";
+  state.parentSessionId = null;
+  state.activeGoal = {
+    objective: "Restore the saved acceptance fixture",
+    goalId: "cold-goal",
+    revision: 2,
+    paused: true,
+    setAtMs: 1,
+  };
+  assert(manager.saveState(state), "Cold external fixture was saved");
+  await cli.script([ask({ level: "preference", question: "Which fixture should continue?" }, "")]);
+  await waitForAsyncFunction(
+    win,
+    async (id) => {
+      try {
+        return (await window.codeshell.goalGet(id)).goalId === "cold-goal";
+      } catch {
+        return false;
+      }
+    },
+    coldId,
+    { timeout: 15_000 },
+  );
+  const beforeResume = (await cli.invocations()).length;
+  const resumed = await win.evaluate(async (sessionId) => {
+    const old = await window.codeshell.goalGet(sessionId);
+    const stale = await window.codeshell.goalUpdate(sessionId, {
+      paused: false,
+      expectedGoalId: old.goalId,
+      expectedRevision: old.revision + 1,
+    });
+    const current = await window.codeshell.goalUpdate(sessionId, {
+      paused: false,
+      expectedGoalId: old.goalId,
+      expectedRevision: old.revision,
+    });
+    return { stale: stale.updated, current: current.updated };
+  }, coldId);
+  assert(!resumed.stale && resumed.current, "Only the current cold Goal revision resumed");
+  await waitForTurns(beforeResume + 1, { approve: false });
+  console.log(
+    "acceptance: the stored external Goal resumed through its owning window and a fresh provider",
+  );
   assert(errors.length === 0, `Renderer errors: ${errors.map((e) => e.message).join("; ")}`);
   console.log("CodeShell external session acceptance: passed");
 } catch (error) {

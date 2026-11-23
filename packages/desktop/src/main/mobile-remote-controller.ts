@@ -1,11 +1,14 @@
 import { hostname } from "node:os";
 import type {
-  AccessPasscode,
   AccountRelayBinding,
-  CloudflaredBinary,
-  RemoteHostManager,
-  TunnelManager,
+  AccountRelayAccessProvider,
 } from "@cjhyy/code-shell-server/mobile-remote";
+import {
+  localMobileGateway,
+  type MobileGateway,
+  type NativeGatewayResources,
+  type MobilePair,
+} from "./mobile-gateway.js";
 import {
   createDeviceRelayConnector,
   environmentIdentity,
@@ -25,7 +28,8 @@ import {
   enrollAccountRelayComputer,
   validateRelayEnrollment,
 } from "./device-relay-enrollment.js";
-import { DeviceRelayStore, type RelayRegistration } from "./device-relay-store.js";
+import type { RelayRegistration } from "./device-relay-store.js";
+import type { GrantStorage } from "@cjhyy/code-shell-core/internal/storage";
 import type { CloudAccountManager } from "./cloud-account-manager.js";
 import {
   CloudAccountHttpError,
@@ -43,6 +47,8 @@ export class MobileRemoteController {
   private connector?: DeviceRelayConnector;
   private registration?: RelayRegistration;
   private loaded = false;
+  private loading?: Promise<void>;
+  private grantWrites: Promise<void> = Promise.resolve();
   private loadFailed = false;
   private state: DesktopRelayState = "unregistered";
   private disposed = false;
@@ -54,42 +60,75 @@ export class MobileRemoteController {
   private autoRetry?: ReturnType<typeof setTimeout>;
   private accountEnrollment?: { origin: string; accountId: string };
   private pairingIssued: number[] = [];
+  private readonly gateway: MobileGateway;
   constructor(
-    private readonly deps: {
-      host: RemoteHostManager;
-      tunnel: TunnelManager;
-      binary: CloudflaredBinary;
-      passcode: AccessPasscode;
-      store: DeviceRelayStore;
+    private readonly deps: ({ gateway: MobileGateway } | NativeGatewayResources) & {
+      store: GrantStorage<RelayRegistration>;
       environmentDir: string;
       changed: (status: DesktopRelayStatus) => void;
-      account?: CloudAccountManager;
+      account?: Pick<CloudAccountManager, "status" | "capabilities" | "getCredential">;
       accountRequest?: CloudAccountTransport;
       connectorFactory?: typeof createDeviceRelayConnector;
       autoRetryDelayMs?: number;
       listProjects?: () => Promise<Array<{ id: string; name: string; path: string }>>;
       now?: () => number;
     },
-  ) {}
+  ) {
+    this.gateway = "gateway" in deps ? deps.gateway : localMobileGateway(deps);
+  }
   private serial<T>(work: () => Promise<T>): Promise<T> {
     const next = this.queue.then(work, work);
     this.queue = next.catch(() => {});
     return next;
   }
-  private load() {
-    if (this.loaded && !this.loadFailed) return;
+  private load(): Promise<void> | undefined {
+    if (this.loading || (this.loaded && !this.loadFailed)) return this.loading;
     this.loaded = true;
-    try {
-      this.registration = this.deps.store.load();
+    const receive = (registration: RelayRegistration | undefined) => {
+      this.registration = registration;
       this.loadFailed = false;
-      this.state = this.registration ? "stopped" : "unregistered";
-    } catch {
+      this.state = registration ? "stopped" : "unregistered";
+    };
+    const fail = () => {
       this.loadFailed = true;
       this.state = "storage-error";
+    };
+    try {
+      const initial = this.deps.store.load();
+      if (initial instanceof Promise) {
+        this.loading = initial.then(receive, fail).finally(() => {
+          if (!this.disposed) this.publish(this.state);
+          this.loading = undefined;
+        });
+        return this.loading;
+      }
+      receive(initial);
+    } catch {
+      fail();
     }
   }
+
+  private writeGrant(assertCurrent: () => void, build: () => RelayRegistration) {
+    const write = this.grantWrites.then(async () => {
+      assertCurrent();
+      const next = build();
+      await this.deps.store.save(next, assertCurrent);
+      assertCurrent();
+      this.registration = next;
+      return next;
+    });
+    this.grantWrites = write.then(
+      () => {},
+      () => {},
+    );
+    return write;
+  }
+
   relayStatus(): DesktopRelayStatus {
     this.load();
+    return this.relaySnapshot();
+  }
+  private relaySnapshot(): DesktopRelayStatus {
     const data = this.registration;
     return {
       state: this.state,
@@ -115,7 +154,7 @@ export class MobileRemoteController {
   private publish(state: DesktopRelayState) {
     this.state = state;
     try {
-      this.deps.changed(this.relayStatus());
+      this.deps.changed(this.relaySnapshot());
     } catch {
       // Renderer shutdown cannot retain transport or credential authority.
     }
@@ -130,8 +169,11 @@ export class MobileRemoteController {
   private async closeTransport() {
     const connector = this.connector;
     this.connector = undefined;
-    await connector?.close();
-    await Promise.all([this.deps.tunnel.stop(), this.deps.host.stop()]);
+    try {
+      await connector?.close();
+    } finally {
+      await this.gateway.close();
+    }
     if (this.registration && this.state !== "storage-error") this.publish("stopped");
   }
   enroll(input: DesktopRelayEnrollment, authorized: () => boolean): Promise<DesktopRelayStatus> {
@@ -147,8 +189,8 @@ export class MobileRemoteController {
       if (this.disposed || generation !== this.generation || !authorized())
         throw new Error("登记已取消。");
       await this.closeTransport();
-      this.load();
-      this.deps.store.preflight();
+      await this.load();
+      await this.deps.store.preflight();
       const environmentId = await environmentIdentity(this.deps.environmentDir);
       if (signal.aborted || !authorized()) throw new Error("登记已取消。");
       // Re-enrollment rotates the server credential. Forget the old value before
@@ -182,8 +224,12 @@ export class MobileRemoteController {
           );
         } else result = await enrollRelayComputer(input, environmentId, signal);
         if (signal.aborted || !authorized()) throw new Error("登记已取消。");
-        this.deps.store.save(result);
-        this.registration = result;
+        await this.writeGrant(
+          () => {
+            if (signal.aborted || !authorized()) throw new Error("登记已取消。");
+          },
+          () => result!,
+        );
         this.publish("stopped");
         return this.relayStatus();
       } catch {
@@ -234,7 +280,8 @@ export class MobileRemoteController {
     if (!account || !current()) return;
     const activationGeneration = this.generation;
     let retryNetworkFailure = false;
-    this.load();
+    await this.load();
+    if (this.disposed || activationGeneration !== this.generation || !current()) return;
     // Focus/account refresh may run while the connector is retrying. Its Host
     // and short-lived viewer grants remain valid; replacing them here would
     // turn a transient transport failure into a new authorization requirement.
@@ -243,7 +290,7 @@ export class MobileRemoteController {
       this.registration.accountId === identity.accountId &&
       this.registration.remoteAccessEnabled === true &&
       this.connector &&
-      this.deps.host.status()?.mode === "relay" &&
+      this.gateway.status().mode === "relay" &&
       ["ready", "connecting", "disconnected"].includes(this.state)
     )
       return;
@@ -271,7 +318,8 @@ export class MobileRemoteController {
       }
       if (!current()) return;
       if (!this.registration) {
-        this.deps.store.preflight();
+        await this.deps.store.preflight();
+        if (!current() || activationGeneration !== this.generation) return;
         this.accountEnrollment = identity;
         const generation = this.generation;
         const signal = this.operation.signal;
@@ -295,11 +343,21 @@ export class MobileRemoteController {
           void this.revokeAccountDevice(result);
           return;
         }
-        this.deps.store.save(result);
-        this.registration = result;
+        try {
+          await this.writeGrant(
+            () => {
+              if (!current() || generation !== this.generation || signal.aborted)
+                throw new Error("登记已取消。");
+            },
+            () => result,
+          );
+        } catch (error) {
+          void this.revokeAccountDevice(result);
+          throw error;
+        }
         this.publish("stopped");
       }
-      if (this.registration.environmentId !== environmentId)
+      if (this.registration?.environmentId !== environmentId)
         throw new Error("本机设备身份与已有登记不匹配。");
       if (!current()) return;
       if (this.registration.remoteAccessEnabled !== true) {
@@ -307,8 +365,8 @@ export class MobileRemoteController {
         return;
       }
       // Do not replace a running LAN/tunnel server when the user explicitly selected that transport.
-      const active = this.deps.host.status();
-      if (active && active.mode !== "relay") {
+      const active = this.gateway.status();
+      if (active.running && active.mode !== "relay") {
         this.availabilityMessage =
           "账号已登录；请先停止当前局域网或临时公网连接，再开启账号远程访问。";
         this.publish("unavailable");
@@ -353,9 +411,9 @@ export class MobileRemoteController {
       if (this.accountEnrollment === identity) this.accountEnrollment = undefined;
     }
   }
-  /** Main-only source proof binds dispatch rights to this registered computer as well as the root account. */
+  /** The private source proof binds dispatch rights to this registered computer as well as the root account. */
   async accountRelaySource(identity: { origin: string; accountId: string }, signal: AbortSignal) {
-    this.load();
+    await this.load();
     const saved = this.registration;
     if (!saved || saved.relayOrigin !== identity.origin || saved.accountId !== identity.accountId)
       throw new Error("正在同步这台电脑的账号，请稍后重试。联网后会自动完成。");
@@ -364,13 +422,10 @@ export class MobileRemoteController {
     if (this.registration?.hostId !== saved.hostId) throw new Error("本机设备授权已更换。");
     return { sourceHostId: saved.hostId, sourceDeviceCredential };
   }
-  private configureAccountAccess() {
+  private accountAccess(): AccountRelayAccessProvider | undefined {
     const registration = this.registration;
-    if (!registration?.accountId) {
-      this.deps.host.setAccountRelayAccess?.(undefined);
-      return;
-    }
-    this.deps.host.setAccountRelayAccess?.({
+    if (!registration?.accountId) return;
+    return {
       hostId: registration.hostId,
       environmentId: registration.environmentId,
       accountId: registration.accountId,
@@ -384,13 +439,20 @@ export class MobileRemoteController {
             origin: registration.relayOrigin,
             path: "/api/v1/remote-hosts/handoffs/redeem",
             token: credential,
-            body: { handoff, hostId: registration.hostId, environmentId: registration.environmentId },
+            body: {
+              handoff,
+              hostId: registration.hostId,
+              environmentId: registration.environmentId,
+            },
             signal,
           });
           signal.throwIfAborted();
-          if (this.registration?.hostId !== registration.hostId) throw new Error("设备授权已更换。");
+          if (this.registration?.hostId !== registration.hostId)
+            throw new Error("设备授权已更换。");
           const binding =
-            value && typeof value === "object" ? (value as Partial<AccountRelayBinding>) : undefined;
+            value && typeof value === "object"
+              ? (value as Partial<AccountRelayBinding>)
+              : undefined;
           // Only timing and a target-match boolean; never persist handoffs,
           // credentials, binding identifiers, response bodies, or error text.
           dlog("main", "mobile.account_relay.redeem_received", {
@@ -415,13 +477,12 @@ export class MobileRemoteController {
           throw error;
         }
       },
-    });
+    };
   }
   forget(): Promise<void> {
     // A cold process still owns a persisted device grant. Unreadable storage
     // leaves no credential to revoke, but must not prevent deleting local state.
-    this.load();
-    const previous = this.registration;
+    const loading = this.load();
     const refresh = this.deviceRefreshResponse;
     clearTimeout(this.autoRetry);
     this.deviceAuthority++;
@@ -429,6 +490,8 @@ export class MobileRemoteController {
     this.deviceRefreshResponse = undefined;
     this.invalidate();
     return this.serial(async () => {
+      if (loading) await loading;
+      const previous = this.registration;
       await this.closeTransport();
       this.registration = undefined;
       this.loaded = true;
@@ -444,60 +507,46 @@ export class MobileRemoteController {
       }
     });
   }
-  start(opts?: { mode?: "lan" | "tunnel" | "relay" }): Promise<MobileRemoteOpenResult> {
+  start(
+    opts?: { mode?: "lan" | "tunnel" | "relay" },
+    document?: AbortSignal,
+  ): Promise<MobileRemoteOpenResult> {
     const mode = opts?.mode ?? "lan";
     if (!["lan", "tunnel", "relay"].includes(mode))
       return Promise.reject(new Error("无效的远程连接方式。"));
     const generation = this.generation;
-    const signal = this.operation.signal;
+    const signal = document
+      ? AbortSignal.any([document, this.operation.signal])
+      : this.operation.signal;
     return this.serial(async () => {
       if (this.disposed || signal.aborted || generation !== this.generation)
         throw new Error("远程启动已取消。");
-      this.load();
-      this.saveRemoteAccessPreference(mode === "relay");
+      await this.load();
+      signal.throwIfAborted();
+      await this.saveRemoteAccessPreference(mode === "relay", signal);
+      signal.throwIfAborted();
       const existing = this.status();
       if (existing.running && existing.mode === mode && existing.url) {
-        return { url: existing.url, ...this.pairingUrl(), mode };
+        return { url: existing.url, ...(await this.pairingUrl()), mode };
       }
       await this.closeTransport();
       if (signal.aborted) throw new Error("远程启动已取消。");
       try {
-        if (
-          mode !== "lan" &&
-          !(mode === "relay" && this.registration?.accountId) &&
-          !this.deps.passcode.isSet()
-        )
-          throw new Error("请先设置访问口令，再开启公网连接。");
-        if (mode === "tunnel") {
-          await this.deps.binary.ensureBinary();
-          if (signal.aborted) throw new Error("远程启动已取消。");
-        }
         if (mode === "relay" && !this.registration)
           throw new Error("正在同步这台电脑的账号，请稍后重试。联网后会自动完成。");
-        if (mode === "relay") this.configureAccountAccess();
-        await this.deps.host.start(
-          mode === "lan"
-            ? { host: "lan", port: 0 }
-            : {
-                mode,
-                host: "127.0.0.1",
-                port: 0,
-                passcode: this.deps.passcode,
-              },
+        await this.gateway.start(
+          mode,
+          mode === "relay" ? this.accountAccess() : undefined,
+          signal,
+          this.registration?.publicOrigin,
         );
-        if (signal.aborted) throw new Error("远程启动已取消。");
-        if (mode === "tunnel") {
-          const started = await this.deps.tunnel.start(this.deps.host.status()!.port);
-          if (signal.aborted) throw new Error("远程启动已取消。");
-          this.deps.host.setPublicBaseUrl(started.url);
-        } else if (mode === "relay") {
-          await this.connectRelay(generation, signal);
-        }
+        signal.throwIfAborted();
+        if (mode === "relay") await this.connectRelay(generation, signal);
         // Relay readiness is published by its connector. LAN and tunnel starts
         // must announce the running gateway too, or settings views in other
         // windows keep showing it closed until they remount.
         if (mode !== "relay") this.publish(this.state);
-        return { url: this.status().url!, ...this.pairingUrl(), mode };
+        return { url: this.status().url!, ...(await this.pairingUrl()), mode };
       } catch (error) {
         await this.closeTransport();
         throw error;
@@ -530,7 +579,7 @@ export class MobileRemoteController {
             }
           : {}),
         ...(this.registration?.accountId ? { issuePairing: () => this.issueAccountPairing() } : {}),
-        localHost: this.deps.host.relayTarget(),
+        localHost: this.gateway.relayTarget(),
         onState: (state) => {
           if (generation !== this.generation || state === "closed") return;
           this.publish(state);
@@ -558,7 +607,11 @@ export class MobileRemoteController {
   }
   /** Account logout must not stop an unrelated LAN/tunnel Host or local tasks. */
   retireAccountRelay(identity: { origin: string; accountId: string }): Promise<void> {
-    this.load();
+    const loading = this.load();
+    if (loading) return loading.then(() => this.retireLoadedAccountRelay(identity));
+    return this.retireLoadedAccountRelay(identity);
+  }
+  private retireLoadedAccountRelay(identity: { origin: string; accountId: string }): Promise<void> {
     const matches =
       this.registration?.relayOrigin === identity.origin &&
       this.registration?.accountId === identity.accountId;
@@ -570,10 +623,10 @@ export class MobileRemoteController {
     this.deviceAuthority++;
     this.deviceRefresh = undefined;
     this.deviceRefreshResponse = undefined;
-    if (enrolling || this.deps.host.status()?.mode === "relay") this.invalidate();
-    this.deps.host.setAccountRelayAccess?.(undefined);
+    if (enrolling || this.gateway.status().mode === "relay") this.invalidate();
+    this.gateway.withdraw();
     return this.serial(async () => {
-      if (this.deps.host.status()?.mode === "relay") await this.closeTransport();
+      if (this.gateway.status().mode === "relay") await this.closeTransport();
       if (
         this.registration?.relayOrigin !== identity.origin ||
         this.registration?.accountId !== identity.accountId
@@ -622,30 +675,30 @@ export class MobileRemoteController {
           result.accessTokenExpiresAt <= Date.now()
         )
           throw new CloudAccountHttpError(401);
-        const next = {
-          ...registration,
+        const current = () => {
+          const account = this.deps.account?.status();
+          if (
+            authority !== this.deviceAuthority ||
+            this.registration?.credential !== registration.credential ||
+            account?.state !== "signed-in" ||
+            account.origin !== registration.relayOrigin ||
+            account.account?.id !== registration.accountId
+          )
+            throw new Error("电脑授权刷新已取消。");
+        };
+        const rotated = {
           credential: result.accessToken,
           refreshToken: result.refreshToken,
           credentialExpiresAt: result.accessTokenExpiresAt,
         };
-        const current = this.deps.account?.status();
-        if (
-          authority !== this.deviceAuthority ||
-          this.registration !== registration ||
-          current?.state !== "signed-in" ||
-          current.origin !== registration.relayOrigin ||
-          current.account?.id !== registration.accountId
-        ) {
-          void this.revokeAccountDevice(next);
-          throw new Error("电脑授权刷新已取消。");
-        }
+        let next: RelayRegistration;
         try {
-          this.deps.store.save(next);
+          next = await this.writeGrant(current, () => ({ ...this.registration!, ...rotated }));
         } catch {
-          void this.revokeAccountDevice(next);
+          void this.revokeAccountDevice({ ...registration, ...rotated });
+          current();
           throw new CloudAccountHttpError(401);
         }
-        this.registration = next;
         return next.credential;
       })();
       this.deviceRefresh = pending;
@@ -695,7 +748,7 @@ export class MobileRemoteController {
    * Pairing requested by the account relay for a phone its owner signed in on.
    * The phone still passes the computer passcode; this only replaces the QR scan.
    */
-  private issueAccountPairing(): { token: string; expiresAt: number } {
+  private issueAccountPairing() {
     const registration = this.registration;
     const account = this.deps.account?.status();
     if (
@@ -710,53 +763,50 @@ export class MobileRemoteController {
     this.pairingIssued = this.pairingIssued.filter((at) => now - at < ACCOUNT_PAIRING_WINDOW_MS);
     if (this.pairingIssued.length >= ACCOUNT_PAIRING_LIMIT)
       throw new Error("account pairing rate limited");
-    const pairing = this.deps.host.createPairingUrl();
     this.pairingIssued.push(now);
-    return { token: pairing.token, expiresAt: pairing.expiresAt };
+    const pairing = this.gateway.pair();
+    const result = (p: MobilePair) => ({ token: p.token, expiresAt: p.expiresAt });
+    return pairing instanceof Promise ? pairing.then(result) : result(pairing);
   }
-  private saveRemoteAccessPreference(enabled: boolean) {
+  private async saveRemoteAccessPreference(enabled: boolean, signal: AbortSignal) {
     const saved = this.registration;
     if (!saved?.accountId || saved.remoteAccessEnabled === enabled) return;
-    const previous = saved.remoteAccessEnabled;
-    saved.remoteAccessEnabled = enabled;
-    try {
-      this.deps.store.save(saved);
-    } catch (error) {
-      if (enabled) saved.remoteAccessEnabled = previous;
-      throw error;
-    }
-    // This local preference does not replace credential authority. An in-flight
-    // device rotation must still recognize and update its registration.
+    const authority = this.deviceAuthority;
+    await this.writeGrant(
+      () => {
+        signal.throwIfAborted();
+        if (authority !== this.deviceAuthority || this.registration?.hostId !== saved.hostId)
+          throw new Error("电脑授权已变更。");
+      },
+      () => ({ ...this.registration!, remoteAccessEnabled: enabled }),
+    );
     this.publish(this.state);
   }
   stop(preserveAccountPreference = false): Promise<void> {
     clearTimeout(this.autoRetry);
-    this.load();
-    let preferenceError: unknown;
-    let retirePreference: RelayRegistration | undefined;
-    if (!preserveAccountPreference) {
-      try {
-        this.saveRemoteAccessPreference(false);
-      } catch (error) {
-        // A storage failure must not leave active remote access running.
-        preferenceError = error;
-        retirePreference = this.registration;
-        try {
-          this.deps.store.forget();
-          this.registration = undefined;
-        } catch {
-          // The server grant is revoked below if its old on-disk setting cannot be removed.
-        }
-      }
-    }
     this.invalidate();
+    const signal = this.operation.signal;
     return this.serial(async () => {
       await this.closeTransport();
-      this.load();
-      this.publish(preferenceError ? "storage-error" : this.registration ? "stopped" : this.state);
-      if (retirePreference)
-        await this.revokeAccountDevice(retirePreference, this.deviceRefreshResponse);
-      if (preferenceError) throw preferenceError;
+      const loading = this.load();
+      if (loading) await loading;
+      if (!preserveAccountPreference && !signal.aborted) {
+        try {
+          await this.saveRemoteAccessPreference(false, signal);
+        } catch (error) {
+          if (signal.aborted) return;
+          const saved = this.registration;
+          this.registration = undefined;
+          try {
+            this.deps.store.forget();
+          } finally {
+            this.publish("storage-error");
+            if (saved) await this.revokeAccountDevice(saved, this.deviceRefreshResponse);
+          }
+          throw error;
+        }
+      }
+      this.publish(this.registration ? "stopped" : this.state);
     });
   }
   async dispose(): Promise<void> {
@@ -764,31 +814,17 @@ export class MobileRemoteController {
     await this.stop(true);
     await this.deviceRefresh?.catch(() => {});
   }
-  pairingUrl(): { pairingUrl: string; expiresAt: number } {
+  pairingUrl() {
     if (!this.status().url) throw new Error("远程连接尚未就绪。");
-    const pairing = this.deps.host.createPairingUrl();
-    return { pairingUrl: pairing.url, expiresAt: pairing.expiresAt };
+    const pairing = this.gateway.pair();
+    const result = (p: MobilePair) => ({ pairingUrl: p.url, expiresAt: p.expiresAt });
+    return pairing instanceof Promise ? pairing.then(result) : result(pairing);
   }
   status(): MobileRemoteGatewayStatus {
-    const status = this.deps.host.status();
-    return {
-      running: !!status,
-      mode: status?.mode,
-      url:
-        status?.mode === "relay"
-          ? this.state === "ready"
-            ? this.registration?.publicOrigin
-            : undefined
-          : status?.mode === "tunnel"
-            ? this.deps.tunnel.isConnected()
-              ? this.deps.tunnel.publicUrl()
-              : undefined
-            : status?.url,
-      tunnelRunning: this.deps.tunnel.isRunning(),
-      tunnelConnected: this.deps.tunnel.isConnected(),
-      passcodeSet: this.deps.passcode.isSet(),
-      onlineDeviceCount: this.deps.host.onlineDeviceIds().length,
-    };
+    const status = this.gateway.status();
+    return status.mode === "relay"
+      ? { ...status, url: this.state === "ready" ? this.registration?.publicOrigin : undefined }
+      : status;
   }
 }
 

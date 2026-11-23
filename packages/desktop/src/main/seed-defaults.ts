@@ -19,10 +19,8 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, dirname } from "node:path";
 import { homedir } from "node:os";
-import { createRequire } from "node:module";
 import { addMarketplace } from "@cjhyy/code-shell-core/internal";
 
 type SeedMarketplaceStatus = {
@@ -33,27 +31,8 @@ type SeedMarketplaceStatus = {
   failed: Array<{ name: string; error: string }>;
 };
 
-// ESM has no implicit __dirname; derive it from this module's URL. Bundled
-// desktop main lives at packages/desktop/out/main, so the repo root is four
-// levels up (out/main → out → desktop → packages → root).
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const require = createRequire(import.meta.url);
-
 function userHome(): string {
   return process.env.HOME ?? homedir();
-}
-
-/** Locate a bundled resource: packaged → resourcesPath, dev → repo root. */
-export function resourcePath(...parts: string[]): string {
-  // Lazy require (via createRequire, the codebase idiom for CJS deps in ESM —
-  // see agent-bridge.ts): importing electron at module top breaks bun-test
-  // loading of the pure helpers (seedAgents) below, since electron's entry
-  // isn't a real ESM module outside the Electron runtime. resourcePath only
-  // ever runs in-app.
-  const { app } = require("electron") as typeof import("electron");
-  if (app.isPackaged) return join(process.resourcesPath, ...parts);
-  // dev: __dirname is packages/desktop/out/main → repo root is ../../../..
-  return resolve(__dirname, "..", "..", "..", "..", ...parts);
 }
 
 /**
@@ -82,14 +61,19 @@ export function seedAgents(srcDir: string, home: string): number {
  * addMarketplace for each. Clone failures are swallowed (best-effort; a bad
  * network on first launch must not block startup). Returns names attempted.
  */
-export async function seedMarketplaces(seedFile: string, home: string): Promise<string[]> {
-  return seedMarketplacesWith(seedFile, home, addMarketplace);
+export async function seedMarketplaces(
+  seedFile: string,
+  home: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  return seedMarketplacesWith(seedFile, home, addMarketplace, signal);
 }
 
 export async function seedMarketplacesWith(
   seedFile: string,
   home: string,
   add: typeof addMarketplace,
+  signal?: AbortSignal,
 ): Promise<string[]> {
   if (!existsSync(seedFile)) return [];
   // Skip entries already present in the user's known_marketplaces.json.
@@ -113,13 +97,15 @@ export async function seedMarketplacesWith(
   const skipped: string[] = [];
   const failed: Array<{ name: string; error: string }> = [];
   for (const [name, source] of Object.entries(seed)) {
+    signal?.throwIfAborted();
     if (known[name]) {
       skipped.push(name);
       continue;
     }
     attempted.push(name);
     try {
-      const result = await add(name, source);
+      const result = await add(name, source, signal ? () => signal.throwIfAborted() : undefined);
+      signal?.throwIfAborted();
       if (result.ok) {
         added.push(name);
       } else {
@@ -127,11 +113,18 @@ export async function seedMarketplacesWith(
         console.error(`seed: failed to add marketplace ${name}: ${result.error}`);
       }
     } catch (err) {
+      signal?.throwIfAborted();
       failed.push({ name, error: err instanceof Error ? err.message : String(err) });
       console.error(`seed: failed to add marketplace ${name}`, err);
     }
   }
-  writeSeedMarketplaceStatus(home, { checkedAt: new Date().toISOString(), attempted, added, skipped, failed });
+  writeSeedMarketplaceStatus(home, {
+    checkedAt: new Date().toISOString(),
+    attempted,
+    added,
+    skipped,
+    failed,
+  });
   return attempted;
 }
 
@@ -142,24 +135,26 @@ function writeSeedMarketplaceStatus(home: string, status: SeedMarketplaceStatus)
 }
 
 /** Top-level first-run seeding, called once from app.whenReady. */
-export async function seedDefaults(): Promise<void> {
-  const home = userHome();
+export async function seedDefaults(
+  resourcesDir: string,
+  home = userHome(),
+  signal?: AbortSignal,
+): Promise<void> {
   try {
-    const n = seedAgents(
-      resourcePath("packages", "desktop", "resources", "agents"),
-      home,
-    );
+    const n = seedAgents(join(resourcesDir, "agents"), home);
     if (n > 0) console.log(`seed: copied ${n} default agent(s)`);
   } catch (err) {
     console.error("seed: agents failed", err);
   }
   try {
     const names = await seedMarketplaces(
-      resourcePath("packages", "desktop", "resources", "known-marketplaces-seed.json"),
+      join(resourcesDir, "known-marketplaces-seed.json"),
       home,
+      signal,
     );
     if (names.length) console.log(`seed: registered marketplace(s): ${names.join(", ")}`);
   } catch (err) {
+    signal?.throwIfAborted();
     console.error("seed: marketplaces failed", err);
   }
 }

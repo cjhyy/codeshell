@@ -288,7 +288,7 @@ export class CronStore {
 
   constructor(
     file?: string,
-    private readonly options: { strictRead?: boolean } = {},
+    private readonly options: { strictRead?: boolean; beforeCommit?: () => void } = {},
   ) {
     this.file = file ?? defaultCronStorePath();
   }
@@ -311,6 +311,7 @@ export class CronStore {
     try {
       const current = this.loadUnlocked();
       const next = fn(current);
+      this.options.beforeCommit?.();
       this.saveUnlocked(next.jobs);
       return next;
     } finally {
@@ -322,6 +323,7 @@ export class CronStore {
   save(jobs: CronJob[]): void {
     const release = this.acquireStoreLock();
     try {
+      this.options.beforeCommit?.();
       this.saveUnlocked(jobs);
     } finally {
       release();

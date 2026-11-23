@@ -63,6 +63,13 @@ jobs:
           artifact-ids: ${{ steps.source.outputs.artifact-ids }}
           path: artifacts
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.5"
+
+      - name: install the reviewed recovery validator dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
       - name: validate downloaded assets before publishing
         run: |
           node - <<'NODE'
@@ -70,10 +77,6 @@ jobs:
           const assets = collectReleaseAssets('artifacts', process.env.RELEASE_TAG.slice(1));
           console.log(`Verified ${assets.length} original release assets across all three platforms`);
           NODE
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.5"
 
       - name: install and build npm packages from the original tag
         working-directory: release-source
@@ -122,7 +125,11 @@ jobs:
           PRERELEASE=()
           case "$RELEASE_TAG" in *-*) PRERELEASE=(--prerelease) ;; esac
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" \
+            NOTES=()
+            if node -e 'process.exit(require("./scripts/validate-release-recovery.cjs").requiresMacUpdateFloor(process.env.RELEASE_TAG.slice(1)) ? 0 : 1)'; then
+              NOTES=(--notes "macOS 需 13.5 或更高版本。旧系统请留在 0.11。退出 0.11 前，请先发送或另存输入框里需要保留的文字。如提示手动更新，请下载对应架构的 DMG 并覆盖 Applications 中的旧版。")
+            fi
+            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" "${NOTES[@]}" \
               --generate-notes "${PRERELEASE[@]}"
           fi
           gh release upload "$RELEASE_TAG" "${ASSETS[@]}" --clobber

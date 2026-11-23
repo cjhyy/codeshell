@@ -55,6 +55,30 @@ describe("PanelHostWindowRoutes", () => {
     });
   });
 
+  test("reports actual reclaims, transfers and all authority release paths", () => {
+    const changes: Array<[string, number | null]> = [];
+    const routes = new PanelHostWindowRoutes((id, owner) => changes.push([id, owner]));
+    routes.claim("a", 11);
+    routes.claim("a", 11);
+    routes.claim("a", 12);
+    routes.claim("a", 11);
+    routes.releaseWindow(11);
+    routes.claim("b", 12);
+    routes.resolve("b", []);
+    routes.claim("c", 12);
+    routes.forgetSession("c");
+    expect(changes).toEqual([
+      ["a", 11],
+      ["a", 12],
+      ["a", 11],
+      ["a", null],
+      ["b", 12],
+      ["b", null],
+      ["c", 12],
+      ["c", null],
+    ]);
+  });
+
   test("accepts only the bound window response unless routing uses a fallback", () => {
     expect(acceptsPanelHostResponse(31, 31)).toBe(true);
     expect(acceptsPanelHostResponse(31, 32)).toBe(false);

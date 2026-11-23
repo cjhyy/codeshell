@@ -22,11 +22,15 @@ function defaultFile(): string {
 
 let file = defaultFile();
 let cache: TrustMap = {};
+let cacheGeneration = 0;
+const revoking = new Map<string, number>();
 let mutationQueue: Promise<void> = Promise.resolve();
 
 /** Test-only isolation hook. */
 export function __setTrustFileForTest(next: string | null): void {
   file = next ?? defaultFile();
+  cacheGeneration++;
+  revoking.clear();
   cache = {};
   mutationQueue = Promise.resolve();
 }
@@ -69,6 +73,7 @@ function parseTrustMap(value: unknown): TrustMap {
 
 /** Every read refreshes the sync cache; any failure clears it (fail closed). */
 async function load(target = file): Promise<TrustMap> {
+  const generation = cacheGeneration;
   let handle: Awaited<ReturnType<typeof fs.open>> | undefined;
   try {
     const entry = await fs.lstat(target);
@@ -81,10 +86,10 @@ async function load(target = file): Promise<TrustMap> {
       throw new Error("trust registry must be a bounded regular file");
     }
     const next = parseTrustMap(JSON.parse(await handle.readFile("utf8")) as unknown);
-    cache = next;
+    if (generation === cacheGeneration) cache = next;
     return next;
   } catch {
-    cache = {};
+    if (generation === cacheGeneration) cache = {};
     return {};
   } finally {
     await handle?.close().catch(() => undefined);
@@ -172,10 +177,15 @@ export async function getTrust(projectPath: string): Promise<TrustLevel | "unkno
   if (!validTrustPath(projectPath)) return "unknown";
   await mutationQueue.catch(() => undefined);
   const map = await load();
-  return map[canonicalTrustPath(projectPath)] ?? "unknown";
+  const key = canonicalTrustPath(projectPath);
+  return revoking.has(key) ? "untrusted" : (map[key] ?? "unknown");
 }
 
-export function setTrust(projectPath: string, level: TrustLevel): Promise<void> {
+export function setTrust(
+  projectPath: string,
+  level: TrustLevel,
+  commit?: () => void,
+): Promise<void> {
   if (!validTrustPath(projectPath)) throw new Error("invalid trust path");
   if (level !== "trusted" && level !== "untrusted") throw new Error("invalid trust level");
   const canonical = canonicalTrustPath(projectPath);
@@ -187,6 +197,7 @@ export function setTrust(projectPath: string, level: TrustLevel): Promise<void> 
       // not stop two desktop instances from both writing a stale snapshot.
       // Do not yield: catalog/project writes take the same directory lock
       // synchronously and would otherwise block our release until it is stale.
+      commit?.();
       const map = { ...loadForMutation(target) };
       if (!(canonical in map) && Object.keys(map).length >= MAX_TRUST_ENTRIES) {
         throw new Error("trust registry is full");
@@ -194,6 +205,7 @@ export function setTrust(projectPath: string, level: TrustLevel): Promise<void> 
       map[canonical] = level;
       // Only publish trusted state to the sync path after durable persistence.
       save(target, map);
+      cacheGeneration++;
       cache = map;
     } finally {
       release();
@@ -203,9 +215,24 @@ export function setTrust(projectPath: string, level: TrustLevel): Promise<void> 
 
 /** Synchronous, fail-closed lookup used by the agent bridge's ordered IPC path. */
 export function getTrustCachedSync(projectPath: string): TrustLevel | "unknown" {
-  return validTrustPath(projectPath)
-    ? (cache[canonicalTrustPath(projectPath)] ?? "unknown")
-    : "unknown";
+  if (!validTrustPath(projectPath)) return "unknown";
+  const key = canonicalTrustPath(projectPath);
+  return revoking.has(key) ? "untrusted" : (cache[key] ?? "unknown");
+}
+
+/** While an untrust intent is unresolved every synchronous Native gate fails closed. */
+export function holdProjectTrust(projectPath: string, level: TrustLevel) {
+  const key = canonicalTrustPath(projectPath);
+  if (level === "untrusted") revoking.set(key, (revoking.get(key) ?? 0) + 1);
+  return (confirmed: TrustLevel | "unknown") => {
+    cacheGeneration++;
+    if (confirmed === "unknown") delete cache[key];
+    else cache[key] = confirmed;
+    if (level !== "untrusted") return;
+    const count = (revoking.get(key) ?? 1) - 1;
+    if (count === 0) revoking.delete(key);
+    else revoking.set(key, count);
+  };
 }
 
 /** Prime the cache from disk before accepting renderer run requests. */

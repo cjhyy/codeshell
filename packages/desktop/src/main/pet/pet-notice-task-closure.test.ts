@@ -216,7 +216,7 @@ describe("delegation rules", () => {
       target: { kind: "route", route },
     });
     // Blocked prompts for this Session now have somewhere to go.
-    expect(current.wiring.decisions.deliveryFor(SID, undefined)).toBeDefined();
+    expect(await current.wiring.decisions.deliveryFor(SID, undefined)).toBeDefined();
   });
 
   test("a desktop delegation targets the owner on the delegatedFromDesktop channel", async () => {

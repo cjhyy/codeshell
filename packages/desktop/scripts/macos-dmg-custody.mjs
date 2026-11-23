@@ -12,8 +12,8 @@ import {
   renameSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 export function isInside(parent, child) {
   const part = relative(parent, child);
@@ -90,113 +90,61 @@ export function assertInstalledUiReceipt(receipt, installed) {
   assert.equal(receipt.keychainContext.operatorDefaultUnchangedAfterRuntime, true);
 }
 
-export function authorizeDmgCommand(
-  args,
-  state,
-  {
-    exists = (path) => {
-      try {
-        lstatSync(path);
-        return true;
-      } catch (error) {
-        if (error.code === "ENOENT") return false;
-        throw error;
-      }
-    },
-    canonicalParent = (path) => realpathSync(dirname(path)),
-  } = {},
-) {
+// dmgbuild 75c8a6c creates its writable NamedTemporaryFile beside the final DMG.
+export function ownedBuildAttachment(info, state) {
+  assert.ok(Array.isArray(info.images) && info.images.length < 1024, "Invalid hdiutil metadata");
+  const staged = info.images.filter((row) => {
+    const image = row["image-path"];
+    return (
+      typeof image === "string" && dirname(image) === state.artifacts && image !== state.artifact
+    );
+  });
+  assert.ok(staged.length <= 1, "Ambiguous images in the private build directory");
+  if (!staged.length) return null;
+  const image = staged[0]["image-path"];
+  const name = basename(image);
+  const suffix = basename(state.artifact);
+  assert.ok(
+    name.endsWith(suffix) && /^\.temp[a-z0-9_]{8}$/.test(name.slice(0, -suffix.length)),
+    "Unexpected image in the private build directory",
+  );
+  const attachment = ownedImageFromInfo(info, image);
+  assert.equal(attachment.mountpoint, state.stageMount, "Unexpected build mountpoint");
+  return attachment;
+}
+
+export function authorizeDmgCommand(args, state) {
   assert.ok(
     Array.isArray(args) && args.every((arg) => typeof arg === "string" && !/[\0\r\n]/.test(arg)),
     "Invalid hdiutil arguments",
   );
   assert.ok(!args.includes("-force"), "Forced detach is forbidden");
-  const value = (flag) => {
-    const index = args.indexOf(flag);
-    assert.ok(index > 0 && index < args.length - 1, `Missing ${flag}`);
-    return args[index + 1];
-  };
-  const ownedNew = (path, parent) => {
-    assert.ok(
-      isAbsolute(path) && resolve(path) === path && isInside(parent, path),
-      "Foreign disk image path",
-    );
-    assert.ok(
-      isInside(parent, canonicalParent(path)) || canonicalParent(path) === parent,
-      "Image parent escaped owned directory",
-    );
-    assert.equal(exists(path), false, "Preexisting image/output is forbidden");
-  };
   switch (args[0]) {
-    case "create": {
-      assert.equal(state.stageImage, undefined, "Only one stage image may be created");
-      assert.equal(value("-srcfolder"), state.sourceApp, "Foreign app source");
-      assert.equal(value("-volname"), state.volumeName, "Foreign volume name");
-      assert.equal(value("-format"), "UDRW");
-      assert.ok(args.includes("-nospotlight") && args.includes("-anyowners"));
-      assert.equal(value("-fs"), state.arch === "arm64" ? "APFS" : "HFS+");
-      const image = args.filter((arg) => arg.endsWith(".dmg")).at(-1);
+    case "attach": {
       assert.deepEqual(
         args,
         [
-          "create",
-          "-srcfolder",
-          state.sourceApp,
-          "-volname",
-          state.volumeName,
-          "-anyowners",
-          "-nospotlight",
-          "-format",
-          "UDRW",
-          "-quiet",
-          "-fs",
-          ...(state.arch === "arm64" ? ["APFS"] : ["HFS+", "-fsargs", "-c c=64,a=16,e=16"]),
-          image,
-        ],
-        "Unexpected production create arguments",
-      );
-      ownedNew(image, state.temporary);
-      return { kind: "create", image };
-    }
-    case "resize":
-      assert.equal(args.at(-1), state.stageImage, "Foreign resize image");
-      assert.ok(
-        Number(value("-size")) > 0 && Number(value("-size")) < 12 * 1024 ** 3,
-        "Unbounded image size",
-      );
-      assert.deepEqual(args, ["resize", "-size", value("-size"), state.stageImage]);
-      return { kind: "resize", image: state.stageImage };
-    case "attach": {
-      const image = args.at(-1);
-      assert.ok(image === state.stageImage || image === state.artifact, "Foreign attach image");
-      const readonly = image === state.artifact;
-      const mountpoint = readonly ? state.readonlyMount : state.stageMount;
-      assert.ok(args.includes("-noautoopen"), "Image must never auto-open");
-      if (readonly) {
-        assert.ok(
-          args.includes("-readonly") && args.includes("-nobrowse") && !args.includes("-readwrite"),
-        );
-        assert.equal(value("-mountpoint"), mountpoint);
-        assert.deepEqual(args, [
           "attach",
           "-readonly",
           "-nobrowse",
           "-noautoopen",
           "-mountpoint",
-          mountpoint,
+          state.readonlyMount,
           "-plist",
-          image,
-        ]);
-      } else {
-        assert.ok(args.includes("-readwrite") && !args.includes("-mountpoint"));
-        assert.equal(exists(mountpoint), false, "Preexisting build mountpoint is forbidden");
-        assert.deepEqual(args, ["attach", "-noverify", "-noautoopen", "-readwrite", image]);
-      }
+          state.artifact,
+        ],
+        "Expected read-only attach at the private mountpoint",
+      );
       assert.ok(
-        !state.attachments.some((row) => row.image === image && !row.detached),
+        !state.attachments.some((row) => row.image === state.artifact && !row.detached),
         "Image already attached",
       );
-      return { kind: "attach", image, mountpoint, readonly };
+      return {
+        kind: "attach",
+        image: state.artifact,
+        mountpoint: state.readonlyMount,
+        readonly: true,
+      };
     }
     case "detach": {
       assert.equal(args.length, 3);
@@ -207,32 +155,12 @@ export function authorizeDmgCommand(
       assert.ok(attachment, "Foreign or preexisting detach is forbidden");
       return { kind: "detach", image: attachment.image, attachment, device: args[2] };
     }
-    case "convert": {
-      assert.equal(args[1], state.stageImage, "Foreign convert image");
-      assert.equal(value("-format"), "UDZO", "Production default compressed DMG is required");
-      const image = value("-o");
-      assert.deepEqual(args, [
-        "convert",
-        state.stageImage,
-        "-ov",
-        "-format",
-        "UDZO",
-        "-o",
-        image,
-        "-imagekey",
-        "zlib-level=9",
-        "-quiet",
-      ]);
-      ownedNew(image, state.artifacts);
-      assert.ok(
-        state.attachments.some((row) => row.image === state.stageImage && row.detached),
-        "Stage must detach before conversion",
-      );
-      return { kind: "convert", image };
-    }
     case "verify":
       assert.deepEqual(args, ["verify", state.artifact]);
       return { kind: "verify", image: state.artifact };
+    case "imageinfo":
+      assert.deepEqual(args, ["imageinfo", "-plist", state.artifact]);
+      return { kind: "imageinfo", image: state.artifact };
     default:
       throw new Error(`Unsupported fixture hdiutil command: ${args[0]}`);
   }
@@ -266,6 +194,9 @@ function readState(file) {
     assert.equal(state.stageMount, `/Volumes/${state.volumeName}`);
     for (const key of ["temporary", "artifacts", "readonlyMount"])
       assert.ok(isInside(state.root, state[key]));
+    assert.equal(realpathSync(state.artifacts), state.artifacts);
+    assert.equal(dirname(state.artifact), state.artifacts);
+    assert.ok(state.artifact.endsWith(".dmg"));
     return state;
   } finally {
     closeSync(descriptor);
@@ -279,7 +210,7 @@ function saveState(file, state) {
 export function readOwnedDmgState(file) {
   return readState(file);
 }
-export function queryOwnedDmgImage(image) {
+function readImages() {
   const xml = execFileSync("/usr/bin/hdiutil", ["info", "-plist"], {
     timeout: 15_000,
     maxBuffer: 2 * 1024 * 1024,
@@ -290,13 +221,48 @@ export function queryOwnedDmgImage(image) {
     timeout: 5_000,
     maxBuffer: 2 * 1024 * 1024,
   });
-  return ownedImageFromInfo(JSON.parse(json), image);
+  return JSON.parse(json);
+}
+
+export function queryOwnedDmgImage(image) {
+  return ownedImageFromInfo(readImages(), image);
+}
+
+// The native builder calls /usr/bin/hdiutil directly. After its process tree
+// settles, recover its private scratch image or an interrupted read-only attach.
+export function recoverDmgAttachments(file) {
+  const state = readState(file);
+  const info = readImages();
+  const staged = ownedBuildAttachment(info, state);
+  const final = ownedImageFromInfo(info, state.artifact);
+  const live = [staged, final].filter(Boolean);
+  for (const attachment of live) {
+    const recorded = state.attachments.find(
+      (row) => !row.detached && row.image === attachment.image,
+    );
+    if (recorded) {
+      assert.equal(recorded.mountpoint, attachment.mountpoint, "Recorded mountpoint changed");
+      assert.deepEqual(recorded.devices, attachment.devices, "Recorded devices changed");
+      continue;
+    }
+    const readonly = attachment === final;
+    if (readonly)
+      assert.equal(attachment.mountpoint, state.readonlyMount, "Unexpected final mountpoint");
+    state.attachments.push({ ...attachment, readonly, detached: false });
+    saveState(file, state);
+  }
+  return live;
 }
 
 export function runGuardedHdiutil(file, args) {
   assert.equal(process.platform, "darwin");
   const state = readState(file);
   const command = authorizeDmgCommand(args, state);
+  if (command.kind !== "detach") {
+    const image = lstatSync(command.image);
+    assert.ok(image.isFile() && image.uid === process.getuid() && image.nlink === 1);
+    assert.equal(realpathSync(command.image), command.image);
+  }
   if (command.kind === "attach")
     assert.equal(
       queryOwnedDmgImage(command.image),
@@ -339,8 +305,6 @@ export function runGuardedHdiutil(file, args) {
     if (!failure) assert.ok(attached, "Attach returned without an owned mounted image");
   }
   if (failure) throw failure;
-  if (command.kind === "create") state.stageImage = command.image;
-  if (command.kind === "convert") state.artifact = command.image;
   if (command.kind === "detach") {
     assert.equal(queryOwnedDmgImage(command.image), null, "Owned image remains attached");
     command.attachment.detached = true;
@@ -350,13 +314,16 @@ export function runGuardedHdiutil(file, args) {
   return output;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  try {
-    process.stdout.write(
-      runGuardedHdiutil(process.env.CODESHELL_DMG_GUARD_REFERENCE, process.argv.slice(2)),
-    );
-  } catch (error) {
-    console.error(`Owned DMG hdiutil guard refused/failed: ${error.message}`);
-    process.exitCode = 1;
+// Disk Arbitration can briefly return EBUSY even after the app exits. Check
+// the live device and mountpoint again before each ordinary detach attempt.
+export async function detachOwnedDmg(file, device) {
+  const delays = [250, 1_000, 3_000];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return runGuardedHdiutil(file, ["detach", "-quiet", device]);
+    } catch (error) {
+      if (error.status !== 16 || attempt === delays.length) throw error;
+      await delay(delays[attempt]);
+    }
   }
 }

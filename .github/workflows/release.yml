@@ -8,8 +8,8 @@ name: release
 #
 # WHY a real per-OS matrix (not cross-compile): node-pty ships no prebuilt
 # binary and must be rebuilt against the installed Electron's ABI on the SAME
-# OS it will run on (see packages/desktop/scripts/rebuild-native.ts, fired on
-# postinstall). Cross-building from Linux would ship a broken terminal panel.
+# OS it will run on (see packages/desktop/scripts/rebuild-native.cjs, run for each
+# target architecture). Cross-building from Linux would ship a broken terminal panel.
 
 on:
   push:
@@ -153,9 +153,7 @@ jobs:
             artifact: linux
           - os: macos-latest
             artifact: mac
-          # windows-latest now ships VS 2026. The locked electron-builder chain
-          # uses node-gyp 9, which recognizes VS 2022 but not VS 2026; retain the
-          # supported native compiler until that toolchain is upgraded together.
+          # Use the same Visual Studio toolchain as the native installer acceptance.
           - os: windows-2022
             artifact: windows
     runs-on: ${{ matrix.os }}
@@ -168,22 +166,20 @@ jobs:
         with:
           bun-version: "1.4.5"
 
-      # node-gyp (used to rebuild node-pty against Electron's ABI) imports
-      # Python's `distutils`, which was REMOVED from the stdlib in Python 3.12 —
-      # the version now default on the macOS/ubuntu runners. Without this the
-      # native rebuild dies with "No module named 'distutils'". Pin Python 3.11
-      # (still ships distutils) and ensure setuptools is present as a backstop.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.22.1"
+          package-manager-cache: false
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - name: ensure setuptools (distutils for node-gyp)
-        run: python -m pip install --upgrade setuptools
 
-      # Installs the whole workspace. The desktop package's postinstall
-      # (rebuild:native) rebuilds node-pty against Electron's ABI here, on the
-      # real target OS — the crux of why this is an OS matrix.
       - name: install
+        env:
+          FORCE_REBUILD_NATIVE: "1"
         run: bun install --frozen-lockfile
+      - name: prepare locked Electron binary
+        run: node packages/desktop/scripts/prepare-electron.mjs
 
       # Build every workspace package the desktop app bundles or materializes.
       # Keep one source of truth with predist so new package splits cannot leave
@@ -334,10 +330,45 @@ jobs:
         run: |
           set -euo pipefail
           case "${{ matrix.artifact }}" in
-            mac) test -f packages/desktop/dist/latest-mac.yml ;;
+            mac) node scripts/mac-release-manifest.cjs ;;
             windows) test -f packages/desktop/dist/latest.yml ;;
             linux) test -f packages/desktop/dist/latest-linux.yml ;;
           esac
+
+      - name: run packaged PTY, Canvas, PDF and mobile ASAR checks
+        id: native_package
+        working-directory: packages/desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.artifact }}" in
+            mac) app=dist/mac-arm64/code-shell.app; arch=arm64 ;;
+            windows) app=dist/win-unpacked; arch=x64 ;;
+            linux) app=dist/linux-unpacked; arch=x64 ;;
+          esac
+          node scripts/smoke-packaged-native.mjs "$app" "$arch"
+          node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-asar.mjs --app "$app"
+
+      - name: run Intel macOS package checks
+        id: intel_mac
+        if: matrix.artifact == 'mac'
+        working-directory: packages/desktop
+        run: |
+          node scripts/smoke-packaged-native.mjs dist/mac/code-shell.app x64
+          node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-asar.mjs --app dist/mac/code-shell.app
+
+      # Preserve the tested local-Mac candidate on manual diagnostic runs.
+      # Tagged releases still require both architectures and the full artifact set.
+      - name: retain Apple Silicon candidate when Intel checks fail
+        if: failure() && github.event_name == 'workflow_dispatch' && steps.native_package.outcome == 'success' && steps.intel_mac.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: codeshell-mac-arm64-diagnostic
+          path: |
+            packages/desktop/dist/*arm64*.dmg
+            packages/desktop/dist/latest-mac.yml
+          if-no-files-found: error
+          retention-days: 7
 
       - name: upload artifacts
         uses: actions/upload-artifact@v7
@@ -389,15 +420,13 @@ jobs:
           case "$TAG" in *-*) PRERELEASE=(--prerelease) ;; esac
 
           cat > /tmp/release-notes.md <<'NOTES'
-          自动打包构建 — 用于在其他电脑(尤其 Windows)安装测试。
+          macOS 版要求 macOS 13.5 或更新版本。使用 macOS 12 或 13.0–13.4 的用户请留在 0.11。
+          退出 0.11 前，请先发送或另存输入框里需要保留的文字。重启会清空未发送的文字。
+          如提示手动更新，请下载对应架构的 DMG 并覆盖 Applications 内的旧版。用同一账户启动即可读取已保存的会话和设置。
+          后续相同签名的版本可使用应用内更新。0.12 正式发布后，rc 用户可从 GitHub 的 Latest Release 手动安装正式版以切回正式通道。
 
-          **安装包签名说明**:
-          - Windows (.exe / nsis):SmartScreen 会拦,点「更多信息 → 仍要运行」。
-          - macOS 未配置 Developer ID 签名密钥时,产物会使用固定 requirement 的 ad-hoc 签名。
-          - 从旧 cdhash ad-hoc 版本升级到固定 requirement 版本时,需要下载 .dmg 手动覆盖安装一次;之后固定 requirement 版本之间可走应用内更新。
-          - macOS 如已配置 Developer ID + notarization secrets,会使用正式签名/公证,应用内自动更新可直接安装。
-
-          产物按平台分目录上传。node-pty 已按各平台 Electron ABI 重编。
+          Windows 安装包为 NSIS x64。若 SmartScreen 提示，请核对下载来源。
+          Linux 版提供 x64 AppImage。
           NOTES
 
           # Create the release if absent (idempotent across re-runs).
@@ -415,7 +444,7 @@ jobs:
           # not within one command) → 422. So allowlist installer + update files.
           mapfile -t ASSETS < <(find artifacts -type f \( \
             -name '*.exe' -o -name '*.dmg' -o -name '*.zip' -o -name '*.AppImage' \
-            -o -name '*.blockmap' -o -name 'latest*.yml' \) | sort)
+            -o -name '*.blockmap' -o -name 'latest.yml' -o -name 'latest-mac.yml' -o -name 'latest-linux.yml' \) | sort)
           if [ ${#ASSETS[@]} -eq 0 ]; then
             echo "no build artifacts found under artifacts/" >&2
             exit 1

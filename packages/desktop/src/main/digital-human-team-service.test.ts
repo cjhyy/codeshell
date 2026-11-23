@@ -79,6 +79,20 @@ afterEach(() => {
 });
 
 describe("digital-human team service", () => {
+  test("revoked edits and deletes preserve the last published team", () => {
+    const team = saveDigitalHumanTeam({
+      id: "pair",
+      name: "Pair",
+      mode: "auto",
+      members: ["researcher", "developer"],
+    });
+    const revoked = () => {
+      throw Error("revoked");
+    };
+    expect(() => saveDigitalHumanTeam({ ...team, name: "changed" }, revoked)).toThrow(/revoked/);
+    expect(() => deleteDigitalHumanTeam(team.id, revoked)).toThrow(/revoked/);
+    expect(readDigitalHumanTeam(team.id)).toEqual(team);
+  });
   test("persists, lists and deletes a team", () => {
     saveDigitalHumanTeam({
       id: "build-team",

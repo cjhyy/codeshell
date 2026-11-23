@@ -120,7 +120,7 @@ test("the startup main window shares the restorer with Dock activation", async (
   // fires `activate` right after the startup window is requested. Both paths must
   // share one restorer, or the gap before mainWindows.add creates a second window.
   const { readFile } = await import("node:fs/promises");
-  const source = await readFile(new URL("./index.ts", import.meta.url), "utf8");
+  const source = await readFile(new URL("./shell/startup.ts", import.meta.url), "utf8");
   const startup = source.match(/const initialWindowReady = ([^;]+);/);
   expect(startup?.[1]).toBe("restoreMainWindow()");
 });

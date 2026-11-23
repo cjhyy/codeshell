@@ -4,7 +4,14 @@ import type { CloudManagementManager } from "./cloud-management-manager.js";
 /** Preserve the existing Cloud entry, with explicit owner-checked management requests. */
 export function registerCloudWorkbenchIpc(options: {
   ipcMain: Pick<IpcMain, "handle">;
-  manager: Pick<CloudManagementManager, "manage">;
+  manager: {
+    manage(
+      raw: unknown,
+      authorized: () => boolean,
+      document?: AbortSignal,
+    ): ReturnType<CloudManagementManager["manage"]>;
+  };
+  documentSignal?: (event: IpcMainInvokeEvent) => AbortSignal;
   isMainWindow: (contents: WebContents) => boolean;
   openLegacy: (address: unknown) => Promise<{ address: string }>;
 }) {
@@ -16,6 +23,6 @@ export function registerCloudWorkbenchIpc(options: {
     if (!allowed(event)) throw new Error("云端入口仅允许从主窗口打开。");
     return typeof input === "string"
       ? options.openLegacy(input)
-      : options.manager.manage(input, () => allowed(event));
+      : options.manager.manage(input, () => allowed(event), options.documentSignal?.(event));
   });
 }

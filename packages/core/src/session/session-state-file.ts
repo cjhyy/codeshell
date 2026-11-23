@@ -1,6 +1,6 @@
 import type { Stats } from "node:fs";
 /**
- * state.json file mechanics for SessionManager's CAS writer.
+ * state.json file mechanics for SessionManager's CAS writer and journal pin commits.
  *
  * Owns the per-session state lock (proper-lockfile lease plus recovery of the
  * old regular-file orphan lock), the bounded synchronous retry schedule shared
@@ -10,12 +10,16 @@ import type { Stats } from "node:fs";
  * in SessionManager.saveStateAttempt.
  */
 
-import { existsSync, lstatSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { channel } from "node:diagnostics_channel";
+import { basename, dirname } from "node:path";
+import { existsSync, lstatSync, rmSync, writeFileSync } from "node:fs";
 import { nanoid } from "nanoid";
 import type { SessionState } from "../types.js";
 import { preserveOutputCoverage } from "./output-coverage-state.js";
 import { isLockHeldInProcess, lockSync } from "../utils/lockfile.js";
+import { replaceFileAtomically } from "../utils/file-mutex.js";
 
+const stateCommitted = channel("codeshell.session.state-committed");
 const SESSION_STATE_LOCK_STALE_MS = 10_000;
 /** Lock retry delays; CAS loops also make `length + 1` attempts. */
 export const SESSION_STATE_LOCK_RETRY_DELAYS_MS = [5, 10, 20, 40] as const;
@@ -44,7 +48,11 @@ export function writeStateAtomically(target: string, state: SessionState, label 
       encoding: "utf-8",
       mode: 0o600,
     });
-    renameSync(tmp, target);
+    replaceFileAtomically(tmp, target);
+    if (stateCommitted.hasSubscribers) {
+      const directory = dirname(target);
+      stateCommitted.publish({ root: dirname(directory), id: basename(directory) });
+    }
   } finally {
     try {
       rmSync(tmp, { force: true });

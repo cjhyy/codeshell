@@ -1,3 +1,9 @@
+import { createCcRoomReads } from "./cc-room-reads.js";
+import { createConfigurationReads } from "./configuration-reads.js";
+import { DesktopHostIpc } from "../shared/desktop-host-protocol";
+import { isDesktopAgentMethod } from "../shared/desktop-agent-methods";
+import type { TerminalCommands } from "../shared/pty.js";
+import { DesktopHostClient, desktopHostRoutes, routeLocalProviders } from "./desktop-host-client";
 import { accountFeaturesApi } from "./account-features-api.js";
 import { createOperationBatchApi } from "./operation-batch-api.js";
 import { cloudAccountApi } from "./cloud-account-api.js";
@@ -34,6 +40,11 @@ import {
   subscribeExternalRuntimeSessionState,
 } from "./external-runtime-session-state";
 import { createTaskInboxApi } from "./task-inbox-api";
+import {
+  fallbackNotice,
+  fallbackReady,
+  type NotificationFallback,
+} from "../shared/notification-fallback";
 import { createNotificationNavigationApi } from "./notification-navigation-api";
 import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
@@ -54,8 +65,7 @@ import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identit
 import { rpcResult } from "./rpc-result";
 import { createGoalControlApi } from "./goal-control-api";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
-import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
-import type { PluginMediaDto } from "../shared/plugin-media";
+
 import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-preview";
 import type { InstalledThemePack, ThemeImportKind, ThemePickPreview } from "../shared/theme-packs";
 import type { WindowTitleBarOverlay } from "../shared/window-titlebar";
@@ -65,6 +75,7 @@ import type { PanelAppWindowTarget } from "../shared/panel-apps";
 import type { GoalConfig, MobileServerEvent, RunResult } from "@cjhyy/code-shell-core";
 import type {
   CodeshellApi,
+  DesktopHostStatus,
   RpcResponse,
   ForkSessionResult,
   StreamEventEnvelope,
@@ -412,6 +423,18 @@ function rpc(
   timeoutMs: number = RPC_TIMEOUT_MS,
 ): Promise<RpcResponse> {
   const id = nextRpcId();
+  const sendIpc = () => rpcIpc(id, method, params, timeoutMs);
+  return agentCommandsHost && isDesktopAgentMethod(method)
+    ? agentCommandsHost.agentCommand(method, params, timeoutMs, id, sendIpc)
+    : sendIpc();
+}
+
+function rpcIpc(
+  id: string,
+  method: string,
+  params: Record<string, unknown> | undefined,
+  timeoutMs: number,
+): Promise<RpcResponse> {
   const line = JSON.stringify({ jsonrpc: "2.0", id, method, params });
   return new Promise<RpcResponse>((resolve, reject) => {
     const timer =
@@ -514,15 +537,62 @@ ipcRenderer.on("externalRuntime:approvalResolved", (_e, payload: { requestId?: u
   approvalResolvedListeners.forEach((cb) => cb(payload as ApprovalResolvedEnvelope));
 });
 
+const desktopHost =
+  process.isMainFrame && process.argv.includes("--codeshell-desktop-host")
+    ? new DesktopHostClient()
+    : undefined;
+
+const configurationHost = desktopHostRoutes.configuration === "host" ? desktopHost : undefined;
+function routeTerminal<K extends keyof TerminalCommands>(
+  method: K,
+  params: TerminalCommands[K]["input"],
+  legacy: () => Promise<TerminalCommands[K]["result"]>,
+) {
+  return desktopHost
+    ? desktopHost.terminal(method, params, configurationHost ? undefined : legacy)
+    : legacy();
+}
+
+const { listProjects, ...configurationReads } = createConfigurationReads(
+  ipcRenderer,
+  configurationHost,
+);
+const agentCommandsHost = desktopHostRoutes.agentCommands === "host" ? desktopHost : undefined;
+const agentHost = desktopHostRoutes.agentStream === "host" ? desktopHost : undefined;
+agentHost?.onStreamEvent((env) => streamListeners.forEach((listener) => listener(env)));
+
+if (desktopHost) {
+  ipcRenderer.on(DesktopHostIpc.port, (event) => {
+    const port = event.ports[0];
+    if (port) void desktopHost.attach(port);
+  });
+  ipcRenderer.on(DesktopHostIpc.status, (_event, status: unknown) => {
+    if (status === "reconnecting" || status === "unavailable") desktopHost.disconnect(status);
+  });
+  ipcRenderer.send(DesktopHostIpc.connect);
+}
+
 contextBridge.exposeInMainWorld("codeshell", {
+  ...(desktopHost && {
+    onDesktopHostStatus: (cb: (status: DesktopHostStatus) => void) => desktopHost.subscribe(cb),
+  }),
   ...createNotificationNavigationApi(ipcRenderer),
+  onNotificationFallback: (receive: (notice: NotificationFallback) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, notice: NotificationFallback) =>
+      receive(notice);
+    ipcRenderer.on(fallbackNotice, listener);
+    ipcRenderer.send(fallbackReady);
+    return () => {
+      ipcRenderer.off(fallbackNotice, listener);
+    };
+  },
   ...createProfilePluginExportApi(ipcRenderer),
   ...createProfileMemoryPromotionApi(ipcRenderer),
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
   platform: process.platform,
   hasWindowTitleBarOverlay:
     process.platform === "win32" && process.argv.includes("--codeshell-titlebar-overlay"),
-  sessionCatalog: createSessionCatalogApi(ipcRenderer),
+  sessionCatalog: createSessionCatalogApi(ipcRenderer, configurationHost),
   /**
    * Resolve a browser File created by an explicit picker/drop to its local
    * absolute path. Electron intentionally removed the old `file.path` field;
@@ -530,8 +600,16 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   /** Read-only local Pet projection; no transcript, resolver, approval or mutation routes. */
-  pet: createPetApi(ipcRenderer),
-  taskInbox: createTaskInboxApi(ipcRenderer),
+  pet: createPetApi(ipcRenderer, configurationHost),
+  taskInbox: createTaskInboxApi(
+    ipcRenderer,
+    desktopHost && desktopHostRoutes.taskInbox === "host"
+      ? {
+          list: desktopHost.listTasks.bind(desktopHost),
+          get: desktopHost.getTask.bind(desktopHost),
+        }
+      : undefined,
+  ),
   operationResolution: createOperationResolutionApi(ipcRenderer),
   operationBatch: createOperationBatchApi(ipcRenderer),
   optimizationLab: createOptimizationLabApi(ipcRenderer),
@@ -787,7 +865,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     };
   },
   getPendingApprovals: async () => {
-    const pending = await ipcRenderer.invoke("agent:pendingApprovals");
+    const readIpc = () => ipcRenderer.invoke("agent:pendingApprovals");
+    const pending = await (agentHost ? agentHost.pendingApprovals(readIpc) : readIpc());
     for (const env of pending) {
       if (env?.source === "external-runtime" && typeof env.requestId === "string")
         externalApprovalIds.add(env.requestId);
@@ -839,7 +918,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   pickSkillDir: (): Promise<{ path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickSkillDir"),
   pickGitBinary: (): Promise<string | null> => ipcRenderer.invoke("dialog:pickGitBinary"),
-  ...createProjectAuthorityApi(ipcRenderer),
+  ...createProjectAuthorityApi(ipcRenderer, listProjects, configurationHost),
+  ...configurationReads,
   setGitPrefs: (prefs: {
     branchPrefix: string;
     autoDeleteWorktrees: boolean;
@@ -898,16 +978,11 @@ contextBridge.exposeInMainWorld("codeshell", {
   turnUndoState: (sessionId: string) => ipcRenderer.invoke("files:turnUndoState", sessionId),
   undoTurn: (sessionId: string) => ipcRenderer.invoke("files:undoTurn", sessionId),
   redoTurn: (sessionId: string) => ipcRenderer.invoke("files:redoTurn", sessionId),
-  listMemory: (level: string, scope: string, cwd?: string, profileName?: string) =>
-    ipcRenderer.invoke("memory:list", level, scope, cwd, profileName),
-  readMemory: (level: string, scope: string, name: string, cwd?: string, profileName?: string) =>
-    ipcRenderer.invoke("memory:read", level, scope, name, cwd, profileName),
   saveMemory: (input: Parameters<CodeshellApi["saveMemory"]>[0]) =>
     ipcRenderer.invoke("memory:save", input),
   deleteMemory: (level: string, scope: string, name: string, cwd?: string, profileName?: string) =>
     ipcRenderer.invoke("memory:delete", level, scope, name, cwd, profileName),
   // 审批门 (pending global memories)
-  listPendingMemory: () => ipcRenderer.invoke("memory:pending:list"),
   approvePendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:approve", name),
   demotePendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:demote", name),
   rejectPendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:reject", name),
@@ -917,16 +992,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Authoritative no-repo conversation cwd (~/.code-shell/no-repo) from main.
    *  Renderer must use this, never recompute homedir() itself. */
   noRepoCwd: (): Promise<string> => ipcRenderer.invoke("no-repo:cwd"),
-  getSettings: (scope: "user") => ipcRenderer.invoke("settings:get", scope),
-  getConfigurationSettings: (target: RendererConfigurationTarget) =>
-    ipcRenderer.invoke("settings:getConfiguration", target),
   updateSettings: (scope: "user", patch: Record<string, unknown>) =>
     ipcRenderer.invoke("settings:set", scope, patch),
   updateConfigurationSettings: (
     target: RendererConfigurationTarget,
     patch: Record<string, unknown>,
   ) => ipcRenderer.invoke("settings:setConfiguration", target, patch),
-  listSessions: () => ipcRenderer.invoke("sessions:list"),
   setSessionArchived: (id: string, archived: boolean) =>
     ipcRenderer.invoke("sessions:setArchived", id, archived),
   deleteSession: (id: string) => ipcRenderer.invoke("sessions:delete", id),
@@ -936,15 +1007,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("quickChat:isClaimActive", id, claimId),
   cleanupQuickChatSession: (id: string, claimId: string) =>
     ipcRenderer.invoke("quickChat:cleanupSession", id, claimId),
-  listSessionTitles: () => ipcRenderer.invoke("sessions:titles"),
   renameSession: (id: string, title: string) => ipcRenderer.invoke("sessions:rename", id, title),
-  tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
-    ipcRenderer.invoke("logs:tail", bucket, lines),
-  getUsageSummary: (query?: import("@cjhyy/code-shell-core").UsageQuery) =>
-    ipcRenderer.invoke("usage:summary", query),
-  listRuns: (options?: { includeSessions?: boolean }) => ipcRenderer.invoke("runs:list", options),
-  getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
-  ...createSessionTranscriptApi(ipcRenderer),
+  ...createSessionTranscriptApi(ipcRenderer, desktopHost),
   modelTraces: createModelTraceApi(ipcRenderer),
   browserPanelAccess: createBrowserPanelAccessApi(ipcRenderer),
   /**
@@ -952,8 +1016,10 @@ contextBridge.exposeInMainWorld("codeshell", {
    * Returns events past `sinceSeq` plus the next cursor, so the renderer can
    * replay what it missed and align the snapshot with the live stream.
    */
-  subscribeSession: (sessionId: string, sinceSeq?: number) =>
-    ipcRenderer.invoke("agent:subscribe", sessionId, sinceSeq),
+  subscribeSession: (sessionId: string, sinceSeq?: number) => {
+    const readIpc = () => ipcRenderer.invoke("agent:subscribe", sessionId, sinceSeq);
+    return agentHost ? agentHost.subscribeSession(sessionId, sinceSeq, readIpc) : readIpc();
+  },
   deleteRun: (runId: string) => ipcRenderer.invoke("runs:delete", runId),
   listAutomations: () => ipcRenderer.invoke("automation:list"),
   getAutomation: (id: string) => ipcRenderer.invoke("automation:get", id),
@@ -987,25 +1053,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   resumeAutomation: (id: string) => ipcRenderer.invoke("automation:resume", id),
   runAutomationNow: (id: string) => ipcRenderer.invoke("automation:runNow", id),
   cancelAutomationRun: (id: string) => ipcRenderer.invoke("automation:cancelRun", id),
-  listSkills: (target: RendererConfigurationTarget | null, opts?: { includeDisabled?: boolean }) =>
-    ipcRenderer.invoke("skills:list", target, opts),
   searchSessionContent: (query: string): Promise<SessionContentSearchResult> =>
-    ipcRenderer.invoke("session:content-search", query),
-  listPlugins: (target: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("plugins:list", target),
-  getPluginMedia: (
-    installKey: string,
-    includeScreenshots?: boolean,
-  ): Promise<PluginMediaDto | null> =>
-    ipcRenderer.invoke("plugins:media", installKey, includeScreenshots),
-  listPluginCommands: (target: RendererConfigurationTarget): Promise<PluginCommandDescriptor[]> =>
-    ipcRenderer.invoke("plugin-commands:list", target),
-  expandPluginCommand: (
-    target: RendererConfigurationTarget,
-    name: string,
-    rawArguments: string,
-  ): Promise<ExpandedPluginCommand> =>
-    ipcRenderer.invoke("plugin-commands:expand", target, name, rawArguments),
+    configurationHost?.readBusiness("activity/searchTranscripts", { query }) ??
+    Promise.reject(new Error("Session search requires the workbench Host")),
   onPluginCommandsChanged: (cb: () => void) => {
     const handler = () => cb();
     ipcRenderer.on("plugin-commands:changed", handler);
@@ -1041,7 +1091,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   respondAgentPanelRequest: (response: AgentPanelHostResponse) =>
     ipcRenderer.send("panel:agent-response", response),
   /** Full content inventory for one installed plugin (详情页). */
-  getPluginDetail: (installKey: string) => ipcRenderer.invoke("plugins:detail", installKey),
   createAutomationFromPluginTemplate: (
     installKey: string,
     templateId: string,
@@ -1055,8 +1104,6 @@ contextBridge.exposeInMainWorld("codeshell", {
       expectedRevision,
       cwd,
     ),
-  listCapabilities: (target: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("capabilities:list", target),
   setCapabilityEnabled: (
     target: RendererConfigurationTarget | null,
     id: string,
@@ -1068,7 +1115,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     id: string,
     state: "inherit" | "on" | "off",
   ) => ipcRenderer.invoke("capabilities:setOverride", target, id, state),
-  listSourceCatalog: () => ipcRenderer.invoke("sources:catalogList"),
   linkedFileSources: {
     snapshot: (projectId: string) => ipcRenderer.invoke("sources:linkedFiles:snapshot", projectId),
     add: (
@@ -1093,21 +1139,16 @@ contextBridge.exposeInMainWorld("codeshell", {
   saveSourceCatalog: (definition: import("@cjhyy/code-shell-core").SourceDefinition) =>
     ipcRenderer.invoke("sources:catalogSave", definition),
   deleteSourceCatalog: (id: string) => ipcRenderer.invoke("sources:catalogDelete", id),
-  projectSourceAccess: (projectId: string) =>
-    ipcRenderer.invoke("sources:projectAccess", projectId),
   bindProjectSource: (
     projectId: string,
     binding: import("@cjhyy/code-shell-core").WorkspaceSourceBinding,
   ) => ipcRenderer.invoke("sources:bindProject", projectId, binding),
   unbindProjectSource: (projectId: string, sourceId: string) =>
     ipcRenderer.invoke("sources:unbindProject", projectId, sourceId),
-  listSourceScopes: (sourceId: string) => ipcRenderer.invoke("sources:listScopes", sourceId),
   pickAndUploadProjectSources: (projectId: string) =>
     ipcRenderer.invoke("sources:pickAndUploadProject", projectId),
   deleteProjectUpload: (projectId: string, name: string) =>
     ipcRenderer.invoke("sources:deleteProjectUpload", projectId, name),
-  listProfiles: (target: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("profiles:list", target),
   activateProfile: (target: RendererConfigurationTarget, name: string) =>
     ipcRenderer.invoke("profiles:activate", target, name),
   deactivateProfile: (target: RendererConfigurationTarget) =>
@@ -1121,15 +1162,11 @@ contextBridge.exposeInMainWorld("codeshell", {
   ) => ipcRenderer.invoke("profiles:adoptSwitch", target, name, expectedRevision),
   setSessionWorkspaceProfile: (sessionId: string, profileName: string) =>
     ipcRenderer.invoke("profiles:setSession", sessionId, profileName),
-  listProfileCatalog: () => ipcRenderer.invoke("profiles:catalog"),
   installCatalogProfile: (name: string) => ipcRenderer.invoke("profiles:install", name),
-  listProfileRepos: () => ipcRenderer.invoke("profiles:listRepos"),
   addProfileRepo: (repo: string) => ipcRenderer.invoke("profiles:addRepo", repo),
   removeProfileRepo: (repo: string) => ipcRenderer.invoke("profiles:removeRepo", repo),
   forceDeleteProfile: (name: string, target: RendererConfigurationTarget | null) =>
     ipcRenderer.invoke("profiles:forceDelete", name, target),
-  previewProfileDeletion: (name: string, target: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("profiles:previewDeletion", name, target),
   previewProfileRequirements: (name: string, target: RendererConfigurationTarget) =>
     ipcRenderer.invoke("profiles:previewRequirements", name, target),
   installProfileRequirements: (name: string, target: RendererConfigurationTarget) =>
@@ -1149,7 +1186,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     name: string,
     options?: { target?: RendererConfigurationTarget | null; clearActiveProject?: boolean },
   ) => ipcRenderer.invoke("profiles:delete", name, options),
-  listDigitalHumanTeams: () => ipcRenderer.invoke("digital-human-teams:list"),
   saveDigitalHumanTeam: (team: import("../shared/digital-human-team").DigitalHumanTeam) =>
     ipcRenderer.invoke("digital-human-teams:save", team),
   deleteDigitalHumanTeam: (id: string) => ipcRenderer.invoke("digital-human-teams:delete", id),
@@ -1193,15 +1229,11 @@ contextBridge.exposeInMainWorld("codeshell", {
     reusedCredentialCatalogId?: string;
   }> => ipcRenderer.invoke("stt:describe", cwd),
   ensureMicAccess: (): Promise<{ granted: boolean }> => ipcRenderer.invoke("stt:ensureMicAccess"),
-  listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
-  loadMarketplace: (name: string) => ipcRenderer.invoke("marketplace:load", name),
-  listRecommendedMarketplaces: () => ipcRenderer.invoke("marketplace:recommended"),
   addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),
   addRecommendedMarketplace: (id: string) => ipcRenderer.invoke("marketplace:addRecommended", id),
   removeMarketplace: (name: string) => ipcRenderer.invoke("marketplace:remove", name),
   refreshMarketplace: (name: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke("marketplace:refresh", name),
-  listPluginInstallJobs: () => ipcRenderer.invoke("plugins:installJobs"),
   onPluginInstallJobsChanged: (cb: (jobs: import("./types").PluginInstallJob[]) => void) => {
     const h = (_e: IpcRendererEvent, jobs: import("./types").PluginInstallJob[]) => cb(jobs);
     ipcRenderer.on("plugins:installJobsChanged", h);
@@ -1285,10 +1317,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     input: import("../shared/panel-apps").PanelAppUpdateInput,
   ): Promise<import("../shared/panel-apps").PanelAppUpdateResult> =>
     ipcRenderer.invoke("panel-apps:installUpdate", input),
-  readSkillBody: (target: RendererConfigurationTarget | null, filePath: string) =>
-    ipcRenderer.invoke("skills:read", target, filePath),
-  checkSkillUpdate: (target: RendererConfigurationTarget | null, filePath: string) =>
-    ipcRenderer.invoke("skills:checkUpdate", target, filePath),
   updateSkill: (target: RendererConfigurationTarget | null, filePath: string) =>
     ipcRenderer.invoke("skills:update", target, filePath),
   installLocalSkill: (
@@ -1302,10 +1330,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     target?: RendererConfigurationTarget;
     skillName: string;
   }) => ipcRenderer.invoke("skills:uninstall", input),
-  listAgents: (target: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("agents:list", target),
-  readAgentBody: (target: RendererConfigurationTarget | null, filePath: string) =>
-    ipcRenderer.invoke("agents:read", target, filePath),
   saveAgent: (
     def: import("./types").AgentDefinitionInput,
     opts?: { scope?: "user" | "project"; target?: RendererConfigurationTarget },
@@ -1317,20 +1341,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   inspectGithubSkill: (url: string, existingNames?: string[]) =>
     ipcRenderer.invoke("skills:inspectGithub", url, existingNames),
   installFromGithub: (input: unknown) => ipcRenderer.invoke("skills:installFromGithub", input),
-  probeMcpServers: (cfgs: unknown, force?: boolean, target?: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("mcp:probe", cfgs, force, target),
-  listMergedMcpServers: (
-    base: unknown,
-    disabledPlugins?: unknown,
-    target?: RendererConfigurationTarget | null,
-  ) => ipcRenderer.invoke("mcp:listMerged", base, disabledPlugins, target),
-  listPluginHooks: (disabledPlugins?: unknown) =>
-    ipcRenderer.invoke("hooks:listPlugin", disabledPlugins),
+  probeMcpServers: (cfgs: unknown, force?: boolean, target?: RendererConfigurationTarget | null, scope?: "user" | "project") =>
+    ipcRenderer.invoke("mcp:probe", cfgs, force, target, scope),
   approvePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>
     ipcRenderer.invoke("hooks:approvePlugin", installKey),
   revokePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>
     ipcRenderer.invoke("hooks:revokePlugin", installKey),
-  listPluginMcpTrust: () => ipcRenderer.invoke("mcp:listPluginTrust"),
   approvePluginMcp: (installKey: string): Promise<PluginMcpApprovalResult[]> =>
     ipcRenderer.invoke("mcp:approvePlugin", installKey),
   revokePluginMcp: (installKey: string): Promise<PluginMcpApprovalResult[]> =>
@@ -1338,29 +1354,10 @@ contextBridge.exposeInMainWorld("codeshell", {
   invalidateMcpProbeCache: (name?: string) => ipcRenderer.invoke("mcp:invalidate", name),
   probeSearch: (input: unknown) => ipcRenderer.invoke("search:probe", input),
   probeImage: (input: unknown) => ipcRenderer.invoke("image:probe", input),
-  getModelCatalog: () => ipcRenderer.invoke("catalog:list"),
   saveCatalogEntry: (entry: unknown) => ipcRenderer.invoke("catalog:save", entry),
   deleteCatalogEntry: (id: string) => ipcRenderer.invoke("catalog:delete", id),
-  getCatalogOrigins: () => ipcRenderer.invoke("catalog:origins"),
-  resolveModelMeta: (models: unknown, providers: unknown) =>
-    ipcRenderer.invoke("models:resolve-meta", models, providers),
-  reasoningControl: (kind: string, model: string) =>
-    ipcRenderer.invoke("models:reasoning-control", kind, model),
-  listModels: (provider: unknown, refresh?: boolean) =>
-    ipcRenderer.invoke("models:list", provider, refresh),
-  getTrust: (path: string) => ipcRenderer.invoke("trust:get", path),
   setTrust: (path: string, level: "trusted" | "untrusted") =>
     ipcRenderer.invoke("trust:set", path, level),
-  getTrustRisks: (
-    path: string,
-  ): Promise<{
-    permissionRules: number;
-    envKeys: string[];
-    hooks: number;
-    mcpServers: string[];
-    setupScripts: boolean;
-  }> => ipcRenderer.invoke("trust:risks", path),
-  recents: () => ipcRenderer.invoke("recents:list"),
   notify: (opts: { title: string; body?: string; subtitle?: string }) =>
     ipcRenderer.invoke("notify:show", opts),
   isWindowFullscreen: () => ipcRenderer.invoke("window:isFullscreen"),
@@ -1418,16 +1415,21 @@ contextBridge.exposeInMainWorld("codeshell", {
    * its pid is a stable per-window discriminator for the window's lifetime.
    */
   windowToken: String(process.pid),
-  ptyStart: (opts: Parameters<CodeshellApi["ptyStart"]>[0]) =>
-    ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
-  ptyWrite: (sessionId: string, data: string, reply?: boolean) =>
-    ipcRenderer.invoke("pty:write", sessionId, data, reply === true),
-  ptyResize: (sessionId: string, cols: number, rows: number) =>
-    ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
-  ptyKill: (sessionId: string) => ipcRenderer.invoke("pty:kill", sessionId),
+  ptyStart: (opts) => routeTerminal("pty/start", opts, () => ipcRenderer.invoke("pty:start", opts)),
+  ptyWrite: (sessionId, data, reply) =>
+    routeTerminal("pty/write", { sessionId, data, reply: reply === true }, () =>
+      ipcRenderer.invoke("pty:write", sessionId, data, reply === true),
+    ),
+  ptyResize: (sessionId, cols, rows) =>
+    routeTerminal("pty/resize", { sessionId, cols, rows }, () =>
+      ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
+    ),
+  ptyKill: (sessionId) =>
+    routeTerminal("pty/kill", { sessionId }, () => ipcRenderer.invoke("pty:kill", sessionId)),
   onPtyData: (
     cb: (msg: { sessionId: string; data: string; replay?: boolean }) => void,
   ): (() => void) => {
+    if (desktopHost) return desktopHost.onTerminalData(cb);
     const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string; replay?: boolean }) =>
       cb(msg);
     ipcRenderer.on("pty:data", h);
@@ -1436,6 +1438,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   onPtyExit: (
     cb: (msg: { sessionId: string; exitCode: number; signal?: number }) => void,
   ): (() => void) => {
+    if (desktopHost) return desktopHost.onTerminalExit(cb);
     const h = (
       _e: IpcRendererEvent,
       msg: { sessionId: string; exitCode: number; signal?: number },
@@ -1444,6 +1447,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     return () => ipcRenderer.removeListener("pty:exit", h);
   },
   onPtyRemoteViewers: (cb: (msg: { sessionId: string; count: number }) => void): (() => void) => {
+    if (desktopHost) return desktopHost.onTerminalViewers(cb);
     const h = (_e: IpcRendererEvent, msg: { sessionId: string; count: number }) => cb(msg);
     ipcRenderer.on("pty:remoteViewers", h);
     return () => ipcRenderer.removeListener("pty:remoteViewers", h);
@@ -1477,7 +1481,9 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("links:remoteRename", cwd, id, label, revision),
     remoteDisconnect: (cwd: string, id: string, revision: string) =>
       ipcRenderer.invoke("links:remoteDisconnect", cwd, id, revision),
-    listLocalProviders: () => ipcRenderer.invoke("links:listLocalProviders"),
+    listLocalProviders: routeLocalProviders(desktopHost, () =>
+      ipcRenderer.invoke("links:listLocalProviders"),
+    ),
     cliStatus: (providerId: string, cwd?: string) =>
       ipcRenderer.invoke("links:cliStatus", providerId, cwd),
     cliInstallStatus: (providerId: string) =>
@@ -1749,12 +1755,7 @@ contextBridge.exposeInMainWorld("codeshell", {
 
   // ── CC rooms (external `claude` CLI orchestration) ──
   ccRoom: {
-    probe: (force?: boolean) => ipcRenderer.invoke("ccRoom:probe", force),
-    codexProbe: (force?: boolean) => ipcRenderer.invoke("ccRoom:codexProbe", force),
-    listSessions: (cwd: string, all?: boolean) =>
-      ipcRenderer.invoke("ccRoom:listSessions", cwd, all),
-    listCodexSessions: (cwd: string, all?: boolean) =>
-      ipcRenderer.invoke("ccRoom:listCodexSessions", cwd, all),
+    ...createCcRoomReads(ipcRenderer, configurationHost),
     openSession: (
       claudeSessionId: string,
       cwd: string,
@@ -1783,10 +1784,6 @@ contextBridge.exposeInMainWorld("codeshell", {
       roomId: string,
       request: { sinceSeq?: number; cursor?: string; limit?: number },
     ) => invokeRoomHistory(roomId, request),
-    readHistory: (cwd: string, sessionId: string, limit: number) =>
-      ipcRenderer.invoke("ccRoom:readHistory", cwd, sessionId, limit),
-    readCodexHistory: (cwd: string, threadId: string, limit: number) =>
-      ipcRenderer.invoke("ccRoom:readCodexHistory", cwd, threadId, limit),
     subscribeTranscript: (
       roomId: string,
       cwd: string,

@@ -38,12 +38,12 @@ type TurnLoopRunResult = Awaited<ReturnType<TurnLoop["run"]>>;
 export function createRunFailureHandler(
   args: Omit<Parameters<typeof buildRunFailureResult>[0], "err" | "reason"> & {
     runId: string;
-    sealForFinalization(): void;
+    sealForFinalization(): unknown;
   },
-): (error: unknown) => EngineResult {
-  return (err) => {
+): (error: unknown) => Promise<EngineResult> {
+  return async (err) => {
     try {
-      args.sealForFinalization();
+      await args.sealForFinalization();
     } catch {
       /* Failure remains non-completed; in-memory fences were installed first. */
     }
@@ -211,7 +211,7 @@ export async function finalizeRunSuccess(args: {
   costStoreSerialize: (() => Record<string, unknown>) | undefined;
   profile: RunBehaviorProfile | undefined;
   getProfileReportedResults: () => Record<string, unknown> | undefined;
-  hasUnverifiedWrites?: () => boolean;
+  hasUnverifiedWrites?: () => boolean | Promise<boolean>;
   hasIncompleteBatch?: () => Promise<boolean>;
 }): Promise<EngineResult> {
   const finalizeStartedAt = performance.now();
@@ -236,7 +236,7 @@ export async function finalizeRunSuccess(args: {
   // Seal pending operations for aborted/failed runs too; late callbacks must not
   // mutate an already published terminal receipt into apparent success.
   try {
-    unverified = args.hasUnverifiedWrites?.() === true;
+    unverified = (await args.hasUnverifiedWrites?.()) === true;
   } catch {
     unverified = true;
   }

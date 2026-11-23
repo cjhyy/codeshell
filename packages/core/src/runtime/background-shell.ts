@@ -1,3 +1,4 @@
+import { reportBackgroundWorkChange } from "./background-work-lifecycle.js";
 /**
  * BackgroundShellManager — session-scoped registry + lifecycle for
  * fire-and-forget background shells (design §4).
@@ -366,6 +367,7 @@ export class BackgroundShellManager {
       waitForExit: opts.waitForExit === true,
     };
     this.shells.set(shellId, sh);
+    reportBackgroundWorkChange("shell", sh.shellId, sh);
 
     const onData = (chunk: Buffer): void => {
       sh.ring.write(chunk);
@@ -401,6 +403,7 @@ export class BackgroundShellManager {
     sh.exitCode = code;
     sh.signal = sig;
     sh.exitedAt = Date.now();
+    reportBackgroundWorkChange("shell", sh.shellId, sh);
     sh.child = null;
     try {
       sh.ring.close();
@@ -725,6 +728,7 @@ export class BackgroundShellManager {
       waitForExit: false,
     };
     this.shells.set(rec.shellId, sh);
+    reportBackgroundWorkChange("shell", sh.shellId, sh);
   }
 
   /** Test/reset helper — clears the registry without killing (used in tests). */

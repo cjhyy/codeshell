@@ -1,28 +1,30 @@
+import type { DesktopHostClient } from "./desktop-host-client.js";
+import type { WorkspaceReadContracts } from "../shared/workspace-read-contracts.js";
 import type { ExternalGitBlobRef, SessionWorkspace } from "@cjhyy/code-shell-core";
 import type { LocalProject } from "./project-authority-types";
-import type { FileVersionResult } from "../shared/file-version.js";
 import type { IpcRenderer, IpcRendererEvent } from "electron";
-import type {
-  ReviewAiPromptRequest,
-  ReviewAiPromptResult,
-  ReviewGitCommit,
-  ReviewGitDiffRequest,
-  ReviewGitDiffResult,
-  ReviewGitStatusResult,
-} from "../shared/review";
+import type { ReviewAiPromptRequest, ReviewGitDiffRequest } from "../shared/review";
 
 type ProjectAuthorityIpcRenderer = Pick<IpcRenderer, "invoke" | "on" | "removeListener">;
 
 /** Renderer-safe transport for project registry and Session workspace authority. */
-export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRenderer) {
+export function createProjectAuthorityApi(
+  ipcRenderer: ProjectAuthorityIpcRenderer,
+  listProjects = (fallback: () => Promise<LocalProject[]>) => fallback(),
+  host?: Pick<DesktopHostClient, "readBusiness">,
+) {
+  function read<K extends keyof WorkspaceReadContracts>(
+    name: K,
+    params: WorkspaceReadContracts[K]["params"],
+  ) {
+    if (host) return host.readBusiness(name, params);
+    return Promise.reject(new Error("Workspace reads require the workbench Host"));
+  }
   return {
     searchProjectFiles: (projectId: string, query: string, rootId?: string) =>
-      rootId === undefined
-        ? ipcRenderer.invoke("files:searchProject", projectId, query)
-        : ipcRenderer.invoke("files:searchProject", projectId, query, rootId),
-    getProjectGitStatus: (projectId: string) => ipcRenderer.invoke("git:projectStatus", projectId),
-    getProjectGitBranches: (projectId: string) =>
-      ipcRenderer.invoke("git:projectBranches", projectId),
+      read("files/searchProject", { projectId, query, rootId }),
+    getProjectGitStatus: (projectId: string) => read("git/projectStatus", { projectId }),
+    getProjectGitBranches: (projectId: string) => read("git/projectBranches", { projectId }),
     switchProjectGitBranch: (projectId: string, branch: string) =>
       ipcRenderer.invoke("git:projectSwitchBranch", projectId, branch),
     stashAndSwitchProjectGitBranch: (projectId: string, branch: string) =>
@@ -31,27 +33,20 @@ export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRender
       ipcRenderer.invoke("workspace:current", sessionId, cwd),
     getSessionWorkspaceAuthority: (sessionId: string) =>
       ipcRenderer.invoke("workspace:authority", sessionId),
-    getSessionGitStatus: (sessionId: string) =>
-      ipcRenderer.invoke("workspace:gitStatus", sessionId),
-    getSessionGitBranches: (sessionId: string) =>
-      ipcRenderer.invoke("workspace:gitBranches", sessionId),
-    getReviewStatus: (sessionId: string) =>
-      ipcRenderer.invoke("review:status", sessionId) as Promise<ReviewGitStatusResult>,
+    getSessionGitStatus: (sessionId: string) => read("workspace/gitStatus", { sessionId }),
+    getSessionGitBranches: (sessionId: string) => read("workspace/gitBranches", { sessionId }),
+    getReviewStatus: (sessionId: string) => read("review/status", { sessionId }),
     getReviewDiff: (sessionId: string, request: ReviewGitDiffRequest) =>
-      ipcRenderer.invoke("review:diff", sessionId, request) as Promise<ReviewGitDiffResult>,
+      read("review/diff", { sessionId, request }),
     prepareReviewPrompt: (sessionId: string, request: ReviewAiPromptRequest) =>
-      ipcRenderer.invoke(
-        "review:preparePrompt",
-        sessionId,
-        request,
-      ) as Promise<ReviewAiPromptResult>,
+      read("review/prompt", { sessionId, request }),
     getReviewRecentCommits: (sessionId: string, limit?: number) =>
-      ipcRenderer.invoke("review:recentCommits", sessionId, limit) as Promise<ReviewGitCommit[]>,
-    listSessionProfiles: (sessionId: string) => ipcRenderer.invoke("workspace:profiles", sessionId),
+      read("review/commits", { sessionId, limit }),
+    listSessionProfiles: (sessionId: string) => read("workspace/profiles", { sessionId }),
     listSessionWorktrees: (sessionId: string, cwd: string) =>
-      ipcRenderer.invoke("workspace:list", sessionId, cwd),
+      read("workspace/list", { sessionId, cwd }),
     getSessionWorktreeDiff: (sessionId: string, worktreePath: string) =>
-      ipcRenderer.invoke("workspace:diff", sessionId, worktreePath),
+      read("workspace/diff", { sessionId, worktreePath }),
     switchSessionWorkspace: (sessionId: string, cwd: string, target: string) =>
       ipcRenderer.invoke("workspace:switch", sessionId, cwd, target),
     releaseSessionWorkspace: (sessionId: string) =>
@@ -75,7 +70,7 @@ export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRender
       action: "detach" | "discard",
     ) => ipcRenderer.invoke("workspace:cleanup", sessionId, cwd, worktreePath, action),
     projectRegistry: {
-      list: () => ipcRenderer.invoke("projectRegistry:list"),
+      list: () => listProjects(() => ipcRenderer.invoke("projectRegistry:list")),
       sessionMainRoots: (projectId: string) =>
         ipcRenderer.invoke("projectRegistry:sessionMainRoots", projectId),
       createFromPicker: () => ipcRenderer.invoke("projectRegistry:createFromPicker"),
@@ -113,31 +108,21 @@ export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRender
       },
     },
     readProjectDir: (projectId: string, rootId: string, dir?: string) =>
-      ipcRenderer.invoke("fsRoot:readDir", projectId, rootId, dir),
+      read("files/list", { owner: { projectId }, rootId, dir }),
     readProjectFileContent: (projectId: string, rootId: string, path: string) =>
-      ipcRenderer.invoke("fsRoot:readFile", projectId, rootId, path),
+      read("files/read", { owner: { projectId }, rootId, path }),
     projectFileExists: (projectId: string, rootId: string, path: string) =>
-      ipcRenderer.invoke("fsRoot:exists", projectId, rootId, path),
-    readSessionDir: (sessionId: string, rootId: string, dir?: string) =>
-      ipcRenderer.invoke("fsSession:readDir", sessionId, rootId, dir),
-    readSessionFileContent: (sessionId: string, rootId: string, path: string) =>
-      ipcRenderer.invoke("fsSession:readFile", sessionId, rootId, path),
-    sessionFileExists: (sessionId: string, rootId: string, path: string) =>
-      ipcRenderer.invoke("fsSession:exists", sessionId, rootId, path),
-    readSessionFileVersion: (sessionId: string, rootId: string, ref: ExternalGitBlobRef) =>
-      ipcRenderer.invoke(
-        "fsSession:readFileVersion",
-        sessionId,
-        rootId,
-        ref,
-      ) as Promise<FileVersionResult>,
+      read("files/exists", { owner: { projectId }, rootId, path }),
     readProjectFileVersion: (projectId: string, rootId: string, ref: ExternalGitBlobRef) =>
-      ipcRenderer.invoke(
-        "fsRoot:readFileVersion",
-        projectId,
-        rootId,
-        ref,
-      ) as Promise<FileVersionResult>,
+      read("files/version", { owner: { projectId }, rootId, ref }),
+    readSessionDir: (sessionId: string, rootId: string, dir?: string) =>
+      read("files/list", { owner: { sessionId }, rootId, dir }),
+    readSessionFileContent: (sessionId: string, rootId: string, path: string) =>
+      read("files/read", { owner: { sessionId }, rootId, path }),
+    sessionFileExists: (sessionId: string, rootId: string, path: string) =>
+      read("files/exists", { owner: { sessionId }, rootId, path }),
+    readSessionFileVersion: (sessionId: string, rootId: string, ref: ExternalGitBlobRef) =>
+      read("files/version", { owner: { sessionId }, rootId, ref }),
     localFileExists: (absPath: string) => ipcRenderer.invoke("fsLocal:exists", absPath),
     readLocalFilePreview: (absPath: string) => ipcRenderer.invoke("fsLocal:readPreview", absPath),
   };

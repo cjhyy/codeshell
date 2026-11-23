@@ -1,3 +1,5 @@
+import type { MobileApprovalAccess } from "../../shared/pending-approvals.js";
+import { readMobileSnapshot } from "./read-snapshot.js";
 import {
   buildSessionHistory,
   dispatchMobileChatTurn,
@@ -10,7 +12,6 @@ import {
   type RoomManager,
   type RoomMeta,
   type RoomPublic,
-  type PendingMobileApprovals,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import { transcriptUserDisplay } from "@cjhyy/code-shell-web";
@@ -71,6 +72,8 @@ export interface MobileDeviceState {
   sessionId?: string;
   /** The session this device explicitly selected (overrides everything). */
   selectedSessionId?: string;
+  /** Invalidates outstanding Host reads even if a phone returns to the same Session. */
+  selectionRevision?: number;
   /** The cwd bound to the selected or freshly-created mobile session. */
   selectedCwd?: string | null;
   /** Stable V2 authority for a freshly-created mobile Session. */
@@ -82,6 +85,13 @@ export interface MobileDeviceState {
 
 /** Narrow facade over the orchestrator state used by the three domain handlers. */
 export interface OrchestratorCtx {
+  readColdGoal?(
+    sessionId: string,
+  ): Promise<
+    import("../../shared/goal-recovery.js").GoalRecoveryOperations["goals/read"]["result"]
+  >;
+  readCcRoom: import("../../shared/cc-room-reads.js").ReadCcRoom;
+  listDiskSessions?: typeof listDiskSessions;
   outputRecovery?: MobileOutputRecovery;
   externalCommands?: MobileExternalRuntimeCommands;
   nativeSubmissions?: MobileNativeSubmissions;
@@ -91,10 +101,11 @@ export interface OrchestratorCtx {
   newSessionAuthority?: typeof mobileNewSessionAuthority;
   remote: RemoteHostManager;
   uploads: MobileUploadService;
-  roomManager: RoomManager;
-  approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
-  pendingApprovals: Pick<PendingMobileApprovals, "find">;
-  transcriptSubscriptions: TranscriptSubscriptionManager;
+  roomManager?: RoomManager;
+  roomHistory?: import("../../shared/room-history.js").RoomHistoryAccess;
+  approvalBridge?: Pick<ApprovalBridge, "respond" | "pendingRequests">;
+  pendingApprovals: Pick<MobileApprovalAccess, "find">;
+  transcriptSubscriptions?: TranscriptSubscriptionManager;
   getBridge: () => AgentBridge | null;
   mobileSessionCwds: Map<string, string | null>;
   mobilePermissionModes: Map<string, PermissionMode>;
@@ -110,7 +121,11 @@ export interface OrchestratorCtx {
   resolveSessionWorkspaceRoot: (sessionId: string, fallbackCwd: string) => Promise<string>;
   sendMobilePermissionMode: (deviceId: string | undefined, sessionId: string) => void;
   sendSelectedMobilePermissionModes: () => void;
-  replayPendingMobileApprovals: (sessionId: string, deviceId?: string) => void;
+  replayPendingMobileApprovals: (
+    sessionId: string,
+    deviceId?: string,
+    viewerId?: string,
+  ) => void | Promise<void>;
   /** Mirrors Host-accepted phone choices onto the Desktop Session's composer. */
   broadcastDesktopSessionSettings: (params: {
     sessionId: string;
@@ -399,12 +414,19 @@ export async function handleClientEvent(
   // ── CC Room (external claude CLI sessions) — checked first so "ccRoom.*"
   // never gets misrouted by the "room." prefix check below ───────────────
   if (event.type.startsWith("ccRoom.")) {
-    await handleCcRoomEvent(ctx, event);
+    const { roomManager, approvalBridge, transcriptSubscriptions } = ctx;
+    if (!roomManager || !approvalBridge || !transcriptSubscriptions)
+      throw Error("Room services unavailable");
+    await handleCcRoomEvent(
+      { ...ctx, roomManager, approvalBridge, transcriptSubscriptions },
+      event,
+    );
     return;
   }
   // ── Rooms (independent of the chat worker bridge) ─────────────────────
   if (event.type.startsWith("room.")) {
-    await handleRoomEvent(ctx, event);
+    if (!ctx.roomManager) throw Error("Room services unavailable");
+    await handleRoomEvent({ ...ctx, roomManager: ctx.roomManager }, event);
     return;
   }
   const bridge = ctx.getBridge();
@@ -440,7 +462,7 @@ export async function handleClientEvent(
     runContext.sessionId
   ) {
     const selection = { ...st };
-    implicitSessionId = await listDiskSessions({
+    implicitSessionId = await (ctx.listDiskSessions ?? listDiskSessions)({
       limit: 1,
       sessionId: runContext.sessionId,
     })
@@ -471,6 +493,7 @@ export async function handleClientEvent(
     explicit ?? st.selectedSessionId ?? implicitSessionId ?? ctx.ensureMobileSessionId(st);
   if (event.type === "session.select") {
     await commandSelection;
+    st.selectionRevision = (st.selectionRevision ?? 0) + 1;
     st.selectedSessionId = event.sessionId;
     st.selectedProjectId = undefined;
     st.selectedRootId = undefined;
@@ -484,7 +507,7 @@ export async function handleClientEvent(
         mode: ctx.mobilePermissionModes.get(event.sessionId) ?? "default",
       });
     }
-    ctx.replayPendingMobileApprovals(event.sessionId, deviceId);
+    await ctx.replayPendingMobileApprovals(event.sessionId, deviceId, event.viewerId);
     await ctx.externalCommands?.replayApprovals(event.viewerId, deviceId, event.sessionId);
     return;
   }
@@ -502,6 +525,7 @@ export async function handleClientEvent(
         permissionMode: event.permissionMode ?? st.permissionMode ?? "default",
         sessionId,
         selectedSessionId: sessionId,
+        selectionRevision: (st.selectionRevision ?? 0) + 1,
         selectedCwd: selection.cwd,
         selectedProjectId: selection.projectId,
         selectedRootId: selection.rootId,
@@ -846,7 +870,8 @@ export async function handleClientEvent(
       return;
     }
     const sessionId = selectedSessionId;
-    const pending = ctx.pendingApprovals.find(sessionId, event.approvalId);
+    const pending = await ctx.pendingApprovals.find(sessionId, event.approvalId);
+    if (event.viewerId && deviceId && !ctx.remote.hasAuthenticatedViewer(event.viewerId,deviceId)) return;
     if (
       !pending ||
       (event.connectionId !== undefined && event.connectionId !== pending.connectionId) ||
@@ -893,7 +918,7 @@ export async function handleClientEvent(
       reply({ type: "error", approvalId: event.approvalId, message: result.message });
       return;
     }
-    ctx.broadcastApprovalResolved({
+    await ctx.broadcastApprovalResolved({
       ...route,
       approved: event.decision === "approve",
       ...(event.decision === "approve" && event.answer !== undefined
@@ -906,7 +931,8 @@ export async function handleClientEvent(
     const sessionId = resolveSessionId(event.sessionId);
     const pending = ctx.externalCommands?.isExternal(sessionId, event.viewerId)
       ? undefined
-      : ctx.pendingApprovals.find(sessionId, event.approvalId);
+      : await ctx.pendingApprovals.find(sessionId, event.approvalId);
+    if (event.viewerId && deviceId && !ctx.remote.hasAuthenticatedViewer(event.viewerId,deviceId)) return;
     if (
       !pending ||
       (event.connectionId !== undefined && event.connectionId !== pending.connectionId) ||
@@ -963,7 +989,7 @@ export async function handleClientEvent(
   }
   if (event.type === "session.list") {
     // Filter before paging so busy projects cannot hide another project's history.
-    const { sessions, nextCursor } = await listDiskSessions({
+    const { sessions, nextCursor } = await (ctx.listDiskSessions ?? listDiskSessions)({
       limit: 100,
       cursor: event.cursor,
       cwds: event.cwds,
@@ -1033,15 +1059,27 @@ export async function handleClientEvent(
     // External output is sent only through the selected per-socket authority;
     // negotiated peers already receive its head on their bounded journal pages.
     if (ctx.externalCommands?.isExternal(event.sessionId, event.viewerId)) return;
-    let snapshot = bridge.getSnapshot(
+    const selectionRevision = st.selectionRevision;
+    const ownerRevision = bridge.sessionPanelOwnerRevision?.(event.sessionId);
+    const current = () =>
+      ctx.getBridge() === bridge &&
+      st.selectionRevision === selectionRevision &&
+      (!deviceId || ctx.deviceState(deviceId) === st) &&
+      !ctx.externalCommands?.isExternal(event.sessionId, event.viewerId) &&
+      bridge.sessionPanelOwnerRevision?.(event.sessionId) === ownerRevision &&
+      (!event.viewerId || !deviceId || ctx.remote.hasAuthenticatedViewer(event.viewerId, deviceId));
+    let snapshot = await readMobileSnapshot(
+      bridge,
       event.sessionId,
       typeof event.sinceSeq === "number" ? event.sinceSeq : 0,
     );
     // A cursor from an earlier Main lifetime cannot filter this process's log.
     // Legacy peers omit epochs and retain the original incremental contract.
     if (event.epoch && snapshot.epoch && event.epoch !== snapshot.epoch) {
-      snapshot = bridge.getSnapshot(event.sessionId, 0);
+      if (!current()) return;
+      snapshot = await readMobileSnapshot(bridge, event.sessionId, 0);
     }
+    if (!current()) return;
     reply({
       type: "session.snapshot",
       sessionId: event.sessionId,
@@ -1051,7 +1089,7 @@ export async function handleClientEvent(
       ...(snapshot.epoch ? { epoch: snapshot.epoch } : {}),
       ...(snapshot.historicalGap ? { historicalGap: true } : {}),
     });
-    ctx.replayPendingMobileApprovals(event.sessionId, deviceId);
+    await ctx.replayPendingMobileApprovals(event.sessionId, deviceId, event.viewerId);
     return;
   }
   if (event.type === "permission.setMode") {
@@ -1130,10 +1168,19 @@ export async function handleClientEvent(
         ...params
       } = event;
       authority.assertCurrent();
-      const res = await injectAndAwaitResult(bridge, method, params, {
-        origin: "mobile",
-        producer: "mobile-goal-control",
-      });
+      const cold =
+        event.type === "goal.get" && ctx.readColdGoal && !bridge.hasLiveWorker()
+          ? await ctx.readColdGoal(event.sessionId)
+          : undefined;
+      authority.assertCurrent();
+      if (cold?.external) throw Error("External Goal controls require the Desktop owner");
+      const res = cold
+        ? { ok: true as const, result: cold.goal }
+        : await injectAndAwaitResult(bridge, method, params, {
+            origin: "mobile",
+            producer: "mobile-goal-control",
+          });
+      authority.assertCurrent();
       if (!res.ok) throw new Error(res.message);
       const value = res.result as {
         updated?: boolean;

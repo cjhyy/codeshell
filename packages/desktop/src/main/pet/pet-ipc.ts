@@ -1,3 +1,5 @@
+import { parseMimiSegmentRange } from "../../shared/mimi-records.js";
+import { dlog } from "../desktop-logger.js";
 import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
@@ -100,20 +102,27 @@ export function broadcastPetChatTranscriptUpdated(
 }
 
 export interface PetIpcDispatcher {
-  dispatch(command: PetDispatchCommand): Promise<PetDispatchResult>;
+  dispatch(command: PetDispatchCommand, signal?: AbortSignal): Promise<PetDispatchResult>;
 }
 
 export interface PetIpcAttention {
-  getSnapshot(): PetAttentionSnapshot;
+  getSnapshot(): PetAttentionSnapshot | Promise<PetAttentionSnapshot>;
   subscribe(listener: (event: PetAttentionEvent) => void): () => void;
-  setActiveSession(sessionId: string | null): void;
-  markReceipts(keys: readonly string[], state: "seen" | "dismissed"): void;
+  setActiveSession(sessionId: string | null, signal?: AbortSignal): void | Promise<void>;
+  markReceipts(
+    keys: readonly string[],
+    state: "seen" | "dismissed",
+    signal?: AbortSignal,
+  ): void | Promise<void>;
 }
 
 export interface PetIpcWorkInbox {
-  getSnapshot(): PetWorkInboxSnapshot;
-  add(ids: readonly string[]): PetWorkInboxSnapshot;
-  clear(): PetWorkInboxSnapshot;
+  getSnapshot(): PetWorkInboxSnapshot | Promise<PetWorkInboxSnapshot>;
+  add(
+    ids: readonly string[],
+    signal?: AbortSignal,
+  ): PetWorkInboxSnapshot | Promise<PetWorkInboxSnapshot>;
+  clear(signal?: AbortSignal): PetWorkInboxSnapshot | Promise<PetWorkInboxSnapshot>;
   /** Preferred transactional mutation; legacy hosts may omit it. */
   addDurably?(ids: readonly string[]): Promise<PetWorkInboxSnapshot>;
   /** Preferred transactional reset; legacy hosts may omit it. */
@@ -124,19 +133,22 @@ export interface PetIpcWorkInbox {
 }
 
 export interface PetIpcLongTasks {
-  getSnapshot(): PetLongTaskSnapshot;
-  control(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult>;
-  clearTerminal(): Promise<PetLongTaskSnapshot>;
-  clearTask(taskId: string): Promise<PetLongTaskSnapshot>;
+  getSnapshot(): PetLongTaskSnapshot | Promise<PetLongTaskSnapshot>;
+  control(
+    request: PetLongTaskControlRequest,
+    signal?: AbortSignal,
+  ): Promise<PetLongTaskControlResult>;
+  clearTerminal(signal?: AbortSignal): Promise<PetLongTaskSnapshot>;
+  clearTask(taskId: string, signal?: AbortSignal): Promise<PetLongTaskSnapshot>;
   subscribe(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
 }
 
 /** Session-like ergonomics for Mimi's durable memory: list, add, edit, remove. */
 export interface PetIpcMemories {
   list(): Promise<PetMemoryEntry[]>;
-  remember(text: string): Promise<PetMemoryEntry>;
-  update(id: string, text: string): Promise<PetMemoryEntry>;
-  forget(id: string): Promise<PetMemoryEntry>;
+  remember(text: string, signal?: AbortSignal): Promise<PetMemoryEntry>;
+  update(id: string, text: string, signal?: AbortSignal): Promise<PetMemoryEntry>;
+  forget(id: string, signal?: AbortSignal): Promise<PetMemoryEntry>;
   subscribe(listener: () => void): () => void;
 }
 
@@ -167,8 +179,8 @@ export interface PetIpcLatestResult {
  * persistent store.
  */
 export interface PetIpcSummaries {
-  collect(): Promise<PetFollowUpSummaryRow[]>;
-  control?(request: PetFollowUpControlRequest): Promise<unknown>;
+  collect(signal?: AbortSignal): Promise<PetFollowUpSummaryRow[]>;
+  control?(request: PetFollowUpControlRequest, signal?: AbortSignal): Promise<unknown>;
   subscribe?(listener: () => void): () => void;
 }
 
@@ -394,6 +406,8 @@ export function registerPetIpc(options: {
   workMemory?: PetIpcWorkMemory;
   longTasks?: PetIpcLongTasks;
   memories?: PetIpcMemories;
+  recordAuthority?: (event: unknown) => AbortSignal;
+  recordWindows?: () => readonly PetIpcWindowLike[];
   latestResult?: PetIpcLatestResult;
   summaries?: PetIpcSummaries;
   journal?: PetIpcJournal;
@@ -424,9 +438,11 @@ export function registerPetIpc(options: {
   if (options.dispatcher) {
     options.ipcMain.handle(PET_DISPATCH_CHANNEL, (_event, ...args) => {
       if (args.length !== 1) throw new Error("invalid pet command");
+      const signal = options.recordAuthority?.(_event);
       const parsed = parseDispatchCommand(args[0]);
       return afterReady(options.ready, async () => {
-        if (parsed.type !== "chat") return options.dispatcher!.dispatch(parsed);
+        signal?.throwIfAborted();
+        if (parsed.type !== "chat") return options.dispatcher!.dispatch(parsed, signal);
         const command = {
           ...parsed,
           clientMessageId: parsed.clientMessageId ?? `pet-${randomUUID()}`,
@@ -440,7 +456,7 @@ export function registerPetIpc(options: {
         for (const window of options.windows()) {
           if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, event);
         }
-        const result = await options.dispatcher!.dispatch(command);
+        const result = await options.dispatcher!.dispatch(command, signal);
         if (result.ok && result.type === "chat") {
           const delegations = result.delegations ?? (result.delegation ? [result.delegation] : []);
           if (delegations.length > 0) {
@@ -499,8 +515,10 @@ export function registerPetIpc(options: {
         throw new Error("invalid active session");
       }
       const sessionId = args[0] as string | null;
-      return afterReady(options.ready, () => {
-        options.attention!.setActiveSession(sessionId);
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, async () => {
+        signal?.throwIfAborted();
+        await options.attention!.setActiveSession(sessionId, signal);
         return { ok: true };
       });
     });
@@ -510,15 +528,18 @@ export function registerPetIpc(options: {
         args.length !== 1 ||
         !payload ||
         !Array.isArray(payload.keys) ||
-        payload.keys.some((key) => typeof key !== "string") ||
+        payload.keys.length > 1_000 ||
+        payload.keys.some((key) => typeof key !== "string" || !key.length || key.length > 4_096) ||
         (payload.state !== "seen" && payload.state !== "dismissed")
       ) {
         throw new Error("invalid attention receipt");
       }
       const keys = payload.keys as string[];
       const receiptState = payload.state as "seen" | "dismissed";
-      return afterReady(options.ready, () => {
-        options.attention!.markReceipts(keys, receiptState);
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, async () => {
+        signal?.throwIfAborted();
+        await options.attention!.markReceipts(keys, receiptState, signal);
         return { ok: true };
       });
     });
@@ -530,17 +551,18 @@ export function registerPetIpc(options: {
     });
     options.ipcMain.handle(PET_WORK_INBOX_UPDATE_CHANNEL, (_event, ...args) => {
       if (args.length !== 1) throw new Error("invalid work inbox update");
+      const signal = options.recordAuthority?.(_event);
       const update = parseWorkInboxUpdate(args[0]);
       return afterReady(options.ready, async () => {
         let snapshot: PetWorkInboxSnapshot;
         if (update.action === "clear") {
           snapshot = options.workInbox!.clearDurably
             ? await options.workInbox!.clearDurably!()
-            : options.workInbox!.clear();
+            : await options.workInbox!.clear(signal);
         } else {
           snapshot = options.workInbox!.addDurably
             ? await options.workInbox!.addDurably!(update.ids)
-            : options.workInbox!.add(update.ids);
+            : await options.workInbox!.add(update.ids, signal);
         }
         if (
           (update.action === "clear" && !options.workInbox!.clearDurably) ||
@@ -561,28 +583,33 @@ export function registerPetIpc(options: {
   if (options.longTasks) {
     options.ipcMain.handle(PET_LONG_TASK_SNAPSHOT_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) throw new Error("Pet long-task snapshot does not accept arguments");
+      options.recordAuthority?.(_event);
       return afterReady(options.ready, () => options.longTasks!.getSnapshot());
     });
     options.ipcMain.handle(PET_LONG_TASK_CONTROL_CHANNEL, (_event, ...args) => {
       if (args.length !== 1) throw new Error("invalid Pet long-task control");
       const request = parseLongTaskControl(args[0]);
-      return afterReady(options.ready, () => options.longTasks!.control(request));
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.longTasks!.control(request, signal));
     });
     options.ipcMain.handle(PET_LONG_TASK_CLEAR_TERMINAL_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) {
         throw new Error("Pet ended long-task cleanup does not accept arguments");
       }
-      return afterReady(options.ready, () => options.longTasks!.clearTerminal());
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.longTasks!.clearTerminal(signal));
     });
     options.ipcMain.handle(PET_LONG_TASK_CLEAR_ONE_CHANNEL, (_event, ...args) => {
       if (args.length !== 1) throw new Error("invalid Pet long-task cleanup");
       const taskId = parseLongTaskClear(args[0]);
-      return afterReady(options.ready, () => options.longTasks!.clearTask(taskId));
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.longTasks!.clearTask(taskId, signal));
     });
   }
   if (options.memories) {
     options.ipcMain.handle(PET_MEMORY_LIST_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) throw new Error("Pet memory list does not accept arguments");
+      options.recordAuthority?.(_event);
       return afterReady(options.ready, () => options.memories!.list());
     });
     options.ipcMain.handle(PET_MEMORY_ADD_CHANNEL, (_event, ...args) => {
@@ -590,7 +617,8 @@ export function registerPetIpc(options: {
         throw new Error("invalid Pet memory text");
       }
       const text = args[0];
-      return afterReady(options.ready, () => options.memories!.remember(text));
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.memories!.remember(text, signal));
     });
     options.ipcMain.handle(PET_MEMORY_UPDATE_CHANNEL, (_event, ...args) => {
       const payload = args[0] as { id?: unknown; text?: unknown } | undefined;
@@ -604,14 +632,16 @@ export function registerPetIpc(options: {
         throw new Error("invalid Pet memory update");
       }
       const { id, text } = payload as { id: string; text: string };
-      return afterReady(options.ready, () => options.memories!.update(id, text));
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.memories!.update(id, text, signal));
     });
     options.ipcMain.handle(PET_MEMORY_REMOVE_CHANNEL, (_event, ...args) => {
       if (args.length !== 1 || typeof args[0] !== "string") {
         throw new Error("invalid Pet memory id");
       }
       const id = args[0];
-      return afterReady(options.ready, () => options.memories!.forget(id));
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.memories!.forget(id, signal));
     });
   }
   if (options.latestResult) {
@@ -630,35 +660,27 @@ export function registerPetIpc(options: {
   if (options.summaries) {
     options.ipcMain.handle(PET_SUMMARIES_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) throw new Error("pet:summaries-get does not accept arguments");
-      return afterReady(options.ready, () => options.summaries!.collect());
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.summaries!.collect(signal));
     });
     if (options.summaries.control) {
       options.ipcMain.handle(PET_FOLLOW_UP_CONTROL_CHANNEL, (_event, ...args) => {
         if (args.length !== 1) throw new Error("invalid follow-up control");
         const request = parseFollowUpControl(args[0]);
-        return afterReady(options.ready, () => options.summaries!.control!(request));
+        const signal = options.recordAuthority?.(_event);
+        return afterReady(options.ready, () => options.summaries!.control!(request, signal));
       });
     }
   }
   if (options.journal) {
     options.ipcMain.handle(PET_JOURNAL_LIST_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) throw new Error("pet:journal-get does not accept arguments");
+      options.recordAuthority?.(_event);
       return afterReady(options.ready, () => options.journal!.list());
     });
     options.ipcMain.handle(PET_SEGMENT_TRANSCRIPT_CHANNEL, (_event, ...args) => {
-      const payload = args[0] as { start?: unknown; end?: unknown } | undefined;
-      if (
-        args.length !== 1 ||
-        !payload ||
-        typeof payload !== "object" ||
-        !Number.isSafeInteger(payload.start) ||
-        !Number.isSafeInteger(payload.end) ||
-        (payload.start as number) < 0 ||
-        (payload.end as number) < (payload.start as number)
-      ) {
-        throw new Error("invalid segment transcript range");
-      }
-      const range = { start: payload.start as number, end: payload.end as number };
+      if (args.length !== 1) throw Error("invalid segment transcript range");
+      const range = parseMimiSegmentRange(args[0]);
       return afterReady(options.ready, () => options.journal!.readSegmentMessages(range));
     });
   }
@@ -694,14 +716,17 @@ export function registerPetIpc(options: {
         ipcMain: options.ipcMain,
         windows: options.windows,
         controls: options.notices,
+        document: options.recordAuthority,
       })
     : undefined;
   const unsubscribeMemories = options.memories?.subscribe(() => {
-    void Promise.resolve(options.memories!.list()).then((entries) => {
-      for (const window of options.windows()) {
-        if (!window.isDestroyed()) window.webContents.send(PET_MEMORY_EVENT_CHANNEL, entries);
-      }
-    });
+    void Promise.resolve(options.memories!.list())
+      .then((entries) => {
+        for (const window of (options.recordWindows ?? options.windows)()) {
+          if (!window.isDestroyed()) window.webContents.send(PET_MEMORY_EVENT_CHANNEL, entries);
+        }
+      })
+      .catch((err) => dlog("main", "pet.memories.refresh.failed", { error: String(err) }));
   });
   const unsubscribeFollowUps = options.summaries?.subscribe?.(() => {
     for (const window of options.windows()) {
@@ -709,11 +734,13 @@ export function registerPetIpc(options: {
     }
   });
   const unsubscribeJournal = options.journal?.subscribe(() => {
-    void Promise.resolve(options.journal!.list()).then((entries) => {
-      for (const window of options.windows()) {
-        if (!window.isDestroyed()) window.webContents.send(PET_JOURNAL_EVENT_CHANNEL, entries);
-      }
-    });
+    void Promise.resolve(options.journal!.list())
+      .then((entries) => {
+        for (const window of (options.recordWindows ?? options.windows)()) {
+          if (!window.isDestroyed()) window.webContents.send(PET_JOURNAL_EVENT_CHANNEL, entries);
+        }
+      })
+      .catch((err) => dlog("main", "pet.journal.refresh.failed", { error: String(err) }));
   });
   const unsubscribe = options.aggregator.subscribe((event) => {
     for (const window of options.windows()) {
@@ -731,7 +758,7 @@ export function registerPetIpc(options: {
     }
   });
   const unsubscribeWorkInbox = options.workInbox?.subscribe?.((snapshot) => {
-    for (const window of options.windows()) {
+    for (const window of (options.recordWindows ?? options.windows)()) {
       if (!window.isDestroyed()) window.webContents.send(PET_WORK_INBOX_EVENT_CHANNEL, snapshot);
     }
   });

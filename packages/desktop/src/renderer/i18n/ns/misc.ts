@@ -6,7 +6,7 @@ export const misc = {
         downloaded: "新版本 {version} 已下载完成。",
         installing: "正在重启并安装新版本 {version}…",
         manualRequiredSignature:
-          "发现新版本 {version}。当前 macOS 安装包使用旧的 cdhash ad-hoc 签名,需要手动下载安装一次。",
+          "发现新版本 {version}。当前安装包的签名需要手动更新。请下载对应架构的 DMG，并替换“应用程序”中的旧版。",
         manualRequiredReadOnly:
           "发现新版本 {version}。当前 App 位于只读卷或隔离位置,请移到“应用程序”后重试,或手动下载安装。",
         restartInstall: "重启并安装",
@@ -152,7 +152,7 @@ export const misc = {
         downloaded: "Version {version} has finished downloading.",
         installing: "Restarting to install version {version}…",
         manualRequiredSignature:
-          "Version {version} is available. This macOS install uses the old cdhash ad-hoc signature, so install this transition manually once.",
+          "Version {version} is available. This app’s signing identity requires a manual update. Download the DMG for your Mac and replace the copy in Applications.",
         manualRequiredReadOnly:
           "Version {version} is available. The app is on a read-only or translocated location; move it to Applications and retry, or install manually.",
         restartInstall: "Restart and install",

@@ -79,8 +79,7 @@ export async function runLongTaskClosureTurn(
   const closureHostActionKinds = canGatewayReply ? ["gatewayReply"] : [];
   const goalContinuation =
     task.verificationMode === "goal" ? await readContinuableGoal(host, task) : undefined;
-  const currentSession = host.options.aggregator
-    .getSnapshot()
+  const currentSession = (await host.options.aggregator.getSnapshot())
     .sessions.find((session) => session.agentSessionId === task.sessionId);
   const canContinue =
     task.status !== "cancelled" &&
@@ -101,7 +100,7 @@ export async function runLongTaskClosureTurn(
         ? await host.getReplyAttachmentRoots()
         : [];
     const metadata = await host.options.metadata.ensure();
-    const snapshot = host.options.aggregator.getSnapshot();
+    const snapshot = (await host.options.aggregator.getSnapshot());
     const workspacePathById = new Map<string, string | null>();
     const petWorkspaces: PetWorkspaceOption[] = [];
     const petReusableSessions: PetReusableSessionOption[] = [];
@@ -145,7 +144,7 @@ export async function runLongTaskClosureTurn(
       // Which request this is among those made to the Session, and whether it ran.
       ...closureRequestIdentity(
         task,
-        host.options.longTasks?.context() as PetLongTaskContext | undefined,
+        (await host.options.longTasks?.context()) as PetLongTaskContext | undefined,
       ),
     };
     const personalization = await host.currentPersonalization();
@@ -345,8 +344,7 @@ export async function runLongTaskClosureTurn(
   let launch: { sessionId: string; cwd: string; taskId?: string };
   try {
     if (!host.options.startWorkSession) throw new Error("自动续办不可用");
-    const latestSession = host.options.aggregator
-      .getSnapshot()
+    const latestSession = (await host.options.aggregator.getSnapshot())
       .sessions.find((session) => session.agentSessionId === task.sessionId);
     if (
       latestSession?.runState === "running" ||

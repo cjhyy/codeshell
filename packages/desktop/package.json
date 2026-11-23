@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-desktop",
-  "version": "0.11.0-rc.11",
+  "version": "0.12.0-rc.1",
   "private": true,
   "license": "MIT",
   "description": "Electron desktop client for CodeShell — the full desktop agent app.",
@@ -13,8 +13,8 @@
   "type": "module",
   "main": "./out/main/index.mjs",
   "scripts": {
-    "postinstall": "bun run rebuild:native",
-    "rebuild:native": "bun run scripts/rebuild-native.ts",
+    "postinstall": "node scripts/rebuild-native.cjs --optional",
+    "rebuild:native": "node scripts/rebuild-native.cjs",
     "dev": "bun run scripts/dev.ts",
     "build": "bun run scripts/build.ts",
     "build:main": "bun run scripts/build-main.ts",
@@ -92,6 +92,7 @@
   "build": {
     "appId": "com.cjhyy.codeshell",
     "productName": "code-shell",
+    "beforeBuild": "scripts/rebuild-native.cjs",
     "afterPack": "scripts/after-pack-adhoc-sign.cjs",
     "afterSign": "scripts/after-sign-managed-node.cjs",
     "detectUpdateChannel": true,
@@ -110,8 +111,20 @@
       "!out/managed-runtimes{,/**/*}",
       "build/icon.png",
       "package.json",
-      "node_modules/node-pty/**/*",
-      "node_modules/playwright-core/**/*"
+      {
+        "from": "node_modules",
+        "to": "node_modules",
+        "filter": [
+          "@cjhyy/code-shell-link/**/*",
+          "@cjhyy/code-shell-core/**/*",
+          "@cjhyy/code-shell-capability-coding/**/*",
+          "@cjhyy/code-shell-pet/**/*",
+          "@cjhyy/code-shell-capability-optimization-lab/**/*",
+          "node-pty",
+          "playwright-core",
+          "!**/.bin{,/**/*}"
+        ]
+      }
     ],
     "asarUnpack": [
       "out/mobile/**/*",
@@ -156,6 +169,7 @@
       "buildResources": "build"
     },
     "mac": {
+      "minimumSystemVersion": "13.5",
       "extraFiles": [
         {
           "from": "out/native/CodeShell Computer Use.app",
@@ -203,11 +217,15 @@
       "createStartMenuShortcut": true
     },
     "linux": {
+      "executableName": "code-shell",
       "target": [
         "AppImage"
       ],
       "category": "Development",
       "icon": "build/icon.png"
+    },
+    "appImage": {
+      "executableArgs": []
     }
   },
   "//deps": "Runtime dependencies are the unbundled worker/native packages. scripts/build-main.ts keeps electron, playwright-core, @cjhyy/code-shell-core, @cjhyy/code-shell-link, and @cjhyy/code-shell-capability-coding external; the renderer is Vite-bundled. scripts/predist.ts materializes Link, Core, Coding, Pet, and Optimization Lab from DESKTOP_MATERIALIZED_WORKSPACES in scripts/materialized-workspaces.ts, and installs their declared production closures. Link is a Desktop devDependency but is explicitly materialized and is also a Core production dependency, so packaging does not rely on a development workspace symlink. Host, Server, Web, Chat, and browser diagnostics are bundled. Keep runtime dependencies and materialization coverage aligned when adding an external or worker-loaded package; native node-pty and playwright-core also ship as runtime dependencies.",
@@ -226,6 +244,7 @@
     "@cjhyy/code-shell-link": "workspace:*",
     "@cjhyy/code-shell-server": "workspace:*",
     "@cjhyy/code-shell-web": "workspace:*",
+    "@electron/rebuild": "4.2.1",
     "@modelcontextprotocol/sdk": "^1.31.0",
     "@radix-ui/react-checkbox": "1.3.3",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -251,9 +270,9 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "electron": "^33.0.0",
-    "electron-builder": "^25.1.8",
-    "electron-updater": "^6.3.9",
+    "electron": "45.4.1",
+    "electron-builder": "26.18.1",
+    "electron-updater": "6.8.12",
     "esbuild": "^0.24.0",
     "highlight.js": "^11",
     "lucide-react": "^0.460.0",

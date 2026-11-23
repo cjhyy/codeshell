@@ -29,6 +29,7 @@ import {
   type OutgoingMessage,
 } from "../packages/chat/src/channel.js";
 import { GatewayControlServer } from "../packages/desktop/src/main/im-gateway-control-server.js";
+import { ConversationSessionRouteStore } from "../packages/desktop/src/main/pet/conversation-session-route-store.js";
 import { PetDispatchService } from "../packages/desktop/src/main/pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "../packages/desktop/src/main/pet/host-action-reply.js";
 import { createReusableSessionResolver } from "../packages/desktop/src/main/pet/reusable-session-resolver.js";
@@ -203,7 +204,7 @@ async function harness() {
   };
   const published: Array<{ type: string; text: string }> = [];
   const wiring = createSessionBridgeWiring({
-    routesFilePath: join(dir, "routes.json"),
+    routes: new ConversationSessionRouteStore(join(dir, "routes.json")),
     resolveSelector: createReusableSessionResolver(sessionsRootDir),
     createRunner: (onTurn) => createBoundSessionRunner(worker, aggregator, onTurn),
     health: createBoundSessionHealth(aggregator, sessionsRootDir),

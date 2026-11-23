@@ -15,6 +15,23 @@ const req = (patch: Partial<SkillRequirement> = {}): SkillRequirement => ({
 });
 
 describe("installSkillRequirement", () => {
+  test("a revoked reviewed batch never starts its dependency installer", async () => {
+    let started = false;
+    await expect(
+      installSkillRequirement(
+        req({ skills: ["media-use"] }),
+        "/repo",
+        async () => {
+          started = true;
+          return { ok: true, stdout: "" };
+        },
+        () => {
+          throw Error("revoked");
+        },
+      ),
+    ).rejects.toThrow(/revoked/);
+    expect(started).toBe(false);
+  });
   test("runs npx with the exact argv the planner produced", async () => {
     const calls: Array<{ file: string; args: string[]; cwd: string }> = [];
     const runner: SkillInstallRunner = async (file, args, cwd) => {

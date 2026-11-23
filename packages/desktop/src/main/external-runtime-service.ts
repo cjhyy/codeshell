@@ -1,3 +1,4 @@
+import { askUserApprovalRequest } from "./external-runtime-approvals.js";
 /**
  * Desktop wiring for external Agent Runtimes (Codex / Claude Code).
  *
@@ -136,24 +137,6 @@ export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   trigger?: SessionRunTrigger;
 };
 
-function askUserApprovalRequest(question: string, options?: Record<string, unknown>) {
-  // External approvals share the native ApprovalRequest wire contract. The
-  // renderer reads presentation fields from args, not the request's top level.
-  // Runtime-only controls (cancellation, deadlines) never cross the wire.
-  const {
-    signal: _signal,
-    throwOnFailure: _throwOnFailure,
-    autoResolveMs: _autoResolveMs,
-    ...presentation
-  } = options ?? {};
-  return {
-    toolName: "__ask_user__",
-    args: { ...presentation, question },
-    description: question,
-    riskLevel: "low" as const,
-  };
-}
-
 export interface ExternalRuntimeSubmissionHooks {
   /** Revalidate host authority inside the actual queue, before any input/Goal mutation. */
   beforeInput: () => Promise<void>;
@@ -187,6 +170,8 @@ export interface ExternalRuntimeStartRequest {
   ownerWindow?: BrowserWindow;
   /** Host request authority, checked only until startup completes; never a turn lease. */
   assertStartAuthority?: () => void;
+  /** Refresh durable workspace/model authority before the synchronous native document check. */
+  refreshStartAuthority?: () => Promise<void>;
 }
 
 /**
@@ -266,6 +251,7 @@ export interface ExternalRuntimeServiceDeps {
   prepareCodexLaunch?: (cwd: string) => Promise<CodexLaunch>;
   /** Start the provider runtime; injectable for tests (production: the real CLI). */
   startSession?: typeof startExternalRuntimeSession;
+  providerFactories?: Parameters<typeof startExternalRuntimeSession>[0]["providerFactories"];
   /** Separate background maintenance; never lends the foreground CLI or tool lease. */
   memory?: Pick<ExternalRuntimeMemory, "schedule" | "cancel" | "dispose">;
 }
@@ -888,6 +874,7 @@ export class ExternalRuntimeService {
   private async ensureExclusive(
     request: ExternalRuntimeStartRequest,
   ): Promise<ExternalRuntimeSession> {
+    if (request.refreshStartAuthority) await request.refreshStartAuthority();
     request.assertStartAuthority?.();
     if (!this.isEnabled()) {
       throw new Error(
@@ -912,6 +899,7 @@ export class ExternalRuntimeService {
       entry.workspaceProfile ===
         requestedExternalRuntimeProfile(request.sessionId, request.workspaceProfile)
     ) {
+      if (request.refreshStartAuthority) await request.refreshStartAuthority();
       request.assertStartAuthority?.();
       return entry.session;
     }
@@ -924,8 +912,9 @@ export class ExternalRuntimeService {
     assertOutputHistoryWriteAvailable(request.sessionId);
     // Do not retain a paired socket's startup grant in the long-lived runtime
     // hooks. A disconnect after successful startup must not revoke its work.
-    const { assertStartAuthority, ...runtimeRequest } = request;
+    const { assertStartAuthority, refreshStartAuthority, ...runtimeRequest } = request;
     request = runtimeRequest;
+    if (refreshStartAuthority) await refreshStartAuthority();
     assertStartAuthority?.();
     if (!this.isEnabled()) {
       throw new Error(
@@ -951,6 +940,7 @@ export class ExternalRuntimeService {
     // old CLI running with authority the user has just withdrawn.
     if (previous && (!authority.projectTrusted || previous.authority.key !== authority.key)) {
       await this.stopExclusive(request.sessionId);
+      if (refreshStartAuthority) await refreshStartAuthority();
       assertStartAuthority?.();
     }
 
@@ -958,6 +948,7 @@ export class ExternalRuntimeService {
     // replacement's program and working directory have passed preflight.
     const codexLaunch =
       request.kind === "codex" ? await this.prepareCodexLaunch(request.cwd) : undefined;
+    if (refreshStartAuthority) await refreshStartAuthority();
     assertStartAuthority?.();
 
     // Environment recovery can wait for a shell. Recheck the caller's authority
@@ -991,6 +982,7 @@ export class ExternalRuntimeService {
     const replaced = preserveBackgroundWork ? this.sessions.get(request.sessionId) : undefined;
     if (replaced) replaced.lifecycle.carryOver = replaced.lifecycle.interruptGeneration;
     await this.stopExclusive(request.sessionId, preserveBackgroundWork);
+    if (refreshStartAuthority) await refreshStartAuthority();
     assertStartAuthority?.();
     if (!this.authorityStillCurrent(request.cwd, authority)) {
       await this.stopExclusive(request.sessionId);
@@ -1310,10 +1302,25 @@ export class ExternalRuntimeService {
     // Register immediately before the runtime starts: a host tool call on the
     // first turn needs its bucket, while all fallible preparation above should
     // happen before this externally visible reservation is made.
+    if (refreshStartAuthority) await refreshStartAuthority();
     assertStartAuthority?.();
     this.deps.registerSession(request.sessionId, request.cwd, ownerId);
     try {
       session = await (this.deps.startSession ?? startExternalRuntimeSession)({
+        providerFactories: this.deps.providerFactories,
+        onProviderDisconnect: () => {
+          lifecycle.faulted = true;
+          const entry = this.sessions.get(request.sessionId);
+          if (entry?.lifecycle !== lifecycle) return;
+          entry.toolTurnAbort?.abort("External provider disconnected");
+          this.deps.cancelApprovals?.(request.sessionId);
+          void this.enqueueLifecycle(request.sessionId, async () => {
+            if (this.sessions.get(request.sessionId) === entry)
+              await this.stopExclusive(request.sessionId);
+          }).catch((err) =>
+            dlog("external-runtime", "provider_disconnect_cleanup_failed", { error: String(err) }),
+          );
+        },
         kind: request.kind,
         ...(codexLaunch ? { codexClient: codexLaunch } : {}),
         cwd: request.cwd,
@@ -1481,8 +1488,9 @@ export class ExternalRuntimeService {
     }
 
     try {
+      if (refreshStartAuthority) await refreshStartAuthority();
       assertStartAuthority?.();
-      if (!this.authorityStillCurrent(request.cwd, authority)) {
+      if (lifecycle.faulted || !this.authorityStillCurrent(request.cwd, authority)) {
         throw new Error("External runtime authority changed while starting");
       }
       if (request.ownerWindow?.isDestroyed?.()) {

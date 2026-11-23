@@ -13,12 +13,14 @@ import type {
   DesktopPetProjectionSnapshot,
   DesktopPetSession,
 } from "../pet/pet-state-aggregator.js";
-import type { TaskInboxActionAdapter } from "./task-inbox-actions.js";
+import type {
+  TaskInboxActionAdapter,
+  TaskExecutorContext as TaskInboxActionContext,
+} from "./task-inbox-actions.js";
 import type { TaskInboxSourceReader } from "./task-inbox-projector.js";
 import { mapTaskInboxRecord } from "./task-inbox-mappers.js";
 import type {
   TaskAction,
-  TaskInboxActionContext,
   TaskInboxActionResult,
   TaskInboxRecordV1,
   TaskSource,
@@ -74,6 +76,12 @@ export interface TaskInboxSourcesDeps {
   diskSessions(): Promise<
     Array<DiskSessionMeta & { projectId?: string; createdAt?: number; automationId?: string }>
   >;
+  diskSession?(
+    id: string,
+  ): Promise<
+    | (DiskSessionMeta & { projectId?: string; createdAt?: number; automationId?: string })
+    | undefined
+  >;
   sessionCatalog?(): Promise<SessionCatalogSnapshot>;
   sessionProjection?(): DesktopPetProjectionSnapshot | undefined;
   native: {
@@ -83,15 +91,15 @@ export interface TaskInboxSourcesDeps {
   };
   runs?: { list(): Promise<RunSummary[]> };
   automations?: {
-    list(): AutomationSummary[];
-    get(id: string): AutomationSummary | null;
-    pause(id: string): boolean;
-    resume(id: string): boolean;
-    runNow(id: string): boolean;
+    list(): AutomationSummary[] | Promise<AutomationSummary[]>;
+    get(id: string): AutomationSummary | null | Promise<AutomationSummary | null>;
+    pause(id: string): boolean | Promise<boolean>;
+    resume(id: string): boolean | Promise<boolean>;
+    runNow(id: string): boolean | Promise<boolean>;
   };
   mimi?: {
-    snapshot(): PetLongTaskSnapshot;
-    get(id: string): PetLongTask | undefined;
+    snapshot(): PetLongTaskSnapshot | Promise<PetLongTaskSnapshot>;
+    get(id: string): PetLongTask | undefined | Promise<PetLongTask | undefined>;
     control(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult>;
   };
   external?: {
@@ -113,6 +121,14 @@ const clean = (text: string | undefined, limit = 4096): string | undefined =>
   text?.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "").slice(0, limit) || undefined;
 const revision = (...parts: unknown[]): string =>
   createHash("sha256").update(JSON.stringify(parts)).digest("hex");
+export const backgroundTaskSourceId = (
+  origin: "main" | "worker" | undefined,
+  sessionId: string,
+  startedAt: number,
+  workId: string,
+  generation?: number | string,
+) => `${workId}:${revision(origin, sessionId, startedAt, generation).slice(0, 24)}`;
+
 function statusOf(value: string | undefined): TaskStatus {
   switch (value) {
     case "queued":
@@ -154,6 +170,15 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
   let pendingDisk: ReturnType<TaskInboxSourcesDeps["diskSessions"]> | undefined;
   let pendingBackground: Promise<TaskInboxBackgroundEntry[]> | undefined;
 
+  let pendingCatalog: Promise<SessionCatalogSnapshot | undefined> | undefined;
+  const catalogSnapshot = () => {
+    if (!pendingCatalog)
+      pendingCatalog = Promise.resolve(deps.sessionCatalog?.()).finally(() => {
+        pendingCatalog = undefined;
+      });
+    return pendingCatalog;
+  };
+
   const diskSessions = (): ReturnType<TaskInboxSourcesDeps["diskSessions"]> => {
     if (!pendingDisk)
       pendingDisk = deps.diskSessions().finally(() => {
@@ -172,10 +197,18 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
     return pendingBackground;
   };
 
-  const sessions = (): Promise<TaskInboxRecordV1[]> => {
-    if (pendingSessions) return pendingSessions;
-    pendingSessions = (async () => {
-      const [disk, catalog] = await Promise.all([diskSessions(), deps.sessionCatalog?.()]);
+  const diskFor = async (id?: string) => {
+    if (id === undefined) return diskSessions();
+    if (deps.diskSession) {
+      const row = await deps.diskSession(id);
+      return row ? [row] : [];
+    }
+    return (await diskSessions()).filter((row) => row.engineSessionId === id);
+  };
+  const sessions = (id?: string): Promise<TaskInboxRecordV1[]> => {
+    if (id === undefined && pendingSessions) return pendingSessions;
+    const work = (async () => {
+      const [disk, catalog] = await Promise.all([diskFor(id), catalogSnapshot()]);
       const children = new Set(
         disk
           .filter((row) => row.origin === "subagent" || row.parentSessionId)
@@ -184,11 +217,14 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
       const metadata = new Map<string, { row: SessionSummary; workspacePath: string }>();
       for (const [workspacePath, index] of Object.entries(catalog?.indices ?? {})) {
         for (const row of index.sessions) {
-          if (row.engineSessionId) metadata.set(row.engineSessionId, { row, workspacePath });
+          if (row.engineSessionId && (id === undefined || row.engineSessionId === id))
+            metadata.set(row.engineSessionId, { row, workspacePath });
         }
       }
       const projection = new Map(
-        (deps.sessionProjection?.()?.sessions ?? []).map((row) => [row.agentSessionId, row]),
+        (deps.sessionProjection?.()?.sessions ?? [])
+          .filter((row) => id === undefined || row.agentSessionId === id)
+          .map((row) => [row.agentSessionId, row]),
       );
       const diskById = new Map(disk.map((row) => [row.engineSessionId, row]));
       const records: TaskInboxRecordV1[] = [];
@@ -260,9 +296,18 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
               id,
               durable?.runId,
               live?.runId,
+              durable?.clientMessageId,
+              live?.clientMessageId,
               status,
-              updatedAt,
               capabilities,
+              // Legacy controllers without execution identity retain the conservative freshness check.
+              capabilities.includes("cancel") &&
+                !durable?.runId &&
+                !live?.runId &&
+                !durable?.clientMessageId &&
+                !live?.clientMessageId
+                ? updatedAt
+                : undefined,
             ),
             ...(durable?.automationId || meta?.row.cronJobId
               ? { automationId: durable?.automationId ?? meta?.row.cronJobId }
@@ -280,7 +325,9 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
         );
       }
       return records;
-    })().finally(() => {
+    })();
+    if (id !== undefined) return work;
+    pendingSessions = work.finally(() => {
       pendingSessions = undefined;
     });
     return pendingSessions;
@@ -367,7 +414,13 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
     const sourceId =
       entry.kind === "subagent" && entry.childSessionId
         ? entry.childSessionId
-        : `${workId}:${revision(entry.executionOrigin, entry.sourceSession.sessionId, startedAt, entry.kind === "subagent" ? entry.runtimeGeneration : undefined).slice(0, 24)}`;
+        : backgroundTaskSourceId(
+            entry.executionOrigin,
+            entry.sourceSession.sessionId,
+            startedAt,
+            workId,
+            entry.kind === "subagent" ? entry.runtimeGeneration : undefined,
+          );
     const rawStatus = shell ? shell.status : entry.kind !== "shell" ? entry.status : undefined;
     const status =
       shell?.status === "exited" ? (shell.exitCode === 0 ? "done" : "failed") : statusOf(rawStatus);
@@ -412,8 +465,8 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
     });
   };
 
-  const subagents = async (): Promise<TaskInboxRecordV1[]> => {
-    const [entries, disk] = await Promise.all([background(), diskSessions()]);
+  const subagents = async (id?: string): Promise<TaskInboxRecordV1[]> => {
+    const [entries, disk] = await Promise.all([background(), diskFor(id)]);
     const children = new Map(
       disk
         .filter((row) => row.origin === "subagent" || row.parentSessionId)
@@ -474,8 +527,9 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
   const readSource = async (source: TaskSource): Promise<TaskInboxRecordV1[]> => {
     if (source === "session" || source === "external-runtime")
       return (await sessions()).filter((record) => record.source === source);
-    if (source === "automation") return deps.automations?.list().map(automationRecord) ?? [];
-    if (source === "mimi-delegation") return deps.mimi?.snapshot().tasks.map(mimiRecord) ?? [];
+    if (source === "automation")
+      return ((await deps.automations?.list()) ?? []).map(automationRecord);
+    if (source === "mimi-delegation") return (await deps.mimi?.snapshot())?.tasks.map(mimiRecord) ?? [];
     if (source === "subagent") return subagents();
     if (source === "legacy-run")
       return ((await deps.runs?.list()) ?? []).map((run) =>
@@ -498,16 +552,24 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
     return (await background()).map(backgroundRecord).filter((record) => record.source === source);
   };
 
+  const readOne = async (source: TaskSource, id: string): Promise<TaskInboxRecordV1[]> => {
+    if (source === "session" || source === "external-runtime")
+      return (await sessions(id)).filter((r) => r.source === source);
+    if (source === "automation") {
+      const found = await deps.automations?.get(id);
+      return found ? [automationRecord(found)] : [];
+    }
+    if (source === "mimi-delegation") {
+      const found = await deps.mimi?.get(id);
+      return found ? [mimiRecord(found)] : [];
+    }
+    if (source === "subagent") return (await subagents(id)).filter((r) => r.sourceId === id);
+    return (await readSource(source)).filter((r) => r.sourceId === id);
+  };
   const reread = async (record: TaskInboxRecordV1): Promise<TaskInboxRecordV1 | undefined> => {
-    if (record.source === "automation") {
-      const current = deps.automations?.get(record.sourceId);
-      return current ? automationRecord(current) : undefined;
-    }
-    if (record.source === "mimi-delegation") {
-      const current = deps.mimi?.get(record.sourceId);
-      return current && current.attempt === record.attempt ? mimiRecord(current) : undefined;
-    }
-    return (await readSource(record.source)).find((current) => current.taskKey === record.taskKey);
+    return (await readOne(record.source, record.sourceId)).find(
+      (current) => current.taskKey === record.taskKey,
+    );
   };
 
   const act = async (
@@ -526,6 +588,7 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
     if (!current.capabilities.includes(action)) return { status: "unavailable", record: current };
     try {
       let ok = false;
+      context?.assertCurrent?.();
       if (record.source === "session" && action === "cancel") {
         ok = (await deps.native.cancel(record.sourceId, context)) !== false;
       } else if (
@@ -538,11 +601,11 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
       } else if (record.source === "automation" && deps.automations) {
         ok =
           action === "pause"
-            ? deps.automations.pause(record.sourceId)
+            ? await deps.automations.pause(record.sourceId)
             : action === "resume"
-              ? deps.automations.resume(record.sourceId)
+              ? await deps.automations.resume(record.sourceId)
               : action === "retry"
-                ? deps.automations.runNow(record.sourceId)
+                ? await deps.automations.runNow(record.sourceId)
                 : false;
       } else if (record.source === "mimi-delegation" && deps.mimi) {
         const result = await deps.mimi.control({
@@ -571,7 +634,10 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
             mapped.taskKey === current.taskKey && mapped.sourceRevision === current.sourceRevision
           );
         });
-        if (entry) ok = await deps.background.cancel(entry, context);
+        if (entry) {
+          context?.assertCurrent?.();
+          ok = await deps.background.cancel(entry, context);
+        }
       }
       const updated = await reread(current);
       return { status: ok ? "ok" : "unavailable", ...(updated ? { record: updated } : {}) };
@@ -591,7 +657,20 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
     "external-runtime",
   ];
   return {
-    readers: sources.map((source) => ({ source, read: () => readSource(source) })),
+    readers: sources.map((source) => ({
+      source,
+      read: () => readSource(source),
+      ...(source === "session"
+        ? {
+            observeDiskSessions: async () =>
+              (await diskSessions()).map(({ engineSessionId, archivedAt }) => ({
+                id: engineSessionId,
+                archivedAt,
+              })),
+          }
+        : {}),
+      readOne: (id) => readOne(source, id),
+    })),
     adapters: sources.map((source) => ({ source, reread, act })),
   };
 }

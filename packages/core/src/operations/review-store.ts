@@ -1,3 +1,4 @@
+import type { EncryptionCipher } from "../credentials/cipher.js";
 import { join } from "node:path";
 import { lockSync } from "../utils/lockfile.js";
 import {
@@ -15,10 +16,11 @@ export class OperationReviewStore {
     private readonly legacyEvidence: (
       owner: OperationSessionOwner,
     ) => ReadonlyMap<string, string> = () => new Map(),
+    private readonly cipher?: EncryptionCipher,
   ) {}
 
   private ledger(sessionId: string) {
-    return new OperationLedger(this.storageRoot, undefined, {
+    return new OperationLedger(this.storageRoot, this.cipher, {
       sessionId,
       read: () => readOperationSessionOwner(this.storageRoot, sessionId),
     });

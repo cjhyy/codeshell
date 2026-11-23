@@ -18,6 +18,7 @@
     "paths": {
       "react/compiler-runtime": ["packages/tui/src/react-compiler-runtime-shim.ts"],
       "@cjhyy/code-shell-core": ["packages/core/src/index.ts"],
+      "@cjhyy/code-shell-core/internal/operations": ["packages/core/src/index.operations.ts"],
       "@cjhyy/code-shell-core/internal": ["packages/core/src/index.internal.ts"],
       "@cjhyy/code-shell-core/extension": ["packages/core/src/index.extension.ts"],
       "@cjhyy/code-shell-core/bin/agent-server-stdio": [

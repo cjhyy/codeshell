@@ -13,6 +13,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PanelRuntimeServices } from "@cjhyy/code-shell-server/panels";
 import {
+  chooseViewOnlyIfPrompted,
+  seedViewOnlyWorkbench,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
@@ -36,20 +38,6 @@ let win;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
-}
-
-/**
- * The first launch in an isolated home raises the trust prompt over a modal
- * overlay that swallows every click, so it must be dismissed before any
- * navigation. Same guard the other e2e scripts carry.
- */
-async function dismissTrustDialog(win) {
-  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
-  const opened = await viewOnly
-    .waitFor({ state: "visible", timeout: 5_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (opened) await viewOnly.click();
 }
 
 async function installFixture(version, marker, installSnapshot = true) {
@@ -268,6 +256,7 @@ try {
   );
   const desktopStateDirectory = join(home, ".code-shell", "desktop");
   await mkdir(desktopStateDirectory, { recursive: true });
+  await seedViewOnlyWorkbench(isolated, [projectDir]);
   await writeFile(
     join(desktopStateDirectory, "recents.json"),
     `${JSON.stringify(
@@ -291,9 +280,9 @@ try {
   win = await findCodeShellWindow(app);
   win.on("pageerror", (error) => console.error("renderer pageerror:", error.message));
 
-  await dismissTrustDialog(win);
+  await chooseViewOnlyIfPrompted(win, 5_000);
   await win.getByText("project-e2e", { exact: true }).click();
-  await dismissTrustDialog(win);
+  await chooseViewOnlyIfPrompted(win, 5_000);
   const extensionsEntry = win.getByRole("button", { name: /^(扩展|Extensions)$/ });
   await extensionsEntry.waitFor({ state: "visible" });
   await extensionsEntry.click();
@@ -368,6 +357,30 @@ try {
   assert(sandbox.hasBridge, "scoped preload bridge was not exposed");
   assert(!sandbox.hasProcess && !sandbox.hasRequire, "Node globals escaped into the panel");
   assert(!sandbox.popup, "plugin popup was not denied");
+  if (process.platform === "linux") {
+    // No media.capture grant: the guest must be rejected before source selection.
+    await app.evaluate(({ desktopCapturer }) => {
+      globalThis.panelCapturePickerRequests = 0;
+      desktopCapturer.getSources = async () => {
+        globalThis.panelCapturePickerRequests++;
+        return [];
+      };
+    });
+    const result = await firstView.evaluate((guest) => {
+      guest.focus();
+      return guest.executeJavaScript(
+        `navigator.mediaDevices.getDisplayMedia({video: true})
+          .then(stream => { stream.getTracks().forEach(track => track.stop()); return "captured"; },
+            error => error.name)`,
+        true,
+      );
+    });
+    assert(result === "NotAllowedError", `Unreviewed Panel display capture returned ${result}`);
+    assert(
+      (await app.evaluate(() => globalThis.panelCapturePickerRequests)) === 0,
+      "Unreviewed Panel reached the source picker",
+    );
+  }
 
   const context = await execute(firstView, "window.codeshellPanel.getContext()");
   assert(

@@ -58,9 +58,8 @@ describe("SessionCwdIndex", () => {
   });
 
   test("a miss reads only that session state and captures workspace plus project binding", async () => {
-    const fixture = fakeFs({});
+    const fixture = fakeFs({ other: { cwd: "/unrelated" } });
     const index = new SessionCwdIndex({ sessionsRoot: "/sessions", fs: fixture.fs });
-    await index.ensureLoaded();
     fixture.states.set("external", {
       sessionId: "external",
       cwd: "/repo",
@@ -76,13 +75,13 @@ describe("SessionCwdIndex", () => {
       mainRootId: "r1",
       status: "confirmed",
     });
-    expect(fixture.counts).toEqual({ readdir: 1, readFile: 1, stat: 1 });
+    expect(fixture.counts).toEqual({ readdir: 0, readFile: 1, stat: 1 });
     expect(await index.lookup("external")).toMatchObject({ workspaceRoot: "/worktree" });
-    expect(fixture.counts).toEqual({ readdir: 1, readFile: 1, stat: 1 });
+    expect(fixture.counts).toEqual({ readdir: 0, readFile: 1, stat: 1 });
   });
 
   test("a synchronous cold miss reads exactly one externally-created Session state", async () => {
-    const fixture = fakeFs({});
+    const fixture = fakeFs({ other: { cwd: "/unrelated" } });
     const syncCounts = { readFile: 0, stat: 0 };
     const state: SessionCwdIndexState = {
       sessionId: "external-sync",
@@ -105,7 +104,6 @@ describe("SessionCwdIndex", () => {
       fs: fixture.fs,
       syncFs,
     });
-    await index.ensureLoaded();
 
     expect(index.lookupCached("external-sync")).toBeUndefined();
     expect(index.refreshSync("external-sync")).toEqual({
@@ -119,6 +117,42 @@ describe("SessionCwdIndex", () => {
     expect(syncCounts).toEqual({ readFile: 1, stat: 1 });
     expect(index.lookupCached("external-sync")?.workspaceRoot).toBe("/worktree");
     expect(syncCounts).toEqual({ readFile: 1, stat: 1 });
+    expect(fixture.counts).toEqual({ readdir: 0, readFile: 0, stat: 0 });
+    expect(() => index.refreshSync("wrong-binding")).toThrow("Cannot verify persisted Session");
+    expect(index.lookupCached("wrong-binding")).toBeUndefined();
+    expect(() => index.refreshSync("..")).toThrow("Invalid session id");
+  });
+
+  test("a current SQLite candidate proves a legacy cwd with one read and a stale row proves nothing", async () => {
+    const fixture = fakeFs({ witness: { cwd: "/legacy" }, unrelated: { cwd: "/other" } });
+    const index = new SessionCwdIndex({ sessionsRoot: "/sessions", fs: fixture.fs });
+    expect(await index.findPersistedCwdWitness("/legacy", ["witness"])).toBe("witness");
+    expect(fixture.counts).toEqual({ readdir: 0, readFile: 1, stat: 1 });
+    fixture.states.delete("witness");
+    expect(await index.findPersistedCwdWitness("/legacy", ["witness"])).toBeUndefined();
+  });
+
+  test("a bulk reverse lookup cannot overwrite an intervening run or deletion", async () => {
+    const fixture = fakeFs({ old: { cwd: "/old" }, gone: { cwd: "/gone" } });
+    let release: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const read = fixture.fs.readFile;
+    fixture.fs.readFile = async (file, encoding) => {
+      const state = await read(file, encoding);
+      await pending;
+      return state;
+    };
+    const index = new SessionCwdIndex({ sessionsRoot: "/sessions", fs: fixture.fs });
+    const scanning = index.ensureLoaded();
+    await Promise.resolve();
+    index.upsert("old", { cwd: "/new" });
+    index.forget("gone");
+    release!();
+    await scanning;
+    expect(index.lookupCached("old")?.cwd).toBe("/new");
+    expect(index.lookupCached("gone")).toBeUndefined();
   });
 
   test("refresh reads one state file and workspace updates never rescan", async () => {

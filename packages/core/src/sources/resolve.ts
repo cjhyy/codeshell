@@ -37,7 +37,14 @@ export interface EffectiveSourceAccess {
   credentialRevision?: string;
 }
 
+export interface SourceCredentialDecision {
+  available: boolean;
+  revision?: string;
+}
+
 export interface ResolveSourceAccessInput {
+  /** A native-owned metadata decision for each exact saved binding. */
+  credentialDecision?: (definition: SourceDefinition) => SourceCredentialDecision;
   cwd: string;
   settings: SettingsManager;
   credentialStatus: CredentialStatusFn;
@@ -77,6 +84,7 @@ export function resolveEffectiveSourceAccess(
     // Historical demo definitions must not appear in prompts or become readable
     // in a host. Keep the adapter available to isolated regression fixtures only.
     if (definition?.kind === "mock" && process.env.NODE_ENV !== "test") return [];
+    const decision = definition?.credentialRef ? input.credentialDecision?.(definition) : undefined;
     return [
       {
         sourceId: binding.sourceId,
@@ -85,10 +93,19 @@ export function resolveEffectiveSourceAccess(
         scopes: binding.scopes,
         readPolicy: binding.readPolicy,
         ...(binding.priority ? { priority: binding.priority } : {}),
-        status: statusOf(definition, input.credentialStatus, input),
+        status:
+          decision && definition
+            ? definition.enabled && decision.available
+              ? "ok"
+              : "unavailable"
+            : statusOf(definition, input.credentialStatus, input),
         ...(definition ? { definition } : {}),
         ...(definition?.kind === "link"
-          ? { credentialRevision: linkSourceAuthorityRevision(definition, input) }
+          ? {
+              credentialRevision: decision
+                ? decision.revision
+                : linkSourceAuthorityRevision(definition, input),
+            }
           : {}),
       } satisfies EffectiveSourceAccess,
     ];

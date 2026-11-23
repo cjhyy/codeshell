@@ -238,6 +238,7 @@ if (process.env.CODESHELL_LINK_ACCOUNT_ACCESS_FIXTURE !== "1") {
     const sender = new Contents();
     const event = { sender, senderFrame: sender.mainFrame };
     const native = registerRemoteLinkIpc({
+      withCaller: (_event, work) => work(),
       ipcMain: { handle: (name, handler) => void handlers.set(name, handler) },
       requireRendererProjectPath: async (path) => {
         if (path !== cwd) throw new Error("Unexpected project");

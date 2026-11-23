@@ -45,6 +45,20 @@ function message(id, kind = "assistant", text = id) {
 function state(messages = [message("a")], extra = {}) {
   return JSON.stringify({ messages, snapshotSeq: 4, activeGoal: { goalId: "goal-1" }, ...extra });
 }
+test("withdrawn Host cache edits cannot create or delete cached or legacy content", async () => {
+  const { cache } = fixture();
+  const revoked = new Int32Array(new SharedArrayBuffer(4));
+  Atomics.store(revoked, 0, -1);
+  const input = { ...key, value: state(), legacy: true };
+  await expect(cache.commitWrite(input, revoked)).rejects.toThrow("revoked");
+  expect((await cache.read(key)).value).toBeNull();
+  const grant = new Int32Array(new SharedArrayBuffer(4));
+  await cache.commitWrite(input, grant);
+  expect(Atomics.load(grant, 0)).toBe(1);
+  await expect(cache.commitDelete(key, revoked)).rejects.toThrow("revoked");
+  expect(JSON.parse((await cache.read(key)).value).messages).toEqual([message("a")]);
+});
+
 afterEach(async () => {
   // close() drains and terminates each real worker so none keeps Node alive.
   await Promise.all(caches.splice(0).map((cache) => cache.close()));

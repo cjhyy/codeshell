@@ -55,6 +55,21 @@ describe("plugin hook approval", () => {
     );
   }
 
+  test("checks the initiating document before persisting either trust transition", () => {
+    writeEntry({ hookDigest: pluginHooksDigest(installPath) });
+    const registry = () => JSON.stringify(readInstalledPlugins());
+    const reject = () => {
+      throw Error("Document revoked");
+    };
+    const before = registry();
+    expect(() => approvePluginHooks("demo@local", reject)).toThrow("Document revoked");
+    expect(registry()).toBe(before);
+    approvePluginHooks("demo@local");
+    const accepted = registry();
+    expect(() => revokePluginHooks("demo@local", reject)).toThrow("Document revoked");
+    expect(registry()).toBe(accepted);
+  });
+
   test("approves a pending install digest and revoke returns it to pending", () => {
     const hookDigest = pluginHooksDigest(installPath);
     writeEntry({ hookDigest });

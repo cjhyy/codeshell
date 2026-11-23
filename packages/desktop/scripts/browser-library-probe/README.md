@@ -37,8 +37,7 @@ bun run --cwd packages/desktop/scripts/browser-library-probe probe
 The runner creates a temporary directory, copies the probe there, and installs
 the exact `puppeteer-core@23.7.1` dependency with Bun. Its lockfile, dependencies,
 and fixture profile remain in that printed directory for inspection. No root
-package manifest or lockfile is changed. The existing repository Electron
-`33.4.11` binary runs the fixture. No user application is launched or reloaded.
+package manifest or lockfile is changed. The fixture runs under the Electron version pinned by the Desktop workspace. No user application is launched or reloaded.
 Installation is bounded to 120 seconds and the Electron stage to 60 seconds.
 Interruptions and timeouts terminate the spawned process group, including
 fixture helper processes on macOS/Linux.
@@ -102,7 +101,8 @@ for the current source paths, permissions, rollout requirements and Chrome smoke
 
 Official `ExtensionTransport` remains experimental. The Electron facade is
 maintained by CodeShell and is not an official upstream Electron integration.
-Puppeteer 23.7.1 and Electron 33.4.11 are the tested combination. The upstream
+The production regression has run on macOS arm64 with Puppeteer 23.7.1 and
+Electron 45.4.1, including both target windows and their screenshot checks. The upstream
 synthetic tab-session resume is rejected as an unknown child session and tolerated
 by this version; no private session name is hard-coded. Upgrading either library
 requires repeating the production regression. The historical offscreen result

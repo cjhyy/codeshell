@@ -31,7 +31,7 @@ interface Entry {
   abort: () => void;
   retiring?: Promise<boolean>;
 }
-/** Explicit Main-only Cloud operations. Construction never connects or loads credentials. */
+/** Owns Cloud project grants and serializes project operations for each reviewed account/target. */
 export class CloudManagementManager {
   private closed = false;
   private readonly shutdown = new AbortController();

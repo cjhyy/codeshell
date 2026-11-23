@@ -315,6 +315,7 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
         optionalProjectConfigurationTarget(
           mcpEffectiveProjectPath(scope, settingsProjectPath, activeProjectPath),
         ),
+        scope,
       );
       if (!mounted.current) return;
       setProbes((prev) => {
@@ -518,6 +519,7 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
         optionalProjectConfigurationTarget(
           mcpEffectiveProjectPath(scope, settingsProjectPath, activeProjectPath),
         ),
+        scope,
       );
       if (mounted.current) setProbes((prev) => ({ ...prev, [s.name]: r }));
     } catch (cause) {
