@@ -482,17 +482,18 @@ export class CloudAccountManager {
   }
   private async prepare(origin: string, authorized: () => boolean) {
     requireOrigin(origin);
+    // An unusable keyring must leave the saved session's expiry, relay activation
+    // and in-flight refresh untouched: nothing has replaced that session yet.
     const loading = this.load();
+    if (loading) await loading;
+    const preflight = this.deps.store.preflight();
+    if (preflight) await preflight;
+    if (this.disposed || !authorized()) throw new Error("云账号操作已取消。");
     this.invalidate();
     this.githubConnection = undefined;
     const generation = this.generation;
     const signal = this.operation.signal;
     try {
-      if (loading) await loading;
-      this.current(generation, authorized);
-      const preflight = this.deps.store.preflight();
-      if (preflight) await preflight;
-      this.current(generation, authorized);
       this.publish("signing-in");
       await this.retire(this.saved);
       this.current(generation, authorized);

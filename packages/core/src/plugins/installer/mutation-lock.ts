@@ -12,7 +12,10 @@ export async function withLocalPluginMutation<T>(name: string, run: () => Promis
   mkdirSync(locks, { recursive: true, mode: 0o700 });
   const key = createHash("sha256").update(name.normalize("NFC").toLowerCase()).digest("hex");
   const target = join(locks, key);
-  const options = { realpath: false, stale: 30_000 };
+  // A stalled event loop (system sleep during a clone) can let another process
+  // take the lease. The default handler throws from a timer and kills the Host.
+  let lost = false;
+  const options = { realpath: false, stale: 30_000, onCompromised: () => void (lost = true) };
   let release: () => void | Promise<void>;
   try {
     // In the uncontended case an uninstall must detach before the caller can reuse the name.
@@ -28,6 +31,9 @@ export async function withLocalPluginMutation<T>(name: string, run: () => Promis
   try {
     return await run();
   } finally {
-    await release();
+    // A lost lease belongs to its new holder; there is nothing left to release.
+    await Promise.resolve()
+      .then(release)
+      .catch((error) => lost || Promise.reject(error));
   }
 }

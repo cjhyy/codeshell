@@ -19,6 +19,7 @@ export class HostScheduler {
   constructor(
     port: MessagePort,
     private readonly engines: Pick<HostAutomationRuns, "run">,
+    private readonly startRetryDelays: readonly number[] = [500, 2000, 5000],
   ) {
     this.storage = new CronPeer(nodeCronPort(port), async (method, input, signal) => {
       const native = this.native;
@@ -75,7 +76,7 @@ export class HostScheduler {
     this.native = new CronPeer(port, () => {
       throw Error("Unexpected native request");
     });
-    this.ready = this.storage.call("start", undefined);
+    this.ready = this.start();
     for (const wake of this.awaitingBind) wake();
     const native = this.native;
     void this.ready
@@ -83,7 +84,21 @@ export class HostScheduler {
       .catch((e) => {
         console.error("[Desktop Host] Scheduler failed to start", e);
         native.close();
+        // Leave the rejected start for waiting commands, but accept another adapter.
+        if (this.native === native) this.native = undefined;
       });
+  }
+  /** A contended store lock or an unreadable receipt file at startup is usually brief.
+   * Storage start is idempotent; all attempts fit inside Main's startup wait. */
+  private async start() {
+    for (const delay of [...this.startRetryDelays, undefined]) {
+      try {
+        return await this.storage.call("start", undefined);
+      } catch (error) {
+        if (delay === undefined || this.closing) throw error;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
   }
   async command(cmd: CronCommand, permit: Int32Array, signal: AbortSignal) {
     signal.throwIfAborted();

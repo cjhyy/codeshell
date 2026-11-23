@@ -1505,3 +1505,24 @@ test("logout while the asynchronous keyring is protecting a rotated grant retire
   expect(manager.status()).toEqual({ state: "signed-out" });
   manager.dispose();
 });
+test("a sign-in rejected by keyring preflight leaves the saved session's relay activation valid", async () => {
+  const saved = grant();
+  const activating = deferred<void>();
+  let stillAuthorized: (() => boolean) | undefined;
+  const ctx = setup(saved, undefined, undefined, undefined, async (_identity, authorized) => {
+    stillAuthorized = authorized;
+    await activating.promise;
+  });
+  const resumed = ctx.manager.resume();
+  await settleConnection();
+  expect(stillAuthorized?.()).toBe(true);
+  ctx.unavailable();
+  await expect(
+    ctx.manager.signIn("login", { origin, username: "alice", password: "long password here" }),
+  ).rejects.toThrow("keyring");
+  expect(stillAuthorized?.()).toBe(true);
+  expect(ctx.manager.status().state).toBe("signed-in");
+  expect(ctx.requests).toHaveLength(0);
+  activating.resolve();
+  await resumed;
+});

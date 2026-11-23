@@ -52,7 +52,11 @@ export class StorageDatabase {
       this.exec("COMMIT");
       return result;
     } catch (error) {
-      this.exec("ROLLBACK");
+      // SQLite has already ended the transaction after errors such as SQLITE_FULL
+      // or SQLITE_IOERR. The caller classifies availability from the original code.
+      try {
+        this.exec("ROLLBACK");
+      } catch {}
       throw error;
     }
   }

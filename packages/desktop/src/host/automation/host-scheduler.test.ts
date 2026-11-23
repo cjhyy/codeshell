@@ -85,3 +85,70 @@ test("closing an unbound Host releases a waiting workbench", async () => {
     channel.port2.close();
   }
 });
+
+test("a storage start that fails once is retried and brings the scheduler online", async () => {
+  const storageChannel = new MessageChannel();
+  let starts = 0;
+  const storage = new CronPeer(nodeCronPort(storageChannel.port2), (method) => {
+    if (method === "start" && ++starts === 1) throw Error("cron store is locked");
+    return method === "command" ? [] : true;
+  });
+  const scheduler = new HostScheduler(storageChannel.port1, engines, [1]);
+  const nativeChannel = new MessageChannel();
+  const online = Promise.withResolvers<void>();
+  const native = new CronPeer(nodeCronPort(nativeChannel.port2), (method) => {
+    if (method === "online") online.resolve();
+    return true;
+  });
+  try {
+    scheduler.bind(nodeCronPort(nativeChannel.port1), "");
+    await online.promise;
+    expect(starts).toBe(2);
+    expect(
+      await scheduler.command(
+        { method: "list", input: undefined },
+        permit(),
+        new AbortController().signal,
+      ),
+    ).toEqual([]);
+  } finally {
+    await scheduler.close();
+    native.close();
+    storage.close();
+  }
+});
+
+test("a scheduler whose start keeps failing accepts a replacement native adapter", async () => {
+  const storageChannel = new MessageChannel();
+  let failing = true;
+  const storage = new CronPeer(nodeCronPort(storageChannel.port2), (method) => {
+    if (method === "start" && failing) throw Error("cron store is locked");
+    return method === "command" ? [] : true;
+  });
+  const scheduler = new HostScheduler(storageChannel.port1, engines, []);
+  const first = new MessageChannel();
+  const closed = Promise.withResolvers<void>();
+  const firstNative = new CronPeer(
+    nodeCronPort(first.port2),
+    () => true,
+    () => closed.resolve(),
+  );
+  const second = new MessageChannel();
+  const online = Promise.withResolvers<void>();
+  const secondNative = new CronPeer(nodeCronPort(second.port2), (method) => {
+    if (method === "online") online.resolve();
+    return true;
+  });
+  try {
+    scheduler.bind(nodeCronPort(first.port1), "");
+    await closed.promise;
+    failing = false;
+    scheduler.bind(nodeCronPort(second.port1), "");
+    await online.promise;
+  } finally {
+    await scheduler.close();
+    firstNative.close();
+    secondNative.close();
+    storage.close();
+  }
+});

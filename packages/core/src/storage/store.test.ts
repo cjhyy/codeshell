@@ -151,3 +151,18 @@ test("worker startup failure and an incapable storage root leave JSON callers in
   expect(badRoot.mode).toBe("json");
   expect(await readFile(root, "utf8")).toBe("a file, not a directory");
 });
+
+test("a transaction SQLite already rolled back reports the original failure", async () => {
+  const { StorageDatabase } = await import("./driver.js");
+  const full = Object.assign(new Error("database or disk is full"), { code: "SQLITE_FULL" });
+  const db = new StorageDatabase({
+    exec(sql: string) {
+      if (sql === "ROLLBACK") throw new Error("cannot rollback - no transaction is active");
+    },
+    prepare() {
+      throw full;
+    },
+    close() {},
+  });
+  expect(() => db.transaction(() => db.run("INSERT INTO t VALUES (1)"))).toThrow(full);
+});
