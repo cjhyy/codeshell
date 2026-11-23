@@ -161,10 +161,8 @@ export function applyTurnComplete(
   //    completed main turn means no foreground subagent is legitimately
   //    still running — a leftover done:false agent is an orphan whose
   //    agent_end was dropped/raced (worker died, or agent_end arrived with
-  //    no matching agent_start index). Without this sweep that orphan keeps
-  //    `runningAgents` > 0 forever, so "后台 N 个子代理运行中…" sticks after
-  //    the turn ends. (#4 stuck background count) A genuinely-backgrounded
-  //    agent reports separately via background_agent_completed.
+  //    no matching agent_start index). A background agent can finish later
+  //    and report separately via background_agent_completed.
   const cleanSweep = event.reason === "completed";
   const msgs = withTurnTiming(state.messages, event, now()).slice();
   const nextActiveAgents = { ...state.activeAgents };

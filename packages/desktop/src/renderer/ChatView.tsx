@@ -196,10 +196,6 @@ interface Props {
    *  Replaces the old per-item promote — the user wants everything they queued
    *  to land in the next turn, not one message per turn. */
   onGuideQueuedInput?: () => void;
-  /** Count of background sub-agents still running in this session. Shown as a
-   *  separate "后台 N 个子代理运行中" hint even after busy clears (run_in_background
-   *  resolves the main run immediately while children keep working). */
-  runningAgents?: number;
   activeProjectId: string | null;
   onAskUserAnswer?: AskUserAnswerHandler;
   /** Keep a question open on a non-local runtime; defaults to the local worker. */
@@ -454,7 +450,6 @@ export function ChatView({
   onClearQueuedInput,
   onRemoveQueuedInput,
   onGuideQueuedInput,
-  runningAgents = 0,
   activeProjectId,
   onAskUserAnswer,
   onKeepWaitingQuestion,
@@ -2628,15 +2623,6 @@ export function ChatView({
               }}
             />
 
-            {runningAgents > 0 && (
-              // Codex-style low-contrast status line: muted grey text, the small
-              // pulsing dot keeps the running color so it still reads as "active"
-              // without the whole line looking like a blue link (TODO 2.7).
-              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-running" />
-                <span>{t("chat.composer.runningAgents", { count: runningAgents })}</span>
-              </div>
-            )}
             {compacting && (
               <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Loader2 size={12} className="animate-spin" />
