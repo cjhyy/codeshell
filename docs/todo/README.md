@@ -7,10 +7,12 @@
 
 ## 仍有明确后续的设计
 
-> 2026-10-08：补录[本地统一任务中心](../superpowers/specs/2026-09-01-local-task-center-design.md)，设计完成、尚待开发；[实施计划](../superpowers/plans/2026-09-01-local-task-center.md)保留分批验收。云端最新状态以[总实施清单](project-cloud-panels-plan.md)顶部检查点为准。
+> 2026-10-08 已实施本地桌面任务中心，范围及本地 Electron 验证见[原设计的实现补充](../superpowers/specs/2026-09-01-local-task-center-design.md)和[实施记录](../superpowers/plans/2026-09-01-local-task-center.md)。云端最新状态以[总实施清单](project-cloud-panels-plan.md)顶部检查点为准。
 
 | 文档                                                                                                                                         | 当前状态与剩余范围                                                                                                        |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [桌面任务中心 Focus](task-center-focus-design.md) | 设计完成，待实施。分批交付跨会话事项与进度、按事项对账、仅在可见时运行的模型摘要。 |
+| [0.12 桌面 Host 与存储迁移](desktop-host-runtime-and-storage-0.12.md) | 设计稿。实施顺序、与第 17 章的对照、进程迁移和数据兼容验收见正文。 |
 | [电脑 Web 手机与云端统一工作台](unified-desktop-web-mobile-workbench-plan.md) | 2026-10-09 整体规划；统一目录、选择性共享、三端操作与云端委派电脑尚待分期实施，复用已实现的本地 task-inbox 与设备中继 |
 | [独立 Link Server](link-server-oauth-architecture.md)                                                                                        | 独立服务与双向 OAuth 已实现并通过受控上游验证；真实账号、正式发布与生产部署仍待验收                                                       |
 | [Server 全流程优化首轮](server-flow-optimization-20261027.md) | 认证热路径、静态传输、关闭竞态与原生 CI 门禁已修复；本地 2012 项回归通过，部署性能与跨平台候选验收另列 |
