@@ -57,7 +57,24 @@ const fixtures = [
   "ui/NotificationHistory.browser.fixture.mjs",
 ];
 
-for (const fixture of fixtures) {
+// `--part 2/3` runs every third fixture starting at the second. Parts are assigned by
+// list position, so the parts of one total cover each fixture exactly once and stay
+// close in size when fixtures are added. Without it every fixture runs.
+function selectPart(argv) {
+  if (!argv.length) return fixtures;
+  const match = argv.length === 2 && argv[0] === "--part" && /^([1-9])\/([1-9])$/.exec(argv[1]);
+  const [index, total] = match ? [Number(match[1]), Number(match[2])] : [0, 0];
+  if (!match || index > total)
+    throw new Error("usage: test-responsive-overlays.mjs [--part <n>/<total>]");
+  return fixtures.filter((_, position) => position % total === index - 1);
+}
+if (new Set(fixtures).size !== fixtures.length) throw new Error("duplicate overlay fixture");
+const selected = selectPart(process.argv.slice(2));
+console.log(`overlay fixtures: ${selected.length} of ${fixtures.length}`);
+
+const timings = [];
+for (const fixture of selected) {
+  const started = Date.now();
   const entry = fileURLToPath(new URL(`../src/renderer/${fixture}`, import.meta.url));
   const child = spawn(process.execPath, [isolatedRunner, entry], { stdio: "inherit" });
   const { code, signal } = await new Promise((resolve, reject) => {
@@ -65,4 +82,8 @@ for (const fixture of fixtures) {
     child.once("close", (code, signal) => resolve({ code, signal }));
   });
   if (code !== 0 || signal) throw new Error(`${fixture} failed (${signal ?? code})`);
+  timings.push([Math.round((Date.now() - started) / 1000), fixture]);
 }
+// Seconds per fixture, slowest first: the evidence for rebalancing parts.
+for (const [seconds, fixture] of timings.sort((a, b) => b[0] - a[0]))
+  console.log(`${String(seconds).padStart(5)}s  ${fixture}`);

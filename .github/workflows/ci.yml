@@ -122,7 +122,7 @@ jobs:
     name: tests (${{ matrix.shard }})
     runs-on: ubuntu-latest
     # A hung test process must fail the shard instead of holding it for GitHub's
-    # 6-hour default. The slowest shard (desktop-ui) takes about 42 minutes.
+    # 6-hour default. The browser fixtures run in the desktop-ui job below.
     timeout-minutes: 60
     strategy:
       # One shard's failure must not cancel the others: a red CI should show
@@ -270,10 +270,6 @@ jobs:
             # 34 files. Bound every Panel group below; lint:test-shards checks exact
             # coverage and budgets while lifecycle diagnostics remain enabled.
             ignore: "--path-ignore-patterns '**/server/src/indexed-disk-sessions.test.ts' --path-ignore-patterns '**/server/src/session-history-index.test.ts' --path-ignore-patterns '**/server/src/panels/**' --path-ignore-patterns '**/server/src/account/**' --path-ignore-patterns '**/web/src/account/**' --path-ignore-patterns '**/web/app/WebsiteEntry.test.tsx' --path-ignore-patterns '**/web/app/WebsiteDestinations.test.tsx' --path-ignore-patterns '**/web/app/DesktopRemoteAccess.test.tsx' --path-ignore-patterns '**/web/app/website-devices.test.ts' --path-ignore-patterns '**/web/app/passkey-browser.test.ts' --path-ignore-patterns '**/web/app/admin-data.test.ts' --path-ignore-patterns '**/web/app/ProcessActivity.test.tsx' --path-ignore-patterns '**/web/app/processActivityProjection.test.ts'"
-          # Browser fixtures, not a Bun shard. The overlay and Web suites took 28 of the
-          # desktop shard's 44 minutes (2026-10-22) and share nothing with its Bun tests,
-          # so they run beside it instead of after it.
-          - shard: desktop-ui
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -282,9 +278,9 @@ jobs:
       # Real background-service fixtures must execute a security-patched Node.
       # Keep the unrelated renderer UI shard on its existing compatibility version.
       - uses: actions/setup-node@v7
-        if: matrix.shard == 'desktop' || matrix.shard == 'desktop-ui' || matrix.shard == 'rest-server'
+        if: matrix.shard == 'desktop' || matrix.shard == 'rest-server'
         with:
-          node-version: ${{ matrix.shard == 'desktop-ui' && '22.16.0' || '24.22.1' }}
+          node-version: "24.22.1"
       - name: install
         run: bun install --frozen-lockfile
       # Real conversion and cancellation tests require the same command-line
@@ -301,7 +297,7 @@ jobs:
       # The runner's /usr/bin/chromium has repeatedly stalled at --version or
       # before exposing its debugging endpoint, before test assertions run.
       - name: install locked desktop test browser
-        if: matrix.shard == 'desktop' || matrix.shard == 'desktop-ui'
+        if: matrix.shard == 'desktop'
         working-directory: packages/desktop
         run: |
           node node_modules/playwright/cli.js install --with-deps chromium
@@ -394,52 +390,6 @@ jobs:
           bun_suites=$(git grep -L 'from "node:test"' -- 'packages/desktop/scripts/*.test.mjs')
           node scripts/run-isolated-node-smoke.mjs --test $node_suites
           node scripts/run-bun-test-shard.mjs --timeout 30000 $bun_suites
-      - name: test responsive overlays and settings menus
-        if: matrix.shard == 'desktop-ui'
-        run: bun run --cwd packages/desktop test:ui:overlays
-      - name: test Web navigation, conversations and settings recovery
-        if: matrix.shard == 'desktop-ui'
-        run: |
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-account-features-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-desktop-login-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-passkeys-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-destinations-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-onboarding-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-selected-computer-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-admin-console-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-answer-copy-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-navigation.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-remote-session-navigation-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-back-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-back-browser.mjs --development
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs --development
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs --immediate-configuration
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs --development --immediate-configuration
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-panel-project-switcher-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-panel-project-switcher-browser.mjs --development
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-panel-directory-picker-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-panel-directory-picker-browser.mjs --development
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-settings-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-skills-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-model-actions-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs --development
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-transcript-window-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-remote-queue-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-cli-session-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-history-details-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-compact-tool-progress-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-compact-tool-progress-browser.mjs --development
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mcp-settings-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-history-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-links-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-focus-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-devices-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-composer-parity-browser.mjs
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-polish-browser.mjs
       - name: test Hub Panel packages
         if: matrix.shard == 'rest-server'
         run: >-
@@ -590,6 +540,103 @@ jobs:
       - name: test browser inspector integration
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/browser-library/browser-inspector.integration.test.ts
+
+  # Browser fixtures, not a Bun shard. As one serial job they took about 39 minutes
+  # (26 for the overlay fixtures, 11 for the Web scripts) and set the length of the
+  # whole workflow. Each part starts its own browsers and shares nothing with the
+  # others, so they run side by side. The overlay runner assigns fixtures to parts
+  # by list position and refuses an unknown part, so every fixture runs exactly once.
+  desktop-ui:
+    name: desktop UI (${{ matrix.part }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [overlays 1/3, overlays 2/3, overlays 3/3, web]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.5"
+      # Keep the renderer UI fixtures on their existing compatibility version.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.16.0"
+      - name: install
+        run: bun install --frozen-lockfile
+      # Use the browser revision selected by the frozen Playwright dependency.
+      # The runner's /usr/bin/chromium has repeatedly stalled at --version or
+      # before exposing its debugging endpoint, before test assertions run.
+      - name: install locked desktop test browser
+        working-directory: packages/desktop
+        run: |
+          node node_modules/playwright/cli.js install --with-deps chromium
+          node -e "const fs = require('node:fs'); const browser = require('playwright').chromium.executablePath(); fs.accessSync(browser, fs.constants.X_OK); for (const key of ['CHROME_PATH', 'CODESHELL_TEST_CHROMIUM']) fs.appendFileSync(process.env.GITHUB_ENV, key + '=' + browser + '\n');"
+      - name: build workspace packages
+        run: bun run build
+      - name: test responsive overlays and settings menus
+        if: startsWith(matrix.part, 'overlays ')
+        env:
+          OVERLAY_PART: ${{ matrix.part }}
+        run: bun run --cwd packages/desktop test:ui:overlays --part "${OVERLAY_PART#overlays }"
+      - name: test Web navigation, conversations and settings recovery
+        if: matrix.part == 'web'
+        run: |
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-account-features-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-desktop-login-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-passkeys-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-destinations-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-onboarding-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-selected-computer-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-admin-console-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-answer-copy-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-navigation.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-remote-session-navigation-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-back-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-back-browser.mjs --development
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs --development
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs --immediate-configuration
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs --development --immediate-configuration
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-panel-project-switcher-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-panel-project-switcher-browser.mjs --development
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-panel-directory-picker-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-panel-directory-picker-browser.mjs --development
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-settings-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-skills-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-model-actions-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs --development
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-transcript-window-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-remote-queue-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-cli-session-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-history-details-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-compact-tool-progress-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-compact-tool-progress-browser.mjs --development
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mcp-settings-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-history-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-links-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-focus-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-devices-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-composer-parity-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-polish-browser.mjs
+
+  # main's ruleset requires a check with this exact name. It passes only when
+  # every desktop UI part passed.
+  desktop-ui-result:
+    name: tests (desktop-ui)
+    needs: desktop-ui
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: every desktop UI part passed
+        env:
+          RESULT: ${{ needs.desktop-ui.result }}
+        run: test "$RESULT" = success
 
   upload-documents:
     name: uploaded documents (Node ${{ matrix.node }})

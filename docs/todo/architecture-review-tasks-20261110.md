@@ -616,7 +616,7 @@ bun run test                  # 全部 CI 分片
 1. **审计证据的去向。** E3 删除前,348 MB 的 `evidence/` 要不要先存一份(独立仓库、bundle、release 附件),还是直接删。
 2. ~~arena 去留。~~ **已决定(2026-11-10):删除。** 见 R1。
 3. ~~cdp 的 legacy driver 去留。~~ **已决定(2026-11-10):删除。** 见 R2。
-4. **CI 关键路径是 `tests (desktop-ui)`。** 一次绿跑里它用了 40.2 分钟,其他所有 job 都在 11.3 分钟以内 [实测,run 42614455601]。其中 `test:ui:overlays` 单脚本 25.4 分钟,28 个 Web 浏览器脚本串行 9.5 分钟,安装浏览器 3.8 分钟。把这两步拆成两个并行 job,整轮 CI 约降到 30 分钟;要更短得把 overlays 脚本本身拆开。拆 job 会改变必需检查的名字,需要你同步改 ruleset。
+4. **已处理(2026-11-23):浏览器夹具拆成 4 个并行部分(overlays 3 组 + Web 1 组),用同名汇总检查 `tests (desktop-ui)` 保留 ruleset 要求的名字,不需要改 ruleset。** 原记录:CI 关键路径是 `tests (desktop-ui)`。 一次绿跑里它用了 40.2 分钟,其他所有 job 都在 11.3 分钟以内 [实测,run 42614455601]。其中 `test:ui:overlays` 单脚本 25.4 分钟,28 个 Web 浏览器脚本串行 9.5 分钟,安装浏览器 3.8 分钟。把这两步拆成两个并行 job,整轮 CI 约降到 30 分钟;要更短得把 overlays 脚本本身拆开。拆 job 会改变必需检查的名字,需要你同步改 ruleset。
 5. **main 的 CI 连续两次红在同一个 E2E 夹具**(见 0.4 第 12 条)。交给别的模型开 PR 之前最好先处理,否则每个 PR 都可能撞上。
 6. **分片预算贴顶。** rest-server 240/240 已满;desktop 已到预算,PR #332 为此又加了 4 条 ignore 和 1 个独立进程。是继续手工拆,还是改成按目录自动分批,需要你定。
 7. **core 公开入口 `.` 的范围。** 现在导出 692 个具名符号(340 个 value),其中 panel-apps 64、plugins 61、links 56、credentials 50、themes 26 [实测]。哪些是有意对外的 SDK,只有你能定。core 已发布到 npm。
