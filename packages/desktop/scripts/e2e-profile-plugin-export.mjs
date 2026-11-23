@@ -10,6 +10,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedViewOnlyWorkbench,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -88,6 +89,9 @@ require("node:https").request = withOwnedAccountDiscovery(deny);
 require("node:module").syncBuiltinESMExports();
 `,
   );
+  // Record the workspace decision before launch. A prompt that appears after the
+  // 2 s fallback wait below otherwise covers the sidebar on a slow runner.
+  await seedViewOnlyWorkbench(isolated, [project]);
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
