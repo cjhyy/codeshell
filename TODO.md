@@ -66,6 +66,10 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 
 ## 大功能升级（体量 L，分阶段落地）
 
+- [ ] **桌面任务中心 Focus（L，设计完成，待实施）。** ① 实现跨会话事项归组、验收进度和证据跳转。② 复用现有账本归集执行用量，处理父子去重、共享归属与缺失回执。③ 仅在 Focus 可见时生成有预算的摘要，单列分析用量。验收覆盖未打开零调用、跨窗口复用、关页取消和按事项对账。[Focus 技术方案](docs/todo/task-center-focus-design.md)
+
+- [ ] **0.12 桌面 Host 与存储迁移（L，方案待实施）。** 按批次验证任务首屏分页、端口授权、流式与取消链路和可重建的会话／任务索引，分别验收 0.11 降级和三平台实包。Focus 随对应查询能力接入。[Host 总体方案及实施顺序](docs/todo/desktop-host-runtime-and-storage-0.12.md)
+
 - **代码审查对标 Codex / Claude Code**（L，2026-10-17 首轮已落地）。继续实现 Host 授权的独立只读 reviewer、结构化 findings 校验与 diff 行位绑定、问题定位／选择修复／重审闭环，以及大范围完整分批审查。当前 Desktop 是按范围生成对话草稿，TUI 支持未提交／base／commit；只读要求仍是提示词约束，不代表工具权限隔离，也未完成模型审查准确率验收。
 
 - **Link 连接器契约与运行时重构**（L，2026-10-16 实施中）。首批增加统一 Operation 契约、五种 recipe、完整快照 CI 门禁、Figma 新旧动作分离、刷新消费错误分类、各入口状态回执、HTTP provider 注册抽取与跨会话未决写屏障；新记录按 recipe 建立，旧连接可由精确离线工具清理。剩余纯领域 helpers/CLI/MCP/verified-write 的完整迁出、在线清理收口、正式契约包与部署兼容验收。同步/Webhook/浏览器会话继续后置。见[重构方案](docs/todo/link-connector-refactor-plan-2026-10-16.md)与[准确实施边界](docs/todo/link-connector-refactor-delivery-2026-10-16.md)。
