@@ -8,7 +8,7 @@ breaking.
 
 ## [Unreleased]
 
-## [0.12.0-rc.1]
+## [0.12.0-rc.1] - 2026-11-23
 
 Desktop moves to Electron 45.4.1. macOS 13.5 or newer is required for both
 Apple Silicon and Intel. Users on earlier macOS versions stay on the 0.11
