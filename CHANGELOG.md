@@ -8,6 +8,30 @@ breaking.
 
 ## [Unreleased]
 
+## [0.12.0-rc.2] - 2026-11-24
+
+Same requirements and upgrade notes as 0.12.0-rc.1.
+
+### Fixed
+
+- A new session no longer asks to recover its history after the first
+  message. The workbench now waits for the session to be ready, including a
+  slow Claude Code or Codex start, instead of treating the first read as
+  damaged history and blocking input.
+- The execution process card keeps its expanded or collapsed state when
+  subagent transcripts refresh.
+
+### Changed
+
+- Queued follow-ups show their attachments: image thumbnails you can zoom
+  and file chips under the message text. While a turn runs, a note says the
+  attachments go out after it ends.
+- Chat, settings and panel tabs use thin, theme-aware native scrollbars. On
+  macOS the app defaults to scrolling-only indicators unless you chose a
+  system preference.
+- The composer no longer shows a background subagent count. Each agent
+  still reports progress in the transcript.
+
 ## [0.12.0-rc.1] - 2026-11-23
 
 Desktop moves to Electron 45.4.1. macOS 13.5 or newer is required for both
