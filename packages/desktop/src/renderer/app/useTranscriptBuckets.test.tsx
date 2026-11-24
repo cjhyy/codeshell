@@ -1217,6 +1217,50 @@ describe("transcript history hydration after a background resume", () => {
     );
   });
 
+  test("a read the Host withdrew while a new session gained its window is retried, not failed", async () => {
+    initial = {};
+    let reads = 0;
+    readSnapshot = async () => {
+      // A first send claims the unowned session while hydration reads it.
+      if (++reads === 1) throw new Error("Desktop Host authority was revoked (-32010)");
+      return {
+        nextSeq: 2,
+        topLevelRunning: false,
+        events: [
+          {
+            seq: 1,
+            event: { type: "stream_request_start", turnNumber: 1, messageId: "claimed" },
+          },
+        ],
+      };
+    };
+    hook = await renderHook(useHarness);
+    expect(hook.result.current.historyFailed).toBe(false);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      await flushMicrotasks();
+    });
+    expect(reads).toBe(2);
+    expect(hook.result.current.historyFailed).toBe(false);
+    expect(hook.result.current.historyLoading).toBe(false);
+  });
+
+  test("a non-revocation snapshot failure is not retried", async () => {
+    initial = {};
+    let reads = 0;
+    readSnapshot = async () => {
+      reads++;
+      throw new Error("worker connection unavailable");
+    };
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      await flushMicrotasks();
+    });
+    expect(reads).toBe(1);
+    expect(hook.result.current.historyFailed).toBe(true);
+  });
+
   test("a switched-away recovery completes only its retained raw tail in the background", async () => {
     initial = {};
     const snapshot = deferred<SessionSnapshot>();

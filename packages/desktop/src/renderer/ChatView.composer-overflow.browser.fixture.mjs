@@ -380,8 +380,11 @@ try {
           if (options.queueCount)
             assert.equal(
               await page
-                .locator(".cs-chat-composer-wrap button[aria-label]")
-                .filter({ hasText: options.lang === "zh" ? "删除" : "Delete" })
+                .locator(
+                  options.lang === "zh"
+                    ? '.cs-chat-composer-wrap button[aria-label^="删除第"]'
+                    : '.cs-chat-composer-wrap button[aria-label^="Delete follow-up change #"]',
+                )
                 .count(),
               12,
               "All queued items remain rendered",

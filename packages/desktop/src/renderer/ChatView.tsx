@@ -17,7 +17,6 @@ import {
   FileText,
   Square,
   Plug,
-  Trash2,
   X,
 } from "lucide-react";
 import { MessageStream, type ContextPackageCreatedHandler } from "./MessageStream";
@@ -29,6 +28,7 @@ import { GoalToggle } from "./chat/GoalToggle";
 import { GoalBar } from "./chat/GoalBar";
 import { ModelPill, type ModelOption } from "./chat/ModelPill";
 import { Lightbox, type LightboxItem } from "./chat/Lightbox";
+import { QueuedInputCard, type QueuedInputPreview } from "./chat/QueuedInputCard";
 import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { WelcomeSuggestions } from "./chat/WelcomeSuggestions";
@@ -50,7 +50,6 @@ import {
   ATTACHMENT_LIMITS,
   buildAttachments,
   buildPathAttachment,
-  decodeWireForDisplay,
   encodeAttachmentsForWire,
   filesFromClipboard,
   CODESHELL_PATH_DND_MIME,
@@ -189,7 +188,7 @@ interface Props {
   busy: boolean;
   compacting?: boolean;
   queuedInputCount?: number;
-  queuedInputItems?: string[];
+  queuedInputItems?: readonly (string | QueuedInputPreview)[];
   onClearQueuedInput?: () => void;
   onRemoveQueuedInput?: (index: number) => void;
   /** Interrupt the current turn and send the ENTIRE queue at once (merged).
@@ -1918,20 +1917,6 @@ export function ChatView({
     queuedInputItems.length,
   ]);
 
-  // Show ALL queued items, not a 2-item slice — the old slice(0, 2) is what
-  // made 引导 look like it "只能打断 2 句": only the first two ever rendered a
-  // button, the rest hid behind a "+N" footer. Guide now drains the whole
-  // queue at once anyway, so the list is purely a preview of what will send.
-  const queuedPreviewItems = queuedInputItems.map((item) => {
-    const decoded = decodeWireForDisplay(item);
-    const text =
-      decoded.text ||
-      (decoded.images.length > 0
-        ? t("chat.composer.imagesPlaceholder", { count: decoded.images.length })
-        : item);
-    return text.length > 180 ? `${text.slice(0, 180)}...` : text;
-  });
-
   // Drop handlers live on the whole chat surface, not just the composer.
   // Users drag a screenshot into the window expecting it to "land" — having
   // to aim at a 50px-tall composer is annoying. The composer still gets a
@@ -2155,76 +2140,15 @@ export function ChatView({
               ))}
             </div>
           )}
-          {queuedInputItems.length > 0 && (
-            <div className="mb-2 rounded-2xl border border-border/80 bg-background/80 px-3 py-2 shadow-sm">
-              <div className="mb-1.5 flex items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <CornerDownRight size={14} />
-                  <span>{t("chat.queue.heading")}</span>
-                  <span className="text-xs font-normal tabular-nums">
-                    {queuedInputItems.length}
-                  </span>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  {busy && onGuideQueuedInput && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 gap-1 rounded-full px-2 text-xs text-muted-foreground"
-                      aria-label={t("chat.queue.guideAllAria")}
-                      title={t("chat.queue.guideAllTitle")}
-                      onClick={onGuideQueuedInput}
-                    >
-                      <CornerDownRight size={12} />
-                      <span>{t("chat.queue.guideAll")}</span>
-                    </Button>
-                  )}
-                  {onClearQueuedInput && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 rounded-full text-muted-foreground"
-                      aria-label={t("chat.queue.clearAria")}
-                      title={t("chat.queue.clearTitle")}
-                      onClick={onClearQueuedInput}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                {queuedPreviewItems.map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex min-w-0 items-start gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-sm text-foreground"
-                  >
-                    <div className="line-clamp-2 min-w-0 flex-1 whitespace-pre-wrap break-words">
-                      {item}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      {onRemoveQueuedInput && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 gap-1 rounded-full px-2 text-xs text-muted-foreground hover:bg-background"
-                          aria-label={t("chat.queue.removeItemAria", { index: i + 1 })}
-                          title={t("chat.queue.removeItemTitle")}
-                          onClick={() => onRemoveQueuedInput(i)}
-                        >
-                          <Trash2 size={12} />
-                          <span>{t("chat.queue.removeItem")}</span>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Show ALL queued items: guide drains the whole queue at once. */}
+          <QueuedInputCard
+            items={queuedInputItems}
+            busy={busy}
+            onGuide={onGuideQueuedInput}
+            onClear={onClearQueuedInput}
+            onRemove={onRemoveQueuedInput}
+            onZoom={(items, index) => setZoomed({ items, index })}
+          />
           {variant === "main" && activeGoal && (
             <GoalBar
               key={sendBucket ?? engineSessionId}

@@ -17,6 +17,7 @@ import {
   type SessionIndex,
 } from "../transcripts";
 import { subscribeSessionPersistenceFlush } from "../sessionPersistence";
+import { retryHostRevoked } from "./retryHostRevoked";
 import type { TranscriptsAction, TranscriptsMap } from "../transcriptsReducer";
 import { applyStreamEvent, INITIAL_STATE, type Message, type MessagesReducerState } from "../types";
 import {
@@ -433,7 +434,10 @@ export function useTranscriptBuckets({
               // read with journal replay, then join the live cursor last.
               await persistedRead;
               if (!canCommit()) throw new Error("Output recovery stopped");
-              return window.codeshell.subscribeSession(engineId, 0);
+              return retryHostRevoked(
+                () => window.codeshell.subscribeSession(engineId, 0),
+                canCommit,
+              );
             },
             canContinue: canCommit,
             latestObservedCursor: () =>
@@ -498,7 +502,10 @@ export function useTranscriptBuckets({
             snapshotLoaded = true;
             snapshotShowsRunning = snapshotHasUnfinishedTopLevelTurn(durable.snapshot);
           } else {
-            const snapshot = await window.codeshell.subscribeSession(engineId, 0);
+            const snapshot = await retryHostRevoked(
+              () => window.codeshell.subscribeSession(engineId, 0),
+              canCommit,
+            );
             if (!canCommit()) return;
             setHistoricalGaps((previous) => ({
               ...previous,
