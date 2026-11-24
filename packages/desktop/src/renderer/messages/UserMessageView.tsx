@@ -1,7 +1,8 @@
-import React, { memo, useEffect, useState } from "react";
+import React, { memo } from "react";
 import { extractAnnotations } from "../chat/anchors";
 import { decodeWireForDisplay } from "../chat/attachments";
 import type { LightboxItem } from "../chat/Lightbox";
+import { useAttachmentDataUrl } from "../chat/useAttachmentDataUrl";
 import { isSystemReminderText } from "../contextSelection";
 import { useT } from "../i18n/I18nProvider";
 import type { UserMessage } from "../types";
@@ -111,12 +112,6 @@ export const UserMessageView = memo(function UserMessageView({
   );
 });
 
-/** `<cwd>/.code-shell/attachments/<sessionId>/…` — the context Main authorizes reads by. */
-function attachmentReadContext(path: string): { cwd?: string; sessionId?: string } {
-  const match = /^(.*)[\\/]\.code-shell[\\/]attachments[\\/]([^\\/]+)[\\/]/u.exec(path);
-  return match ? { cwd: match[1] || "/", sessionId: match[2] } : {};
-}
-
 function AttachmentChip({
   attachment,
   loadImage,
@@ -127,26 +122,7 @@ function AttachmentChip({
   onZoom: Props["onZoom"];
 }) {
   const { t } = useT();
-  const [src, setSrc] = useState<string | null>(null);
-  const image = loadImage && attachment.kind === "image" && Boolean(attachment.absPath);
-  useEffect(() => {
-    if (!image) return;
-    let live = true;
-    const context = attachmentReadContext(attachment.absPath);
-    const sessionId = attachment.sessionId || context.sessionId;
-    void window.codeshell
-      ?.readImageDataUrl?.(attachment.absPath, {
-        ...(context.cwd ? { cwd: context.cwd } : {}),
-        ...(sessionId ? { sessionId } : {}),
-      })
-      .then((dataUrl) => {
-        if (live && dataUrl) setSrc(dataUrl);
-      })
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [image, attachment.absPath, attachment.sessionId]);
+  const src = useAttachmentDataUrl(attachment, loadImage);
   const name = attachment.originalName || t("chat.composer.imageFallbackName");
   if (!src)
     return (

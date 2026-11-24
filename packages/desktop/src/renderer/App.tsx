@@ -2703,9 +2703,10 @@ function App() {
                     busy={busy}
                     compacting={compacting}
                     queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
-                    queuedInputItems={(queuedInputs[activeBucket] ?? []).map(
-                      (i) => i.displayText ?? i.text,
-                    )}
+                    queuedInputItems={(queuedInputs[activeBucket] ?? []).map((i) => ({
+                      text: i.displayText ?? i.text,
+                      attachments: i.attachments,
+                    }))}
                     onClearQueuedInput={clearActiveQueuedInput}
                     onRemoveQueuedInput={removeActiveQueuedInputAt}
                     onGuideQueuedInput={guideActiveQueuedInput}

@@ -179,6 +179,7 @@ export const chat = {
         removeItemTitle: "删除",
         removeItem: "删除",
         attachmentsDeferred: "这条后续变更包含附件，将在当前轮结束后作为下一条消息发送。",
+        attachmentsDeferredHint: "附件将在本轮结束后随这条一起发送",
       },
       anchors: {
         diff: "审查",
@@ -538,6 +539,8 @@ export const chat = {
         removeItem: "Delete",
         attachmentsDeferred:
           "This queued follow-up includes attachments and will be sent after the current turn.",
+        attachmentsDeferredHint:
+          "Attachments will be sent with this message after the current turn",
       },
       anchors: {
         diff: "Review",

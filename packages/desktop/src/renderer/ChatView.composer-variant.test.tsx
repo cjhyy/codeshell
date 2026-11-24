@@ -189,3 +189,54 @@ describe("ChatView embedded question region", () => {
     expect(html).not.toContain("cs-chat-question-dock");
   });
 });
+
+describe("ChatView queued follow-ups", () => {
+  const queued = (items: unknown[], busy = true) =>
+    renderComposer("main", "default", [{ kind: "user", id: "u1", text: "Running turn" }], {
+      busy,
+      queuedInputCount: items.length,
+      queuedInputItems: items,
+      onRemoveQueuedInput: () => undefined,
+      onGuideQueuedInput: () => undefined,
+    });
+
+  test("shows saved attachments of a queued item next to its text", () => {
+    const html = queued([
+      {
+        text: "为什么新项目会有这个问题",
+        attachments: [
+          {
+            kind: "image",
+            absPath: "/repo/.code-shell/attachments/s1/shot.png",
+            originalName: "截屏.png",
+          },
+          { kind: "file", absPath: "/repo/docs/report.pdf", size: 2048 },
+        ],
+      },
+    ]);
+    expect(html).toContain("为什么新项目会有这个问题");
+    expect(html).toContain("data-queued-attachments");
+    expect(html).toContain("截屏.png");
+    expect(html).toContain("report.pdf");
+    expect(html).toContain("附件将在本轮结束后随这条一起发送");
+    expect(html).toContain('aria-label="删除第 1 条后续变更"');
+  });
+
+  test("keeps text-only and legacy string items free of attachment rows", () => {
+    const html = queued(["legacy text", { text: "plain follow-up" }]);
+    expect(html).toContain("legacy text");
+    expect(html).toContain("plain follow-up");
+    expect(html).not.toContain("data-queued-attachments");
+    expect(html).toContain("全部引导");
+  });
+
+  test("drops the deferred hint once the turn is idle", () => {
+    const html = queued(
+      [{ text: "", attachments: [{ kind: "file", absPath: "/repo/a.txt" }] }],
+      false,
+    );
+    expect(html).toContain("a.txt");
+    expect(html).not.toContain("附件将在本轮结束后随这条一起发送");
+    expect(html).not.toContain("全部引导");
+  });
+});
