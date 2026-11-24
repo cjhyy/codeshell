@@ -39,12 +39,20 @@ describe("feature flags", () => {
       "external_agent_runtime",
       "external_host_tools",
       "fast_mode",
+      "memory_segment_closure",
       "optimization_lab",
       "shell_snapshot",
       "shell_tool",
       "undo",
       "web_search",
     ]);
+  });
+
+  test("memory_segment_closure defaults ON and can be switched off", () => {
+    expect(isFeatureEnabled(undefined, "memory_segment_closure")).toBe(true);
+    expect(isFeatureEnabled({ memory_segment_closure: false }, "memory_segment_closure")).toBe(
+      false,
+    );
   });
 
   test("optimization_lab defaults OFF and can be switched on", () => {

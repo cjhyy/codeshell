@@ -191,6 +191,23 @@ describe("SessionManager side snapshot", () => {
     ).toThrow(SessionError);
   });
 
+  test("a fork keeps the parent's memory cursor, which still locates covered events by time", () => {
+    const manager = new SessionManager(dir);
+    const source = manager.create("/project", "model", "provider", "parent");
+    source.transcript.appendMessage("user", "already read for memories");
+    const covered = source.transcript.appendMessage("assistant", "covered answer");
+    const cursor = { v: 1 as const, eventId: covered.id, at: covered.timestamp, closedAt: 1 };
+    manager.updateSessionState("parent", { memoryCursor: cursor });
+
+    const forked = manager.fork("parent", { targetSessionId: "forked-child" });
+
+    expect(forked.bundle.state.memoryCursor).toEqual(cursor);
+    const copied = forked.bundle.transcript.getEvents("message");
+    // New ids, original timestamps: the cursor's time anchor still applies.
+    expect(copied.map((event) => event.id)).not.toContain(covered.id);
+    expect(copied.every((event) => event.timestamp <= cursor.at)).toBe(true);
+  });
+
   test("does not inherit the parent's active goal or control state", () => {
     const manager = new SessionManager(dir);
     const source = manager.create("/project", "model", "provider", "parent-goal");

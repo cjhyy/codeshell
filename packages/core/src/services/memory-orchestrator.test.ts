@@ -1,8 +1,9 @@
 import { describe, it, expect, spyOn } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { MemoryOrchestrator } from "./memory-orchestrator.js";
+import { recordSession, sessionsSinceLastDream } from "./auto-dream.js";
 import { logger } from "../logging/logger.js";
 import { MemoryManager } from "../session/memory.js";
 
@@ -172,50 +173,38 @@ describe("MemoryOrchestrator exact batch duplicates", () => {
   });
 });
 
-describe("MemoryOrchestrator session-summary JSON robustness", () => {
-  // The session-summary step (step 2) used to do a naive
-  // `smResponse.match(/\{[\s\S]*\}/)` + bare JSON.parse, so any LLM reply with a
-  // markdown fence / trailing comma / surrounding prose blew up into a
-  // `memory.session_memory_failed` warn and the summary was silently lost
-  // (observed in session s-mqhh533p). These cases must now parse cleanly.
-  const FRAGILE_RESPONSES: Record<string, string> = {
-    "markdown fence":
-      '```json\n{"summary":"did stuff","keyTopics":["a","b"],"decisions":["x"]}\n```',
-    "trailing comma": '{"summary":"did stuff","keyTopics":["a","b",],"decisions":["x",]}',
-    "prose around object":
-      'Here is the summary:\n{"summary":"did stuff","keyTopics":["a"],"decisions":[]}\nHope that helps!',
-  };
-
-  for (const [name, reply] of Object.entries(FRAGILE_RESPONSES)) {
-    it(`parses a ${name} reply without logging session_memory_failed`, async () => {
-      const info = spyOn(logger, "info").mockImplementation(() => {});
-      const warn = spyOn(logger, "warn").mockImplementation(() => {});
-      try {
-        await withCodeShellHome(async (base) => {
-          // Use a real isolated store so the summary and cadence remain inside
-          // the fixture along with the extraction scopes.
-          const orchestrator = new MemoryOrchestrator({
-            memoryManager: new MemoryManager({ baseDir: base }),
-            callLLM: async (_system, prompt) =>
-              prompt.includes("session summariser") ? reply : "[]",
-          });
-          await orchestrator.run(
-            [
-              { role: "user", content: "a" },
-              { role: "assistant", content: "b" },
-              { role: "user", content: "c" },
-            ],
-            "s-fragile",
-          );
-          const failed = warn.mock.calls.find((c) => c[0] === "memory.session_memory_failed");
-          expect(failed).toBeUndefined();
+describe("MemoryOrchestrator makes no session-summary request", () => {
+  it("asks the model once for a run that extracts nothing and writes no summary file", async () => {
+    const info = spyOn(logger, "info").mockImplementation(() => {});
+    const warn = spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      await withCodeShellHome(async (base) => {
+        const prompts: string[] = [];
+        const orchestrator = new MemoryOrchestrator({
+          memoryManager: new MemoryManager({ baseDir: base }),
+          callLLM: async (_system, prompt) => {
+            prompts.push(prompt);
+            return "[]";
+          },
         });
-      } finally {
-        info.mockRestore();
-        warn.mockRestore();
-      }
-    });
-  }
+        const result = await orchestrator.run(
+          [
+            { role: "user", content: "a" },
+            { role: "assistant", content: "b" },
+            { role: "user", content: "c" },
+          ],
+          "s-no-summary",
+        );
+        expect(prompts).toHaveLength(1);
+        expect(prompts[0]).toContain("memory extraction assistant");
+        expect(result.changed).toBe(false);
+        expect(existsSync(join(base, "session-memories"))).toBe(false);
+      });
+    } finally {
+      info.mockRestore();
+      warn.mockRestore();
+    }
+  });
 });
 
 describe("MemoryOrchestrator autoExtract gate (settings.memories.autoExtract)", () => {
@@ -382,5 +371,129 @@ describe("MemoryOrchestrator write decisions", () => {
       info.mockRestore();
       warn.mockRestore();
     }
+  });
+});
+
+describe("MemoryOrchestrator auto-dream cadence counts only runs that changed the store", () => {
+  const conversation = [
+    { role: "user", content: "a" },
+    { role: "assistant", content: "b" },
+    { role: "user", content: "c" },
+  ];
+  const quiet = async <T>(fn: () => Promise<T>): Promise<T> => {
+    const info = spyOn(logger, "info").mockImplementation(() => {});
+    const warn = spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      return await fn();
+    } finally {
+      info.mockRestore();
+      warn.mockRestore();
+    }
+  };
+
+  it("leaves the counter alone when extraction yields nothing", () =>
+    quiet(() =>
+      withCodeShellHome(async (base) => {
+        const result = await new MemoryOrchestrator({
+          memoryManager: new MemoryManager({ baseDir: base }),
+          callLLM: async () => "[]",
+        }).run(conversation, "s-empty");
+        expect(result.changed).toBe(false);
+        expect(sessionsSinceLastDream(base)).toBe(0);
+      }),
+    ));
+
+  it("counts a run that added a memory", () =>
+    quiet(() =>
+      withCodeShellHome(async (base) => {
+        const result = await new MemoryOrchestrator({
+          memoryManager: new MemoryManager({ baseDir: base }),
+          callLLM: async () =>
+            JSON.stringify([{ type: "project", name: "n", description: "d", content: "c" }]),
+        }).run(conversation, "s-added");
+        expect(result.changed).toBe(true);
+        expect(sessionsSinceLastDream(base)).toBe(1);
+      }),
+    ));
+
+  it("does not count a run with extraction turned off", () =>
+    quiet(() =>
+      withCodeShellHome(async (base) => {
+        let calls = 0;
+        await new MemoryOrchestrator({
+          memoryManager: new MemoryManager({ baseDir: base }),
+          autoExtract: false,
+          callLLM: async () => {
+            calls++;
+            return "[]";
+          },
+        }).run(conversation, "s-off");
+        expect(calls).toBe(0);
+        expect(sessionsSinceLastDream(base)).toBe(0);
+      }),
+    ));
+
+  it("still runs a consolidation that was already due", () =>
+    quiet(() =>
+      withCodeShellHome(async (base) => {
+        const manager = new MemoryManager({ baseDir: base });
+        manager.save({ type: "project", name: "kept", description: "d", content: "c" });
+        for (let index = 0; index < 5; index++) recordSession(base);
+        let dreams = 0;
+        const result = await new MemoryOrchestrator({
+          memoryManager: manager,
+          callLLM: async () => "[]",
+          runDream: async () => {
+            dreams++;
+            return true;
+          },
+        }).run(conversation, "s-due");
+        expect(dreams).toBe(1);
+        expect(result.dreamTriggered).toBe(true);
+        expect(sessionsSinceLastDream(base)).toBe(0);
+      }),
+    ));
+});
+
+describe("MemoryOrchestrator reports whether extraction finished", () => {
+  const conversation = [
+    { role: "user", content: "a" },
+    { role: "assistant", content: "b" },
+    { role: "user", content: "c" },
+  ];
+  const run = async (options: { autoExtract?: boolean; reply: () => Promise<string> }) => {
+    const info = spyOn(logger, "info").mockImplementation(() => {});
+    const warn = spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      return await withCodeShellHome((base) =>
+        new MemoryOrchestrator({
+          memoryManager: new MemoryManager({ baseDir: base }),
+          autoExtract: options.autoExtract,
+          callLLM: options.reply,
+        }).run(conversation, "s-completed"),
+      );
+    } finally {
+      info.mockRestore();
+      warn.mockRestore();
+    }
+  };
+
+  it("is true when the extraction answered, even with nothing to keep", async () => {
+    expect((await run({ reply: async () => "[]" })).completed).toBe(true);
+  });
+
+  it("is false when the extraction request failed, so the caller can retry the same stretch", async () => {
+    const result = await run({
+      reply: async () => {
+        throw new Error("model unavailable");
+      },
+    });
+    expect(result.completed).toBe(false);
+    expect(result.changed).toBe(false);
+  });
+
+  it("is true when extraction is turned off: there is nothing to retry", async () => {
+    const result = await run({ autoExtract: false, reply: async () => "[]" });
+    expect(result.completed).toBe(true);
   });
 });

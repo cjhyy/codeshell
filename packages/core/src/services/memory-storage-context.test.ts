@@ -6,7 +6,6 @@ import { MemoryManager } from "../session/memory.js";
 import { MemoryOrchestrator } from "./memory-orchestrator.js";
 import { runDreamConsolidation } from "./dream-consolidation.js";
 import { sessionsSinceLastDream } from "./auto-dream.js";
-import { loadSessionMemory } from "./session-memory.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import type { ToolContext } from "../tool-system/context.js";
 import type { ToolCall } from "../types.js";
@@ -162,8 +161,8 @@ test("UPDATE and DELETE only touch IDs in the injected root", async () =>
     );
   }));
 
-test("summary, dream cadence, callback and TTL share explicit storage", async () =>
-  isolated(async ({ custom, ambient, projectDir, home }) => {
+test("dream cadence, callback and TTL share explicit storage", async () =>
+  isolated(async ({ custom, ambient, projectDir }) => {
     for (const baseDir of [custom, ambient]) {
       for (const project of [projectDir, undefined]) {
         manager(baseDir, project).save({
@@ -174,7 +173,8 @@ test("summary, dream cadence, callback and TTL share explicit storage", async ()
       }
       writeFileSync(
         join(baseDir, "auto-dream-state.json"),
-        JSON.stringify({ lastDreamAt: null, sessionsSinceLastDream: baseDir === custom ? 4 : 99 }),
+        // This run extracts nothing, so it does not count: the dream must already be due.
+        JSON.stringify({ lastDreamAt: null, sessionsSinceLastDream: baseDir === custom ? 5 : 99 }),
       );
     }
     let dreamInput: any;
@@ -182,8 +182,9 @@ test("summary, dream cadence, callback and TTL share explicit storage", async ()
       memoryManager: manager(custom, projectDir),
       autoExtract: false,
       recallTtlDays: 30,
-      callLLM: async () =>
-        JSON.stringify({ summary: "isolated summary", keyTopics: [], decisions: [] }),
+      callLLM: async () => {
+        throw new Error("No auxiliary model request expected");
+      },
       runDream: async (input) => {
         dreamInput = input;
         return true;
@@ -197,10 +198,6 @@ test("summary, dream cadence, callback and TTL share explicit storage", async ()
       "isolated-summary",
     );
     expect(dreamInput).toMatchObject({ baseDir: custom, projectDir });
-    expect(loadSessionMemory("isolated-summary", custom)?.summary).toBe("isolated summary");
-    expect(existsSync(join(home, ".code-shell", "session-memories", "isolated-summary.json"))).toBe(
-      false,
-    );
     expect(sessionsSinceLastDream(custom)).toBe(0);
     expect(sessionsSinceLastDream(ambient)).toBe(99);
     for (const project of [projectDir, undefined]) {
@@ -237,7 +234,8 @@ test("equivalent path options retain the injected manager's project storage key"
     injected.save(candidate);
     writeFileSync(
       join(custom, "auto-dream-state.json"),
-      JSON.stringify({ lastDreamAt: null, sessionsSinceLastDream: 4 }),
+      // An extraction-free run does not count, so the dream is already due.
+      JSON.stringify({ lastDreamAt: null, sessionsSinceLastDream: 5 }),
     );
     let restoredProject: string | undefined;
     await new MemoryOrchestrator({
@@ -293,14 +291,11 @@ test("tool context isolates project/global roots while keeping portable profile 
     expect(manager(ambient).loadAll()).toHaveLength(0);
   }));
 
-test("default routing retains env memories/cadence and HOME session summaries", async () =>
-  isolated(async ({ ambient, projectDir, home }) => {
+test("default routing retains env memories and cadence", async () =>
+  isolated(async ({ ambient, projectDir }) => {
     await new MemoryOrchestrator({
       projectDir,
-      callLLM: async (_system, prompt) =>
-        prompt.includes("summariser")
-          ? JSON.stringify({ summary: "default summary", keyTopics: [], decisions: [] })
-          : JSON.stringify([candidate]),
+      callLLM: async () => JSON.stringify([candidate]),
     }).run(
       [
         { role: "user", content: "a" },
@@ -311,10 +306,6 @@ test("default routing retains env memories/cadence and HOME session summaries", 
     );
     expect(manager(ambient, projectDir, "dream").loadAll()).toHaveLength(1);
     expect(existsSync(join(ambient, "auto-dream-state.json"))).toBe(true);
-    expect(loadSessionMemory("default-summary", join(home, ".code-shell"))?.summary).toBe(
-      "default summary",
-    );
-    expect(loadSessionMemory("default-summary", ambient)).toBeNull();
   }));
 
 test("dream prompt, ownership guard and actual tools use the same explicit root", async () =>

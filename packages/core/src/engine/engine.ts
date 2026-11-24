@@ -127,6 +127,7 @@ import { userHome } from "../utils/paths.js";
 import { getCredentialAccess } from "../credentials/access.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import {
+  isFeatureEnabled,
   resolveFeatureFlags,
   type FeatureFlagName,
   type FeatureFlagOverrides,
@@ -174,6 +175,7 @@ import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-in
 import { type EngineRunOptions, type RunBehaviorProfile } from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
+import { MemorySegments } from "./memory-segments.js";
 import { PermissionController } from "./permission-controller.js";
 import { buildPromptComposerConfig } from "./run-setup.js";
 import { resolveActiveWorkspaceProfileSelection } from "../profile/resolve.js";
@@ -412,6 +414,7 @@ export class Engine {
   readonly usageLedger: UsageLedger;
   private readonly runEnvironmentResolver: RunEnvironmentResolver;
   private readonly auxiliaryPipeline: AuxiliaryPipeline;
+  private readonly memorySegments: MemorySegments;
   private readonly permissionController: PermissionController;
 
   // Lazy SettingsManager — reused across updateConfig/readSetting so we
@@ -788,6 +791,15 @@ export class Engine {
         modelPool: () => this.modelPool,
         toolRegistry: () => this.toolRegistry,
         toolContext: () => this.buildToolContext(),
+      });
+      this.memorySegments = new MemorySegments({
+        pipeline: this.auxiliaryPipeline,
+        scheduler: () => this.runtime?.memoryClosures,
+        unattended: config.isSubAgent === true || config.origin === "automation",
+        readCursor: (sessionId) => this.sessionManager.readSessionState(sessionId)?.memoryCursor,
+        writeCursor: (sessionId, memoryCursor) => {
+          this.sessionManager.updateSessionState(sessionId, { memoryCursor });
+        },
       });
       if (!config.runtime) {
         this.populateModelPoolFromSettings();
@@ -2072,6 +2084,16 @@ export class Engine {
             this.runningSession.ownUsage = () =>
               foldRunUsage({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }, getRunUsage());
             this.runningSession.ownCacheUsage = accounting.getRunCacheUsage;
+          }
+          if (this.memorySegmentClosureEnabled()) {
+            this.memorySegments.runStarted({
+              session,
+              runId,
+              cwd,
+              primaryClient: llmClient,
+              recordBilledUsage: recordExternalBilledUsage,
+              memoryDisabled: profile?.disableMemoryPipeline === true,
+            });
           }
 
           // Run start → first model step: session claim, context, hooks, prompt
@@ -3709,6 +3731,11 @@ export class Engine {
     return this.auxiliaryPipeline.resolveAuxClient(fallback);
   }
 
+  /**
+   * A run ended with memory allowed. With segment closure on, extraction waits
+   * for the work segment to end (memory-segments.ts); with it off, the whole
+   * transcript window is re-read after every run.
+   */
   private async runMemoryPipeline(
     transcript: import("../session/transcript.js").Transcript,
     sessionId: string,
@@ -3716,6 +3743,8 @@ export class Engine {
     primaryClient: Awaited<ReturnType<typeof createLLMClient>>,
     recordBilledUsage?: (usage: TokenUsage) => void,
   ): Promise<void> {
+    const args = { transcript, sessionId, cwd, primaryClient, recordBilledUsage };
+    if (this.memorySegmentClosureEnabled()) return this.memorySegments.runEnded(args);
     return this.auxiliaryPipeline.runMemoryPipeline(
       transcript,
       sessionId,
@@ -3723,6 +3752,16 @@ export class Engine {
       primaryClient,
       recordBilledUsage,
     );
+  }
+
+  /** Read for unattended Engines too, so turning the flag off restores every legacy path. */
+  private memorySegmentClosureEnabled(): boolean {
+    try {
+      const settings = this.getSettingsManager().get() as { featureFlags?: FeatureFlagOverrides };
+      return isFeatureEnabled(settings.featureFlags, "memory_segment_closure");
+    } catch {
+      return isFeatureEnabled(undefined, "memory_segment_closure");
+    }
   }
 
   getToolRegistry(): ToolRegistry {

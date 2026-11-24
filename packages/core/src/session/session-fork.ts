@@ -208,6 +208,9 @@ export function buildForkState(
     parentSessionId: null,
     forkedFrom: structuredClone(lineage),
     ...(source.origin ? { origin: source.origin } : {}),
+    // Copied events get new ids but keep their timestamps, so the source's
+    // cursor still marks what was already read for memories (by time).
+    ...(source.memoryCursor ? { memoryCursor: structuredClone(source.memoryCursor) } : {}),
     status: "active",
   };
 }

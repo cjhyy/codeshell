@@ -749,6 +749,8 @@ export const settingsNs = {
         dreamSkipped: "暂时无法整理，请检查记忆能力是否可用。",
         autoExtract: "自动提取",
         autoExtractTitle: "对话结束后自动提取少量可复用信息，放入“自动整理”中等待确认。",
+        externalExtractionNeedsModel:
+          "Claude Code 和 Codex 会话用后台任务模型提取记忆。当前没有选择后台任务模型，这些会话不会提取。",
         cleanupAuto: "清理自动提取({count})",
         cleanupTitle: "先审核自动提取的记忆，再把选中内容移入可恢复的回收目录",
         confirmCleanupTitle: "清理自动提取的记忆",
@@ -2044,6 +2046,8 @@ export const settingsNs = {
         autoExtract: "Auto-extract",
         autoExtractTitle:
           "After a conversation, extract a small number of reusable items for you to review.",
+        externalExtractionNeedsModel:
+          "Claude Code and Codex sessions extract memories with the background-task model. None is selected, so those sessions are not extracted.",
         cleanupAuto: "Clean auto-extracted ({count})",
         cleanupTitle:
           "Review auto-extracted memories, then move selected items to recoverable trash",

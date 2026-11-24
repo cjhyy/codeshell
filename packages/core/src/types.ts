@@ -451,6 +451,13 @@ export interface SessionState {
    * transcript flush failure) and must fail closed instead of using the tail.
    */
   completedSnapshotVersion?: 1;
+  /**
+   * How far this session's conversation has been read for memories. A memory
+   * closure reads only what follows it. Written by a detached field update
+   * after a closure, never by a run's final state. Absent before the first
+   * closure and on legacy sessions, where the whole transcript counts as unread.
+   */
+  memoryCursor?: import("./services/memory-closure.js").MemoryCursor;
   /** Frozen host-authorized instruction bindings; an empty array freezes the original version. */
   instructionContextStartEventId?: string;
   instructionContextRevisions?: string[];

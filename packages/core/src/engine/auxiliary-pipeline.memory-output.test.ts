@@ -5,12 +5,12 @@ import { join } from "node:path";
 import type { CreateMessageOptions } from "../llm/types.js";
 import { ModelPool } from "../llm/model-pool.js";
 import { MemoryManager } from "../session/memory.js";
-import { loadSessionMemory, saveSessionMemory } from "../services/session-memory.js";
 import type { SettingsManager } from "../settings/manager.js";
 import type { ToolContext } from "../tool-system/context.js";
 import type { ToolRegistry } from "../tool-system/registry.js";
 import type { Transcript } from "../session/transcript.js";
-import type { LLMResponse, TokenUsage } from "../types.js";
+import type { LLMResponse, TokenUsage, TranscriptEvent } from "../types.js";
+import type { MemoryCursor } from "../services/memory-closure.js";
 import { AuxiliaryPipeline, type EngineLlmClient } from "./auxiliary-pipeline.js";
 
 let root: string;
@@ -32,20 +32,7 @@ afterEach(() => {
 });
 
 const sessionId = "memory-budget-session";
-const priorSummary = {
-  sessionId,
-  summary: "previous verified summary",
-  keyTopics: ["verified"],
-  decisions: ["keep the prior memory"],
-  createdAt: "2026-10-01T00:00:00.000Z",
-};
 const usage: TokenUsage = { promptTokens: 20, completionTokens: 10, totalTokens: 30 };
-
-/** The task is in the user messages; both calls share one system prompt. */
-const promptText = (options: CreateMessageOptions) =>
-  options.messages
-    .map((message) => (typeof message.content === "string" ? message.content : ""))
-    .join("");
 
 function setup(autoExtract: boolean, respond: (options: CreateMessageOptions) => LLMResponse) {
   const calls: CreateMessageOptions[] = [];
@@ -86,11 +73,26 @@ function setup(autoExtract: boolean, respond: (options: CreateMessageOptions) =>
 
 describe("memory model output budgets", () => {
   test.each(["length", "max_tokens"])(
-    "preserves a good summary when the provider reports %s, without retrying",
+    "discards an extraction the provider reports as %s, without retrying",
     async (stopReason) => {
-      saveSessionMemory(priorSummary);
-      const fixture = setup(false, () => ({
-        text: JSON.stringify({ summary: "partial replacement", keyTopics: [], decisions: [] }),
+      const manager = new MemoryManager({ projectDir: root, scope: "dream" });
+      manager.save({
+        type: "project",
+        name: "verified-memory",
+        description: "verified",
+        content: "keep this",
+      });
+      const before = manager.loadAll();
+      const fixture = setup(true, () => ({
+        text: JSON.stringify([
+          {
+            type: "project",
+            scope: "project",
+            name: "partial-new-memory",
+            description: "partial",
+            content: "discard this",
+          },
+        ]),
         toolCalls: [],
         stopReason,
         usage,
@@ -101,54 +103,21 @@ describe("memory model output budgets", () => {
       expect(fixture.calls).toHaveLength(1);
       expect(fixture.calls[0]!.maxTokens).toBe(3072);
       expect(fixture.billed).toEqual([usage]);
-      expect(loadSessionMemory(sessionId)).toEqual(priorSummary);
+      expect(manager.loadAll()).toEqual(before);
     },
   );
 
-  test("discards length-stopped extraction and summary even when their text looks like valid JSON", async () => {
-    saveSessionMemory(priorSummary);
-    const manager = new MemoryManager({ projectDir: root, scope: "dream" });
-    manager.save({
-      type: "project",
-      name: "verified-memory",
-      description: "verified",
-      content: "keep this",
-    });
-    const before = manager.loadAll();
-    const fixture = setup(true, (options) => ({
-      text: promptText(options).includes("memory extraction assistant")
-        ? JSON.stringify([
-            {
-              type: "project",
-              scope: "project",
-              name: "partial-new-memory",
-              description: "partial",
-              content: "discard this",
-            },
-          ])
-        : JSON.stringify({ summary: "partial replacement", keyTopics: [], decisions: [] }),
-      toolCalls: [],
-      stopReason: "length",
-      usage,
-    }));
-
-    await fixture.run();
-
-    expect(fixture.calls).toHaveLength(2);
-    expect(fixture.billed).toEqual([usage, usage]);
-    expect(manager.loadAll()).toEqual(before);
-    expect(loadSessionMemory(sessionId)).toEqual(priorSummary);
-  });
-
-  test("uses bounded memory budgets and persists complete output", async () => {
-    const fixture = setup(true, (options) => ({
-      text: promptText(options).includes("memory extraction assistant")
-        ? "[]"
-        : JSON.stringify({
-            summary: "current outcome",
-            keyTopics: [],
-            decisions: ["not published"],
-          }),
+  test("uses a bounded memory budget and persists complete output", async () => {
+    const fixture = setup(true, () => ({
+      text: JSON.stringify([
+        {
+          type: "project",
+          scope: "project",
+          name: "complete-memory",
+          description: "complete",
+          content: "keep this",
+        },
+      ]),
       toolCalls: [],
       stopReason: "stop",
       usage,
@@ -156,11 +125,139 @@ describe("memory model output budgets", () => {
 
     await fixture.run();
 
-    expect(fixture.calls).toHaveLength(2);
-    expect(fixture.calls.map((call) => call.maxTokens)).toEqual([3072, 3072]);
-    expect(loadSessionMemory(sessionId)).toMatchObject({
-      summary: "current outcome",
-      decisions: ["not published"],
+    expect(fixture.calls.map((call) => call.maxTokens)).toEqual([3072]);
+    expect(
+      new MemoryManager({ projectDir: root, scope: "dream" }).loadAll().map((m) => m.name),
+    ).toEqual(["complete-memory"]);
+  });
+});
+
+describe("memory closure", () => {
+  let sequence = 0;
+  const message = (
+    role: "user" | "assistant",
+    content: string,
+    extra: Record<string, unknown> = {},
+  ): TranscriptEvent => {
+    sequence++;
+    return {
+      id: `closure-${sequence}`,
+      type: "message",
+      timestamp: sequence * 1000,
+      turnNumber: 0,
+      data: { role, content, ...extra },
+    };
+  };
+  const exchange = (count: number, label: string, userExtra: Record<string, unknown> = {}) =>
+    Array.from({ length: count }, (_, index) =>
+      index % 2
+        ? message("assistant", `${label} answer ${index}`)
+        : message("user", `${label} question ${index}`, userExtra),
+    );
+  const sent = (options: CreateMessageOptions) =>
+    options.messages
+      .map((entry) => (typeof entry.content === "string" ? entry.content : ""))
+      .join("");
+
+  function closure(
+    autoExtract: boolean | undefined,
+    respond: (options: CreateMessageOptions) => LLMResponse = () => ({
+      text: "[]",
+      toolCalls: [],
+      stopReason: "stop",
+      usage,
+    }),
+  ) {
+    const calls: CreateMessageOptions[] = [];
+    const client = {
+      createMessage: async (options: CreateMessageOptions) => {
+        calls.push(options);
+        return respond(options);
+      },
+    } as EngineLlmClient;
+    const pipeline = new AuxiliaryPipeline({
+      config: () => ({ llm: { provider: "fixture", model: "memory-fixture" } }),
+      settings: () =>
+        ({
+          invalidate: () => {},
+          get: () => ({ memories: { autoExtract } }),
+        }) as unknown as SettingsManager,
+      modelPool: () => new ModelPool([]),
+      toolRegistry: () => ({}) as ToolRegistry,
+      toolContext: () => ({}) as ToolContext,
     });
+    const state: { cursor?: MemoryCursor } = {};
+    return {
+      calls,
+      state,
+      run: (events: TranscriptEvent[]) =>
+        pipeline.runMemoryClosure({
+          events,
+          sessionId,
+          cwd: root,
+          primaryClient: client,
+          trigger: "run-end",
+          readCursor: () => state.cursor,
+          writeCursor: (cursor) => (state.cursor = cursor),
+        }),
+    };
+  }
+
+  test("a stretch nobody typed in makes no request and keeps the cursor", async () => {
+    const fixture = closure(true);
+    await fixture.run(exchange(12, "background", { injected: true }));
+    expect(fixture.calls).toHaveLength(0);
+    expect(fixture.state.cursor).toBeUndefined();
+  });
+
+  test("a first closure shorter than eight messages makes no request", async () => {
+    const fixture = closure(true);
+    await fixture.run(exchange(6, "short"));
+    expect(fixture.calls).toHaveLength(0);
+    expect(fixture.state.cursor).toBeUndefined();
+  });
+
+  test("a closure reads only what follows the cursor and then advances it", async () => {
+    const fixture = closure(true);
+    const first = exchange(8, "early");
+    await fixture.run(first);
+    expect(fixture.calls).toHaveLength(1);
+    expect(sent(fixture.calls[0]!)).toContain("[user]: early question 0");
+    expect(sent(fixture.calls[0]!)).not.toContain("[context]:");
+    expect(fixture.state.cursor).toMatchObject({
+      v: 1,
+      eventId: first.at(-1)!.id,
+      at: first.at(-1)!.timestamp,
+    });
+
+    const second = exchange(2, "later");
+    await fixture.run([...first, ...second]);
+    expect(fixture.calls).toHaveLength(2);
+    const prompt = sent(fixture.calls[1]!);
+    expect(prompt).toContain("[user]: later question 0");
+    expect(prompt).toContain("[assistant]: later answer 1");
+    // The covered lead-in is one entry that says not to extract from it.
+    expect(prompt).toContain("[context]: Earlier messages, already covered by a previous pass.");
+    expect(prompt).toContain("- assistant: early answer 7");
+    expect(prompt).not.toContain("early question 0");
+    expect(prompt).not.toContain("[user]: early question 6");
+    expect(fixture.state.cursor!.eventId).toBe(second.at(-1)!.id);
+  });
+
+  test("a failed request leaves the cursor where it was", async () => {
+    const fixture = closure(true, () => {
+      throw new Error("model unavailable");
+    });
+    await fixture.run(exchange(8, "failing"));
+    expect(fixture.calls).toHaveLength(1);
+    expect(fixture.state.cursor).toBeUndefined();
+  });
+
+  test("with extraction turned off the stretch counts as read without a request", async () => {
+    const fixture = closure(false);
+    const events = exchange(8, "off");
+    await fixture.run(events);
+    expect(fixture.calls).toHaveLength(0);
+    expect(fixture.state.cursor!.eventId).toBe(events.at(-1)!.id);
   });
 });

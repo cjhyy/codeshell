@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { ClientDefaults, LLMConfig, TokenUsage } from "../types.js";
+import type { ClientDefaults, LLMConfig, TokenUsage, TranscriptEvent } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import { isTruncatedStop } from "../llm/stop-reason.js";
 import type { ModelPool } from "../llm/model-pool.js";
@@ -8,9 +8,13 @@ import type { ToolRegistry } from "../tool-system/registry.js";
 import type { ToolContext } from "../tool-system/context.js";
 import type { Transcript } from "../session/transcript.js";
 import { logger } from "../logging/logger.js";
-import { sanitizeContent } from "../logging/sanitize-messages.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
+import {
+  planMemoryClosure,
+  toMemoryTranscriptMessage,
+  type MemoryCursor,
+} from "../services/memory-closure.js";
 import { resolveAuxKey } from "./aux-key.js";
 import { auxCachedRequest } from "../llm/aux-prompt-cache.js";
 import type { CumulativeUsageCounters } from "../session/usage.js";
@@ -30,6 +34,20 @@ export interface MemoriesConfig {
   maxAge?: number;
   extractionModel?: string;
   autoExtract?: boolean;
+}
+
+/** One memory closure: a frozen event snapshot and where its cursor lives. */
+export interface MemoryClosureInput {
+  /** Snapshot of the session's transcript events; later appends are not read. */
+  events: readonly TranscriptEvent[];
+  sessionId: string;
+  cwd: string;
+  primaryClient: EngineLlmClient;
+  recordBilledUsage?: (usage: TokenUsage) => void;
+  readCursor: () => MemoryCursor | undefined;
+  writeCursor: (cursor: MemoryCursor) => void;
+  /** Why it runs now: straight after a run, after the quiet period, or on resume. */
+  trigger: "run-end" | "idle" | "resume";
 }
 
 export function sameLlmIdentity(a: LLMConfig, b: LLMConfig): boolean {
@@ -197,67 +215,108 @@ export class AuxiliaryPipeline {
         );
       if (messages.length < 8) return;
 
-      const plainMessages = messages.map((message) => {
-        const safe = sanitizeContent(message.content);
-        return {
-          role: message.role,
-          content: typeof safe === "string" ? safe : JSON.stringify(safe),
-          // A turn ends on an assistant message without tool calls; the memory
-          // prompts seal a cache piece there (memory-transcript.ts).
-          endsTurn:
-            message.role === "assistant" &&
-            (typeof message.content === "string" ||
-              !message.content.some((block) => block.type === "tool_use")),
-        };
-      });
-      const memories = this.readMemoriesConfig();
-      const orchestrator = new MemoryOrchestrator({
-        callLLM: async (systemPrompt, userMessage, options) => {
-          const response = await llmClient.createMessage({
-            systemPrompt,
-            // Stable messages first and a cache boundary after them, so the
-            // next run's call for this session resumes from the provider cache.
-            ...auxCachedRequest({
-              client: llmClient,
-              sessionId,
-              prompt: userMessage,
-              plan: options?.cache,
-            }),
-            tools: [],
-            maxTokens: options?.maxTokens ?? 1024,
-            billingEnabled: true,
-            requestVisible: false,
-            usagePurpose: "aux_summary",
-            reasoning: { mode: "off" },
-          });
-          if (response.usage) recordBilledUsage?.(response.usage);
-          if (isTruncatedStop(response.stopReason)) {
-            throw new Error(
-              "Memory response exceeded its output token budget; discarded partial JSON",
-            );
-          }
-          return response.text;
-        },
-        runDream: async ({ projectDir, baseDir }) =>
-          this.runDreamLoop({
-            projectDir,
-            baseDir,
-            llmClient,
-            sessionId,
-            recordBilledUsage,
-          }),
-        projectDir: cwd,
-        maxCount: memories?.maxCount,
-        autoExtract: memories?.autoExtract,
-      });
-
-      await orchestrator.run(plainMessages, sessionId);
+      const orchestrator = this.memoryOrchestrator(llmClient, sessionId, cwd, recordBilledUsage);
+      await orchestrator.run(messages.map(toMemoryTranscriptMessage), sessionId);
     } catch (error) {
       logger.warn("engine.memory_pipeline_failed", {
         sessionId,
         error: (error as Error).message,
       });
     }
+  }
+
+  /**
+   * Extract memories from the stretch of conversation that follows the
+   * session's memory cursor, if a person typed something in it, then move the
+   * cursor. A skipped or failed closure leaves the cursor alone, so the same
+   * stretch is offered again next time.
+   */
+  async runMemoryClosure(input: MemoryClosureInput): Promise<void> {
+    const { sessionId } = input;
+    try {
+      const plan = planMemoryClosure(input.events, input.readCursor());
+      const { window } = plan;
+      const facts = {
+        sessionId,
+        trigger: input.trigger,
+        anchor: window.anchor,
+        freshCount: window.fresh.length,
+        humanCount: window.humanCount,
+      };
+      if (!plan.run) {
+        logger.info("memory.closure", { ...facts, skipped: plan.reason });
+        return;
+      }
+      const llmClient = await this.resolveExtractionClient(input.primaryClient);
+      const result = await this.memoryOrchestrator(
+        llmClient,
+        sessionId,
+        input.cwd,
+        input.recordBilledUsage,
+      ).run(plan.transcript, sessionId);
+      if (result.completed && window.through) {
+        input.writeCursor({ v: 1, ...window.through, closedAt: Date.now() });
+      }
+      logger.info("memory.closure", {
+        ...facts,
+        extracted: result.extracted,
+        changed: result.changed,
+        completed: result.completed,
+      });
+    } catch (error) {
+      logger.warn("engine.memory_pipeline_failed", {
+        sessionId,
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  private memoryOrchestrator(
+    llmClient: EngineLlmClient,
+    sessionId: string,
+    cwd: string,
+    recordBilledUsage?: (usage: TokenUsage) => void,
+  ): MemoryOrchestrator {
+    const memories = this.readMemoriesConfig();
+    return new MemoryOrchestrator({
+      callLLM: async (systemPrompt, userMessage, options) => {
+        const response = await llmClient.createMessage({
+          systemPrompt,
+          // Stable messages first and a cache boundary after them, so the
+          // next run's call for this session resumes from the provider cache.
+          ...auxCachedRequest({
+            client: llmClient,
+            sessionId,
+            prompt: userMessage,
+            plan: options?.cache,
+          }),
+          tools: [],
+          maxTokens: options?.maxTokens ?? 1024,
+          billingEnabled: true,
+          requestVisible: false,
+          usagePurpose: "aux_summary",
+          reasoning: { mode: "off" },
+        });
+        if (response.usage) recordBilledUsage?.(response.usage);
+        if (isTruncatedStop(response.stopReason)) {
+          throw new Error(
+            "Memory response exceeded its output token budget; discarded partial JSON",
+          );
+        }
+        return response.text;
+      },
+      runDream: async ({ projectDir, baseDir }) =>
+        this.runDreamLoop({
+          projectDir,
+          baseDir,
+          llmClient,
+          sessionId,
+          recordBilledUsage,
+        }),
+      projectDir: cwd,
+      maxCount: memories?.maxCount,
+      autoExtract: memories?.autoExtract,
+    });
   }
 
   private async runDreamLoop(options: {

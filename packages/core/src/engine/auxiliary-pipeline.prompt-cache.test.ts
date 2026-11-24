@@ -54,11 +54,9 @@ function setup(cacheStrategy = "openai-hybrid", extracted: unknown[] = []) {
       calls.push(options);
       const system = options.systemPrompt;
       return {
-        text: text(options).join("").includes("session summariser")
-          ? JSON.stringify({ summary: "s", keyTopics: [], decisions: [] })
-          : system.includes("write decision")
-            ? JSON.stringify({ action: "NOOP" })
-            : JSON.stringify(extracted),
+        text: system.includes("write decision")
+          ? JSON.stringify({ action: "NOOP" })
+          : JSON.stringify(extracted),
         toolCalls: [],
         stopReason: "stop",
         usage,
@@ -88,60 +86,50 @@ function setup(cacheStrategy = "openai-hybrid", extracted: unknown[] = []) {
 }
 
 describe("memory pipeline prompt cache", () => {
-  test("extraction and summary share the system prompt, the transcript prefix and the cache scope", async () => {
+  test("extraction sends the transcript as a stable prefix under the session-transcript scope", async () => {
     const fixture = setup();
     await fixture.run();
 
-    expect(fixture.calls).toHaveLength(2);
-    const [extraction, summary] = fixture.calls as [CreateMessageOptions, CreateMessageOptions];
-    for (const call of [extraction, summary]) {
-      expect(call.systemPrompt).toBe(SESSION_TRANSCRIPT_SYSTEM_PROMPT);
-      expect(call.messages.length).toBeGreaterThan(2);
-      expect(call.messages.every((message) => message.role === "user")).toBe(true);
-      // The breakpoint lands on the last stable message; only the final
-      // message, the task, is outside the settled prefix.
-      expect(call.promptCache?.stablePrefixMessageCount).toBe(call.messages.length - 1);
-      expect(call.promptCache?.scopeId).toBe(sharedScope);
-      expect(call.promptCache?.scopeKind).toBe("auxiliary");
-    }
-    // Byte-identical leading messages up to the end of the transcript. The
-    // run ended on an assistant answer, so the whole transcript is stable.
+    expect(fixture.calls).toHaveLength(1);
+    const extraction = fixture.calls[0]!;
+    expect(extraction.systemPrompt).toBe(SESSION_TRANSCRIPT_SYSTEM_PROMPT);
+    expect(extraction.messages.length).toBeGreaterThan(2);
+    expect(extraction.messages.every((message) => message.role === "user")).toBe(true);
+    // The breakpoint lands on the last stable message; only the final
+    // message, the task, is outside the settled prefix.
+    expect(extraction.promptCache?.stablePrefixMessageCount).toBe(extraction.messages.length - 1);
+    expect(extraction.promptCache?.scopeId).toBe(sharedScope);
+    expect(extraction.promptCache?.scopeKind).toBe("auxiliary");
+    // The run ended on an assistant answer, so the whole transcript is stable.
     const stableCount = extraction.promptCache!.stablePrefixMessageCount!;
-    expect(summary.promptCache!.stablePrefixMessageCount).toBe(stableCount);
-    expect(text(summary).slice(0, stableCount)).toEqual(text(extraction).slice(0, stableCount));
     const stable = text(extraction).slice(0, stableCount).join("");
     expect(stable).toContain("TURN_0 ");
     expect(stable).toEndWith(`TURN_13 ${"x".repeat(900)}`);
     expect(stable).not.toContain("## Task");
-    // Only the task differs.
     expect(text(extraction).at(-1)).toStartWith("\n\n## Task: memory extraction");
     expect(text(extraction).at(-1)).toContain("## Existing Memories");
-    expect(text(summary).at(-1)).toStartWith("\n\n## Task: session summary");
     expect(sharedScope).not.toBe(sessionId);
     expect(auxPromptCacheScope("other-session", "session-transcript")).not.toBe(sharedScope);
   });
 
   test.each(["provider-managed", "openai-implicit"])(
-    "a %s route keeps one user message per call, still with a shared prefix and scope",
+    "a %s route keeps one user message per call under the same scope",
     async (strategy) => {
       const fixture = setup(strategy);
       await fixture.run();
 
-      expect(fixture.calls).toHaveLength(2);
-      for (const call of fixture.calls) {
-        expect(call.messages).toHaveLength(1);
-        expect(call.promptCache?.stablePrefixMessageCount).toBeUndefined();
-        expect(call.promptCache?.scopeId).toBe(sharedScope);
-      }
-      // Conversation first, then the task and its volatile lists.
-      const [extraction, summary] = fixture.calls.map((call) => text(call)[0]!);
-      const taskStart = extraction!.indexOf("## Task");
-      expect(extraction!.indexOf("TURN_0 ")).toBeLessThan(extraction!.indexOf("TURN_13 "));
-      expect(extraction!.indexOf("TURN_13 ")).toBeLessThan(taskStart);
-      expect(taskStart).toBeLessThan(extraction!.indexOf("## Existing Memories"));
-      // Implicit prefix caching sees the same bytes up to the task.
-      expect(summary!.indexOf("## Task")).toBe(taskStart);
-      expect(summary!.slice(0, taskStart)).toBe(extraction!.slice(0, taskStart));
+      expect(fixture.calls).toHaveLength(1);
+      const call = fixture.calls[0]!;
+      expect(call.messages).toHaveLength(1);
+      expect(call.promptCache?.stablePrefixMessageCount).toBeUndefined();
+      expect(call.promptCache?.scopeId).toBe(sharedScope);
+      // Conversation first, then the task and its volatile lists, so implicit
+      // prefix caching sees the same bytes up to the task on the next run.
+      const extraction = text(call)[0]!;
+      const taskStart = extraction.indexOf("## Task");
+      expect(extraction.indexOf("TURN_0 ")).toBeLessThan(extraction.indexOf("TURN_13 "));
+      expect(extraction.indexOf("TURN_13 ")).toBeLessThan(taskStart);
+      expect(taskStart).toBeLessThan(extraction.indexOf("## Existing Memories"));
     },
   );
 
@@ -158,10 +146,10 @@ describe("memory pipeline prompt cache", () => {
     fixture.grow(4);
     await fixture.run();
 
-    expect(fixture.calls).toHaveLength(4);
-    const firstRun = fixture.calls[1]!;
+    expect(fixture.calls).toHaveLength(2);
+    const firstRun = fixture.calls[0]!;
     const stableCount = firstRun.promptCache!.stablePrefixMessageCount!;
-    for (const after of fixture.calls.slice(2)) {
+    for (const after of fixture.calls.slice(1)) {
       expect(after.systemPrompt).toBe(firstRun.systemPrompt);
       // Every stable message of the previous run, including the end of its
       // transcript, is a leading message of this run's requests.
@@ -175,8 +163,8 @@ describe("memory pipeline prompt cache", () => {
       const total = text(after).join("").length;
       expect(reusable / total).toBeGreaterThan(0.6);
     }
-    expect(text(fixture.calls[2]!).at(-1)).toContain("added between runs");
-    expect(text(fixture.calls[2]!).slice(0, -1).join("")).not.toContain("added between runs");
+    expect(text(fixture.calls[1]!).at(-1)).toContain("added between runs");
+    expect(text(fixture.calls[1]!).slice(0, -1).join("")).not.toContain("added between runs");
   });
 
   test("the write decision sends the catalogue as stable messages under its own scope", async () => {
@@ -195,7 +183,7 @@ describe("memory pipeline prompt cache", () => {
     ]);
     await fixture.run();
 
-    expect(fixture.calls).toHaveLength(3);
+    expect(fixture.calls).toHaveLength(2);
     const decision = fixture.calls[1]!;
     expect(decision.systemPrompt).toContain("write decision");
     expect(decision.promptCache).toEqual({

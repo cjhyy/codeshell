@@ -133,6 +133,8 @@ const expectedRuntimeExportsByPartition = {
   turnOutcomes: ["createTurnOutcomeTracker", "withOutcomeTrigger"],
   memoryMaintenance: [
     "MemoryOrchestrator",
+    "MEMORY_CLOSURE_IDLE_MS",
+    "planMemoryClosure",
     "auxCachedRequest",
     "isEphemeralSessionState",
     "sanitizeContent",

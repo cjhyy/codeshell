@@ -14,6 +14,8 @@ import {
 import { sandboxCacheKey } from "./sandbox-cache-key.js";
 import { LifetimeScope, onceDispose, type Dispose } from "../composition/lifetime.js";
 import { UsageLedger } from "../cost-ledger/store.js";
+import { MemoryClosureScheduler } from "../services/memory-closure.js";
+import { logger } from "../logging/logger.js";
 
 export interface EngineRuntimeOptions {
   modelPool: ModelPool;
@@ -23,6 +25,12 @@ export interface EngineRuntimeOptions {
   costTracker: CostTracker;
   usageLedger?: UsageLedger;
   usageStorageDir?: string;
+  /**
+   * A long-lived host sets this to how long a session must stay quiet before
+   * its memories are extracted. Without it (one-shot hosts, tests) an Engine
+   * extracts as soon as a run ends, because no timer would outlive the process.
+   */
+  memoryClosureIdleMs?: number;
 }
 
 /**
@@ -37,6 +45,8 @@ export class EngineRuntime {
   readonly mcpPool: MCPManager;
   readonly costTracker: CostTracker;
   readonly usageLedger: UsageLedger;
+  /** Per-session quiet-period timers for memory closures; absent in one-shot hosts. */
+  readonly memoryClosures?: MemoryClosureScheduler;
   private engines = new Set<() => Promise<void>>();
   private closing?: Promise<void>;
 
@@ -58,6 +68,18 @@ export class EngineRuntime {
         storageDir: opts.usageStorageDir,
       });
     this.costTracker.bindLedger?.(this.usageLedger);
+    if (opts.memoryClosureIdleMs !== undefined) {
+      const closures = new MemoryClosureScheduler({
+        idleMs: opts.memoryClosureIdleMs,
+        onError: (sessionId, error) =>
+          logger.warn("memory.closure_failed", {
+            sessionId,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+      });
+      this.memoryClosures = closures;
+      this.lifetime.own(() => closures.dispose());
+    }
     this.lifetime.own(() => this.modelPool.clear());
     this.lifetime.own(() => this.toolRegistry.clear());
     this.lifetime.own(() => this.sandboxCache.clear());

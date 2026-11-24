@@ -517,6 +517,9 @@ export class ExternalRuntimeSessionRecorder {
       runId,
       cwd: this.cwd,
       messages: Object.freeze(messages),
+      // Raw events for a segment closure: it reads what follows the session's
+      // memory cursor and tells typed turns from injected ones by their fields.
+      events: Object.freeze(this.transcript.getEvents()),
       assertCurrent: () => {
         this.assertOwner();
         const current = this.manager.readSessionState(this.sessionId);

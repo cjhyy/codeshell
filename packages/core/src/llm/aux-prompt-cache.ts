@@ -12,8 +12,8 @@ import type { Message } from "../types.js";
 export interface AuxPromptCachePlan {
   /**
    * Cache scope name within the session. Calls that share a prefix must use
-   * the same purpose (e.g. "session-transcript" for memory extraction and the
-   * session summary); prompts that share no prefix use different ones.
+   * the same purpose (e.g. "session-transcript" for the transcript-first
+   * memory prompts); prompts that share no prefix use different ones.
    */
   purpose: string;
   /** Messages the next call repeats byte for byte, in order. */

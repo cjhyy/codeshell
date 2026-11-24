@@ -1,13 +1,13 @@
 /**
- * The shared, transcript-first layout of the end-of-run analysis prompts
- * (memory extraction and session summary).
+ * The transcript-first layout of the end-of-run analysis prompts. The memory
+ * pipeline sends memory extraction; the session-summary builder
+ * (session-memory.ts) keeps the same layout, but no pipeline step calls it.
  *
- * Both calls send the same conversation. Instead of each leading with its own
- * system prompt and instructions, they share a neutral system prompt, a fixed
- * head and the transcript rendered byte for byte the same way; only the final
- * message (the task) differs. The second call then reads the first call's
- * cached prefix, and the next run of the session reads this run's
- * (append-only transcript rendering, memory-transcript.ts).
+ * Instead of leading with its own system prompt and instructions, a task uses
+ * a neutral system prompt, a fixed head and the transcript rendered byte for
+ * byte the same way; only the final message (the task) differs. The next run
+ * of the session then reads this run's cached prefix (append-only transcript
+ * rendering, memory-transcript.ts).
  * See docs/todo/prompt-cache-optimization.md §五 (head / ledger / tail).
  */
 import {

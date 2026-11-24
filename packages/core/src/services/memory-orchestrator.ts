@@ -1,10 +1,10 @@
 /**
- * MemoryOrchestrator — ties extract-memories, session-memory, and auto-dream
- * into a single end-of-session pipeline.
+ * MemoryOrchestrator — ties extract-memories and auto-dream into a single
+ * end-of-session pipeline.
  *
  * Called by Engine.run() after the turn loop completes. Runs memory extraction
- * and session summarisation via lightweight LLM calls, then conditionally
- * triggers auto-dream consolidation. None of this blocks the Engine result.
+ * via a lightweight LLM call, then conditionally triggers auto-dream
+ * consolidation. None of this blocks the Engine result.
  *
  * Dream uses a tool-call loop (not free-text JSON output) so the LLM can
  * incrementally inspect and modify the dream-scope workspace via the same
@@ -26,7 +26,6 @@ import {
   type ExistingMemorySummary,
   type ExtractedMemory,
 } from "./extract-memories.js";
-import { saveSessionMemory, buildSessionMemoryPromptSegments } from "./session-memory.js";
 import { joinMemoryPrompt, type MemoryPromptCachePlan } from "./memory-prompt-segments.js";
 import type { MemoryTranscriptMessage } from "./memory-transcript.js";
 import {
@@ -101,7 +100,8 @@ export interface MemoryOrchestratorOptions {
   /**
    * From settings.memories.autoExtract. `false` skips step 1 (LLM memory
    * extraction) entirely — the user-curated store stops accumulating
-   * extractor noise — while session summaries and auto-dream keep running.
+   * extractor noise. Such a run changes nothing, so it does not count toward
+   * the auto-dream cadence; a consolidation that is already due still runs.
    * Absent/true = extract (default behavior).
    */
   autoExtract?: boolean;
@@ -117,6 +117,14 @@ export interface MemoryOrchestratorOptions {
 export interface MemoryOrchestratorResult {
   /** Number of new memory entries extracted and saved. */
   extracted: number;
+  /** Whether this run added, updated or deleted a memory. */
+  changed: boolean;
+  /**
+   * Whether extraction finished: it answered (with or without candidates) or
+   * is turned off. False when the request failed, so a caller that tracks how
+   * far the conversation has been read can offer the same stretch again.
+   */
+  completed: boolean;
   /** Whether the auto-dream consolidation was triggered. */
   dreamTriggered: boolean;
   /** Names of memories pruned by the recall-TTL sweep. */
@@ -198,12 +206,12 @@ export class MemoryOrchestrator {
   }
 
   /**
-   * Run the full end-of-session memory pipeline.
+   * Run the end-of-session memory pipeline.
    *
    *  1. Extract durable memories from the transcript (extract-memories)
-   *  2. Summarise the session (session-memory)
-   *  3. Record a completed session for auto-dream tracking
-   *  4. Conditionally trigger auto-dream consolidation
+   *  2. Count the run toward auto-dream when it changed the store
+   *  3. Conditionally trigger auto-dream consolidation
+   *  4. Recall-TTL sweep
    */
   async run(
     transcript: MemoryTranscriptMessage[],
@@ -218,8 +226,10 @@ export class MemoryOrchestrator {
 
     // --------------- 1. Extract durable memories ---------------
     // settings.memories.autoExtract=false skips the extractor entirely (the
-    // curated store stops accumulating noise); summaries + dream still run.
+    // curated store stops accumulating noise); a due dream still runs.
     let extracted = 0;
+    let changed = false;
+    let completed = true;
     if (this.options.autoExtract === false) {
       logger.info("memory.extraction_skipped", { sessionId, reason: "autoExtract=false" });
     } else
@@ -231,9 +241,8 @@ export class MemoryOrchestrator {
         const extractionPrompt = buildExtractionPromptSegments(transcript, existing);
         const promptMs = Date.now() - t;
         t = Date.now();
-        // Same system prompt, transcript prefix and cache scope as the session
-        // summary below, which then reads this call's cached prefix. Keep the
-        // two calls sequential (and maxTokens equal) so that read can happen.
+        // The transcript is sent as a stable prefix under its own cache scope,
+        // so the next run for this session can read this call's cached prefix.
         const response = await this.callLLM(
           SESSION_TRANSCRIPT_SYSTEM_PROMPT,
           joinMemoryPrompt(extractionPrompt),
@@ -369,6 +378,7 @@ export class MemoryOrchestrator {
               break;
           }
           refreshDecisionContext = memoryChanged;
+          changed ||= memoryChanged;
         }
         const saveMs = Date.now() - t;
         extracted = entries.length;
@@ -396,65 +406,20 @@ export class MemoryOrchestrator {
       } catch (err) {
         if (err instanceof MemoryMaintenanceCustodyError) throw err;
         this.assertCurrent();
+        completed = false;
         logger.warn("memory.extraction_failed", {
           sessionId,
           error: (err as Error).message,
         });
       }
 
-    // --------------- 2. Session summary ---------------
-    try {
-      // Only summarise sessions with enough content to be meaningful.
-      const messageCount = transcript.filter((m) => m.role !== "system").length;
-      if (messageCount >= 3) {
-        const smPrompt = buildSessionMemoryPromptSegments(transcript);
-        const smResponse = await this.callLLM(
-          SESSION_TRANSCRIPT_SYSTEM_PROMPT,
-          joinMemoryPrompt(smPrompt),
-          { maxTokens: 3072, cache: sessionTranscriptCachePlan(smPrompt) },
-        );
-        // LLM 摘要常带 markdown 围栏 / 围栏外解释文字 / 末尾逗号 → 裸 JSON.parse 易碎。
-        // 复用 utils/json 的 extractJSON(剥围栏 + 花括号配平,识别字符串/转义)拿到候选,
-        // 解析失败再修一次常见错误(末尾逗号),都不行才放弃(走 catch,该 session 无摘要)。
-        const candidate = extractJSON(smResponse);
-        let parsed: { summary?: unknown; keyTopics?: unknown; decisions?: unknown } | null = null;
-        try {
-          parsed = JSON.parse(candidate);
-        } catch {
-          try {
-            parsed = JSON.parse(candidate.replace(/,(\s*[}\]])/g, "$1"));
-          } catch {
-            parsed = null;
-          }
-        }
-        if (parsed) {
-          this.assertCurrent();
-          saveSessionMemory(
-            {
-              sessionId,
-              summary: String(parsed.summary ?? "").slice(0, 1000),
-              keyTopics: Array.isArray(parsed.keyTopics) ? parsed.keyTopics.slice(0, 20) : [],
-              decisions: Array.isArray(parsed.decisions) ? parsed.decisions.slice(0, 20) : [],
-              createdAt: new Date().toISOString(),
-            },
-            this.baseDir,
-          );
-        }
-      }
-    } catch (err) {
-      if (err instanceof MemoryMaintenanceCustodyError) throw err;
-      this.assertCurrent();
-      logger.warn("memory.session_memory_failed", {
-        sessionId,
-        error: (err as Error).message,
-      });
-    }
-
-    // --------------- 3. Record session for auto-dream tracking ---------------
+    // --------------- 2. Record a store change for auto-dream tracking ---------------
+    // The cadence counts runs that changed the store, not runs: an unchanged
+    // store has nothing new to consolidate.
     this.assertCurrent();
-    recordSession(storage.baseDir);
+    if (changed) recordSession(storage.baseDir);
 
-    // --------------- 4. Auto-dream consolidation ---------------
+    // --------------- 3. Auto-dream consolidation ---------------
     // Drives a tool-call loop in the caller (Engine.runDream) so the LLM can
     // list/read/save/delete dream-scope memories via the same Memory* tools
     // the user-facing assistant uses. Skipped when:
@@ -506,7 +471,7 @@ export class MemoryOrchestrator {
       });
     }
 
-    // --------------- 5. Recall-based TTL sweep (用户拍板 C) ---------------
+    // --------------- 4. Recall-based TTL sweep (用户拍板 C) ---------------
     // Soft-delete project-type memories not read for recallTtlDays. Runs on
     // both the project store and the global store (global also accumulates
     // project-type events if the LLM mis-scopes). Never throws into the result.
@@ -534,7 +499,7 @@ export class MemoryOrchestrator {
       });
     }
 
-    return { extracted, dreamTriggered, pruned };
+    return { extracted, changed, completed, dreamTriggered, pruned };
   }
 }
 

@@ -71,6 +71,7 @@ import type { AgentModule } from "../composition/types.js";
 import { resolveSessionAgentConfig, resolveSessionCwd } from "./stdio-session-config.js";
 import { hasWorkspaceHostBridge } from "./stdio-host-config.js";
 import { configureModelTracing } from "../model-traces/index.js";
+import { MEMORY_CLOSURE_IDLE_MS } from "../services/memory-closure.js";
 import { registerOpenRouterCatalogCache } from "../data/openrouter-sync.js";
 import { codeShellHome } from "../utils/paths.js";
 
@@ -248,6 +249,8 @@ const runtime = new EngineRuntime({
   mcpPool,
   costTracker,
   usageStorageDir: join(dataSessionsDir ?? sessionsRoot(), ".usage-ledger"),
+  // This process outlives its sessions, so memories wait for a work segment to end.
+  memoryClosureIdleMs: MEMORY_CLOSURE_IDLE_MS,
 });
 
 // ─── Step 4: ChatSessionManager ──────────────────────────────────

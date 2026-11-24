@@ -17,9 +17,10 @@ export interface MemoryPromptSegments {
 }
 
 /**
- * Cache purposes. Memory extraction and the session summary share one
- * (`session-transcript`): both send the same transcript-first prefix, so they
- * must share a cache scope (and therefore an OpenAI `prompt_cache_key`) too.
+ * Cache purposes. Prompts with the transcript-first prefix (memory extraction,
+ * and the session-summary builder that no pipeline step calls) use
+ * `session-transcript`: one prefix needs one cache scope (and therefore one
+ * OpenAI `prompt_cache_key`).
  */
 export type MemoryPromptPurpose = "session-transcript" | "memory-write-decision";
 
