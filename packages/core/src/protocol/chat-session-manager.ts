@@ -610,6 +610,8 @@ export class ChatSessionManager {
     const invalidated = sessionManager?.incrementSessionGeneration(sessionId) ?? generation + 1;
     this.sessionGeneration.set(sessionId, invalidated);
     const finalizeClosedRun = s.engine.prepareSessionCloseFinalization?.(sessionId, invalidated);
+    // The Engine is going away; the unread stretch is closed when the session next runs.
+    this.runtime?.memoryClosures?.cancel(sessionId);
     s.cancel();
     clearSessionPathApprovals(sessionId);
     clearInteractiveApprovalSession(sessionId);
@@ -716,6 +718,8 @@ export class ChatSessionManager {
       // An asynchronous question remains answerable after its requesting run ends.
       if (s.pendingApprovals.size > 0) continue;
       if (backgroundJobRegistry.hasRunningForSession(id)) continue;
+      // Its memory closure is waiting for quiet, or running, and needs this Engine.
+      if (this.runtime?.memoryClosures?.hasPending(id)) continue;
       if (
         s.wasCancelledSinceLastTurn() &&
         this.evictedStops.size >= CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT

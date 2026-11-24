@@ -42,6 +42,7 @@ import { getApprovalRouter } from "../tool-system/permission.js";
 import { assertSafeSessionId, SessionManager, sessionsRoot } from "../session/session-manager.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import { configureModelTracing } from "../model-traces/index.js";
+import { MEMORY_CLOSURE_IDLE_MS } from "../services/memory-closure.js";
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 const port = Number(process.env.AGENT_TCP_PORT ?? "4321");
@@ -123,6 +124,8 @@ const runtime = new EngineRuntime({
   mcpPool,
   costTracker,
   usageStorageDir: join(dataSessionsDir ?? sessionsRoot(), ".usage-ledger"),
+  // This process outlives its sessions, so memories wait for a work segment to end.
+  memoryClosureIdleMs: MEMORY_CLOSURE_IDLE_MS,
 });
 
 const chatManager = new ChatSessionManager({

@@ -70,6 +70,17 @@ export const FEATURE_FLAGS = {
     description: "Expose allowlisted CodeShell tools to an external Agent Runtime",
   },
   /**
+   * Extract memories when a work segment ends instead of after every run: a
+   * closure reads only what was said since the previous one, and only when a
+   * person typed something in that stretch
+   * (docs/todo/memory-segment-closure-design-20261124.md). Default ON; turning
+   * it off restores extraction after every run over the whole transcript window.
+   */
+  memory_segment_closure: {
+    default: true,
+    description: "Extract memories when a work segment ends, not after every run",
+  },
+  /**
    * Optimization Lab (docs/todo/optimization-lab-mvp.md). Default OFF while the
    * experimental capability is being evaluated. Desktop loads its module only
    * when this flag is enabled.

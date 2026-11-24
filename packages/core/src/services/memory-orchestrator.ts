@@ -119,6 +119,12 @@ export interface MemoryOrchestratorResult {
   extracted: number;
   /** Whether this run added, updated or deleted a memory. */
   changed: boolean;
+  /**
+   * Whether extraction finished: it answered (with or without candidates) or
+   * is turned off. False when the request failed, so a caller that tracks how
+   * far the conversation has been read can offer the same stretch again.
+   */
+  completed: boolean;
   /** Whether the auto-dream consolidation was triggered. */
   dreamTriggered: boolean;
   /** Names of memories pruned by the recall-TTL sweep. */
@@ -223,6 +229,7 @@ export class MemoryOrchestrator {
     // curated store stops accumulating noise); a due dream still runs.
     let extracted = 0;
     let changed = false;
+    let completed = true;
     if (this.options.autoExtract === false) {
       logger.info("memory.extraction_skipped", { sessionId, reason: "autoExtract=false" });
     } else
@@ -399,6 +406,7 @@ export class MemoryOrchestrator {
       } catch (err) {
         if (err instanceof MemoryMaintenanceCustodyError) throw err;
         this.assertCurrent();
+        completed = false;
         logger.warn("memory.extraction_failed", {
           sessionId,
           error: (err as Error).message,
@@ -491,7 +499,7 @@ export class MemoryOrchestrator {
       });
     }
 
-    return { extracted, changed, dreamTriggered, pruned };
+    return { extracted, changed, completed, dreamTriggered, pruned };
   }
 }
 

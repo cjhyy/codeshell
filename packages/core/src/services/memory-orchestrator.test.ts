@@ -454,3 +454,46 @@ describe("MemoryOrchestrator auto-dream cadence counts only runs that changed th
       }),
     ));
 });
+
+describe("MemoryOrchestrator reports whether extraction finished", () => {
+  const conversation = [
+    { role: "user", content: "a" },
+    { role: "assistant", content: "b" },
+    { role: "user", content: "c" },
+  ];
+  const run = async (options: { autoExtract?: boolean; reply: () => Promise<string> }) => {
+    const info = spyOn(logger, "info").mockImplementation(() => {});
+    const warn = spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      return await withCodeShellHome((base) =>
+        new MemoryOrchestrator({
+          memoryManager: new MemoryManager({ baseDir: base }),
+          autoExtract: options.autoExtract,
+          callLLM: options.reply,
+        }).run(conversation, "s-completed"),
+      );
+    } finally {
+      info.mockRestore();
+      warn.mockRestore();
+    }
+  };
+
+  it("is true when the extraction answered, even with nothing to keep", async () => {
+    expect((await run({ reply: async () => "[]" })).completed).toBe(true);
+  });
+
+  it("is false when the extraction request failed, so the caller can retry the same stretch", async () => {
+    const result = await run({
+      reply: async () => {
+        throw new Error("model unavailable");
+      },
+    });
+    expect(result.completed).toBe(false);
+    expect(result.changed).toBe(false);
+  });
+
+  it("is true when extraction is turned off: there is nothing to retry", async () => {
+    const result = await run({ autoExtract: false, reply: async () => "[]" });
+    expect(result.completed).toBe(true);
+  });
+});

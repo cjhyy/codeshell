@@ -510,7 +510,9 @@ describe("architecture growth budgets", () => {
       // external runtime answer goalGet with the same shape (incl. goal progress).
       // +1 the native turn-outcome tracker, so Desktop's external runtime stamps
       // `turn_complete.outcome` (and its trigger) with the same rules as Engine.
-      "packages/core/src/index.internal.ts": 134,
+      // +1 the memory closure planner, so Desktop's external runtime closes a work
+      // segment with the same window, human-input gate and quiet period as Engine.
+      "packages/core/src/index.internal.ts": 135,
       "packages/coding/src/index.ts": 12,
       // +1 for conversation-session.ts, which re-exports the four modules
       // behind entering a Work Session from a chat (route record, IM list,
