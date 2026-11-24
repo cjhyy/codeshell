@@ -1194,24 +1194,9 @@
 
   * {
     border-color: hsl(var(--cs-border));
-  }
-
-  *::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-
-  *::-webkit-scrollbar-thumb {
-    background: hsl(var(--cs-muted-foreground) / 0.32);
-    border: 2px solid transparent;
-    border-radius: 999px;
-    background-clip: padding-box;
-  }
-
-  *::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--cs-muted-foreground) / 0.48);
-    border: 2px solid transparent;
-    background-clip: padding-box;
+    /* Native scrollbars keep the platform's overlay and auto-hide behavior. */
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--cs-muted-foreground) / 0.8) transparent;
   }
 }
 

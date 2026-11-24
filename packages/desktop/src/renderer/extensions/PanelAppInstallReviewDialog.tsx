@@ -74,7 +74,7 @@ export function PanelAppInstallReviewDialog({
           </div>
         </DialogHeader>
 
-        <div className="min-h-0 space-y-3 overflow-y-scroll overscroll-contain px-5 py-4 [scrollbar-gutter:stable] [scrollbar-width:thin]">
+        <div className="min-h-0 space-y-3 overflow-y-scroll overscroll-contain px-5 py-4 [scrollbar-gutter:stable]">
           {preview.alreadyInstalled && action === "install" && (
             <div className="flex gap-2 rounded-lg border border-status-warn/40 bg-status-warn/10 p-3 text-sm">
               <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-status-warn" />

@@ -11,6 +11,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   findCodeShellWindow,
+  seedViewOnlyWorkbench,
   waitForAsyncFunction,
 } from "./electron-harness.mjs";
 
@@ -176,6 +177,8 @@ try {
     JSON.stringify({ autoUpdates: false }),
   );
   await writePackage("1.0.0");
+  // Settle the initial no-project trust prompt before it can cover the project picker.
+  await seedViewOnlyWorkbench(isolated);
   electron = await launchCodeShellElectron({
     appDir,
     home: isolated.home,

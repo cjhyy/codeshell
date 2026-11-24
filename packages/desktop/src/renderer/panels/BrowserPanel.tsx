@@ -426,7 +426,7 @@ export function BrowserPanel({
         {/* Tabs scroll horizontally when they overflow; the + button stays
             pinned (shrink-0) so it's always reachable. Each tab is shrink-0 so
             they keep their width instead of squishing into unreadable slivers. */}
-        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:thin]">
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           {tabs.map((tab) => (
             <div
               key={tab.id}
