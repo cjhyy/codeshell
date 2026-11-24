@@ -14,6 +14,7 @@ import { RunToolSurface } from "../tool-system/run-tool-surface.js";
 import { callToolDef } from "../tool-system/builtin/call-tool.js";
 import { saveContextNoteToolDef } from "../tool-system/builtin/context-notes.js";
 import { toolSearchToolDef } from "../tool-system/builtin/tool-search.js";
+import { SESSION_TRANSCRIPT_SYSTEM_PROMPT } from "../services/session-transcript-prompt.js";
 
 const PROVIDER = "fake-engine-context-notes";
 const NOTE_TOOLS = ["SaveContextNote", "NewContext", "SearchHistory"];
@@ -283,10 +284,17 @@ describe("Engine notes context strategy", () => {
       ["SaveContextNote", false],
       ["NewContext", false],
     ]);
-    // UI tool labels are independent background calls and may settle before
-    // this assertion in a larger suite. A context-summary call must never run.
+    // UI tool labels and the run-end memory closure are independent background
+    // calls and may settle before this assertion in a larger suite. (The closure
+    // reads the transcript's raw events, so the checkpoint that shrank the
+    // replay does not hide this session's history from it.) A context-summary
+    // call must never run.
     expect(
-      scenario.auxiliary.every((request) => request.systemPrompt.includes("what these tools did")),
+      scenario.auxiliary.every(
+        (request) =>
+          request.systemPrompt.includes("what these tools did") ||
+          request.systemPrompt === SESSION_TRANSCRIPT_SYSTEM_PROMPT,
+      ),
     ).toBe(true);
     const transcript = engine.getSessionManager().resume(sessionId).transcript;
     expect(transcript.getEvents("context_checkpoint")).toHaveLength(1);
