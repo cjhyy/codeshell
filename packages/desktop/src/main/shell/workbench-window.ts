@@ -8,7 +8,14 @@ import {
   registerSecondInstanceFocus,
   createMainWindowRestorer,
 } from "../quick-chat-startup-cleanup.js";
-import { app, BrowserWindow, nativeTheme, session, type WebContents } from "electron";
+import {
+  app,
+  BrowserWindow,
+  nativeTheme,
+  session,
+  systemPreferences,
+  type WebContents,
+} from "electron";
 import { resolve } from "node:path";
 import { MEDIA_PREVIEW_SCHEME } from "../../shared/media-preview.js";
 import { THEME_ASSET_SCHEME } from "../theme-asset-protocol.js";
@@ -37,6 +44,10 @@ export function prepareNativeInstance(): boolean {
   // panel show our product name even before packaging. setAppUserModelId
   // makes Windows taskbar/notification grouping work correctly.
   app.setName("code-shell");
+  if (process.platform === "darwin") {
+    // An explicit macOS scrollbar preference takes precedence over this app default.
+    systemPreferences.registerDefaults({ AppleShowScrollBars: "WhenScrolling" });
+  }
   if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
   return Boolean(chromeNativeMessagingOrigin);
 }
