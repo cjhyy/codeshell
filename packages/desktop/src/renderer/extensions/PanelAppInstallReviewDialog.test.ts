@@ -11,7 +11,7 @@ describe("Panel App install review dialog layout", () => {
     expect(dialog).toContain("grid-rows-[auto_minmax(0,1fr)_auto]");
     expect(dialog).toContain("gap-0 overflow-hidden p-0");
     expect(dialog).toContain(
-      'className="min-h-0 space-y-3 overflow-y-scroll overscroll-contain px-5 py-4 [scrollbar-gutter:stable] [scrollbar-width:thin]"',
+      'className="min-h-0 space-y-3 overflow-y-scroll overscroll-contain px-5 py-4 [scrollbar-gutter:stable]"',
     );
     expect(dialog).toContain(
       '<DialogFooter className="shrink-0 border-t bg-background px-5 py-4">',

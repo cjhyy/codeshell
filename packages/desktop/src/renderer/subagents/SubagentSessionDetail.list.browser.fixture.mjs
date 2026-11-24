@@ -30,6 +30,22 @@ const source = `
   };
   let options={};
   function title(index){return index===3&&options.presentation?(options.lang==='zh'?'等待设计确认':'Waiting for design review'):names[options.lang][index]}
+  function processTranscript(id){
+    const stream=event=>({kind:'stream',event});
+    const summary='Summary for '+id+': '+window.snapshotRevision;
+    return [
+      {kind:'user',text:'Read project files for '+id},
+      stream({type:'stream_request_start',turnNumber:0}),
+      stream({type:'text_delta',text:'Inspect files before summarizing.'}),
+      stream({type:'assistant_message',message:{role:'assistant',content:'Inspect files before summarizing.'}}),
+      stream({type:'tool_use_start',toolCall:{id:'read-1',toolName:'Read',args:{file_path:'/fixture/project.ts'}}}),
+      stream({type:'tool_result',result:{id:'read-1',toolName:'Read',result:'File contents'}}),
+      stream({type:'stream_request_start',turnNumber:1}),
+      stream({type:'text_delta',text:summary}),
+      stream({type:'assistant_message',message:{role:'assistant',content:summary}}),
+      stream({type:'turn_complete',reason:'completed'}),
+    ];
+  }
   function raw(id){return [
     {kind:'user',text:'Exact transcript '+id},
     ...(id==='child-nested'?[
@@ -57,6 +73,7 @@ const source = `
     },
     getSessionTranscript:async(id)=>{
       window.actions.push(['transcript',id]);
+      if(options.processTranscript)return processTranscript(id);
       if(options.delay&&id==='old-child')return new Promise(resolve=>window.resolveOldTranscript=()=>resolve([{kind:'user',text:'STALE TRANSCRIPT'}]));
       return raw(id);
     },
@@ -201,6 +218,37 @@ async function run(label, task) {
   }
 }
 try {
+  await run("process-disclosure-refresh", async () => {
+    await page.evaluate(() => {
+      window.snapshotRevision = 1;
+    });
+    await render({ agentId: "active", processTranscript: true });
+    const heading = pane.locator(".cs-process-heading");
+    const expanded = () => heading.getAttribute("aria-expanded");
+    await pane.getByText("Summary for active: 1", { exact: true }).waitFor();
+    assert.equal(await expanded(), "false");
+    await heading.click();
+    assert.equal(await expanded(), "true");
+    await page.evaluate(() => {
+      window.snapshotRevision = 2;
+    });
+    await pane.getByText("Summary for active: 2", { exact: true }).waitFor();
+    assert.equal(await expanded(), "true", "polling preserves a manually opened process");
+    await pane.getByText("Inspect files before summarizing.", { exact: true }).waitFor();
+    await heading.click();
+    await page.evaluate(() => {
+      window.snapshotRevision = 3;
+      window.dispatchEvent(new Event("codeshell:files-changed"));
+    });
+    await pane.getByText("Summary for active: 3", { exact: true }).waitFor();
+    assert.equal(await expanded(), "false", "refresh preserves a manually closed process");
+    await heading.click();
+    assert.equal(await expanded(), "true");
+    await pane.locator('[data-subagent-action="back-to-list"]').click();
+    await pane.locator('[data-subagent-list-id="failed"]').click();
+    await pane.getByText("Summary for failed: 3", { exact: true }).waitFor();
+    assert.equal(await expanded(), "false", "sibling with the same tool ID starts closed");
+  });
   for (const lang of ["zh", "en"])
     for (const mode of ["light", "dark"])
       for (const paneWidth of [620, 320]) {
