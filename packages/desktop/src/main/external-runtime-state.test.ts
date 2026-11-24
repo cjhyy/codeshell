@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readOutputJournal, readOutputJournalLegacyBase } from "@cjhyy/code-shell-core/internal";
-import { SessionManager, UsageLedger, sessionsRoot } from "@cjhyy/code-shell-core";
+import { MemoryManager, SessionManager, UsageLedger, sessionsRoot } from "@cjhyy/code-shell-core";
 import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { captureExternalRuntimeUsage } from "./external-runtime-usage.js";
 import {
@@ -85,7 +85,7 @@ describe("external runtime durable state", () => {
     expect(recorder.memorySnapshot()).toBeUndefined();
   });
 
-  test("a first-session accounting replacement during inference blocks the late summary", async () => {
+  test("a first-session accounting replacement during inference blocks the late memory write", async () => {
     const recorder = new ExternalRuntimeSessionRecorder(
       "late-memory-owner",
       "/tmp/project",
@@ -106,8 +106,9 @@ describe("external runtime durable state", () => {
     const input = recorder.memorySnapshot()!;
     let calls = 0;
     const memory = new ExternalRuntimeMemory({
+      idleDelayMs: 0,
       storageDir: sessionsRoot(),
-      readSettings: () => ({ memories: { autoExtract: false } }) as never,
+      readSettings: () => ({ memories: {} }) as never,
       infer: async () => {
         calls++;
         const state = sessions.readSessionState("late-memory-owner")!;
@@ -115,7 +116,15 @@ describe("external runtime durable state", () => {
           costState: { ...state.costState, accountingSessionId: "replacement-owner" },
         });
         return {
-          text: JSON.stringify({ summary: "must not persist", keyTopics: [], decisions: [] }),
+          text: JSON.stringify([
+            {
+              type: "project",
+              scope: "project",
+              name: "must not persist",
+              description: "late outcome",
+              content: "written after the owner changed",
+            },
+          ]),
         };
       },
       onError() {},
@@ -123,9 +132,13 @@ describe("external runtime durable state", () => {
     memory.schedule({ ...input, kind: "claude-code", model: "captured" });
     await memory.idle(input.sessionId);
     expect(calls).toBe(1);
-    expect(() =>
-      readFileSync(join(testHome, "session-memories", "late-memory-owner.json")),
-    ).toThrow();
+    expect(
+      new MemoryManager({
+        baseDir: testHome,
+        projectDir: "/tmp/project",
+        scope: "dream",
+      }).loadAll(),
+    ).toEqual([]);
     await memory.dispose();
   });
 

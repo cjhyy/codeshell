@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SessionManager, UsageLedger, type SettingsManager } from "@cjhyy/code-shell-core";
+import {
+  MemoryManager,
+  SessionManager,
+  UsageLedger,
+  type SettingsManager,
+} from "@cjhyy/code-shell-core";
 import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import {
   EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX,
@@ -25,7 +30,7 @@ afterEach(async () => {
 });
 function settings(): Settings {
   return {
-    memories: { autoExtract: false },
+    memories: {},
     defaults: { text: "primary" },
     modelConnections: ["primary", "aux", "extract"].map((id) => ({
       id,
@@ -58,14 +63,21 @@ function snapshot(fields: Partial<ExternalMemorySnapshot> = {}): ExternalMemoryS
     ...fields,
   };
 }
-function summaryPath(id = "memory-session") {
-  return join(directory, "session-memories", `${id}.json`);
+/** Names of the memories that maintenance persisted for the fixture project. */
+function savedMemories() {
+  return new MemoryManager({ baseDir: directory, projectDir: directory, scope: "dream" })
+    .loadAll()
+    .map((memory) => memory.name);
 }
-const answer = JSON.stringify({
-  summary: "latest verified outcome",
-  keyTopics: [],
-  decisions: ["keep source scope"],
-});
+const answer = JSON.stringify([
+  {
+    type: "project",
+    scope: "project",
+    name: "latest verified outcome",
+    description: "keep source scope",
+    content: "the outcome this maintenance run extracted",
+  },
+]);
 
 test("follow current never resolves the unrelated default API; explicit extraction overrides aux", () => {
   const config = settings();
@@ -84,10 +96,11 @@ test("follow current never resolves the unrelated default API; explicit extracti
   expect(() => resolveExternalMemoryModel(config)).toThrow("unavailable");
 });
 
-test("Claude follow uses the captured CLI model and persists a scoped summary", async () => {
+test("Claude follow uses the captured CLI model and persists a scoped memory", async () => {
   const captured: Array<{ model?: string; systemPrompt: string }> = [];
   const errors: unknown[] = [];
   const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
     storageDir: storage,
     readSettings: settings,
     infer: async (request) => {
@@ -103,7 +116,7 @@ test("Claude follow uses the captured CLI model and persists a scoped summary", 
   expect(captured).toHaveLength(1);
   expect(captured[0]!.model).toBe("claude-actual-model");
   expect(captured[0]).toMatchObject({ cwd: directory });
-  expect(JSON.parse(readFileSync(summaryPath(), "utf8")).summary).toBe("latest verified outcome");
+  expect(savedMemories()).toEqual(["latest verified outcome"]);
   const traces = new ModelTraceStore({ storageDir: join(storage, ".model-traces") }).list();
   expect(traces.items[0]).toMatchObject({
     sessionId: "memory-session",
@@ -132,6 +145,7 @@ test("unsupported Codex follow is visible and never calls Claude or a default AP
   let calls = 0;
   const errors: unknown[] = [];
   const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
     storageDir: storage,
     readSettings: settings,
     infer: async () => {
@@ -156,7 +170,7 @@ test("unsupported Codex follow is visible and never calls Claude or a default AP
     sessionId: "memory-session",
   });
   expect(store.list().total).toBe(0);
-  expect(existsSync(summaryPath())).toBe(false);
+  expect(savedMemories()).toEqual([]);
 });
 
 test("Codex can use an explicit API auxiliary connection with tools disabled", async () => {
@@ -165,6 +179,7 @@ test("Codex can use an explicit API auxiliary connection with tools disabled", a
   const received: unknown[] = [];
   const errors: unknown[] = [];
   const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
     storageDir: storage,
     readSettings: () => config,
     createClient: (async (selected) => {
@@ -187,7 +202,7 @@ test("Codex can use an explicit API auxiliary connection with tools disabled", a
   expect(errors).toEqual([]);
   expect(received).toHaveLength(1);
   expect(received[0]).toMatchObject({ tools: [], maxTokens: 3072 });
-  expect(existsSync(summaryPath())).toBe(true);
+  expect(savedMemories()).toEqual(["latest verified outcome"]);
 });
 
 test("API memory calls send core's segmented, cacheable request in an external scope", async () => {
@@ -201,13 +216,14 @@ test("API memory calls send core's segmented, cacheable request in an external s
   const received: Request[] = [];
   const errors: unknown[] = [];
   const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
     storageDir: storage,
     readSettings: () => config,
     createClient: (async () => ({
       getPromptCacheConfigIdentity: () => ({ cacheStrategy: "anthropic-explicit" }),
       createMessage: async (request: Request) => {
         received.push(request);
-        return { text: received.length === 1 ? "[]" : answer, toolCalls: [] };
+        return { text: "[]", toolCalls: [] };
       },
     })) as any,
     infer: async () => {
@@ -220,9 +236,8 @@ test("API memory calls send core's segmented, cacheable request in an external s
   await memory.idle("memory-session");
   expect(errors).toEqual([]);
   const scopes = received.map((request) => request.promptCache?.scopeId);
-  // Extraction and summary share one transcript-first prefix and so one scope.
+  // One request per maintenance run: extraction, under the transcript-first scope.
   expect(scopes).toEqual([
-    `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}session-transcript`,
     `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}session-transcript`,
   ]);
   // Never the main conversation's scope, nor core's own memory scopes.
@@ -243,6 +258,7 @@ test("without explicit cache markers the API call keeps one complete user messag
   config.defaults!.auxText = "aux";
   const received: Array<{ messages: unknown[]; promptCache?: { scopeId: string } }> = [];
   const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
     storageDir: storage,
     readSettings: () => config,
     createClient: (async () => ({
@@ -268,6 +284,7 @@ test("without explicit cache markers the API call keeps one complete user messag
 
 test.each(["length", "max_tokens"])("CLI %s output cannot replace memory", async (stopReason) => {
   const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
     storageDir: storage,
     readSettings: settings,
     infer: async () => ({ text: answer, stopReason }),
@@ -276,12 +293,13 @@ test.each(["length", "max_tokens"])("CLI %s output cannot replace memory", async
   jobs.push(memory);
   memory.schedule(snapshot());
   await memory.idle("memory-session");
-  expect(existsSync(summaryPath())).toBe(false);
+  expect(savedMemories()).toEqual([]);
 });
 
-test("a model-setting change during inference prevents a late summary write", async () => {
+test("a model-setting change during inference prevents a late memory write", async () => {
   const config = settings();
   const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
     storageDir: storage,
     readSettings: () => config,
     infer: async () => {
@@ -293,7 +311,7 @@ test("a model-setting change during inference prevents a late summary write", as
   jobs.push(memory);
   memory.schedule(snapshot());
   await memory.idle("memory-session");
-  expect(existsSync(summaryPath())).toBe(false);
+  expect(savedMemories()).toEqual([]);
 });
 
 test("superseded jobs release the queue even when old transport ignores abort", async () => {
@@ -303,6 +321,7 @@ test("superseded jobs release the queue even when old transport ignores abort", 
   let oldGuard!: () => void;
   const runs: string[] = [];
   const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
     run: async (input, _signal, guard) => {
       runs.push(input.runId);
       if (input.runId === "old") {
@@ -331,6 +350,7 @@ test("dispose cancels pending maintenance without waiting for a wedged provider"
   const pending = new Promise<void>((resolve) => (started = resolve));
   let release!: () => void;
   const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
     run: async () => {
       started();
       await new Promise<void>((resolve) => {
@@ -350,6 +370,7 @@ test("dispose waits for abort-driven child cleanup before the host exits", async
   const pending = new Promise<void>((resolve) => (started = resolve));
   let cleaned = false;
   const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
     run: async (_snapshot, signal) => {
       started();
       await new Promise<void>((resolve) =>
@@ -371,4 +392,100 @@ test("dispose waits for abort-driven child cleanup before the host exits", async
   await pending;
   await memory.dispose();
   expect(cleaned).toBe(true);
+});
+
+function grown(extra: number) {
+  return Array.from({ length: 8 + extra }, (_, index) => ({
+    role: index % 2 ? "assistant" : "user",
+    content: `turn ${index}`,
+  }));
+}
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+test("consecutive turns collapse into one run after the session goes quiet", async () => {
+  const runs: string[] = [];
+  const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 30,
+    run: async (input) => {
+      runs.push(input.runId);
+    },
+  });
+  jobs.push(memory);
+  memory.schedule(snapshot({ runId: "turn-1" }));
+  await wait(5);
+  memory.schedule(snapshot({ runId: "turn-2", messages: grown(2) }));
+  await wait(5);
+  memory.schedule(snapshot({ runId: "turn-3", messages: grown(4) }));
+  expect(runs).toEqual([]);
+  await wait(60);
+  await memory.idle("memory-session");
+  expect(runs).toEqual(["turn-3"]);
+});
+
+test("a new turn starting cancels the waiting snapshot", async () => {
+  const runs: string[] = [];
+  const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 20,
+    run: async (input) => {
+      runs.push(input.runId);
+    },
+  });
+  jobs.push(memory);
+  memory.schedule(snapshot({ runId: "stale" }));
+  memory.cancel("memory-session");
+  await wait(40);
+  expect(runs).toEqual([]);
+});
+
+test("dispose drops waiting snapshots", async () => {
+  const runs: string[] = [];
+  const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 20,
+    run: async (input) => {
+      runs.push(input.runId);
+    },
+  });
+  memory.schedule(snapshot({ runId: "never" }));
+  await memory.dispose();
+  await wait(40);
+  expect(runs).toEqual([]);
+});
+
+test("reruns wait until enough new messages accumulate", async () => {
+  const runs: string[] = [];
+  const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
+    minNewMessages: 4,
+    run: async (input) => {
+      runs.push(input.runId);
+    },
+  });
+  jobs.push(memory);
+  memory.schedule(snapshot({ runId: "first" }));
+  await memory.idle("memory-session");
+  memory.schedule(snapshot({ runId: "too-few", messages: grown(2) }));
+  await memory.idle("memory-session");
+  memory.schedule(snapshot({ runId: "enough", messages: grown(4) }));
+  await memory.idle("memory-session");
+  memory.schedule(snapshot({ runId: "rewritten", messages: grown(0).slice(0, 8) }));
+  await memory.idle("memory-session");
+  expect(runs).toEqual(["first", "enough", "rewritten"]);
+});
+
+test("a failed run does not count as processed", async () => {
+  const runs: string[] = [];
+  const memory = new ExternalRuntimeMemory({
+    idleDelayMs: 0,
+    run: async (input) => {
+      runs.push(input.runId);
+      if (input.runId === "fails") throw new Error("provider down");
+    },
+    onError() {},
+  });
+  jobs.push(memory);
+  memory.schedule(snapshot({ runId: "fails" }));
+  await memory.idle("memory-session");
+  memory.schedule(snapshot({ runId: "retry", messages: grown(1) }));
+  await memory.idle("memory-session");
+  expect(runs).toEqual(["fails", "retry"]);
 });

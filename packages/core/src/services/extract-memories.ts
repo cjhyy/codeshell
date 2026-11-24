@@ -40,7 +40,7 @@ export interface ExistingMemorySummary {
 
 /**
  * The extraction task. It follows the conversation (session-transcript-prompt.ts):
- * the conversation is the prefix shared with the session summary call.
+ * the conversation is the cacheable prefix and the task comes last.
  */
 const EXTRACTION_TASK = `## Task: memory extraction
 Act as a memory extraction assistant. Extract only durable, reusable information worth carrying into future sessions.

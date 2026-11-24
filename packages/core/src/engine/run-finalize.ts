@@ -320,8 +320,8 @@ export async function finalizeRunSuccess(args: {
     profile?.disableMemoryPipeline !== true
   ) {
     // Fire-and-forget memory pipeline: extract durable memories from the
-    // transcript, save a session summary, and conditionally trigger
-    // auto-dream consolidation. Doesn't block the Engine result.
+    // transcript and conditionally trigger auto-dream consolidation.
+    // Doesn't block the Engine result.
     void args.runMemoryPipeline(
       session.transcript,
       session.state.sessionId,

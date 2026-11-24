@@ -52,6 +52,15 @@ type ExternalMemoryCachePlan = NonNullable<
 /** External-runtime memory calls are cached apart from core's own memory calls. */
 export const EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX = "external-runtime-";
 const MAINTENANCE_TIMEOUT_MS = 180_000;
+/**
+ * Memory maintenance re-reads the whole transcript (extraction, one write
+ * decision per candidate, then a summary), so running it after every turn
+ * multiplied background model calls by the turn count. Wait until the session
+ * has been quiet this long; any newer turn restarts the wait.
+ */
+const DEFAULT_IDLE_DELAY_MS = 5 * 60_000;
+/** Skip a rerun until the transcript has grown by this many messages. */
+const DEFAULT_MIN_NEW_MESSAGES = 8;
 
 /** Release the queue on cancellation even if an injected transport settles late. */
 function untilAborted<T>(signal: AbortSignal, operation: () => Promise<T>): Promise<T> {
@@ -103,6 +112,10 @@ export function resolveExternalMemoryModel(
 /** Per-session latest-snapshot queue, separate from the foreground runtime and tool lease. */
 export class ExternalRuntimeMemory {
   private readonly jobs = new Map<string, MemoryJob>();
+  /** Debounced snapshots waiting for the session to go quiet. */
+  private readonly pending = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Transcript length of each session's last completed maintenance in this process. */
+  private readonly processed = new Map<string, number>();
   private readonly inFlight = new Set<Promise<void>>();
 
   constructor(
@@ -118,11 +131,45 @@ export class ExternalRuntimeMemory {
         assertCurrent: () => void,
       ) => Promise<void>;
       onError?: (snapshot: ExternalMemorySnapshot, error: unknown) => void;
+      /** Quiet period before maintenance starts; 0 starts immediately. */
+      idleDelayMs?: number;
+      minNewMessages?: number;
     } = {},
   ) {}
 
   schedule(snapshot: ExternalMemorySnapshot): void {
     if (snapshot.messages.length < 8) return;
+    const last = this.processed.get(snapshot.sessionId);
+    const length = snapshot.messages.length;
+    // A shorter transcript was rewritten (compaction/restore): treat it as new.
+    if (
+      last !== undefined &&
+      length >= last &&
+      length - last < (this.deps.minNewMessages ?? DEFAULT_MIN_NEW_MESSAGES)
+    )
+      return;
+    this.clearPending(snapshot.sessionId);
+    const delay = this.deps.idleDelayMs ?? DEFAULT_IDLE_DELAY_MS;
+    if (delay <= 0) return this.start(snapshot);
+    // A session closed during the wait fails its snapshot guard and is skipped;
+    // the next completed turn after it resumes schedules the full transcript.
+    const timer = setTimeout(() => {
+      if (this.pending.get(snapshot.sessionId) !== timer) return;
+      this.pending.delete(snapshot.sessionId);
+      this.start(snapshot);
+    }, delay);
+    timer.unref?.();
+    this.pending.set(snapshot.sessionId, timer);
+  }
+
+  private clearPending(sessionId: string): void {
+    const timer = this.pending.get(sessionId);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    this.pending.delete(sessionId);
+  }
+
+  private start(snapshot: ExternalMemorySnapshot): void {
     const previous = this.jobs.get(snapshot.sessionId);
     previous?.abort.abort();
     const abort = new AbortController();
@@ -155,6 +202,7 @@ export class ExternalRuntimeMemory {
             () => this.inFlight.delete(operation),
           );
           await untilAborted(abort.signal, () => operation);
+          this.processed.set(snapshot.sessionId, snapshot.messages.length);
         } catch (error) {
           if (!abort.signal.aborted) {
             withModelTraceContext(
@@ -200,6 +248,7 @@ export class ExternalRuntimeMemory {
   }
 
   cancel(sessionId: string): void {
+    this.clearPending(sessionId);
     this.jobs.get(sessionId)?.abort.abort();
   }
 
@@ -208,6 +257,7 @@ export class ExternalRuntimeMemory {
   }
 
   async dispose(): Promise<void> {
+    for (const sessionId of [...this.pending.keys()]) this.clearPending(sessionId);
     for (const job of this.jobs.values()) job.abort.abort();
     await Promise.all([...this.jobs.values()].map((job) => job.done));
     // Cancellation releases the queue first, but process-group cleanup still

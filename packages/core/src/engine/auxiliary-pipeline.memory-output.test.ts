@@ -5,7 +5,6 @@ import { join } from "node:path";
 import type { CreateMessageOptions } from "../llm/types.js";
 import { ModelPool } from "../llm/model-pool.js";
 import { MemoryManager } from "../session/memory.js";
-import { loadSessionMemory, saveSessionMemory } from "../services/session-memory.js";
 import type { SettingsManager } from "../settings/manager.js";
 import type { ToolContext } from "../tool-system/context.js";
 import type { ToolRegistry } from "../tool-system/registry.js";
@@ -32,20 +31,7 @@ afterEach(() => {
 });
 
 const sessionId = "memory-budget-session";
-const priorSummary = {
-  sessionId,
-  summary: "previous verified summary",
-  keyTopics: ["verified"],
-  decisions: ["keep the prior memory"],
-  createdAt: "2026-10-01T00:00:00.000Z",
-};
 const usage: TokenUsage = { promptTokens: 20, completionTokens: 10, totalTokens: 30 };
-
-/** The task is in the user messages; both calls share one system prompt. */
-const promptText = (options: CreateMessageOptions) =>
-  options.messages
-    .map((message) => (typeof message.content === "string" ? message.content : ""))
-    .join("");
 
 function setup(autoExtract: boolean, respond: (options: CreateMessageOptions) => LLMResponse) {
   const calls: CreateMessageOptions[] = [];
@@ -86,11 +72,26 @@ function setup(autoExtract: boolean, respond: (options: CreateMessageOptions) =>
 
 describe("memory model output budgets", () => {
   test.each(["length", "max_tokens"])(
-    "preserves a good summary when the provider reports %s, without retrying",
+    "discards an extraction the provider reports as %s, without retrying",
     async (stopReason) => {
-      saveSessionMemory(priorSummary);
-      const fixture = setup(false, () => ({
-        text: JSON.stringify({ summary: "partial replacement", keyTopics: [], decisions: [] }),
+      const manager = new MemoryManager({ projectDir: root, scope: "dream" });
+      manager.save({
+        type: "project",
+        name: "verified-memory",
+        description: "verified",
+        content: "keep this",
+      });
+      const before = manager.loadAll();
+      const fixture = setup(true, () => ({
+        text: JSON.stringify([
+          {
+            type: "project",
+            scope: "project",
+            name: "partial-new-memory",
+            description: "partial",
+            content: "discard this",
+          },
+        ]),
         toolCalls: [],
         stopReason,
         usage,
@@ -101,54 +102,21 @@ describe("memory model output budgets", () => {
       expect(fixture.calls).toHaveLength(1);
       expect(fixture.calls[0]!.maxTokens).toBe(3072);
       expect(fixture.billed).toEqual([usage]);
-      expect(loadSessionMemory(sessionId)).toEqual(priorSummary);
+      expect(manager.loadAll()).toEqual(before);
     },
   );
 
-  test("discards length-stopped extraction and summary even when their text looks like valid JSON", async () => {
-    saveSessionMemory(priorSummary);
-    const manager = new MemoryManager({ projectDir: root, scope: "dream" });
-    manager.save({
-      type: "project",
-      name: "verified-memory",
-      description: "verified",
-      content: "keep this",
-    });
-    const before = manager.loadAll();
-    const fixture = setup(true, (options) => ({
-      text: promptText(options).includes("memory extraction assistant")
-        ? JSON.stringify([
-            {
-              type: "project",
-              scope: "project",
-              name: "partial-new-memory",
-              description: "partial",
-              content: "discard this",
-            },
-          ])
-        : JSON.stringify({ summary: "partial replacement", keyTopics: [], decisions: [] }),
-      toolCalls: [],
-      stopReason: "length",
-      usage,
-    }));
-
-    await fixture.run();
-
-    expect(fixture.calls).toHaveLength(2);
-    expect(fixture.billed).toEqual([usage, usage]);
-    expect(manager.loadAll()).toEqual(before);
-    expect(loadSessionMemory(sessionId)).toEqual(priorSummary);
-  });
-
-  test("uses bounded memory budgets and persists complete output", async () => {
-    const fixture = setup(true, (options) => ({
-      text: promptText(options).includes("memory extraction assistant")
-        ? "[]"
-        : JSON.stringify({
-            summary: "current outcome",
-            keyTopics: [],
-            decisions: ["not published"],
-          }),
+  test("uses a bounded memory budget and persists complete output", async () => {
+    const fixture = setup(true, () => ({
+      text: JSON.stringify([
+        {
+          type: "project",
+          scope: "project",
+          name: "complete-memory",
+          description: "complete",
+          content: "keep this",
+        },
+      ]),
       toolCalls: [],
       stopReason: "stop",
       usage,
@@ -156,11 +124,9 @@ describe("memory model output budgets", () => {
 
     await fixture.run();
 
-    expect(fixture.calls).toHaveLength(2);
-    expect(fixture.calls.map((call) => call.maxTokens)).toEqual([3072, 3072]);
-    expect(loadSessionMemory(sessionId)).toMatchObject({
-      summary: "current outcome",
-      decisions: ["not published"],
-    });
+    expect(fixture.calls.map((call) => call.maxTokens)).toEqual([3072]);
+    expect(
+      new MemoryManager({ projectDir: root, scope: "dream" }).loadAll().map((m) => m.name),
+    ).toEqual(["complete-memory"]);
   });
 });

@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { MemoryManager } from "../session/memory.js";
 import { recordSession } from "./auto-dream.js";
 import { MemoryOrchestrator } from "./memory-orchestrator.js";
-import { loadSessionMemory, saveSessionMemory } from "./session-memory.js";
 
 let baseDir: string;
 let projectDir: string;
@@ -36,13 +35,7 @@ const messages = [
   { role: "assistant", content: "initial answer" },
   { role: "user", content: "latest correction" },
 ];
-const summary = {
-  sessionId: "guarded-session",
-  summary: "prior verified summary",
-  keyTopics: ["verified"],
-  decisions: ["retain the prior outcome"],
-  createdAt: "2026-10-01T00:00:00.000Z",
-};
+const sessionId = "guarded-session";
 const candidate = {
   type: "project",
   scope: "project",
@@ -77,18 +70,14 @@ describe("MemoryOrchestrator background custody", () => {
       },
     });
 
-    await expect(orchestrator.run(messages, summary.sessionId)).rejects.toThrow(
-      "no longer current",
-    );
+    await expect(orchestrator.run(messages, sessionId)).rejects.toThrow("no longer current");
     expect(calls).toBe(0);
     expect(existsSync(join(baseDir, "auto-dream-state.json"))).toBe(false);
-    expect(loadSessionMemory(summary.sessionId, baseDir)).toBeNull();
   });
 
-  test("a late valid extraction cannot persist facts, replace a summary, or advance dream state", async () => {
+  test("a late valid extraction cannot persist facts or advance dream state", async () => {
     const manager = seedMemory();
     const before = manager.loadAll();
-    saveSessionMemory(summary, baseDir);
     const entered = deferred<void>();
     const response = deferred<string>();
     let calls = 0;
@@ -102,7 +91,7 @@ describe("MemoryOrchestrator background custody", () => {
         return response.promise;
       },
     });
-    const pending = orchestrator.run(messages, summary.sessionId);
+    const pending = orchestrator.run(messages, sessionId);
     await entered.promise;
     current = false;
     response.resolve(JSON.stringify([candidate]));
@@ -110,7 +99,6 @@ describe("MemoryOrchestrator background custody", () => {
     await expect(pending).rejects.toThrow("no longer current");
     expect(calls).toBe(1);
     expect(manager.loadAll()).toEqual(before);
-    expect(loadSessionMemory(summary.sessionId, baseDir)).toEqual(summary);
     expect(existsSync(join(baseDir, "auto-dream-state.json"))).toBe(false);
   });
 
@@ -119,7 +107,6 @@ describe("MemoryOrchestrator background custody", () => {
     async (action) => {
       const manager = seedMemory();
       const before = manager.loadAll();
-      saveSessionMemory(summary, baseDir);
       const entered = deferred<void>();
       const decision = deferred<string>();
       let calls = 0;
@@ -136,7 +123,7 @@ describe("MemoryOrchestrator background custody", () => {
           return JSON.stringify([candidate]);
         },
       });
-      const pending = orchestrator.run(messages, summary.sessionId);
+      const pending = orchestrator.run(messages, sessionId);
       await entered.promise;
       current = false;
       decision.resolve(
@@ -149,38 +136,6 @@ describe("MemoryOrchestrator background custody", () => {
       await expect(pending).rejects.toThrow("no longer current");
       expect(calls).toBe(2);
       expect(manager.loadAll()).toEqual(before);
-      expect(loadSessionMemory(summary.sessionId, baseDir)).toEqual(summary);
-      expect(existsSync(join(baseDir, "auto-dream-state.json"))).toBe(false);
-    },
-  );
-
-  test.each([false, true])(
-    "a late session-summary outcome cannot replace prior data (request rejects: %s)",
-    async (rejects) => {
-      saveSessionMemory(summary, baseDir);
-      const entered = deferred<void>();
-      const response = deferred<string>();
-      let calls = 0;
-      const orchestrator = new MemoryOrchestrator({
-        baseDir,
-        projectDir,
-        assertCurrent,
-        autoExtract: false,
-        callLLM: async () => {
-          calls++;
-          entered.resolve();
-          return response.promise;
-        },
-      });
-      const pending = orchestrator.run(messages, summary.sessionId);
-      await entered.promise;
-      current = false;
-      if (rejects) response.reject(new Error("Model request was aborted"));
-      else response.resolve(JSON.stringify({ ...summary, summary: "late replacement" }));
-
-      await expect(pending).rejects.toThrow("no longer current");
-      expect(calls).toBe(1);
-      expect(loadSessionMemory(summary.sessionId, baseDir)).toEqual(summary);
       expect(existsSync(join(baseDir, "auto-dream-state.json"))).toBe(false);
     },
   );
@@ -206,7 +161,7 @@ describe("MemoryOrchestrator background custody", () => {
         return response.promise;
       },
     });
-    const pending = orchestrator.run(messages.slice(0, 1), summary.sessionId);
+    const pending = orchestrator.run(messages.slice(0, 1), sessionId);
     await entered.promise;
     const beforeCadence = readFileSync(join(baseDir, "auto-dream-state.json"), "utf8");
     current = false;

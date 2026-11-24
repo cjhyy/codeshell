@@ -8,6 +8,12 @@ breaking.
 
 ## [Unreleased]
 
+### Changed
+
+- Background memory maintenance makes fewer model requests. It no longer
+  writes a session summary after every turn, and in Claude Code and Codex
+  sessions it waits until the session has been quiet for five minutes.
+
 ## [0.12.0-rc.2] - 2026-11-24
 
 Same requirements and upgrade notes as 0.12.0-rc.1.
