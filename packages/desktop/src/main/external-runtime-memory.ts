@@ -8,15 +8,19 @@ import {
   resolveLLMConfigForTag,
   sessionsRoot,
   withUsageOwner,
+  type TranscriptEvent,
 } from "@cjhyy/code-shell-core";
 import {
+  MEMORY_CLOSURE_IDLE_MS,
   MemoryOrchestrator,
   auxCachedRequest,
+  planMemoryClosure,
   recordExternalModelTrace,
   recordModelTraceEvent,
   withModelTraceContext,
   type MemoryOrchestratorOptions,
 } from "@cjhyy/code-shell-core/internal";
+import { isFeatureEnabled, type FeatureFlagOverrides } from "@cjhyy/code-shell-core/extension";
 import {
   runClaudeTextInference,
   type ExternalRuntimeKind,
@@ -42,6 +46,8 @@ export interface ExternalMemorySnapshot {
   kind: ExternalRuntimeKind;
   model?: string;
   messages: ReadonlyArray<{ role: string; content: string }>;
+  /** The transcript's raw events at the same moment; read by a segment closure. */
+  events: ReadonlyArray<TranscriptEvent>;
   assertCurrent(): void;
 }
 
@@ -53,10 +59,9 @@ type ExternalMemoryCachePlan = NonNullable<
 export const EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX = "external-runtime-";
 const MAINTENANCE_TIMEOUT_MS = 180_000;
 /**
- * Memory maintenance re-reads the whole transcript (extraction, one write
- * decision per candidate, then a summary), so running it after every turn
- * multiplied background model calls by the turn count. Wait until the session
- * has been quiet this long; any newer turn restarts the wait.
+ * With segment closure turned off, maintenance re-reads the whole transcript
+ * window, so it at least waits until the session has been quiet this long; any
+ * newer turn restarts the wait.
  */
 const DEFAULT_IDLE_DELAY_MS = 5 * 60_000;
 /** Skip a rerun until the transcript has grown by this many messages. */
@@ -134,22 +139,41 @@ export class ExternalRuntimeMemory {
       /** Quiet period before maintenance starts; 0 starts immediately. */
       idleDelayMs?: number;
       minNewMessages?: number;
+      /** `settings.featureFlags`; absent leaves every flag at its default. */
+      featureFlags?: () => FeatureFlagOverrides | undefined;
+      /** Quiet period before a work segment closes; 0 closes immediately. */
+      closureIdleMs?: number;
     } = {},
   ) {}
 
+  /**
+   * Segment closure (the default): a session's memories are read once its work
+   * segment ends, from what follows the session's memory cursor, and only with
+   * a model the user picked. Off restores maintenance over the whole window.
+   */
+  private closureEnabled(): boolean {
+    return isFeatureEnabled(this.deps.featureFlags?.(), "memory_segment_closure");
+  }
+
   schedule(snapshot: ExternalMemorySnapshot): void {
-    if (snapshot.messages.length < 8) return;
-    const last = this.processed.get(snapshot.sessionId);
-    const length = snapshot.messages.length;
-    // A shorter transcript was rewritten (compaction/restore): treat it as new.
-    if (
-      last !== undefined &&
-      length >= last &&
-      length - last < (this.deps.minNewMessages ?? DEFAULT_MIN_NEW_MESSAGES)
-    )
-      return;
+    const closure = this.closureEnabled();
+    if (!closure) {
+      if (snapshot.messages.length < 8) return;
+      const last = this.processed.get(snapshot.sessionId);
+      const length = snapshot.messages.length;
+      // A shorter transcript was rewritten (compaction/restore): treat it as new.
+      if (
+        last !== undefined &&
+        length >= last &&
+        length - last < (this.deps.minNewMessages ?? DEFAULT_MIN_NEW_MESSAGES)
+      )
+        return;
+    }
     this.clearPending(snapshot.sessionId);
-    const delay = this.deps.idleDelayMs ?? DEFAULT_IDLE_DELAY_MS;
+    // A closure decides what is worth reading when it runs, from the cursor.
+    const delay = closure
+      ? (this.deps.closureIdleMs ?? MEMORY_CLOSURE_IDLE_MS)
+      : (this.deps.idleDelayMs ?? DEFAULT_IDLE_DELAY_MS);
     if (delay <= 0) return this.start(snapshot);
     // A session closed during the wait fails its snapshot guard and is skipped;
     // the next completed turn after it resumes schedules the full transcript.
@@ -291,6 +315,17 @@ export class ExternalRuntimeMemory {
     };
     assertCurrent();
     const selected = resolveExternalMemoryModel(settings);
+    const closure = this.closureEnabled();
+    if (closure && selected.kind === "current-runtime") {
+      // Only a model the user picked reads an external session for memories;
+      // the session's own model is never borrowed for it. The cursor stays
+      // put, so the stretch is read once a model is selected.
+      dlog("external-runtime", "memory.closure", {
+        sessionId: snapshot.sessionId,
+        skipped: "no-model",
+      });
+      return;
+    }
     if (selected.kind === "current-runtime" && snapshot.kind === "codex") {
       throw new Error(
         "Codex CLI does not expose a verified tool-free memory request. Select an API background or extraction model explicitly; the current API default was not used.",
@@ -298,9 +333,22 @@ export class ExternalRuntimeMemory {
     }
     const storage = this.deps.storageDir ?? sessionsRoot();
     const ledger = new UsageLedger({ storageDir: join(storage, ".usage-ledger") });
-    const state = new SessionManager(storage).readSessionState(snapshot.sessionId);
+    const sessions = new SessionManager(storage);
+    const state = sessions.readSessionState(snapshot.sessionId);
     if (!state || !ledger.adoptSession(snapshot.sessionId, state.costState, storage))
       throw new Error("Memory accounting owner is unavailable");
+    const plan = closure ? planMemoryClosure(snapshot.events, state.memoryCursor) : undefined;
+    const window = plan?.window;
+    if (plan && !plan.run) {
+      dlog("external-runtime", "memory.closure", {
+        sessionId: snapshot.sessionId,
+        skipped: plan.reason,
+        freshCount: plan.window.fresh.length,
+        humanCount: plan.window.humanCount,
+      });
+      return;
+    }
+    const transcript = plan?.run ? plan.transcript : [...snapshot.messages];
     const client =
       selected.kind === "api"
         ? await (this.deps.createClient ?? createLLMClient)(selected.config, {
@@ -408,7 +456,7 @@ export class ExternalRuntimeMemory {
         throw error;
       }
     };
-    await withModelTraceContext(
+    const result = await withModelTraceContext(
       {
         storageDir: join(storage, ".model-traces"),
         sessionId: snapshot.sessionId,
@@ -430,8 +478,25 @@ export class ExternalRuntimeMemory {
               maxCount: settings.memories?.maxCount,
               assertCurrent,
               callLLM,
-            }).run([...snapshot.messages], snapshot.sessionId),
+            }).run(transcript, snapshot.sessionId),
         ),
     );
+    if (!window) return;
+    // A failed extraction keeps the cursor, so the next closure reads the same stretch.
+    if (result.completed && window.through) {
+      assertCurrent();
+      sessions.updateSessionState(snapshot.sessionId, {
+        memoryCursor: { v: 1, ...window.through, closedAt: Date.now() },
+      });
+    }
+    dlog("external-runtime", "memory.closure", {
+      sessionId: snapshot.sessionId,
+      anchor: window.anchor,
+      freshCount: window.fresh.length,
+      humanCount: window.humanCount,
+      extracted: result.extracted,
+      changed: result.changed,
+      completed: result.completed,
+    });
   }
 }

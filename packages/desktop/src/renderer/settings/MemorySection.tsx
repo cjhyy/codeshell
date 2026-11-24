@@ -214,6 +214,18 @@ export function buildPinSaveInput(
   };
 }
 
+/**
+ * Claude Code and Codex sessions extract memories only with a model the user
+ * picked (the extraction model, else the background-task model), never with
+ * the session's own model. True when neither is set, so nothing is extracted.
+ */
+export function externalExtractionNeedsModel(settings: {
+  memories?: { extractionModel?: string };
+  defaults?: { auxText?: string };
+}): boolean {
+  return !settings.memories?.extractionModel && !settings.defaults?.auxText;
+}
+
 export function defaultCleanupSelection(entries: RendererMemoryEntry[]): Set<string> {
   return new Set(
     entries.filter((entry) => entry.origin === "auto" && !entry.pinned).map((e) => e.fileName),
@@ -622,14 +634,18 @@ export function MemoryStoreView({
   // Only surfaced in the GLOBAL memory view: the engine reads the merged
   // settings, so this one switch governs every project's extractor.
   const [autoExtract, setAutoExtract] = useState(true);
+  // Claude Code / Codex sessions extract only with a model the user picked.
+  const [externalModelMissing, setExternalModelMissing] = useState(false);
   useEffect(() => {
     if (level !== "user") return;
     void (async () => {
       try {
         const s = ((await window.codeshell.getSettings("user")) ?? {}) as {
-          memories?: { autoExtract?: boolean };
+          memories?: { autoExtract?: boolean; extractionModel?: string };
+          defaults?: { auxText?: string };
         };
         setAutoExtract(s.memories?.autoExtract !== false);
+        setExternalModelMissing(externalExtractionNeedsModel(s));
       } catch {
         /* keep default-on */
       }
@@ -758,6 +774,11 @@ export function MemoryStoreView({
               <Switch checked={autoExtract} onCheckedChange={(v) => void toggleAutoExtract(v)} />
               <span>{t("settingsX.memory.autoExtract")}</span>
             </label>
+          )}
+          {level === "user" && scope === "user" && autoExtract && externalModelMissing && (
+            <p className="order-last basis-full text-right text-xs text-muted-foreground">
+              {t("settingsX.memory.externalExtractionNeedsModel")}
+            </p>
           )}
           {cleanupEntries.length > 0 && (
             <Button

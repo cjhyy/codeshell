@@ -85,6 +85,36 @@ describe("external runtime durable state", () => {
     expect(recorder.memorySnapshot()).toBeUndefined();
   });
 
+  test("a memory snapshot freezes the transcript events, with the marker of an injected turn", () => {
+    const recorder = new ExternalRuntimeSessionRecorder(
+      "snapshot-events",
+      "/tmp/project",
+      "model",
+      "claude-code",
+    );
+    recorder.beginTurn({ text: "typed by a person" });
+    recorder.onEvent({ type: "text_delta", text: "answer" });
+    recorder.onEvent({ type: "turn_complete", reason: "completed" });
+    recorder.finishIfMissing();
+    recorder.beginTurn({ text: "background job finished", injected: true });
+    recorder.onEvent({ type: "text_delta", text: "noted" });
+    recorder.onEvent({ type: "turn_complete", reason: "completed" });
+    recorder.finishIfMissing();
+
+    const snapshot = recorder.memorySnapshot()!;
+    const userTurns = snapshot.events.filter(
+      (event) => event.type === "message" && event.data.role === "user",
+    );
+    expect(userTurns.map((event) => [event.data.content, event.data.injected === true])).toEqual([
+      ["typed by a person", false],
+      ["background job finished", true],
+    ]);
+    // A later turn does not reach into a snapshot already taken.
+    const frozen = snapshot.events.length;
+    recorder.beginTurn({ text: "next" });
+    expect(snapshot.events).toHaveLength(frozen);
+  });
+
   test("a first-session accounting replacement during inference blocks the late memory write", async () => {
     const recorder = new ExternalRuntimeSessionRecorder(
       "late-memory-owner",
@@ -108,6 +138,8 @@ describe("external runtime durable state", () => {
     const memory = new ExternalRuntimeMemory({
       idleDelayMs: 0,
       storageDir: sessionsRoot(),
+      // The CLI route this guards runs only with segment closure turned off.
+      featureFlags: () => ({ memory_segment_closure: false }),
       readSettings: () => ({ memories: {} }) as never,
       infer: async () => {
         calls++;

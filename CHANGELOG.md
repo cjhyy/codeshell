@@ -10,9 +10,16 @@ breaking.
 
 ### Changed
 
-- Background memory maintenance makes fewer model requests. It no longer
-  writes a session summary after every turn, and in Claude Code and Codex
-  sessions it waits until the session has been quiet for five minutes.
+- Background memory extraction makes far fewer model requests. It now runs
+  once a work session has been quiet for 30 minutes instead of after every
+  turn, reads only what was said since it last ran, and skips stretches in
+  which nobody typed anything (background-task notices, automatic
+  continuation, sub-agents, scheduled automations). The per-turn session
+  summary is gone. Set `featureFlags.memory_segment_closure` to `false` to go
+  back to extraction after every turn.
+- Claude Code and Codex sessions extract memories only with the background-task
+  model you selected, never with the session's own model. With none selected
+  they are not extracted, and Settings > Memory says so.
 
 ## [0.12.0-rc.2] - 2026-11-24
 

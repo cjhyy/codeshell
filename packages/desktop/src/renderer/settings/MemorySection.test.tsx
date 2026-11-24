@@ -7,6 +7,7 @@ import {
   buildEditDraft,
   buildPinSaveInput,
   defaultCleanupSelection,
+  externalExtractionNeedsModel,
   memoryDraftChanged,
 } from "./MemorySection";
 
@@ -149,5 +150,14 @@ describe("MemorySection legacy cleanup selection", () => {
     ]);
 
     expect([...selected]).toEqual(["auto.md"]);
+  });
+});
+
+describe("MemorySection external extraction hint", () => {
+  test("is shown only when neither the extraction nor the background-task model is set", () => {
+    expect(externalExtractionNeedsModel({})).toBe(true);
+    expect(externalExtractionNeedsModel({ memories: {}, defaults: {} })).toBe(true);
+    expect(externalExtractionNeedsModel({ defaults: { auxText: "aux" } })).toBe(false);
+    expect(externalExtractionNeedsModel({ memories: { extractionModel: "extract" } })).toBe(false);
   });
 });

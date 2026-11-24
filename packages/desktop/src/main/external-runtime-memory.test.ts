@@ -7,6 +7,7 @@ import {
   SessionManager,
   UsageLedger,
   type SettingsManager,
+  type TranscriptEvent,
 } from "@cjhyy/code-shell-core";
 import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import {
@@ -59,9 +60,26 @@ function snapshot(fields: Partial<ExternalMemorySnapshot> = {}): ExternalMemoryS
       role: index % 2 ? "assistant" : "user",
       content: `turn ${index}`,
     })),
+    events: turns(8),
     assertCurrent() {},
     ...fields,
   };
+}
+/** Whole-window maintenance, as it runs with segment closure turned off. */
+const wholeWindow = () => ({ memory_segment_closure: false });
+/** `count` alternating turns as transcript events; ids and times follow the index. */
+function turns(count: number, userData: Record<string, unknown> = {}, from = 0): TranscriptEvent[] {
+  return Array.from({ length: count }, (_, offset) => {
+    const index = from + offset;
+    const role = index % 2 ? "assistant" : "user";
+    return {
+      id: `turn-${index}`,
+      type: "message" as const,
+      timestamp: 1_000 + index,
+      turnNumber: 0,
+      data: { role, content: `turn ${index}`, ...(role === "user" ? userData : {}) },
+    };
+  });
 }
 /** Names of the memories that maintenance persisted for the fixture project. */
 function savedMemories() {
@@ -100,6 +118,7 @@ test("Claude follow uses the captured CLI model and persists a scoped memory", a
   const captured: Array<{ model?: string; systemPrompt: string }> = [];
   const errors: unknown[] = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     storageDir: storage,
     readSettings: settings,
@@ -145,6 +164,7 @@ test("unsupported Codex follow is visible and never calls Claude or a default AP
   let calls = 0;
   const errors: unknown[] = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     storageDir: storage,
     readSettings: settings,
@@ -179,6 +199,7 @@ test("Codex can use an explicit API auxiliary connection with tools disabled", a
   const received: unknown[] = [];
   const errors: unknown[] = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     storageDir: storage,
     readSettings: () => config,
@@ -216,6 +237,7 @@ test("API memory calls send core's segmented, cacheable request in an external s
   const received: Request[] = [];
   const errors: unknown[] = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     storageDir: storage,
     readSettings: () => config,
@@ -258,6 +280,7 @@ test("without explicit cache markers the API call keeps one complete user messag
   config.defaults!.auxText = "aux";
   const received: Array<{ messages: unknown[]; promptCache?: { scopeId: string } }> = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     storageDir: storage,
     readSettings: () => config,
@@ -284,6 +307,7 @@ test("without explicit cache markers the API call keeps one complete user messag
 
 test.each(["length", "max_tokens"])("CLI %s output cannot replace memory", async (stopReason) => {
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     storageDir: storage,
     readSettings: settings,
@@ -299,6 +323,7 @@ test.each(["length", "max_tokens"])("CLI %s output cannot replace memory", async
 test("a model-setting change during inference prevents a late memory write", async () => {
   const config = settings();
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     storageDir: storage,
     readSettings: () => config,
@@ -321,6 +346,7 @@ test("superseded jobs release the queue even when old transport ignores abort", 
   let oldGuard!: () => void;
   const runs: string[] = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     run: async (input, _signal, guard) => {
       runs.push(input.runId);
@@ -350,6 +376,7 @@ test("dispose cancels pending maintenance without waiting for a wedged provider"
   const pending = new Promise<void>((resolve) => (started = resolve));
   let release!: () => void;
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     run: async () => {
       started();
@@ -370,6 +397,7 @@ test("dispose waits for abort-driven child cleanup before the host exits", async
   const pending = new Promise<void>((resolve) => (started = resolve));
   let cleaned = false;
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     run: async (_snapshot, signal) => {
       started();
@@ -405,6 +433,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 test("consecutive turns collapse into one run after the session goes quiet", async () => {
   const runs: string[] = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 30,
     run: async (input) => {
       runs.push(input.runId);
@@ -425,6 +454,7 @@ test("consecutive turns collapse into one run after the session goes quiet", asy
 test("a new turn starting cancels the waiting snapshot", async () => {
   const runs: string[] = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 20,
     run: async (input) => {
       runs.push(input.runId);
@@ -440,6 +470,7 @@ test("a new turn starting cancels the waiting snapshot", async () => {
 test("dispose drops waiting snapshots", async () => {
   const runs: string[] = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 20,
     run: async (input) => {
       runs.push(input.runId);
@@ -454,6 +485,7 @@ test("dispose drops waiting snapshots", async () => {
 test("reruns wait until enough new messages accumulate", async () => {
   const runs: string[] = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     minNewMessages: 4,
     run: async (input) => {
@@ -475,6 +507,7 @@ test("reruns wait until enough new messages accumulate", async () => {
 test("a failed run does not count as processed", async () => {
   const runs: string[] = [];
   const memory = new ExternalRuntimeMemory({
+    featureFlags: wholeWindow,
     idleDelayMs: 0,
     run: async (input) => {
       runs.push(input.runId);
@@ -488,4 +521,124 @@ test("a failed run does not count as processed", async () => {
   memory.schedule(snapshot({ runId: "retry", messages: grown(1) }));
   await memory.idle("memory-session");
   expect(runs).toEqual(["fails", "retry"]);
+});
+
+/** A fake API client that records what a closure sent. */
+function closureFixture(respond: () => string = () => "[]") {
+  const config = settings();
+  config.defaults!.auxText = "aux";
+  const requests: string[] = [];
+  const errors: unknown[] = [];
+  const memory = new ExternalRuntimeMemory({
+    closureIdleMs: 0,
+    storageDir: storage,
+    readSettings: () => config,
+    createClient: (async () => ({
+      createMessage: async (request: { messages: Array<{ content: string }> }) => {
+        requests.push(request.messages.map((message) => message.content).join(""));
+        return { text: respond(), toolCalls: [] };
+      },
+    })) as any,
+    infer: async () => {
+      throw new Error("unexpected CLI");
+    },
+    onError: (_snapshot, error) => errors.push(error),
+  });
+  jobs.push(memory);
+  const cursor = () => new SessionManager(storage).readSessionState("memory-session")?.memoryCursor;
+  return { memory, requests, errors, cursor };
+}
+
+test.each(["claude-code", "codex"] as const)(
+  "segment closure never borrows a %s session's own model: without a selected model nothing runs",
+  async (kind) => {
+    let calls = 0;
+    const errors: unknown[] = [];
+    const memory = new ExternalRuntimeMemory({
+      closureIdleMs: 0,
+      storageDir: storage,
+      readSettings: settings,
+      infer: async () => {
+        calls++;
+        return { text: answer };
+      },
+      createClient: async () => {
+        calls++;
+        throw new Error("unexpected API");
+      },
+      onError: (_snapshot, error) => errors.push(error),
+    });
+    jobs.push(memory);
+    memory.schedule(snapshot({ kind }));
+    await memory.idle("memory-session");
+    expect(calls).toBe(0);
+    // Not a failure: there is nothing to retry until a model is selected.
+    expect(errors).toEqual([]);
+    expect(savedMemories()).toEqual([]);
+    expect(
+      new SessionManager(storage).readSessionState("memory-session")!.memoryCursor,
+    ).toBeUndefined();
+  },
+);
+
+test("segment closure reads only what follows the cursor and records how far it read", async () => {
+  const fixture = closureFixture();
+  fixture.memory.schedule(snapshot({ kind: "codex" }));
+  await fixture.memory.idle("memory-session");
+  expect(fixture.errors).toEqual([]);
+  expect(fixture.requests).toHaveLength(1);
+  expect(fixture.requests[0]).toContain("[user]: turn 0");
+  expect(fixture.cursor()).toMatchObject({ v: 1, eventId: "turn-7", at: 1_007 });
+
+  fixture.memory.schedule(
+    snapshot({ kind: "codex", runId: "next-run", events: [...turns(8), ...turns(2, {}, 8)] }),
+  );
+  await fixture.memory.idle("memory-session");
+  expect(fixture.requests).toHaveLength(2);
+  const later = fixture.requests[1]!;
+  expect(later).toContain("[user]: turn 8");
+  expect(later).toContain("[assistant]: turn 9");
+  expect(later).toContain("[context]: Earlier messages, already covered by a previous pass.");
+  expect(later).not.toContain("[user]: turn 0");
+  expect(later).not.toContain("[user]: turn 6");
+  expect(fixture.cursor()!.eventId).toBe("turn-9");
+});
+
+test("segment closure skips a stretch that only holds injected turns", async () => {
+  const fixture = closureFixture();
+  fixture.memory.schedule(snapshot({ kind: "codex", events: turns(12, { injected: true }) }));
+  await fixture.memory.idle("memory-session");
+  expect(fixture.errors).toEqual([]);
+  expect(fixture.requests).toHaveLength(0);
+  expect(fixture.cursor()).toBeUndefined();
+});
+
+test("segment closure keeps the cursor when the request fails", async () => {
+  const fixture = closureFixture(() => {
+    throw new Error("model unavailable");
+  });
+  fixture.memory.schedule(snapshot({ kind: "codex" }));
+  await fixture.memory.idle("memory-session");
+  expect(fixture.requests).toHaveLength(1);
+  expect(fixture.cursor()).toBeUndefined();
+});
+
+test("segment closure waits for the session to go quiet, whatever the transcript length", async () => {
+  const runs: string[] = [];
+  const memory = new ExternalRuntimeMemory({
+    closureIdleMs: 30,
+    run: async (input) => {
+      runs.push(input.runId);
+    },
+  });
+  jobs.push(memory);
+  // Two turns: far below the old eight-message floor, which a closure checks itself.
+  memory.schedule(snapshot({ runId: "first", messages: grown(0).slice(0, 2), events: turns(2) }));
+  await wait(10);
+  memory.schedule(snapshot({ runId: "second", messages: grown(0).slice(0, 4), events: turns(4) }));
+  await wait(10);
+  expect(runs).toEqual([]);
+  await wait(60);
+  await memory.idle("memory-session");
+  expect(runs).toEqual(["second"]);
 });
