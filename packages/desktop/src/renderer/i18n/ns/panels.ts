@@ -275,6 +275,7 @@ export const panels = {
         findTitle: "在文件中查找(⌘F)",
         wrapLines: "自动换行",
         selectLineToComment: "先点击行号选中一行，再评论",
+        plainTruncated: "仅显示前 {shown} 行（共 {total} 行）",
         largeMarkdownSource: "Markdown 文件较大，已按源码打开。可切换到预览查看渲染效果。",
       },
       review: {
@@ -719,6 +720,7 @@ export const panels = {
         findTitle: "Find in file (⌘F)",
         wrapLines: "Wrap lines",
         selectLineToComment: "Click a line number to select a line, then comment",
+        plainTruncated: "Showing the first {shown} of {total} lines",
         largeMarkdownSource:
           "This Markdown file is large, so it opens as source. Switch to preview to render it.",
       },

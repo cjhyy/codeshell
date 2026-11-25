@@ -36,8 +36,3 @@ function readDarkClass(): boolean {
 export function useDarkClass(): boolean {
   return useSyncExternalStore(subscribeDarkClass, readDarkClass, () => false);
 }
-
-/** Display name Pierre uses for its header and language inference. */
-export function fileNameOf(path: string): string {
-  return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
-}

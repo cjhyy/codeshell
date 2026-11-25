@@ -19,14 +19,9 @@ import type { UILanguage } from "../uiLanguage";
 import { diffLineText, type DiffSection } from "../diff/diffSections";
 import type { DiffStyle } from "../diff/DiffFileBody";
 import { PierreBoundary } from "./PierreBoundary";
+import { addFileLineComment, fileDisplayName } from "./fileLineComment";
 import { toPierreFileDiff } from "./pierreDiffModel";
-import {
-  PIERRE_METRICS,
-  PIERRE_THEMES,
-  PIERRE_UNSAFE_CSS,
-  fileNameOf,
-  useDarkClass,
-} from "./pierre";
+import { PIERRE_METRICS, PIERRE_THEMES, PIERRE_UNSAFE_CSS, useDarkClass } from "./pierre";
 
 /*
  * Everything that imports @pierre/diffs lives in this module. The renderer
@@ -159,7 +154,7 @@ export const PierreFileCodeView = memo(function PierreFileCodeView({
     commentOpener.current?.focus({ preventScroll: true });
     commentOpener.current = null;
   };
-  const name = fileNameOf(path);
+  const name = fileDisplayName(path);
   const lines = useMemo(() => text.split("\n"), [text]);
 
   const items = useMemo<CodeViewItem<CommentAnnotation>[]>(
@@ -275,16 +270,7 @@ export const PierreFileCodeView = memo(function PierreFileCodeView({
                   title={`${name}:${line}`}
                   onCancel={closeComment}
                   onSubmit={(comment) => {
-                    addAnchor({
-                      kind: "file",
-                      label: `${name}:${line}`,
-                      locator: {
-                        文件: path,
-                        行号: String(line),
-                        代码: (lines[line - 1] ?? "").trim().slice(0, 200),
-                      },
-                      comment,
-                    });
+                    addFileLineComment(path, line, lines[line - 1] ?? "", comment);
                     closeComment();
                   }}
                 />
