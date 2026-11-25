@@ -1,4 +1,4 @@
-import type { ListSessions } from "../../shared/disk-session-query.js";
+import { hostSessionVisible, type ListSessions } from "../../shared/disk-session-query.js";
 import { HostRevokedError } from "./authority.js";
 import type { DesktopBusinessReads } from "../../shared/desktop-business-contracts.js";
 import type { HostRequestContext } from "./authority.js";
@@ -73,11 +73,7 @@ export function scopedBusinessRead<K extends keyof DesktopBusinessReads>(
   const [, method] = businessRead(name, parse, async (input, ctx) => {
     const id = scope(input);
     const check = async () => {
-      if (
-        ctx.historical &&
-        id &&
-        !(await list({ sessionId: id, limit: 1 })).sessions.some((row) => row.id === id)
-      )
+      if (ctx.historical && id && !(await hostSessionVisible(list, id)))
         throw new HostRevokedError();
       ctx.assertCurrent();
     };
