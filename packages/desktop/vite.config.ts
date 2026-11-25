@@ -42,6 +42,9 @@ export default defineConfig({
     },
   },
   plugins: [react(), tailwindcss()],
+  // Pierre's highlight worker lazy-loads grammars, so it needs a module worker
+  // (see code-view/PierreWorkerPool.tsx); IIFE workers cannot code-split.
+  worker: { format: "es" },
   // Pre-bundle every installed Radix package (+ lucide) at server start.
   // Without this, the FIRST import of a not-yet-used package mid-session
   // (e.g. adding a new shadcn component while dev is running) triggers a

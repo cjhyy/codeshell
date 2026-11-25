@@ -66,7 +66,9 @@ try {
   const dialog = descendants(document.body).find((node) => propsOf(node).role === "dialog");
   assert.ok(dialog, "Snapshot review renders a real dialog");
   assert.equal(container.contains(dialog), false, "Dialog escapes transcript containment");
-  assert.ok(descendants(dialog).some((node) => node.tagName === "TABLE"));
+  // The file card and its body render; without Pierre (mini DOM) the body is the plain patch.
+  assert.ok(descendants(dialog).some((node) => propsOf(node)["data-diff-file"] !== undefined));
+  assert.ok(descendants(dialog).some((node) => propsOf(node)["data-diff-plain"] !== undefined));
   assert.equal(
     descendants(dialog).some((node) =>
       ["打开文件", "评论此行"].includes(propsOf(node)["aria-label"]),

@@ -429,8 +429,13 @@ function ReviewModal({
             <X size={14} />
           </Button>
         </div>
-        <div className="min-h-0 max-h-[70dvh] overflow-y-auto p-4">
-          <UnifiedDiffViewer cwd={cwd} file={scopedFile} diffText={diffText} />
+        <div className="flex min-h-0 flex-col p-4">
+          <UnifiedDiffViewer
+            cwd={cwd}
+            file={scopedFile}
+            diffText={diffText}
+            scrollClassName="max-h-[70dvh]"
+          />
         </div>
       </DialogContent>
     </Dialog>

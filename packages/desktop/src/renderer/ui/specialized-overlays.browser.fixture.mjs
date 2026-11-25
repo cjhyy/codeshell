@@ -115,7 +115,12 @@ const failures = [];
 async function geometry(locator) {
   return locator.evaluate((element) => {
     const rect = element.getBoundingClientRect();
-    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    // Pierre renders diff rows in a shadow root; hit-test within the element's own tree.
+    const scope = element.getRootNode();
+    const hit = (scope.elementFromPoint ? scope : document).elementFromPoint(
+      rect.x + rect.width / 2,
+      rect.y + rect.height / 2,
+    );
     return {
       rect: rect.toJSON(),
       hit: element === hit || element.contains(hit),

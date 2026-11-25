@@ -174,7 +174,18 @@ interface Props {
    * (skill/agent bodies) — relative image paths there degrade to a link.
    */
   cwd?: string | null;
+  /**
+   * A whole document (file preview) rather than a chat message: render it
+   * completely, and let the browser skip layout for off-screen tables and
+   * code blocks instead of paging the source.
+   */
+  document?: boolean;
 }
+
+/** Off-screen tables and code blocks skip layout and paint (Codex parity). */
+const documentBodyClassName =
+  "[&_[data-md-block]]:[content-visibility:auto] " +
+  "[&_[data-md-block]]:[contain-intrinsic-size:auto_240px]";
 
 export const markdownBodyClassName =
   "min-w-0 max-w-[720px] text-sm leading-relaxed text-foreground [overflow-wrap:anywhere] " +
@@ -204,6 +215,7 @@ export function MarkdownTable({ node: _node, className, ...props }: MarkdownTabl
     <div
       className="my-3 min-w-0 max-w-full overflow-x-auto rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
       tabIndex={0}
+      data-md-block
       role="region"
       aria-label={t("msg.markdown.table")}
     >
@@ -224,11 +236,19 @@ export const streamingMarkdownClassName = cn(
  * assistant message in the transcript, which is the dominant cost
  * in long sessions.
  */
-function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: Props) {
+function MarkdownImpl({
+  text,
+  cwd,
+  sessionId,
+  sessionMainRootId,
+  rootStatus,
+  // Named apart from the global `document` inside this component.
+  document: isDocument = false,
+}: Props) {
   const localActions = useLocalRuntimeActions();
-  if (needsPagedMarkdown(text)) return <PagedText text={text} sourceNotice />;
+  if (!isDocument && needsPagedMarkdown(text)) return <PagedText text={text} sourceNotice />;
   return (
-    <div className={markdownBodyClassName}>
+    <div className={cn(markdownBodyClassName, isDocument && documentBodyClassName)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkPathLinks]}
         // rehype-raw parses raw HTML embedded in markdown (e.g. a README's
@@ -810,7 +830,10 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
   };
 
   return (
-    <div className="cs-code-block my-3 overflow-hidden rounded-xl border border-border/80 bg-muted/20">
+    <div
+      className="cs-code-block my-3 overflow-hidden rounded-xl border border-border/80 bg-muted/20"
+      data-md-block
+    >
       <div className="flex min-h-9 items-center justify-between gap-2 border-b border-border/70 bg-muted/40 px-3 py-1">
         {lang && (
           <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">

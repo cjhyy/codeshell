@@ -328,7 +328,16 @@ try {
     await page.getByRole("button", { name: "src", exact: true }).click();
     await page.getByRole("button", { name: "deep", exact: true }).click();
     await page.getByRole("button", { name: "nested.ts", exact: true }).click();
-    const comment = page.getByRole("button", { name: "评论此行", exact: true }).first();
+    // Pierre owns the rows: select line 1 by its number, then comment on it
+    // from the keyboard-reachable toolbar button.
+    // The hover comment button covers the right of the number cell; select
+    // from its left edge.
+    const lineNumber = await page.locator('[data-column-number="1"]').first().boundingBox();
+    await page.mouse.click(lineNumber.x + 3, lineNumber.y + lineNumber.height / 2);
+    const comment = page.locator("[data-file-comment-selected]");
+    await page.waitForFunction(
+      () => document.querySelector("[data-file-comment-selected]")?.disabled === false,
+    );
     await comment.focus();
     assert.equal((await inspect(page, comment, "keyboard-line-comment")).opacity, "1");
     await page.keyboard.press("Enter");

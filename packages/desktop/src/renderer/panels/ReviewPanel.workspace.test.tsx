@@ -587,7 +587,7 @@ describe("ReviewPanel workspace requests", () => {
   });
 });
 
-test("zero-hunk files are paged without dropping later binary changes", async () => {
+test("zero-hunk files all stay listed without pages or a line budget", async () => {
   const diff = Array.from(
     { length: 205 },
     (_, index) =>
@@ -599,13 +599,10 @@ test("zero-hunk files are paged without dropping later binary changes", async ()
     root?.render(<UnifiedDiffViewer cwd="/repo" diffText={diff} />);
     await flushMicrotasks();
   });
-  expect(text(container)).toContain("asset-0.png");
-  expect(text(container)).not.toContain("asset-100.png");
-  await clickButton(container, "下一组文件");
-  expect(text(container)).toContain("asset-100.png");
-  expect(text(container)).not.toContain("asset-0.png");
-  await clickButton(container, "下一组文件");
-  expect(text(container)).toContain("asset-204.png");
-  await clickButton(container, "上一组文件");
-  expect(text(container)).toContain("asset-100.png");
+  const rendered = text(container);
+  expect(rendered).toContain("asset-0.png");
+  expect(rendered).toContain("asset-100.png");
+  expect(rendered).toContain("asset-204.png");
+  expect(rendered).not.toContain("下一组文件");
+  expect(rendered.split("没有文本改动").length - 1).toBe(205);
 });
