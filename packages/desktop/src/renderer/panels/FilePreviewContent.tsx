@@ -1,5 +1,5 @@
-import { PagedText } from "../components/PagedText";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { FileCodeView } from "../code-view/FileCodeView";
 import type { ExternalGitBlobRef } from "@cjhyy/code-shell-core";
 import type { FileContent } from "../../preload/types";
 import type { FileVersionResult } from "../../shared/file-version";
@@ -24,6 +24,7 @@ export function FilePreviewContent({
   reference,
   reader,
   renderCurrent,
+  onContent,
 }: {
   root: string;
   path: string;
@@ -31,6 +32,8 @@ export function FilePreviewContent({
   reference?: ExternalFileOrigin;
   reader: FilePreviewReader;
   renderCurrent(content: FileContent): React.ReactNode;
+  /** Reports each loaded current version, e.g. so a toolbar can adapt to its size. */
+  onContent?(content: FileContent): void;
 }) {
   const { t } = useT();
   const [content, setContent] = useState<FileContent | null>(null);
@@ -38,6 +41,8 @@ export function FilePreviewContent({
   const [historical, setHistorical] = useState(false);
   const [version, setVersion] = useState<FileVersionResult | null>(null);
   const ref = reference?.ref?.contentRef;
+  const onContentRef = useRef(onContent);
+  onContentRef.current = onContent;
   const canReadVersion = !!ref && !!reader.readVersion;
 
   useEffect(() => {
@@ -49,6 +54,7 @@ export function FilePreviewContent({
         if (value.reason === "missing") invalidateFileExistsCache();
         setContent(value);
         setError(null);
+        onContentRef.current?.(value);
       })
       .catch((error) => {
         if (!cancelled) setError(error instanceof Error ? error.message : String(error));
@@ -110,7 +116,7 @@ export function FilePreviewContent({
             <div className="break-all font-mono">commit {ref.commit}</div>
             <SourceMetadata reference={reference} />
           </div>
-          <div className="min-h-0 flex-1 overflow-auto">
+          <div className="flex min-h-0 flex-1 flex-col overflow-auto">
             {!version ? (
               <div className="p-4 text-sm">{t("panels.common.loading")}</div>
             ) : version.status === "unavailable" ? (
@@ -118,26 +124,17 @@ export function FilePreviewContent({
                 {t(`panels.files.versionUnavailable.${version.reason}`)}
               </div>
             ) : (
-              <div className="p-3 font-mono text-xs" data-file-version-code>
-                <PagedText
-                  text={version.text}
-                  renderLine={(line, no) => (
-                    <div className="flex">
-                      <span className="w-10 shrink-0 select-none pr-3 text-right text-muted-foreground">
-                        {no}
-                      </span>
-                      <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words">
-                        {line || " "}
-                      </pre>
-                    </div>
-                  )}
-                />
-              </div>
+              <FileCodeView
+                path={path}
+                text={version.text}
+                commentable={false}
+                cacheKey={`${path}\0${ref.commit}`}
+              />
             )}
           </div>
         </>
       ) : (
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto">
           {error ? (
             <div className="p-4 text-sm text-status-err">
               {t("panels.files.readFailed", { error })}

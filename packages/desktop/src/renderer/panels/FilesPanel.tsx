@@ -8,7 +8,6 @@ import {
   ChevronDown,
   File as FileIcon,
   Folder,
-  MessageSquarePlus,
   PanelLeftClose,
   RefreshCw,
 } from "lucide-react";
@@ -16,9 +15,7 @@ import type { FsEntry, FileContent } from "../../preload/types";
 import { Input } from "@/components/ui/input";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { Markdown } from "../Markdown";
-import { PagedText } from "../components/PagedText";
-import { CommentBox } from "../chat/CommentBox";
-import { addAnchor } from "../chat/addAnchor";
+import { FileCodeView } from "../code-view/FileCodeView";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { MoreHorizontal, Paperclip } from "lucide-react";
 import { CODESHELL_PATH_DND_MIME } from "../chat/attachments";
@@ -904,6 +901,9 @@ function FileRow({
   );
 }
 
+/** Larger Markdown documents open as source; rendering them is still one click away. */
+const LARGE_MARKDOWN_CHARS = 512 * 1024;
+
 const FileViewer = memo(function FileViewer({
   root,
   path,
@@ -923,9 +923,15 @@ const FileViewer = memo(function FileViewer({
   const isMarkdown = ext === "md" || ext === "markdown";
   // Markdown renders rich by default; switch to 源码 to get per-line comments.
   // (Rich preview has no addressable lines, so commenting needs source mode.)
-  const [mdSource, setMdSource] = useState(false);
-  // Reset to preview when switching to a different markdown file.
-  useEffect(() => setMdSource(false), [path]);
+  // A very large document opens as source until the user asks for preview.
+  const [mdChoice, setMdChoice] = useState<"preview" | "source" | null>(null);
+  const [mdLarge, setMdLarge] = useState(false);
+  const mdSource = mdChoice ? mdChoice === "source" : mdLarge;
+  // Reset to the automatic choice when switching to a different file.
+  useEffect(() => {
+    setMdChoice(null);
+    setMdLarge(false);
+  }, [path]);
 
   return (
     <div className="flex h-full flex-col">
@@ -937,7 +943,7 @@ const FileViewer = memo(function FileViewer({
           <button
             type="button"
             className="shrink-0 rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent"
-            onClick={() => setMdSource((v) => !v)}
+            onClick={() => setMdChoice(mdSource ? "preview" : "source")}
             title={
               mdSource
                 ? t("panels.files.previewToggleToPreview")
@@ -954,6 +960,13 @@ const FileViewer = memo(function FileViewer({
         reloadNonce={reloadNonce}
         reference={reference}
         reader={fileSystem}
+        onContent={(content) =>
+          setMdLarge(
+            isMarkdown &&
+              typeof content.text === "string" &&
+              content.text.length > LARGE_MARKDOWN_CHARS,
+          )
+        }
         renderCurrent={(content) => {
           if (isImage)
             return (
@@ -978,11 +991,23 @@ const FileViewer = memo(function FileViewer({
             );
           if (isMarkdown && !mdSource)
             return (
-              <div className="p-4">
-                <Markdown text={content.text} cwd={mdBaseDir(root, path)} />
+              <div className="p-4" data-file-markdown>
+                <Markdown text={content.text} cwd={mdBaseDir(root, path)} document />
               </div>
             );
-          return <CodeWithComments path={path} text={content.text} />;
+          return (
+            <>
+              {isMarkdown && mdChoice === null && mdLarge && (
+                <div
+                  className="shrink-0 border-b border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground"
+                  role="status"
+                >
+                  {t("panels.files.largeMarkdownSource")}
+                </div>
+              )}
+              <FileCodeView path={path} text={content.text} />
+            </>
+          );
         }}
       />
     </div>
@@ -1055,80 +1080,3 @@ function mdBaseDir(root: string, path: string): string {
   const abs = isAbsolutePath(path) ? path : joinPath(root, path);
   return nativeDirname(abs, window.codeshell.platform);
 }
-
-/** Line-numbered code view; hover a line to pin a comment anchor (file:line). */
-const CodeWithComments = memo(function CodeWithComments({
-  path,
-  text,
-}: {
-  path: string;
-  text: string;
-}) {
-  const { t } = useT();
-  const [commenting, setCommenting] = useState<number | null>(null);
-  const commentButton = useRef<HTMLButtonElement | null>(null);
-  const name = nativeBasename(path, window.codeshell.platform);
-  const closeComment = () => {
-    setCommenting(null);
-    commentButton.current?.focus({ preventScroll: true });
-  };
-
-  return (
-    <div className="p-2 font-mono text-xs leading-relaxed">
-      <PagedText
-        text={text}
-        renderLine={(line, no) => {
-          return (
-            // Key on the line number (stable within a file) rather than the array
-            // index, so `commenting` state can't follow the wrong row if line list
-            // composition ever changes without a full remount.
-            <div key={no}>
-              <div className="flex items-start gap-1 px-1 hover:bg-accent/40" data-file-row>
-                {/* Gutter comment button (left): a clear blue + that appears on
-                  row hover, GitHub-style. Click pins this line + your comment
-                  into the composer as an anchor. Replaces the old tiny,
-                  near-invisible right-side icon. */}
-                <button
-                  type="button"
-                  aria-label={t("panels.files.commentThisLine")}
-                  title={t("panels.files.commentThisLineTitle")}
-                  className="cs-file-action mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  data-active={commenting === no ? "true" : undefined}
-                  onClick={(event) => {
-                    commentButton.current = event.currentTarget;
-                    setCommenting(commenting === no ? null : no);
-                  }}
-                >
-                  <MessageSquarePlus size={11} />
-                </button>
-                <span className="w-9 shrink-0 select-none pr-2 text-right text-muted-foreground">
-                  {no}
-                </span>
-                <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-foreground">
-                  {line || " "}
-                </pre>
-              </div>
-              {commenting === no && (
-                <div className="px-2">
-                  <CommentBox
-                    title={`${name}:${no}`}
-                    onCancel={closeComment}
-                    onSubmit={(comment) => {
-                      addAnchor({
-                        kind: "file",
-                        label: `${name}:${no}`,
-                        locator: { 文件: path, 行号: String(no), 代码: line.trim().slice(0, 200) },
-                        comment,
-                      });
-                      closeComment();
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        }}
-      />
-    </div>
-  );
-});

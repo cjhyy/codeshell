@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { MessageSquarePlus, ChevronRight, ChevronDown, ExternalLink } from "lucide-react";
-import { parseUnifiedDiff, type DiffFile } from "./parseUnifiedDiff";
+import React, { Suspense, useEffect, useState } from "react";
+import { ChevronRight, ChevronDown, ExternalLink } from "lucide-react";
+import type { DiffFile } from "./parseUnifiedDiff";
 import { groupReviewSnapshot } from "./reviewSnapshot";
-import { CommentBox } from "../chat/CommentBox";
-import { addAnchor } from "../chat/addAnchor";
+import { diffFileStats, splitDiffSections, type DiffSection } from "./diffSections";
+import { DiffFileBody, type DiffStyle } from "./DiffFileBody";
+import { pierreSupported } from "../code-view/PierreBoundary";
+import { LazyPierreScroller } from "../code-view/lazy";
 import { openFileTarget } from "../chat/openWith";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -49,10 +51,15 @@ interface Props {
    * summary next to its scope selector without re-fetching the diff itself.
    */
   onStats?: (stats: { added: number; removed: number }) => void;
+  /** Stacked (default) or side-by-side rows. */
+  diffStyle?: DiffStyle;
+  /** Bounds of the scroll container, which Pierre virtualizes. */
+  scrollClassName?: string;
 }
 
 interface LoadedDiffFile {
   file: DiffFile;
+  section: DiffSection;
   rootId: string;
   repoRoot: string;
   key: string;
@@ -80,11 +87,12 @@ function loadedFiles(
   repository: Pick<ReviewRepositoryIdentity, "rootId" | "repoRoot">,
   raw: string,
 ): LoadedDiffFile[] {
-  return parseUnifiedDiff(raw).map((parsed, index) => ({
-    file: parsed,
+  return splitDiffSections(raw).map((section, index) => ({
+    file: section.file,
+    section,
     rootId: repository.rootId,
     repoRoot: repository.repoRoot,
-    key: reviewDiffFileKey(repository, parsed, index),
+    key: reviewDiffFileKey(repository, section.file, index),
   }));
 }
 
@@ -106,13 +114,13 @@ export function UnifiedDiffViewer({
   onlyPath,
   mode,
   onStats,
+  diffStyle = "unified",
+  scrollClassName,
 }: Props) {
   const { t } = useT();
   const localActions = useLocalRuntimeActions();
   const [diff, setDiff] = useState<LoadedDiff | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filePage, setFilePage] = useState(0);
-  useEffect(() => setFilePage(0), [diff, onlyPath]);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,12 +173,9 @@ export function UnifiedDiffViewer({
     let added = 0;
     let removed = 0;
     for (const loaded of diff.files) {
-      for (const h of loaded.file.hunks) {
-        for (const l of h.lines) {
-          if (l.kind === "add") added++;
-          else if (l.kind === "del") removed++;
-        }
-      }
+      const stats = diffFileStats(loaded.file);
+      added += stats.added;
+      removed += stats.removed;
     }
     onStats({ added, removed });
   }, [diff]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -190,32 +195,9 @@ export function UnifiedDiffViewer({
   if (visible.length === 0 && diff.errors.length === 0) {
     return <div className="p-3 text-sm text-muted-foreground">{t("panels.diff.noChanges")}</div>;
   }
-  // Guard against rendering an enormous diff (e.g. a whole "branch vs base"
-  // range): a per-line <tr> table with no virtualization froze the main thread
-  // (couldn't even scroll) and leaked memory toward V8 OOM. Cap the total lines
-  // rendered; past the cap, show a notice prompting the user to pick a single
-  // file. (#5 ③ hang / ④ OOM)
-  const totalLines = visible.reduce(
-    (n, loaded) => n + loaded.file.hunks.reduce((m, h) => m + h.lines.length, 0),
-    0,
-  );
-  // Binary and rename-only files have no hunk lines, but each still mounts a
-  // complete file card. Page those cards independently of the line budget.
-  const pageCount = Math.max(1, Math.ceil(visible.length / MAX_RENDERED_FILES));
-  const currentPage = Math.min(filePage, pageCount - 1);
-  const pageFiles = visible.slice(
-    currentPage * MAX_RENDERED_FILES,
-    (currentPage + 1) * MAX_RENDERED_FILES,
-  );
-  const overCap =
-    pageFiles.reduce(
-      (n, loaded) => n + loaded.file.hunks.reduce((m, h) => m + h.lines.length, 0),
-      0,
-    ) > MAX_RENDERED_LINES;
-  const filesToRender = overCap ? capFiles(pageFiles, MAX_RENDERED_LINES) : pageFiles;
   const showRepository = new Set(visible.map((entry) => entry.repoRoot)).size > 1;
-  return (
-    <div className="flex min-w-0 flex-col gap-3 overflow-x-auto text-sm">
+  const content = (
+    <>
       {diff.errors.map((repositoryError) => (
         <div
           key={`${repositoryError.operation}:${repositoryError.repoRoot ?? repositoryError.rootId}`}
@@ -226,109 +208,55 @@ export function UnifiedDiffViewer({
           })}
         </div>
       ))}
-      {pageCount > 1 && (
-        <div className="flex items-center gap-2 text-xs" data-diff-file-pages>
-          <button
-            type="button"
-            disabled={currentPage === 0}
-            onClick={() => setFilePage(currentPage - 1)}
-          >
-            {t("panels.diff.previousFiles")}
-          </button>
-          <span role="status">
-            {t("panels.diff.filePage", { page: currentPage + 1, total: pageCount })}
-          </span>
-          <button
-            type="button"
-            disabled={currentPage + 1 === pageCount}
-            onClick={() => setFilePage(currentPage + 1)}
-          >
-            {t("panels.diff.nextFiles")}
-          </button>
-        </div>
-      )}
-      {overCap && (
-        <div className="rounded-md bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
-          {t("panels.diff.largeDiff", { total: totalLines, max: MAX_RENDERED_LINES })}
-        </div>
-      )}
-      {filesToRender.map((loaded) => (
+      {visible.map((loaded) => (
         <DiffFileBlock
           key={loaded.key}
-          file={loaded.file}
-          cwd={loaded.repoRoot}
-          repoRoot={loaded.repoRoot}
+          loaded={loaded}
           showRepository={showRepository}
+          diffStyle={diffStyle}
         />
       ))}
-    </div>
+    </>
+  );
+  const scrollClass = cn("min-h-0 min-w-0 overflow-auto text-sm", scrollClassName);
+  const contentClass = "flex min-w-0 flex-col gap-3";
+  // Pierre virtualizes rows across every file in this one scroll container,
+  // so a whole branch diff stays responsive without pages or line caps.
+  const plain = <div className={cn(scrollClass, contentClass)}>{content}</div>;
+  return pierreSupported() ? (
+    <Suspense fallback={plain}>
+      <LazyPierreScroller className={scrollClass} contentClassName={contentClass}>
+        {content}
+      </LazyPierreScroller>
+    </Suspense>
+  ) : (
+    plain
   );
 }
 
-/** Upper bound on rendered diff lines before we stop and ask the user to pick a
- *  single file. A per-line table past this size blocks the main thread. */
-const MAX_RENDERED_LINES = 2000;
-const MAX_RENDERED_FILES = 100;
-
-/** Keep the first files/lines within the budget, including a single file whose
- * merged edit hunks exceed it. The source snapshot and stats stay complete. */
-export function capFiles(diff: LoadedDiffFile[], budget: number): LoadedDiffFile[] {
-  const out: LoadedDiffFile[] = [];
-  let used = 0;
-  for (const loaded of diff) {
-    const lines = loaded.file.hunks.reduce((m, h) => m + h.lines.length, 0);
-    if (used >= budget) break;
-    if (used + lines > budget) {
-      let remaining = budget - used;
-      const hunks = [] as DiffFile["hunks"];
-      for (const hunk of loaded.file.hunks) {
-        if (remaining <= 0) break;
-        const kept = hunk.lines.slice(0, remaining);
-        hunks.push({ ...hunk, lines: kept });
-        remaining -= kept.length;
-      }
-      out.push({ ...loaded, file: { ...loaded.file, hunks } });
-      break;
-    }
-    out.push(loaded);
-    used += lines;
-  }
-  return out;
-}
-
 function DiffFileBlock({
-  file,
-  cwd,
-  repoRoot,
+  loaded,
   showRepository,
+  diffStyle,
 }: {
-  file: DiffFile;
-  cwd: string;
-  repoRoot: string;
+  loaded: LoadedDiffFile;
   showRepository: boolean;
+  diffStyle: DiffStyle;
 }) {
   const { t } = useT();
   const localActions = useLocalRuntimeActions();
+  const { file, repoRoot } = loaded;
+  const cwd = repoRoot;
   const title = file.newPath ?? file.oldPath ?? t("panels.diff.unknownFile");
-  // Which line is currently being commented on, keyed by "hunkIdx:lineIdx".
-  const [commenting, setCommenting] = useState<string | null>(null);
   // Collapse a file's diff by clicking its header (GitLab/GitHub style) — when
   // many files stack in the review panel, this lets the user fold the ones
   // they're done with instead of scrolling past a long flat list.
   const [collapsed, setCollapsed] = useState(false);
-
   // Per-file +/- counts for the header (handy when collapsed).
-  let added = 0;
-  let removed = 0;
-  for (const h of file.hunks) {
-    for (const l of h.lines) {
-      if (l.kind === "add") added++;
-      else if (l.kind === "del") removed++;
-    }
-  }
+  const { added, removed } = diffFileStats(file);
 
   return (
-    <div className="overflow-hidden rounded-md border bg-card">
+    <div className="overflow-hidden rounded-md border bg-card" data-diff-file>
       <Button
         type="button"
         variant="ghost"
@@ -401,88 +329,17 @@ function DiffFileBlock({
           </span>
         )}
       </Button>
-      {!collapsed &&
-        file.hunks.map((h, i) => (
-          <div key={`${i}:${h.header}`} className="overflow-x-auto border-b last:border-b-0">
-            <div className="border-b bg-muted/40 px-3 py-1 font-mono text-xs text-muted-foreground">
-              {h.header}
-            </div>
-            <table className="w-full border-collapse font-mono text-xs">
-              <tbody>
-                {h.lines.map((l, j) => {
-                  const key = `${i}:${j}`;
-                  const lineNo = l.newLine ?? l.oldLine ?? null;
-                  return (
-                    <React.Fragment key={j}>
-                      <tr className={cn("group", lineTone(l.kind))}>
-                        <td className="w-12 select-none border-r px-2 py-0.5 text-right tabular-nums text-muted-foreground">
-                          {l.oldLine ?? ""}
-                        </td>
-                        <td className="w-12 select-none border-r px-2 py-0.5 text-right tabular-nums text-muted-foreground">
-                          {l.newLine ?? ""}
-                        </td>
-                        <td className="w-6 select-none border-r px-2 py-0.5 text-center text-muted-foreground">
-                          {l.kind === "add" ? "+" : l.kind === "del" ? "-" : " "}
-                        </td>
-                        <td className="min-w-[520px] whitespace-pre px-2 py-0.5">
-                          {/* The line text keeps `white-space: pre` (from
-                            .diff-text) so it extends and the hunk scrolls
-                            horizontally; the comment button is positioned
-                            relative to the row, not inline, so it doesn't
-                            force-wrap or get lost off-screen on scroll. */}
-                          <span className="relative block pr-6">
-                            {l.text || " "}
-                            {localActions && (
-                              <button
-                                type="button"
-                                aria-label={t("panels.diff.commentThisLine")}
-                                title={t("panels.diff.commentThisLineTitle")}
-                                className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
-                                onClick={() => setCommenting(commenting === key ? null : key)}
-                              >
-                                <MessageSquarePlus size={12} />
-                              </button>
-                            )}
-                          </span>
-                        </td>
-                      </tr>
-                      {localActions && commenting === key && (
-                        <tr>
-                          <td colSpan={4} className="px-2">
-                            <CommentBox
-                              title={`${showRepository ? `${repoRoot}:` : ""}${title}${lineNo != null ? `:${lineNo}` : ""}`}
-                              onCancel={() => setCommenting(null)}
-                              onSubmit={(comment) => {
-                                addAnchor({
-                                  kind: "diff",
-                                  label: `${title.split("/").pop()}${lineNo != null ? `:${lineNo}` : ""}`,
-                                  locator: {
-                                    ...(showRepository ? { 仓库: repoRoot } : {}),
-                                    文件: title,
-                                    ...(lineNo != null ? { 行号: String(lineNo) } : {}),
-                                    代码: l.text.trim().slice(0, 200),
-                                  },
-                                  comment,
-                                });
-                                setCommenting(null);
-                              }}
-                            />
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ))}
+      {!collapsed && (
+        <DiffFileBody
+          section={loaded.section}
+          cacheKey={loaded.key}
+          title={title}
+          repoRoot={repoRoot}
+          showRepository={showRepository}
+          commentable={Boolean(localActions)}
+          diffStyle={diffStyle}
+        />
+      )}
     </div>
   );
-}
-
-function lineTone(kind: string): string {
-  if (kind === "add") return "bg-status-ok/10";
-  if (kind === "del") return "bg-status-err/10";
-  return "";
 }

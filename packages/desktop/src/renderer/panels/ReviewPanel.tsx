@@ -1,6 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCw, ChevronDown, Check, ScanSearch, LoaderCircle } from "lucide-react";
+import {
+  RefreshCw,
+  ChevronDown,
+  Check,
+  ScanSearch,
+  LoaderCircle,
+  Columns2,
+  Rows2,
+} from "lucide-react";
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
+import type { DiffStyle } from "../diff/DiffFileBody";
 import { parseUnifiedDiff } from "../diff/parseUnifiedDiff";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import {
@@ -19,6 +28,15 @@ import { groupReviewSnapshot, selectReviewSnapshot } from "../diff/reviewSnapsho
 import { useReviewPrompt } from "./useReviewPrompt";
 
 const ALL_FILES_VALUE = "all";
+const DIFF_STYLE_KEY = "codeshell.review.diffStyle";
+
+function loadDiffStyle(): DiffStyle {
+  try {
+    return localStorage.getItem(DIFF_STYLE_KEY) === "split" ? "split" : "unified";
+  } catch {
+    return "unified";
+  }
+}
 const fileOptionValue = (path: string): string => `path:${path}`;
 
 interface Props {
@@ -122,6 +140,17 @@ export function ReviewPanel({
   // Total +/- for the current scope, reported by the diff viewer — shown next
   // to the scope dropdown (Codex style).
   const [stats, setStats] = useState<{ added: number; removed: number } | null>(null);
+  const [diffStyle, setDiffStyle] = useState<DiffStyle>(loadDiffStyle);
+  const toggleDiffStyle = (): void =>
+    setDiffStyle((current) => {
+      const next = current === "split" ? "unified" : "split";
+      try {
+        localStorage.setItem(DIFF_STYLE_KEY, next);
+      } catch {
+        // Storage is optional; the toggle still applies to this panel.
+      }
+      return next;
+    });
 
   // File list parsed out of the turn snapshot, to populate the dropdown.
   const turnFilePaths = useMemo(() => {
@@ -357,12 +386,28 @@ export function ReviewPanel({
             {t("panels.review.aiReview")}
           </button>
         )}
+        <button
+          type="button"
+          title={t(diffStyle === "split" ? "panels.diff.unifiedView" : "panels.diff.splitView")}
+          aria-label={t(
+            diffStyle === "split" ? "panels.diff.unifiedView" : "panels.diff.splitView",
+          )}
+          className={`${sessionId ? "" : "ml-auto "}shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground`}
+          onClick={toggleDiffStyle}
+          data-review-diff-style={diffStyle}
+        >
+          {diffStyle === "split" ? (
+            <Rows2 className="h-3.5 w-3.5" />
+          ) : (
+            <Columns2 className="h-3.5 w-3.5" />
+          )}
+        </button>
         {gitAvailable && (
           <button
             type="button"
             title={t("panels.common.refresh")}
             aria-label={t("panels.common.refresh")}
-            className={`${sessionId ? "" : "ml-auto "}shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground`}
+            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
             onClick={() => setRefreshKey((k) => k + 1)}
           >
             <RefreshCw className="h-3.5 w-3.5" />
@@ -419,7 +464,7 @@ export function ReviewPanel({
       )}
 
       {/* Full-width diff. */}
-      <div className="min-h-0 flex-1 overflow-auto p-2">
+      <div className="flex min-h-0 flex-1 flex-col p-2">
         {activeScope === "turn" && hasTurnSnapshot ? (
           // Authoritative turn-time snapshot — viewable even after the edits
           // were committed (git would no longer show them). The dropdown above
@@ -429,6 +474,8 @@ export function ReviewPanel({
             diffText={turnDiff}
             onlyPath={activeTurnFileSel}
             onStats={setStats}
+            diffStyle={diffStyle}
+            scrollClassName="flex-1"
           />
         ) : (
           // Every Git-backed scope is resolved in Main from the current Session.
@@ -439,6 +486,8 @@ export function ReviewPanel({
             reviewSessionId={sessionId ?? undefined}
             reviewRequest={reviewRequest}
             onStats={setStats}
+            diffStyle={diffStyle}
+            scrollClassName="flex-1"
           />
         )}
       </div>
