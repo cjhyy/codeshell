@@ -41,3 +41,11 @@ export function rendererDiskSessionQuery(input: unknown): ListSessionOptions {
     ...(opts.sessionId !== undefined ? { sessionId: opts.sessionId } : {}),
   };
 }
+
+/** Host-side existence check behind reads of an unowned session. The sidebar
+ * hides archived rows, but the archive view still opens them, so archival must
+ * not make a stored session unreadable. Sessions being deleted stay hidden. */
+export async function hostSessionVisible(list: ListSessions, sessionId: string): Promise<boolean> {
+  const page = await list({ sessionId, limit: 1, includeArchived: true });
+  return page.sessions.some((row) => row.id === sessionId);
+}

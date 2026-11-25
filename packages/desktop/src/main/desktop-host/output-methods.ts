@@ -1,4 +1,8 @@
-import { isDesktopSessionId, type ListSessions } from "../../shared/disk-session-query.js";
+import {
+  hostSessionVisible,
+  isDesktopSessionId,
+  type ListSessions,
+} from "../../shared/disk-session-query.js";
 import type { Snapshot } from "../SessionSnapshotStore.js";
 import { HostRevokedError } from "./authority.js";
 import { InvalidParams, type DesktopHostMethod } from "./server.js";
@@ -26,8 +30,7 @@ export function outputMethods(
         async run(context, params) {
           const id = params!.sessionId as string;
           const visible = async () => {
-            if (!(await list({ sessionId: id, limit: 1 })).sessions.some((row) => row.id === id))
-              throw new HostRevokedError();
+            if (!(await hostSessionVisible(list, id))) throw new HostRevokedError();
             context.assertCurrent();
           };
           if (context.historical) await visible();

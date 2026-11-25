@@ -6,6 +6,7 @@ import {
   type RpcNotification,
   type RpcResponse,
 } from "../../shared/desktop-host-protocol.js";
+import { hostSessionVisible } from "../../shared/disk-session-query.js";
 import { outputMethods } from "./output-methods.js";
 import { DesktopHostServer, desktopHostMethods, type DesktopHostMethod } from "./server.js";
 
@@ -455,4 +456,45 @@ test("disk-history recovery checks visibility after I/O and legacy IPC uses the 
   await expect(legacy).rejects.toThrow("revoked");
   await expect(server.readWorkbenchOutput(frame(2), { sessionId })).rejects.toThrow("revoked");
   await expect(server.readWorkbenchOutput(frame(1, 2), { sessionId })).rejects.toThrow("revoked");
+});
+
+test("disk-history reads admit an archived session the workbench opened from the archive", async () => {
+  const snapshot = { epoch: "test", events: [], nextSeq: 1, topLevelRunning: false };
+  const queries: Array<Record<string, unknown>> = [];
+  const methods = outputMethods(
+    async () => snapshot,
+    async (options) => {
+      queries.push({ ...options });
+      // The catalog hides archived rows unless the caller opts in.
+      return {
+        sessions: options.includeArchived ? [{ id: sessionId, mtime: 1, archivedAt: 1 }] : [],
+        nextCursor: null,
+      };
+    },
+  );
+  const server = new DesktopHostServer("test", methods);
+  const a = connect(server, frame(1));
+  a.request(1, "agent/subscribe", { sessionId });
+  await tick();
+  expect(a.responses(1)[0]?.error).toBeUndefined();
+  expect(a.responses(1)[0]?.result).toEqual(snapshot);
+  expect(queries.every((query) => query.includeArchived === true)).toBe(true);
+});
+
+test("host visibility counts archived sessions but not deleted or foreign rows", async () => {
+  const rows: Record<string, { archivedAt?: number }> = { live: {}, archived: { archivedAt: 1 } };
+  const list = async (options: { sessionId?: string; includeArchived?: boolean }) => {
+    const row = options.sessionId ? rows[options.sessionId] : undefined;
+    const shown = row && (row.archivedAt === undefined || options.includeArchived);
+    return {
+      sessions: shown ? [{ id: options.sessionId!, mtime: 1, ...row }] : [],
+      nextCursor: null,
+    };
+  };
+  expect(await hostSessionVisible(list as never, "live")).toBe(true);
+  expect(await hostSessionVisible(list as never, "archived")).toBe(true);
+  expect(await hostSessionVisible(list as never, "deleted")).toBe(false);
+  // A catalog row for another id never stands in for the requested session.
+  const wrong = async () => ({ sessions: [{ id: "other", mtime: 1 }], nextCursor: null });
+  expect(await hostSessionVisible(wrong as never, "live")).toBe(false);
 });

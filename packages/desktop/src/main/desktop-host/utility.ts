@@ -19,6 +19,7 @@ import { hostedProfileLibrary } from "../../host/composition/profile-library.js"
 import { configuredMcpProbe } from "../../host/composition/configured-mcp-probe.js";
 import { HostedMimiTasks } from "../../host/composition/mimi-tasks.js";
 import { parseMimiSegmentRange } from "../../shared/mimi-records.js";
+import { hostSessionVisible } from "../../shared/disk-session-query.js";
 import { hostedMimiSegments } from "../../host/composition/mimi-segments.js";
 import { hostedSkills } from "../../host/composition/skills.js";
 import { wechatLoginOperations } from "../../host/composition/wechat-login.js";
@@ -562,11 +563,7 @@ parent.on("message", ({ data, ports }) => {
             return worker.rendererCommand(req, current);
           },
           async (id) => {
-            if (
-              (await catalog.list({ sessionId: id, limit: 1 })).sessions.some(
-                (row) => row.id === id,
-              )
-            )
+            if (await hostSessionVisible((options) => catalog.list(options), id))
               return "visible";
             try {
               await lstat(join(sessionsRoot(), id));
