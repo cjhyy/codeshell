@@ -108,6 +108,7 @@ interface SidebarProps {
 }
 
 const COMPACT_SESSION_LIMIT = 5;
+const PROJECT_BRANCH_CACHE_MS = 2_000;
 /**
  * Cap on per-Session worktree-branch lookups (one IPC each). Chosen to comfortably
  * cover a normally-sized expanded list while keeping a ~1000-Session project from
@@ -121,11 +122,7 @@ type MenuTarget =
   | { kind: "project"; x: number; y: number; project: TrackedProject }
   | { kind: "session"; x: number; y: number; projectId: string | null; session: SessionSummary };
 
-type WorkspaceChangeEvent = {
-  sessionId: string;
-  workspace?: SessionWorkspace;
-  mainRoot?: string;
-};
+type WorkspaceChangeListeners = Set<(sessionId: string) => void>;
 
 export function shouldPromptForPrimaryTrust(level: "trusted" | "untrusted" | "unknown"): boolean {
   return level !== "trusted";
@@ -181,7 +178,7 @@ export function Sidebar({
     rootId: string;
     path: string;
   } | null>(null);
-  const [workspaceChange, setWorkspaceChange] = useState<WorkspaceChangeEvent | null>(null);
+  const [workspaceListeners] = useState<WorkspaceChangeListeners>(() => new Set());
   const closeMenu = (): void => setMenu(null);
   const confirm = useConfirm();
   const prompt = usePrompt();
@@ -216,8 +213,10 @@ export function Sidebar({
   useEffect(() => {
     const subscribe = window.codeshell.onWorkspaceChanged;
     if (typeof subscribe !== "function") return;
-    return subscribe((event) => setWorkspaceChange(event));
-  }, []);
+    return subscribe(({ sessionId }) => {
+      for (const listener of workspaceListeners) listener(sessionId);
+    });
+  }, [workspaceListeners]);
 
   useEffect(() => {
     const content = contentRef.current;
@@ -485,7 +484,7 @@ export function Sidebar({
                 }}
                 onPinSession={(sid, pinned) => onPinSession(project.id, sid, pinned)}
                 onArchiveSession={(sid) => onArchiveSession(project.id, sid, true)}
-                workspaceChange={workspaceChange}
+                workspaceListeners={workspaceListeners}
               />
             ))}
 
@@ -840,32 +839,45 @@ function useProjectBranch(
 } {
   const [branch, setBranch] = useState<string | undefined>();
   const requestVersion = useRef(0);
+  const pending = useRef(false);
+  const freshUntil = useRef(0);
 
   const refresh = useCallback(() => {
+    if (!enabled || pending.current || performance.now() < freshUntil.current) return;
     const version = ++requestVersion.current;
-    if (!enabled) {
-      setBranch(undefined);
-      return;
-    }
+    pending.current = true;
     void window.codeshell
       .getProjectGitStatus(projectId)
       .then((status) => {
-        if (requestVersion.current === version) setBranch(status.branch ?? undefined);
+        if (version !== requestVersion.current) return;
+        freshUntil.current = performance.now() + PROJECT_BRANCH_CACHE_MS;
+        setBranch(status.branch ?? undefined);
       })
       .catch(() => {
-        if (requestVersion.current === version) setBranch(undefined);
+        if (version === requestVersion.current) setBranch(undefined);
+      })
+      .finally(() => {
+        if (version === requestVersion.current) pending.current = false;
       });
   }, [projectId, enabled]);
 
   useEffect(() => {
-    refresh();
+    setBranch(undefined);
+    const invalidate = () => {
+      requestVersion.current++;
+      freshUntil.current = 0;
+      pending.current = false;
+    };
     const onBranchesChanged = (event: Event) => {
       const changedPath = (event as CustomEvent<{ cwd?: string }>).detail?.cwd;
-      if (!changedPath || changedPath === projectPath) refresh();
+      if (changedPath && changedPath !== projectPath) return;
+      const wasRequested = pending.current || freshUntil.current > 0;
+      invalidate();
+      if (wasRequested) refresh();
     };
     window.addEventListener("codeshell:git-branches-changed", onBranchesChanged);
     return () => {
-      requestVersion.current += 1;
+      invalidate();
       window.removeEventListener("codeshell:git-branches-changed", onBranchesChanged);
     };
   }, [projectPath, refresh]);
@@ -882,9 +894,8 @@ interface VisibleSessionWorkspace {
 function useVisibleSessionWorkspaces(
   projectPath: string,
   sessions: SessionSummary[],
-  workspaceChange: WorkspaceChangeEvent | null,
+  workspaceListeners?: WorkspaceChangeListeners,
 ): Record<string, VisibleSessionWorkspace> {
-  const requestVersions = useRef(new Map<string, number>());
   const [workspaces, setWorkspaces] = useState<Record<string, VisibleSessionWorkspace>>({});
   // Session authority + Git decoration are bounded per visible Session.
   // Expanding ~1000 Sessions used to issue an unbounded state-read burst in
@@ -896,6 +907,7 @@ function useVisibleSessionWorkspaces(
   const engineSessionIdKey = sessions
     .flatMap((session) => (session.engineSessionId ? [session.engineSessionId] : []))
     .slice(0, WORKTREE_BRANCH_LOOKUP_LIMIT)
+    .sort()
     .join("\u0000");
   const engineSessionIds = useMemo(
     () => (engineSessionIdKey ? engineSessionIdKey.split("\u0000") : []),
@@ -915,35 +927,53 @@ function useVisibleSessionWorkspaces(
       return next;
     });
 
-    for (const sessionId of engineSessionIds) {
-      const version = (requestVersions.current.get(sessionId) ?? 0) + 1;
-      requestVersions.current.set(sessionId, version);
-      void (async () => {
+    const inFlight = new Set<string>();
+    const changed = new Set<string>();
+    const refreshSession = async (sessionId: string) => {
+      if (!visible.has(sessionId)) return;
+      if (inFlight.has(sessionId)) {
+        changed.add(sessionId);
+        return;
+      }
+      inFlight.add(sessionId);
+      try {
         const authorityApi = window.codeshell.getSessionWorkspaceAuthority;
         const authority =
           typeof authorityApi === "function" ? await authorityApi(sessionId) : undefined;
+        if (cancelled || changed.has(sessionId)) return;
         const workspace =
           authority?.workspace ??
           (await window.codeshell.getSessionWorkspace(sessionId, projectPath));
-        if (authority && authority.rootStatus !== "ok") {
-          return { workspace, authority, branch: undefined };
+        if (cancelled || changed.has(sessionId)) return;
+        const status =
+          !authority || authority.rootStatus === "ok"
+            ? await window.codeshell.getSessionGitStatus(sessionId)
+            : undefined;
+        if (cancelled || changed.has(sessionId)) return;
+        const next = { workspace, authority, branch: status?.branch ?? undefined };
+        setWorkspaces((current) => ({ ...current, [sessionId]: next }));
+      } catch {
+        // A failed refresh must not keep an obsolete branch or root repair action.
+        if (!cancelled && !changed.has(sessionId)) {
+          setWorkspaces((current) => {
+            if (!Object.hasOwn(current, sessionId)) return current;
+            const next = { ...current };
+            delete next[sessionId];
+            return next;
+          });
         }
-        const status = await window.codeshell.getSessionGitStatus(sessionId);
-        return { workspace, authority, branch: status.branch ?? undefined };
-      })()
-        .then((next) => {
-          if (cancelled || requestVersions.current.get(sessionId) !== version) return;
-          setWorkspaces((current) => ({ ...current, [sessionId]: next }));
-        })
-        .catch(() => {
-          // Legacy/missing engine sessions simply have no worktree marker.
-        });
-    }
-
+      } finally {
+        inFlight.delete(sessionId);
+        if (changed.delete(sessionId) && !cancelled) void refreshSession(sessionId);
+      }
+    };
+    for (const sessionId of visible) refreshSession(sessionId);
+    if (visible.size) workspaceListeners?.add(refreshSession);
     return () => {
       cancelled = true;
+      workspaceListeners?.delete(refreshSession);
     };
-  }, [engineSessionIds, projectPath, workspaceChange]);
+  }, [engineSessionIds, projectPath, workspaceListeners]);
 
   return workspaces;
 }
@@ -965,7 +995,7 @@ export function ProjectGroup({
   onSessionContextMenu,
   onPinSession,
   onArchiveSession,
-  workspaceChange,
+  workspaceListeners,
   localRuntime = true,
 }: {
   localRuntime?: boolean;
@@ -985,7 +1015,7 @@ export function ProjectGroup({
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
   onPinSession: (sid: string, pinned: boolean) => void;
   onArchiveSession: (sid: string) => void;
-  workspaceChange: WorkspaceChangeEvent | null;
+  workspaceListeners?: WorkspaceChangeListeners;
 }) {
   const { t } = useT();
   const toast = useToast();
@@ -1016,7 +1046,7 @@ export function ProjectGroup({
   const sessionWorkspaces = useVisibleSessionWorkspaces(
     project.path,
     workspaceSessions,
-    workspaceChange,
+    workspaceListeners,
   );
   const { branch: projectBranch, refresh: refreshProjectBranch } = useProjectBranch(
     project.id,
@@ -1154,7 +1184,11 @@ export function ProjectGroup({
                           }
                         : undefined
                     }
-                    onHover={localRuntime ? refreshProjectBranch : undefined}
+                    onHover={
+                      localRuntime && !worktreeBranch && !sessionWorkspace?.branch
+                        ? refreshProjectBranch
+                        : undefined
+                    }
                   />
                 );
               })}
