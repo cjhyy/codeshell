@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { SessionWorkspace, SessionWorkspaceAuthority } from "../preload/types";
+import { readWhenHostBusy } from "./workspace-trust/readWhenHostBusy";
 import { TrustGate } from "./workspace-trust/TrustGate";
 import { formatModifierShortcut } from "./keyboardShortcutHints";
 
@@ -192,17 +193,29 @@ export function Sidebar({
   const orderedProjects = useMemo(() => sortProjects(projects), [projects]);
   const editingProject = projects.find((project) => project.id === editingProjectId) ?? null;
 
+  const primaryRead = useRef<AbortController | null>(null);
+  useLayoutEffect(() => () => primaryRead.current?.abort(), [editingProject?.id]);
+
   const setPrimary = useCallback(
     async (projectId: string, rootId: string, path: string): Promise<void> => {
+      primaryRead.current?.abort();
+      const controller = new AbortController();
+      primaryRead.current = controller;
       try {
-        const trust = await window.codeshell.getTrust(path);
+        const trust = await readWhenHostBusy(
+          () => window.codeshell.getTrust(path),
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
         if (shouldPromptForPrimaryTrust(trust)) {
           setPendingPrimary({ projectId, rootId, path });
           return;
         }
         await window.codeshell.projectRegistry.setPrimary(projectId, rootId);
       } catch (error) {
-        toast({ message: String(error), variant: "error" });
+        if (!controller.signal.aborted) toast({ message: String(error), variant: "error" });
+      } finally {
+        if (primaryRead.current === controller) primaryRead.current = null;
       }
     },
     [toast],

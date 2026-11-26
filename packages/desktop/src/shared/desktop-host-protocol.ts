@@ -16,7 +16,12 @@ export const DesktopHostIpc = {
   status: "desktop-host:status",
 } as const;
 
-export const DesktopHostErrors = { revoked: -32010, reconnecting: -32011 } as const;
+export const DesktopHostErrors = {
+  requestLimit: -32001,
+  revoked: -32010,
+  reconnecting: -32011,
+} as const;
+export const DESKTOP_HOST_REQUEST_LIMIT_MESSAGE = "Too many pending Desktop Host requests";
 
 export interface DesktopHostIdentity {
   webContentsId: number;

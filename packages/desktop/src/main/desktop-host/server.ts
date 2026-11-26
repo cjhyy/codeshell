@@ -4,6 +4,7 @@ import { rendererDiskSessionQuery, type ListSessions } from "../../shared/disk-s
 import { isTerminalCommand } from "../../shared/pty.js";
 import { CONTRACTS } from "@cjhyy/code-shell-core/contracts";
 import {
+  DESKTOP_HOST_REQUEST_LIMIT_MESSAGE,
   DesktopHostErrors,
   isRpcRequest,
   type DesktopHostIdentity,
@@ -294,7 +295,7 @@ export class DesktopHostServer {
     const sessionId = handler.sessionId?.(params);
     if (!sessionId && !handler.admission && !isTerminalCommand(method)) throw new InvalidParams();
     if (atRequestLimit(connection, method, "workbench"))
-      throw new Error("Too many pending Desktop Host requests");
+      throw new Error(DESKTOP_HOST_REQUEST_LIMIT_MESSAGE);
     const guard = sessionId
       ? connection.authority.captureHistoryRead(
           sessionId,
@@ -460,7 +461,7 @@ export class DesktopHostServer {
       return;
     }
     if (atRequestLimit(connection, method, "port")) {
-      sendError(port, id, -32001, "Too many pending Desktop Host requests");
+      sendError(port, id, DesktopHostErrors.requestLimit, DESKTOP_HOST_REQUEST_LIMIT_MESSAGE);
       return;
     }
     let guard: HostRequestContext | undefined;
