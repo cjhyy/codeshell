@@ -87,6 +87,8 @@ const { createGithubOperationReader } =
   await import("../packages/core/dist/links/operation-reader.js");
 const { setDefaultCredentialAccess } = await import("../packages/core/dist/credentials/access.js");
 const { inspectPluginHooks } = await import("../packages/core/dist/plugins/pluginHookIntegrity.js");
+const { computePluginTreeDigest } =
+  await import("../packages/core/dist/plugins/pluginTreeDigest.js");
 const results = [];
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const literal = (value) => `printf '%s' '${JSON.stringify(value)}'`;
@@ -553,6 +555,9 @@ try {
     }),
   );
   const inspected = inspectPluginHooks(pluginRoot);
+  // Approval covers the whole plugin tree, not only hooks.json.
+  const tree = computePluginTreeDigest(pluginRoot);
+  assert.equal(tree.ok, true);
   const registry = join(home, ".code-shell/plugins");
   mkdirSync(registry, { recursive: true });
   const entry = {
@@ -563,6 +568,8 @@ try {
     lastUpdated: "fixture",
     hookDigest: inspected.digest,
     approvedHookDigest: inspected.digest,
+    contentDigest: tree.digest,
+    approvedContentDigest: tree.digest,
   };
   assert.ok(inspected.digest);
   writeFileSync(

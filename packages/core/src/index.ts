@@ -560,6 +560,28 @@ export {
   pluginHookApprovalState,
   type PluginHookApprovalState,
 } from "./plugins/pluginHookIntegrity.js";
+// Native plugins: one approval for the whole plugin, and the worker's view of them.
+export {
+  approvePlugin,
+  listNativePlugins,
+  reviewNativePlugin,
+  revokePlugin,
+  type NativePluginReview,
+  type NativePluginState,
+  type NativePluginSurface,
+  type NativeSurfaceDiff,
+  type PluginApprovalSummary,
+} from "./plugins/native/approval.js";
+export {
+  NATIVE_PLUGINS_LOG_QUERY,
+  NATIVE_PLUGINS_RESTART_QUERY,
+  NATIVE_PLUGINS_STATUS_QUERY,
+  type NativePluginRuntimeState,
+  type NativePluginStatus,
+  type NativePluginsLogReply,
+  type NativePluginsRestartReply,
+  type NativePluginsStatusReply,
+} from "./plugin-runtime/queries.js";
 export {
   describePluginContent,
   type PluginAutomationTemplateDescriptor,

@@ -19,7 +19,9 @@ import {
   loadPluginCatalog,
   describePluginContent,
   listPluginMcpTrust,
+  listNativePlugins,
   PluginInstallError,
+  type NativePluginReview,
   type PluginContentInventory,
   type PluginCatalogEntry,
   type PluginMcpTrustEntry,
@@ -171,6 +173,19 @@ export function listPlugins(
 export interface PluginDetail extends PluginSummary {
   content: PluginContentInventory;
   mcpTrust?: PluginMcpTrustEntry;
+  /** What a native plugin declares and whether that is what the user approved. */
+  native?: NativePluginReview;
+}
+
+function nativeReview(installKey: string): NativePluginReview | undefined {
+  try {
+    // The newest entry of a key is the one the runtime loads.
+    return listNativePlugins()
+      .filter((entry) => entry.installKey === installKey)
+      .at(-1);
+  } catch {
+    return undefined;
+  }
 }
 
 export function getPluginDetail(installKey: string): PluginDetail | null {
@@ -187,7 +202,13 @@ export function getPluginDetail(installKey: string): PluginDetail | null {
         automationTemplates: [],
       };
   const mcpTrust = listPluginMcpTrust().find((entry) => entry.installKey === installKey);
-  return { ...summary, content: described, ...(mcpTrust ? { mcpTrust } : {}) };
+  const native = nativeReview(installKey);
+  return {
+    ...summary,
+    content: described,
+    ...(mcpTrust ? { mcpTrust } : {}),
+    ...(native ? { native } : {}),
+  };
 }
 
 export interface UninstallPluginResult {

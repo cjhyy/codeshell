@@ -292,6 +292,11 @@ try {
     .update("codeshell-plugin-mcp-v1\0mcp-servers.json\0")
     .update(mcp)
     .digest("hex");
+  // Approval covers every file of the plugin, so the fixture records the tree
+  // it just wrote the way an install followed by the user's approval would.
+  const { computePluginTreeDigest } = await import("../../core/dist/plugins/pluginTreeDigest.js");
+  const tree = computePluginTreeDigest(plugin);
+  assert.equal(tree.ok, true, "runtime fixture plugin tree could not be digested");
   await put(join(isolated.codeShellHome, "plugins", "installed_plugins.json"), {
     version: 2,
     plugins: {
@@ -304,6 +309,8 @@ try {
           lastUpdated: "2026-10-12T00:00:00.000Z",
           mcpDigest: digest,
           approvedMcpDigest: digest,
+          contentDigest: tree.digest,
+          approvedContentDigest: tree.digest,
         },
       ],
     },

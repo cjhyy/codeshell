@@ -144,6 +144,7 @@ describe("headlessWorkerEnv", () => {
       CODE_SHELL_MODEL_REQUEST_SIGNING: "host",
       CODE_SHELL_WORKSPACE_ACCESS: "host",
       CODE_SHELL_HOST_MCP_SERVERS: "fixture-mcp",
+      CODE_SHELL_NATIVE_PLUGINS: "host",
       CODE_SHELL_CREDENTIAL_ACCESS: "host",
     });
 
@@ -155,6 +156,7 @@ describe("headlessWorkerEnv", () => {
       CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
       CODE_SHELL_WORKSPACE_ACCESS: undefined,
       CODE_SHELL_HOST_MCP_SERVERS: undefined,
+      CODE_SHELL_NATIVE_PLUGINS: undefined,
       CODE_SHELL_CREDENTIAL_ACCESS: "local",
     });
     expect(base.CODE_SHELL_CREDENTIAL_ACCESS).toBe("host");

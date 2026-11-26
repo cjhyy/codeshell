@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { loadPluginHooks, listPluginHooks, pluginHookKey } from "./loadPluginHooks.js";
 import { pluginHooksDigest } from "./pluginHookIntegrity.js";
+import { computePluginTreeDigest } from "./pluginTreeDigest.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { Engine } from "../engine/engine.js";
 import { LLMClientBase } from "../llm/client-base.js";
@@ -31,11 +32,19 @@ afterEach(() => {
   dirs.length = 0;
 });
 
+/**
+ * - `approved`: declaration and whole tree recorded and approved (what an
+ *   install followed by the user's approval leaves behind).
+ * - `pending`: recorded at install, nothing approved yet.
+ * - `declaration-only`: approved under the rule that only covered hooks.json.
+ * - `unrecorded`: an install that predates every digest.
+ */
+type StagedTrust = "approved" | "pending" | "declaration-only" | "unrecorded";
+
 function stagePlugin(
   pluginKey: string,
   sessionStartGroups: unknown[] = [{ hooks: [{ type: "command", command: "echo hi" }] }],
-  hookDigest?: "current" | string,
-  approvedHookDigest?: "current" | string,
+  trust: StagedTrust = "approved",
   event = "SessionStart",
 ): string {
   const home = mkdtempSync(join(tmpdir(), "plughome-"));
@@ -67,26 +76,26 @@ function stagePlugin(
             version: "1.0.0",
             installedAt: "2026-01-01",
             lastUpdated: "2026-01-01",
-            ...(hookDigest
-              ? {
-                  hookDigest:
-                    hookDigest === "current" ? pluginHooksDigest(installPath) : hookDigest,
-                }
+            ...(trust === "unrecorded" ? {} : { hookDigest: pluginHooksDigest(installPath) }),
+            ...(trust === "approved" || trust === "declaration-only"
+              ? { approvedHookDigest: pluginHooksDigest(installPath) }
               : {}),
-            ...(approvedHookDigest
-              ? {
-                  approvedHookDigest:
-                    approvedHookDigest === "current"
-                      ? pluginHooksDigest(installPath)
-                      : approvedHookDigest,
-                }
+            ...(trust === "approved" || trust === "pending"
+              ? { contentDigest: treeDigest(installPath) }
               : {}),
+            ...(trust === "approved" ? { approvedContentDigest: treeDigest(installPath) } : {}),
           },
         ],
       },
     }),
   );
   return installPath;
+}
+
+function treeDigest(installPath: string): string {
+  const tree = computePluginTreeDigest(installPath);
+  if (!tree.ok) throw new Error(tree.reason);
+  return tree.digest;
 }
 
 const fakeProvider = "fake-session-start-source";
@@ -174,7 +183,7 @@ describe("loadPluginHooks disabledPluginHooks (per-hook) filter", () => {
 
 describe("loadPluginHooks install-time integrity", () => {
   test("registers a hook whose digest was explicitly approved", () => {
-    stagePlugin("verified@market", undefined, "current", "current");
+    stagePlugin("verified@market");
     const reg = new HookRegistry();
     loadPluginHooks(reg);
     expect(reg.hasHooks("on_session_start")).toBe(true);
@@ -183,7 +192,7 @@ describe("loadPluginHooks install-time integrity", () => {
   });
 
   test("fails closed while a new matching hook digest is pending approval", () => {
-    stagePlugin("pending@market", undefined, "current");
+    stagePlugin("pending@market", undefined, "pending");
     const reg = new HookRegistry();
     loadPluginHooks(reg);
     expect(reg.hasHooks("on_session_start")).toBe(false);
@@ -192,7 +201,7 @@ describe("loadPluginHooks install-time integrity", () => {
   });
 
   test("fails closed when hooks.json changes after installation", () => {
-    const installPath = stagePlugin("changed@market", undefined, "current");
+    const installPath = stagePlugin("changed@market", undefined, "pending");
     writeFileSync(
       join(installPath, "hooks", "hooks.json"),
       JSON.stringify({
@@ -209,16 +218,53 @@ describe("loadPluginHooks install-time integrity", () => {
     expect(listPluginHooks()[0]?.approval).toBe("changed");
   });
 
-  test("keeps legacy installs compatible until the user explicitly revokes them", () => {
-    stagePlugin("legacy@market");
+  test("does not load an install recorded before approval existed", () => {
+    stagePlugin("legacy@market", undefined, "unrecorded");
     const reg = new HookRegistry();
     loadPluginHooks(reg);
-    expect(reg.hasHooks("on_session_start")).toBe(true);
-    expect(listPluginHooks()[0]?.approval).toBe("legacy");
+    expect(reg.hasHooks("on_session_start")).toBe(false);
+    expect(listPluginHooks()[0]?.integrity).toBe("legacy");
+    expect(listPluginHooks()[0]?.approval).toBe("pending");
+  });
+
+  test("does not load an approval that only ever covered hooks.json", () => {
+    stagePlugin("declared@market", undefined, "declaration-only");
+    const reg = new HookRegistry();
+    loadPluginHooks(reg);
+    expect(reg.hasHooks("on_session_start")).toBe(false);
+    expect(listPluginHooks()[0]?.approval).toBe("pending");
+  });
+
+  test("stops loading once a script changes after approval", () => {
+    const installPath = stagePlugin("scripted@market");
+    const loaded = new HookRegistry();
+    loadPluginHooks(loaded);
+    expect(loaded.hasHooks("on_session_start")).toBe(true);
+
+    writeFileSync(join(installPath, "run.sh"), "echo added after approval\n");
+    const reg = new HookRegistry();
+    loadPluginHooks(reg);
+    expect(reg.hasHooks("on_session_start")).toBe(false);
+    expect(listPluginHooks()[0]?.integrity).toBe("verified");
+    expect(listPluginHooks()[0]?.approval).toBe("changed");
+  });
+
+  test("runs hooks with Python bytecode caching off so they cannot dirty the approved tree", async () => {
+    const out = join(mkdtempSync(join(tmpdir(), "hook-env-")), "env.txt");
+    dirs.push(dirname(out));
+    stagePlugin("env@market", [
+      {
+        hooks: [{ type: "command", command: `printf '%s' "$PYTHONDONTWRITEBYTECODE" > '${out}'` }],
+      },
+    ]);
+    const reg = new HookRegistry();
+    loadPluginHooks(reg);
+    await reg.emit("on_session_start", { source: "startup" });
+    expect(readFileSync(out, "utf8")).toBe("1");
   });
 
   test("ignores blank command declarations instead of prompting or registering", () => {
-    stagePlugin("blank@market", [{ hooks: [{ type: "command", command: "   " }] }], "current");
+    stagePlugin("blank@market", [{ hooks: [{ type: "command", command: "   " }] }], "pending");
     const reg = new HookRegistry();
     loadPluginHooks(reg);
     expect(reg.hasHooks("on_session_start")).toBe(false);
@@ -358,8 +404,8 @@ describe("listPluginHooks (read-only, for the settings UI)", () => {
       rawEvent: "SessionStart",
       command: "echo hi",
       disabled: false,
-      integrity: "legacy",
-      approval: "legacy",
+      integrity: "verified",
+      approval: "approved",
       key: "superpowers:SessionStart:echo hi",
     });
   });
@@ -392,8 +438,7 @@ describe("Claude-Code Notification hooks for user decisions", () => {
           hooks: [{ type: "command", command: `cat >> '${out}'; echo >> '${out}'` }],
         },
       ],
-      undefined,
-      undefined,
+      "approved",
       "Notification",
     );
     const reg = new HookRegistry();

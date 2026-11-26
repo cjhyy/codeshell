@@ -167,7 +167,7 @@ export function parseOperationHookHost(configuration: string) {
         !hostPath(source.installPath) ||
         !digest(source.installEntrySha256) ||
         !digest(source.hooksDigest) ||
-        !["approved", "legacy"].includes(source.approval) ||
+        source.approval !== "approved" ||
         (source.approvedHookDigest !== null && !digest(source.approvedHookDigest)) ||
         !text(source.rawEvent, 128) ||
         !source.rawEvent ||

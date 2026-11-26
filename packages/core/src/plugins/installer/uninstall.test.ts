@@ -6,6 +6,12 @@ import { uninstallPluginByName, uninstallPluginByNameAsync } from "./uninstall.j
 import { installPluginFromPath } from "./install.js";
 import { withLocalPluginMutation } from "./mutation-lock.js";
 import { readInstalledPlugins } from "../installedPlugins.js";
+import { nativeModuleId } from "../native/manifest.js";
+import {
+  nativeRuntimeRoot,
+  prepareNativeSnapshot,
+  removeNativeSnapshot,
+} from "../native/snapshot.js";
 
 describe("uninstallPluginByName", () => {
   let home: string, src: string, prev: string | undefined;
@@ -21,6 +27,34 @@ describe("uninstallPluginByName", () => {
     process.env.HOME = prev;
     rmSync(home, { recursive: true, force: true });
     rmSync(src, { recursive: true, force: true });
+  });
+
+  test("takes a native plugin's runtime copy and log with it", async () => {
+    mkdirSync(join(src, ".codeshell-plugin"), { recursive: true });
+    writeFileSync(
+      join(src, ".codeshell-plugin", "plugin.json"),
+      JSON.stringify({ schemaVersion: 2, apiVersion: 1, main: "./index.js" }),
+    );
+    writeFileSync(join(src, "index.js"), "export default () => {};\n");
+    const dir = await installPluginFromPath(src, "native", "t");
+    const runtimeRoot = nativeRuntimeRoot();
+    expect(runtimeRoot.startsWith(home)).toBe(true);
+    const moduleId = nativeModuleId("native", "native@local");
+    const snapshot = prepareNativeSnapshot({
+      moduleId,
+      installPath: dir,
+      contentDigest: readInstalledPlugins().plugins["native@local"]![0]!.contentDigest!,
+    });
+    if (!snapshot.ok) throw new Error(snapshot.reason);
+    mkdirSync(join(runtimeRoot, ".logs"), { recursive: true });
+    writeFileSync(join(runtimeRoot, ".logs", `${moduleId}.log`), "line\n");
+    try {
+      uninstallPluginByName("native");
+      expect(existsSync(join(runtimeRoot, moduleId))).toBe(false);
+      expect(existsSync(join(runtimeRoot, ".logs", `${moduleId}.log`))).toBe(false);
+    } finally {
+      removeNativeSnapshot(runtimeRoot);
+    }
   });
 
   test("removes the dir and the registry entry", async () => {

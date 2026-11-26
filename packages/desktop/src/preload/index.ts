@@ -88,6 +88,7 @@ import type {
   PluginHookApprovalResult,
   PluginMcpApprovalResult,
 } from "./types";
+import { createNativePluginsApi } from "./native-plugins-api";
 import { forwardAgentSideEffectEvent } from "./agent-side-effect-events";
 type CcAskUser = Extract<MobileServerEvent, { type: "ccRoom.approvalRequest" }>["req"]["askUser"];
 
@@ -1351,6 +1352,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("mcp:approvePlugin", installKey),
   revokePluginMcp: (installKey: string): Promise<PluginMcpApprovalResult[]> =>
     ipcRenderer.invoke("mcp:revokePlugin", installKey),
+  ...createNativePluginsApi(ipcRenderer),
   invalidateMcpProbeCache: (name?: string) => ipcRenderer.invoke("mcp:invalidate", name),
   probeSearch: (input: unknown) => ipcRenderer.invoke("search:probe", input),
   probeImage: (input: unknown) => ipcRenderer.invoke("image:probe", input),

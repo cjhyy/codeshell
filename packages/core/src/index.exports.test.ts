@@ -679,4 +679,31 @@ describe("core public/internal export contract", () => {
       "packages/core/src/index.extension.ts",
     ]);
   });
+
+  it("gives native plugin authors an SDK entry that loads nothing else", async () => {
+    const packageJson = await Bun.file(new URL("../package.json", import.meta.url)).json();
+    expect(packageJson.exports["./plugin"]).toEqual({
+      types: "./dist/plugin-sdk.d.ts",
+      import: "./dist/plugin-sdk.js",
+    });
+    const sdk = await import("./plugin-sdk.js");
+    expect(Object.keys(sdk).sort()).toEqual(["PLUGIN_API_VERSION", "definePlugin"]);
+    expect(sdk.PLUGIN_API_VERSION).toBe(CONTRACTS.pluginApi);
+    // A plugin that bundles definePlugin must not drag core along.
+    const source = await Bun.file(new URL("./plugin-sdk.ts", import.meta.url)).text();
+    expect(source).not.toMatch(/^\s*import\s/m);
+
+    // Hosts approve, review and watch native plugins through the public root.
+    for (const name of [
+      "approvePlugin",
+      "revokePlugin",
+      "listNativePlugins",
+      "reviewNativePlugin",
+      "NATIVE_PLUGINS_STATUS_QUERY",
+      "NATIVE_PLUGINS_RESTART_QUERY",
+      "NATIVE_PLUGINS_LOG_QUERY",
+    ]) {
+      expect((publicApi as Record<string, unknown>)[name], name).toBeDefined();
+    }
+  });
 });

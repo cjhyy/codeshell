@@ -3,8 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appendInstallEntry, readInstalledPlugins } from "./installedPlugins.js";
+import { approvePluginHooks, reviewPluginHooks } from "./pluginHookApproval.js";
 import { approvePluginMcp, listPluginMcpTrust, revokePluginMcp } from "./pluginMcpApproval.js";
 import { pluginMcpDigest } from "./pluginMcpIntegrity.js";
+import { computePluginTreeDigest } from "./pluginTreeDigest.js";
 import { mergePluginMcpServers } from "./installer/loadPluginMcp.js";
 
 describe("plugin MCP approval", () => {
@@ -39,6 +41,12 @@ describe("plugin MCP approval", () => {
       lastUpdated: "t1",
       ...entry,
     });
+  }
+
+  function treeDigest(): string {
+    const tree = computePluginTreeDigest(installPath);
+    if (!tree.ok) throw new Error(tree.reason);
+    return tree.digest;
   }
 
   test("checks the initiating document before persisting either trust transition", () => {
@@ -84,16 +92,66 @@ describe("plugin MCP approval", () => {
     expect(mergePluginMcpServers({})["demo:server"]).toBeUndefined();
   });
 
-  test("legacy installs remain compatible until revoke freezes them into pending", () => {
+  test("an install recorded before MCP digests stays disconnected until approved once", () => {
     writeEntry();
-    expect(listPluginMcpTrust()[0]?.status).toBe("legacy");
+    expect(listPluginMcpTrust()[0]?.status).toBe("pending");
+    expect(mergePluginMcpServers({})["demo:server"]).toBeUndefined();
+
+    expect(approvePluginMcp("demo")[0]).toMatchObject({ status: "approved", changed: true });
+    expect(readInstalledPlugins().plugins["demo@local"]?.[0]).toMatchObject({
+      mcpDigest: pluginMcpDigest(installPath),
+      approvedMcpDigest: pluginMcpDigest(installPath),
+      contentDigest: treeDigest(),
+      approvedContentDigest: treeDigest(),
+    });
     expect(mergePluginMcpServers({})["demo:server"]).toBeDefined();
 
     expect(revokePluginMcp("demo")[0]?.status).toBe("pending");
-    const entry = readInstalledPlugins().plugins["demo@local"]?.[0];
-    expect(entry?.mcpDigest).toBe(pluginMcpDigest(installPath));
-    expect(entry?.approvedMcpDigest).toBeUndefined();
     expect(mergePluginMcpServers({})["demo:server"]).toBeUndefined();
+  });
+
+  test("an MCP approval granted before whole-tree approval does not carry over", () => {
+    const mcpDigest = pluginMcpDigest(installPath);
+    writeEntry("demo@local", { mcpDigest, approvedMcpDigest: mcpDigest });
+    expect(listPluginMcpTrust()[0]?.status).toBe("pending");
+    expect(mergePluginMcpServers({})["demo:server"]).toBeUndefined();
+  });
+
+  test("a server script changed after approval disconnects the server", () => {
+    writeFileSync(join(installPath, "server.js"), "console.log('approved');\n");
+    writeEntry();
+    approvePluginMcp("demo");
+    expect(mergePluginMcpServers({})["demo:server"]).toBeDefined();
+
+    writeFileSync(join(installPath, "server.js"), "console.log('tampered');\n");
+    expect(listPluginMcpTrust()[0]?.status).toBe("changed");
+    expect(mergePluginMcpServers({})["demo:server"]).toBeUndefined();
+    expect(() => approvePluginMcp("demo")).toThrow(/changed after install/);
+
+    writeFileSync(join(installPath, "server.js"), "console.log('approved');\n");
+    expect(listPluginMcpTrust()[0]?.status).toBe("approved");
+  });
+
+  test("hooks and MCP share the content approval but are still approved separately", () => {
+    mkdirSync(join(installPath, "hooks"));
+    writeFileSync(
+      join(installPath, "hooks", "hooks.json"),
+      JSON.stringify({
+        hooks: { SessionStart: [{ hooks: [{ type: "command", command: "echo demo" }] }] },
+      }),
+    );
+    writeEntry();
+
+    approvePluginMcp("demo");
+    expect(listPluginMcpTrust()[0]?.status).toBe("approved");
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("pending");
+
+    approvePluginHooks("demo");
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
+
+    revokePluginMcp("demo");
+    expect(listPluginMcpTrust()[0]?.status).toBe("pending");
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
   });
 
   test("post-install MCP changes cannot be directly approved", () => {

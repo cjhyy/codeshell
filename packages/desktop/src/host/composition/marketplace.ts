@@ -85,6 +85,8 @@ export function hostedMarketplace(
     };
   }
   const operations = {
+    "plugins/approve": route("plugins/approve"),
+    "plugins/revoke": route("plugins/revoke"),
     "plugins/approveHooks": route("plugins/approveHooks"),
     "plugins/revokeHooks": route("plugins/revokeHooks"),
     "plugins/approveMcp": route("plugins/approveMcp"),

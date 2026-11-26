@@ -218,12 +218,10 @@ export function loadPluginHooks(
       const installPath = entry.installPath;
       if (!installPath) continue;
       const snapshot = inspectPluginHooks(installPath);
-      const approval = pluginHookApprovalState(entry, snapshot);
-      if (approval === "pending" || approval === "changed" || approval === "none") {
-        // Pending and changed executable definitions fail closed. The rest of
-        // the plugin remains available; hook-free installs have nothing to load.
-        continue;
-      }
+      // Only an explicit approval of the current bytes loads. Pending and
+      // changed executable definitions fail closed; the rest of the plugin
+      // remains available, and hook-free installs have nothing to load.
+      if (pluginHookApprovalState(entry, snapshot) !== "approved") continue;
       if (!snapshot.definition) continue;
 
       for (const hook of iteratePluginHooks(snapshot.definition)) {
@@ -295,7 +293,7 @@ export interface PluginHookEntry {
   disabled: boolean;
   /** Install-time integrity state for the executable hook definition. */
   integrity: PluginHookIntegrity;
-  /** Explicit execution trust state. Pending/changed hooks do not register. */
+  /** Explicit execution trust state. Only approved hooks register. */
   approval: PluginHookApprovalState;
   /** Stable per-hook identity ({@link pluginHookKey}) — the record key the
    *  UI writes to `capabilityOverrides.pluginHooks` to toggle just this hook. */
@@ -322,7 +320,7 @@ export interface PluginHookSource {
   installPath: string;
   installEntrySha256: string;
   hooksDigest: string;
-  approval: "approved" | "legacy" | "pending" | "changed" | "none";
+  approval: PluginHookApprovalState;
   approvedHookDigest: string | null;
   rawEvent: string;
   key: string;

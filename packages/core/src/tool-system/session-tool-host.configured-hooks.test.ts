@@ -20,6 +20,7 @@ import { createSessionToolHost, type CreateSessionToolHostOptions } from "./sess
 import { ToolRegistry } from "./registry.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { pluginHooksDigest } from "../plugins/pluginHookIntegrity.js";
+import { computePluginTreeDigest } from "../plugins/pluginTreeDigest.js";
 import type { BuiltinTool } from "./builtin/index.js";
 
 const originalHome = process.env.HOME;
@@ -204,6 +205,8 @@ describe("configured hooks reach external-runtime tool calls", () => {
         }),
       );
       const digest = pluginHooksDigest(installPath);
+      const tree = computePluginTreeDigest(installPath);
+      if (!tree.ok) throw new Error(tree.reason);
       const pluginsDir = join(home, ".code-shell", "plugins");
       mkdirSync(pluginsDir, { recursive: true });
       writeFileSync(
@@ -219,7 +222,10 @@ describe("configured hooks reach external-runtime tool calls", () => {
                 installedAt: "2026-01-01",
                 lastUpdated: "2026-01-01",
                 hookDigest: digest,
-                ...(approved ? { approvedHookDigest: digest } : {}),
+                contentDigest: tree.digest,
+                ...(approved
+                  ? { approvedHookDigest: digest, approvedContentDigest: tree.digest }
+                  : {}),
               },
             ],
           },

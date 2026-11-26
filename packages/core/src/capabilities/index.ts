@@ -29,6 +29,8 @@ export interface CapabilityDynamicContext {
     kind?: string;
     profileId?: string;
     isSubAgent: boolean;
+    /** The top-level Session a sub-agent belongs to. */
+    parentId?: string;
   };
   /** This run's behavior-profile parameters. In-process providers only. */
   runParams?: Readonly<Record<string, unknown>>;

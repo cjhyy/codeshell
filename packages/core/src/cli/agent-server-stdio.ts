@@ -68,6 +68,11 @@ import {
 import { createDesktopAutomationAuthorityClient } from "../automation/desktop-authority-client.js";
 import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule } from "../composition/types.js";
+import {
+  createNativePluginSessions,
+  nativePluginsRequested,
+  startWorkerNativePlugins,
+} from "../plugin-runtime/worker-integration.js";
 import { resolveSessionAgentConfig, resolveSessionCwd } from "./stdio-session-config.js";
 import { hasWorkspaceHostBridge } from "./stdio-host-config.js";
 import { configureModelTracing } from "../model-traces/index.js";
@@ -116,9 +121,19 @@ const documentRuntimeRoot = process.env.CODE_SHELL_DOCUMENT_RUNTIME_ROOT;
 const documentParserExecutable = documentRuntimeRoot
   ? createManagedDocumentParserResolver(documentRuntimeRoot)
   : undefined;
+// Approved native plugins run `setup` in their own processes first: what they
+// register becomes modules of the one composition below. Only when the host
+// asked for it; otherwise nothing here differs from a worker without plugins.
+const hostModules = await loadConfiguredAgentModules();
+const nativePlugins = nativePluginsRequested()
+  ? await startWorkerNativePlugins({ hostKind: "desktop", modules: hostModules })
+  : undefined;
 // Compile ONCE at the host root; seed engine, per-session engines and the
 // AgentServer all consume this same composition (design §9.3).
-const composition = compileComposition({ modules: await loadConfiguredAgentModules() });
+const composition = compileComposition({
+  modules: nativePlugins?.modules ?? hostModules,
+  ...(nativePlugins ? { pluginModules: nativePlugins.pluginModules } : {}),
+});
 
 // Injectable data root (identity dimension foundations, Task 3). Server
 // Phase 2 per-user workers spawn this entry with CODE_SHELL_DATA_ROOT set to
@@ -379,6 +394,22 @@ const chatManager = new ChatSessionManager({
   ...(dataRoot ? { dataRoot } : {}),
 });
 chatManager.startIdleSweeper();
+// A plugin switched off for a project stops receiving that project's calls.
+nativePlugins?.bindSessions(
+  createNativePluginSessions({
+    session(sessionId) {
+      const engine = chatManager.get(sessionId)?.engine;
+      return engine
+        ? {
+            cwd: engine.getConfig().cwd,
+            disabledPlugins: () => engine.getEffectiveDisabledLists().disabledPlugins,
+          }
+        : undefined;
+    },
+    userDisabledPlugins: () =>
+      computeEffectiveDisabledLists(settingsManager, undefined).disabledPlugins,
+  }),
+);
 
 // ─── Cron persistence ────────────────────────────────────────────
 // The agent's CronCreate/Delete tools operate on the shared cronScheduler
@@ -476,6 +507,9 @@ const agentServer = new AgentServer({
   // engineFactory uses for new sessions, so a reloaded running session and a
   // newly-created session converge on identical disk config (no divergence).
   settingsReader: freshSettings,
+  // Installing, approving, revoking or switching a plugin off all end in a
+  // settings reload from the host.
+  ...(nativePlugins ? { onSettingsReload: () => nativePlugins.refresh() } : {}),
   readActiveGoalFromDisk: (sessionId) => goalDiskReader.readActiveGoal(sessionId),
   updateActiveGoalOnDisk: (sessionId, patch) =>
     goalDiskReader.updateActiveGoal(sessionId, patch)?.goal,
@@ -495,7 +529,12 @@ installGracefulShutdown(
       try {
         await agentServer.close();
       } finally {
-        await runtime.close();
+        try {
+          // After the sessions, so their last hooks still reach the plugins.
+          await nativePlugins?.close();
+        } finally {
+          await runtime.close();
+        }
       }
     },
   },

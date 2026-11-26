@@ -292,6 +292,8 @@ describe("installPluginFromPath", () => {
     const entry = readInstalledPlugins().plugins["hook-cx@local"]?.[0];
     expect(entry?.hookDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(entry?.approvedHookDigest).toBeUndefined();
+    expect(entry?.contentDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(entry?.approvedContentDigest).toBeUndefined();
   });
 
   test("writes an Agent Plugin manifest, UI metadata, and automation templates", async () => {

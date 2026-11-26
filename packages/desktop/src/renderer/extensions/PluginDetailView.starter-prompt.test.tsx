@@ -131,3 +131,134 @@ describe("PluginDetailView starter prompts", () => {
     }
   });
 });
+
+describe("PluginDetailView native plugins", () => {
+  // React writes a lone string child as textContent and anything else as text nodes.
+  function textOf(node: unknown): string {
+    const current = node as {
+      nodeType?: number;
+      data?: string;
+      textContent?: string;
+      childNodes?: unknown[];
+    };
+    if (current.nodeType === 3) return current.data ?? "";
+    const children = (current.childNodes ?? []).map(textOf).join("");
+    return children || (current.textContent ?? "");
+  }
+
+  function detail(native: Record<string, unknown>) {
+    return {
+      name: "tickets",
+      displayName: "Tickets",
+      installKey: "tickets@local",
+      marketplace: null,
+      sourceLabel: "local",
+      installPath: "/tmp/tickets",
+      installedAt: "2026-11-26T00:00:00.000Z",
+      version: "1.0.0",
+      skillCount: 0,
+      mediaAvailability: { composerIcon: false, logo: false, logoDark: false, screenshotCount: 0 },
+      content: {
+        skills: [],
+        commands: [],
+        agents: [],
+        hooks: [],
+        mcpServers: [],
+        automationTemplates: [],
+      },
+      native: {
+        installKey: "tickets@local",
+        plugin: "tickets",
+        surface: {
+          apiVersion: 1,
+          hooks: ["pre_tool_use"],
+          tools: ["lookup"],
+          presets: [],
+          promptSections: [],
+          context: [],
+          background: false,
+          coreCapabilities: [],
+          hostCapabilities: [],
+        },
+        baselineAvailable: false,
+        diff: { added: {}, removed: {} },
+        ...native,
+      },
+    };
+  }
+
+  async function render(api: Record<string, unknown>): Promise<HTMLElement> {
+    ensureMiniDom();
+    Object.defineProperty(window, "codeshell", {
+      configurable: true,
+      value: { getPluginMedia: async () => null, ...api },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <DialogProvider>
+          <PluginDetailView
+            installKey="tickets@local"
+            cwd="/tmp/project"
+            onBack={() => undefined}
+          />
+        </DialogProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    return container;
+  }
+
+  test("a plugin waiting for approval shows what it declares and one approval, and runs nothing", async () => {
+    const nativePluginRuntime = mock(async () => ({ kind: "loaded", plugins: [] }));
+    const container = await render({
+      getPluginDetail: async () => detail({ state: "pending" }),
+      nativePluginRuntime,
+    });
+    const text = textOf(container);
+    expect(text).toContain("原生插件等待授权");
+    expect(text).toContain("pre_tool_use");
+    expect(text).toContain("lookup");
+    expect(buttonWithLabel(container, "授权此插件")).toBeDefined();
+    expect(buttonWithLabel(container, "撤销授权")).toBeUndefined();
+    // Nothing is asked of the agent for a plugin that cannot run.
+    expect(nativePluginRuntime).not.toHaveBeenCalled();
+  });
+
+  test("an approved plugin shows its process and can be restarted", async () => {
+    const running = {
+      installKey: "tickets@local",
+      plugin: "tickets",
+      moduleId: "plugin-tickets-0123abcd",
+      state: "running",
+      pid: 4242,
+      restarts: 0,
+      calls: 3,
+      failures: 1,
+      timeouts: 0,
+      lastError: "TIMEOUT: the plugin did not answer in time",
+      logFile: "/logs/plugin-tickets-0123abcd.log",
+    };
+    const nativePluginRuntime = mock(async () => ({ kind: "loaded", plugins: [running] }));
+    const container = await render({
+      getPluginDetail: async () => detail({ state: "approved" }),
+      nativePluginRuntime,
+    });
+    const text = textOf(container);
+    expect(text).toContain("原生插件已授权");
+    expect(text).toContain("进程 4242");
+    expect(text).toContain("最近错误：TIMEOUT: the plugin did not answer in time");
+    expect(nativePluginRuntime).toHaveBeenCalledWith("status");
+
+    const restart = buttonWithLabel(container, "重启插件");
+    expect(restart).toBeDefined();
+    await act(async () => {
+      reactPropsOf(restart).onClick();
+      await flushMicrotasks();
+    });
+    expect(nativePluginRuntime).toHaveBeenCalledWith("restart", "tickets@local");
+  });
+});

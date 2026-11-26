@@ -1,5 +1,9 @@
 import type { PluginMediaDto } from "../../shared/plugin-media";
-import type { PluginHookEntry } from "../../preload/types";
+import type {
+  NativePluginReview,
+  NativePluginRuntimeView,
+  PluginHookEntry,
+} from "../../preload/types";
 
 const SAFE_PLUGIN_IMAGE_DATA_URL = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/u;
 const COMPOSER_SVG_PREFIX = "data:image/svg+xml;base64,";
@@ -57,7 +61,7 @@ export function shouldLoadPluginListMedia(mediaAvailability: {
   return mediaAvailability.logo || mediaAvailability.logoDark || mediaAvailability.composerIcon;
 }
 
-export type PluginHookApprovalSummary = "approved" | "pending" | "changed" | "legacy";
+export type PluginHookApprovalSummary = "approved" | "pending" | "changed";
 
 export function summarizePluginHookApproval(
   hooks: Pick<PluginHookEntry, "approval">[],
@@ -66,7 +70,6 @@ export function summarizePluginHookApproval(
   if (executable.length === 0) return null;
   if (executable.some((hook) => hook.approval === "changed")) return "changed";
   if (executable.some((hook) => hook.approval === "pending")) return "pending";
-  if (executable.some((hook) => hook.approval === "legacy")) return "legacy";
   return "approved";
 }
 
@@ -86,6 +89,72 @@ export async function changePluginMcpApproval(
 ): Promise<void> {
   if (action === "approve") await api.approvePluginMcp(installKey);
   else await api.revokePluginMcp(installKey);
+}
+
+export async function changePluginApproval(
+  api: Pick<Window["codeshell"], "approvePlugin" | "revokePlugin">,
+  action: "approve" | "revoke",
+  installKey: string,
+): Promise<void> {
+  if (action === "approve") await api.approvePlugin(installKey);
+  else await api.revokePlugin(installKey);
+}
+
+export const NATIVE_SURFACE_ROWS = [
+  "hooks",
+  "tools",
+  "presets",
+  "promptSections",
+  "context",
+  "coreCapabilities",
+  "hostCapabilities",
+] as const;
+export type NativeSurfaceRow = (typeof NATIVE_SURFACE_ROWS)[number];
+
+export interface NativeSurfaceItem {
+  name: string;
+  change?: "added" | "removed";
+}
+
+/** What a native plugin declares, list by list, marked against the last approval. */
+export function nativeSurfaceRows(
+  review: NativePluginReview,
+): Array<{ list: NativeSurfaceRow; items: NativeSurfaceItem[] }> {
+  const surface = review.surface;
+  if (!surface) return [];
+  // Without an earlier approval everything is new, and marking it all says nothing.
+  const diff = review.baselineAvailable ? review.diff : undefined;
+  return NATIVE_SURFACE_ROWS.flatMap((list) => {
+    const added = new Set(diff?.added[list] ?? []);
+    const items: NativeSurfaceItem[] = [
+      ...surface[list].map((name) =>
+        added.has(name) ? { name, change: "added" as const } : { name },
+      ),
+      ...(diff?.removed[list] ?? []).map((name) => ({ name, change: "removed" as const })),
+    ];
+    return items.length > 0 ? [{ list, items }] : [];
+  });
+}
+
+export type NativePluginStatusEntry = Extract<
+  NativePluginRuntimeView,
+  { kind: "loaded" }
+>["plugins"][number];
+
+/** One plugin's place in the running agent, or why it has none. */
+export type NativeRuntimePlace =
+  | { kind: "unknown" }
+  | { kind: "off" | "no-worker" | "not-loaded" | "not-in-worker" }
+  | { kind: "status"; status: NativePluginStatusEntry };
+
+export function nativeRuntimeOf(
+  view: NativePluginRuntimeView | null,
+  installKey: string,
+): NativeRuntimePlace {
+  if (!view) return { kind: "unknown" };
+  if (view.kind !== "loaded") return { kind: view.kind };
+  const status = view.plugins.find((plugin) => plugin.installKey === installKey);
+  return status ? { kind: "status", status } : { kind: "not-in-worker" };
 }
 
 export type PluginLegalLinkKind = "website" | "privacy" | "terms";

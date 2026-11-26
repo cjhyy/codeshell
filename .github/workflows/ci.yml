@@ -165,9 +165,12 @@ jobs:
             # core dir were also split out for Bun 1.3.11's extra-pipe double close
             # (oven-sh/bun#47561, fixed in Bun 1.4.0). They are back in the shared shard
             # since Bun 1.4.5.
+            # The native plugin runtime also runs alone below: its suites start real plugin
+            # processes with short liveness deadlines, which a busy shared process can miss.
             ignore: >-
               --path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**
               --path-ignore-patterns '**/src/plugins/**' --path-ignore-patterns '**/src/session/**'
+              --path-ignore-patterns '**/src/plugin-runtime/**'
           - shard: desktop
             paths: packages/desktop
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
@@ -505,6 +508,9 @@ jobs:
       - name: test core plugins in their own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins
+      - name: test the native plugin runtime in its own Bun process
+        if: matrix.shard == 'core-rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugin-runtime
       - name: test core session in its own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/*.privacy.test.ts' --path-ignore-patterns '**/src/session/session-state-file.test.ts' packages/core/src/session

@@ -21,6 +21,9 @@ import {
 import { rewritePluginVars } from "./varRewrite.js";
 import { pluginHookInstallRecord } from "./pluginHookIntegrity.js";
 import { pluginMcpInstallRecord } from "./pluginMcpIntegrity.js";
+import { pluginContentInstallRecord } from "./pluginTreeDigest.js";
+import { pluginNativeInstallRecord } from "./native/approval.js";
+import { removeNativeRuntimeFiles } from "./native/snapshot.js";
 import { assertSafePluginName } from "./installer/paths.js";
 import {
   detachPluginDirectory,
@@ -431,6 +434,7 @@ export async function installPlugin(
   removeInstallEntries(key);
 
   const now = new Date().toISOString();
+  const content = pluginContentInstallRecord(mat.cacheDir, previousEntries);
   const installEntry: PluginInstallEntry = {
     scope: "user",
     installPath: mat.cacheDir,
@@ -438,6 +442,8 @@ export async function installPlugin(
     installedAt: now,
     lastUpdated: now,
     ...(mat.sha ? { gitCommitSha: mat.sha } : {}),
+    ...content,
+    ...pluginNativeInstallRecord(content.contentDigest, previousEntries),
     ...pluginHookInstallRecord(mat.cacheDir, previousEntries),
     ...pluginMcpInstallRecord(
       mat.cacheDir,
@@ -499,6 +505,7 @@ function uninstallPluginDirectories(
     }
   }
   const removedFromManifest = removeInstallEntries(key);
+  removeNativeRuntimeFiles(pluginName, key);
   // Clear orphaned disable flags (disabledSkills "name:skill" /
   // disabledPlugins "name") so a removed plugin leaves no dangling entries.
   pruneDisabledSettingsForPlugin(pluginName);
