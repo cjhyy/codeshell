@@ -644,7 +644,7 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
                       : t("settingsX.mcp.pluginTrustApprove")}
                   </Button>
                 )}
-                {(entry.status === "approved" || entry.status === "legacy") && (
+                {entry.status === "approved" && (
                   <Button
                     type="button"
                     size="sm"

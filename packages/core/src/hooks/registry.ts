@@ -97,8 +97,12 @@ export class HookRegistry {
     const handlers = this.hooks.get(eventName);
     if (!handlers?.length) return {};
 
-    const ctx: HookContext = { eventName, data: { ...this.identity?.(), ...data } };
     const aggregated: HookResult = {};
+    const ctx: HookContext = {
+      eventName,
+      data: { ...this.identity?.(), ...data },
+      pending: aggregated,
+    };
 
     for (const { handler } of handlers) {
       try {

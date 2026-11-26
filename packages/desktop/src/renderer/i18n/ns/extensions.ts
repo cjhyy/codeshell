@@ -465,15 +465,100 @@ export const extensions = {
           },
           pending: {
             title: "插件 MCP 等待授权",
-            description: "这 {count} 个外部进程/远程连接在明确授权前不会启动或连接。",
+            description:
+              "这 {count} 个外部进程/远程连接在明确授权前不会启动或连接。授权覆盖插件目录里的全部文件；此前安装或授权的插件需要重新授权一次。",
           },
           changed: {
-            title: "插件 MCP 安装后发生变化",
-            description: "连接已阻止。请更新或重新安装插件，再审查并授权新的摘要。",
+            title: "插件文件在安装后发生变化",
+            description: "连接已阻止。请更新或重新安装插件，再审查并授权。",
           },
-          legacy: {
-            title: "插件 MCP 旧安装兼容模式",
-            description: "此安装早于 MCP 摘要授权机制，当前仍允许连接；可撤销以改为默认阻止。",
+        },
+        native: {
+          processNote:
+            "原生插件的代码在独立进程里运行，拥有与你相同的系统权限（此版本不做沙箱）。只授权你信任的插件。",
+          state: {
+            approved: {
+              title: "原生插件已授权",
+              description:
+                "授权覆盖插件目录里的全部文件和下面列出的能力，也包括它的 Hook 与 MCP server。",
+            },
+            pending: {
+              title: "原生插件等待授权",
+              description: "授权前不会运行它的任何代码。一次授权同时启用它的 Hook 与 MCP server。",
+            },
+            changed: {
+              title: "插件文件在安装后发生变化",
+              description: "已停止加载。请更新或重新安装插件，再审查并授权。",
+            },
+            invalid: {
+              title: "原生插件清单无效",
+              description: "无法加载：{error}",
+            },
+            incompatible: {
+              title: "此插件需要更新版本的 CodeShell",
+              description: "无法加载：{error}",
+            },
+            none: {
+              title: "不是原生插件",
+              description: "",
+            },
+          },
+          surfaceTitle: "它声明的能力",
+          diffBaseline: "标出的项与上一次授权时相比有新增或移除。",
+          diffNoBaseline: "首次授权；下面全部是新能力。",
+          list: {
+            hooks: "Hook 事件",
+            tools: "工具",
+            presets: "预设",
+            promptSections: "提示词片段",
+            context: "上下文",
+            coreCapabilities: "核心能力",
+            hostCapabilities: "宿主能力",
+          },
+          change: {
+            added: "新增",
+            removed: "移除",
+          },
+          backgroundOn: "后台逻辑：插件加载期间持续运行",
+          backgroundOff: "后台逻辑：不再声明",
+          changedSinceApproval: "（与上次授权不同）",
+          capabilitiesNote: "核心能力与宿主能力目前只是声明，此版本还不能调用。",
+          approve: "授权此插件",
+          revoke: "撤销授权",
+          approveConfirmTitle: "授权原生插件？",
+          approveConfirmMessage:
+            "“{name}” 的代码将在你的电脑上以你的权限运行，可向 Agent 提供工具、Hook、预设和上下文；它的 Hook 与 MCP server 也会一并启用。",
+          approvedToast: "已授权此插件",
+          revokedToast: "已撤销授权，正在运行的会话会立即停止使用它",
+          approvalFailed: "授权操作失败：{error}",
+          runtime: {
+            title: "运行状态",
+            off: "原生插件未开启：在用户设置的 featureFlags 里打开 native_plugins，然后重启应用。",
+            noWorker: "Agent 尚未启动；插件会随第一个会话一起启动。",
+            notLoaded: "正在运行的 Agent 启动于开启原生插件之前；重启应用后加载。",
+            notInWorker: "正在运行的 Agent 没有加载此插件；重启应用后加载。",
+            states: {
+              running: "运行中",
+              "circuit-open": "多次失败后已停止",
+              revoked: "已撤回",
+              "restart-required": "重启应用后生效",
+              failed: "加载失败",
+              pending: "等待授权",
+              changed: "文件已变化",
+              invalid: "清单无效",
+              incompatible: "版本不兼容",
+            },
+            pid: "进程 {pid}",
+            idle: "空闲，下次调用时启动",
+            counters: "调用 {calls} · 失败 {failures} · 超时 {timeouts}",
+            lastError: "最近错误：{error}",
+            refresh: "刷新",
+            restart: "重启插件",
+            restartedToast: "已重启插件",
+            restartFailed: "重启失败：{error}",
+            showLog: "查看日志",
+            hideLog: "收起日志",
+            emptyLog: "暂无日志",
           },
         },
         hookApproval: {
@@ -483,22 +568,18 @@ export const extensions = {
           },
           pending: {
             title: "Hook 等待授权",
-            description: "插件的其他能力仍可使用，但这些 shell Hook 在明确授权前不会执行。",
+            description:
+              "插件的其他能力仍可使用，但这些 shell Hook 在明确授权前不会执行。授权覆盖插件目录里的全部文件；此前安装或授权的插件需要重新授权一次。",
           },
           changed: {
-            title: "Hook 安装后发生变化",
-            description: "执行已阻止。请更新或重新安装插件，再审查并授权新的摘要。",
-          },
-          legacy: {
-            title: "旧安装兼容模式",
-            description: "此安装早于 Hook 摘要授权机制，当前仍允许执行；可撤销以改为默认阻止。",
+            title: "插件文件在安装后发生变化",
+            description: "执行已阻止。请更新或重新安装插件，再审查并授权。",
           },
         },
         hookApprovalLabel: {
           approved: "已授权",
           pending: "待授权，已阻止",
           changed: "已变更，已阻止",
-          legacy: "旧安装兼容",
           none: "无可执行 Hook",
         },
         hookIntegrity: {
@@ -1689,17 +1770,105 @@ export const extensions = {
           pending: {
             title: "Plugin MCP pending approval",
             description:
-              "These {count} external process / remote connection(s) stay blocked until explicitly approved.",
+              "These {count} external process / remote connection(s) stay blocked until explicitly approved. Approval covers every file in the plugin directory; plugins installed or approved earlier need to be approved once more.",
           },
           changed: {
-            title: "Plugin MCP changed after installation",
+            title: "Plugin files changed after installation",
             description:
-              "Connections are blocked. Update or reinstall the plugin, then review and approve the new digest.",
+              "Connections are blocked. Update or reinstall the plugin, then review and approve it.",
           },
-          legacy: {
-            title: "Plugin MCP legacy compatibility mode",
-            description:
-              "This install predates MCP approval digests and is still allowed; revoke it to switch to fail-closed behavior.",
+        },
+        native: {
+          processNote:
+            "A native plugin's code runs in a process of its own with the same system permissions as you (this version has no sandbox). Approve only plugins you trust.",
+          state: {
+            approved: {
+              title: "Native plugin approved",
+              description:
+                "The approval covers every file in the plugin directory and everything listed below, including its hooks and MCP servers.",
+            },
+            pending: {
+              title: "Native plugin pending approval",
+              description:
+                "None of its code runs before you approve it. One approval also enables its hooks and MCP servers.",
+            },
+            changed: {
+              title: "Plugin files changed after installation",
+              description:
+                "It is no longer loaded. Update or reinstall the plugin, then review and approve it.",
+            },
+            invalid: {
+              title: "Invalid native plugin manifest",
+              description: "It cannot be loaded: {error}",
+            },
+            incompatible: {
+              title: "This plugin needs a newer CodeShell",
+              description: "It cannot be loaded: {error}",
+            },
+            none: {
+              title: "Not a native plugin",
+              description: "",
+            },
+          },
+          surfaceTitle: "What it declares",
+          diffBaseline: "Marked items were added or removed since the last approval.",
+          diffNoBaseline: "First approval; everything below is new.",
+          list: {
+            hooks: "Hook events",
+            tools: "Tools",
+            presets: "Presets",
+            promptSections: "Prompt sections",
+            context: "Context",
+            coreCapabilities: "Core capabilities",
+            hostCapabilities: "Host capabilities",
+          },
+          change: {
+            added: "Added",
+            removed: "Removed",
+          },
+          backgroundOn: "Background logic: runs while the plugin is loaded",
+          backgroundOff: "Background logic: no longer declared",
+          changedSinceApproval: "(differs from the last approval)",
+          capabilitiesNote:
+            "Core and host capabilities are only declared for now; this version does not let plugins call them yet.",
+          approve: "Approve this plugin",
+          revoke: "Revoke approval",
+          approveConfirmTitle: "Approve native plugin?",
+          approveConfirmMessage:
+            "The code of “{name}” will run on your computer with your permissions and can give the agent tools, hooks, presets and context. Its hooks and MCP servers are enabled too.",
+          approvedToast: "Plugin approved",
+          revokedToast: "Approval revoked; running sessions stop using it at once",
+          approvalFailed: "Approval failed: {error}",
+          runtime: {
+            title: "Runtime",
+            off: "Native plugins are off: turn on native_plugins under featureFlags in your user settings, then restart the app.",
+            noWorker: "The agent has not started yet; plugins start with the first session.",
+            notLoaded:
+              "The running agent started before native plugins were turned on; restart the app to load them.",
+            notInWorker:
+              "The running agent has not loaded this plugin; restart the app to load it.",
+            states: {
+              running: "Running",
+              "circuit-open": "Stopped after repeated failures",
+              revoked: "Withdrawn",
+              "restart-required": "Takes effect after a restart",
+              failed: "Failed to load",
+              pending: "Pending approval",
+              changed: "Files changed",
+              invalid: "Invalid manifest",
+              incompatible: "Incompatible",
+            },
+            pid: "process {pid}",
+            idle: "idle; starts on the next call",
+            counters: "{calls} calls · {failures} failed · {timeouts} timed out",
+            lastError: "Last error: {error}",
+            refresh: "Refresh",
+            restart: "Restart plugin",
+            restartedToast: "Plugin restarted",
+            restartFailed: "Restart failed: {error}",
+            showLog: "Show log",
+            hideLog: "Hide log",
+            emptyLog: "No log yet",
           },
         },
         hookApproval: {
@@ -1711,24 +1880,18 @@ export const extensions = {
           pending: {
             title: "Hooks pending approval",
             description:
-              "Other plugin capabilities remain available, but these shell hooks cannot run until explicitly approved.",
+              "Other plugin capabilities remain available, but these shell hooks cannot run until explicitly approved. Approval covers every file in the plugin directory; plugins installed or approved earlier need to be approved once more.",
           },
           changed: {
-            title: "Hooks changed after installation",
+            title: "Plugin files changed after installation",
             description:
-              "Execution is blocked. Update or reinstall the plugin, then review and approve the new digest.",
-          },
-          legacy: {
-            title: "Legacy compatibility mode",
-            description:
-              "This install predates hook approval digests and is still allowed; revoke it to switch to fail-closed behavior.",
+              "Execution is blocked. Update or reinstall the plugin, then review and approve it.",
           },
         },
         hookApprovalLabel: {
           approved: "Approved",
           pending: "Pending; blocked",
           changed: "Changed; blocked",
-          legacy: "Legacy allowed",
           none: "No executable hooks",
         },
         hookIntegrity: {

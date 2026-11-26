@@ -253,6 +253,29 @@ describe("finite native Hook plans", () => {
     ).toThrow();
     expect(() => parseOperationHookHost(` ${" ".repeat(32768)}${configuration()}`)).toThrow();
   });
+  test("a plugin plan is accepted only for an explicitly approved hook", () => {
+    const pluginPlan = (approval: string) => ({
+      ...plan(),
+      source: {
+        kind: "plugin",
+        installKey: "demo@market",
+        installPath: join(root, "plugin"),
+        installEntrySha256: "5".repeat(64),
+        hooksDigest: "6".repeat(64),
+        approval,
+        approvedHookDigest: "6".repeat(64),
+        rawEvent: "PreToolUse",
+        key: `demo:PreToolUse:${command}`,
+      },
+      files: [
+        { source: "scripts/entry.mjs", name: "scripts/entry.mjs", bytes: 2, sha256: hash("{}") },
+      ],
+    });
+    expect(parseOperationHookHost(configuration(pluginPlan("approved"))).plans).toHaveLength(1);
+    // "legacy" used to pass as trusted; a plan recorded under that rule is now refused.
+    for (const approval of ["legacy", "pending", "changed", "none"])
+      expect(() => parseOperationHookHost(configuration(pluginPlan(approval)))).toThrow();
+  });
   test("expected bytes are actual captured bytes, links reject, and identity revocation stays invalid", () => {
     const directory = join(root, "resources");
     mkdirSync(directory);

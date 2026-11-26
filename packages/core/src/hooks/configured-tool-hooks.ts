@@ -86,7 +86,7 @@ export function prepareConfiguredToolHooks(options: {
     if (
       hook.disabled ||
       options.disabledPluginHooks.includes(hook.key) ||
-      !["approved", "legacy"].includes(hook.approval) ||
+      hook.approval !== "approved" ||
       !events.has(hook.event) ||
       !matcherAccepts(hook.event, hook.matcher, {
         eventName: hook.event,

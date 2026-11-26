@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { pluginContentState } from "./pluginTreeDigest.js";
 import type { PluginInstallEntry } from "./types.js";
 
 const DIGEST_DOMAIN = "codeshell-plugin-mcp-v1";
@@ -43,8 +44,9 @@ export function pluginMcpDigest(installPath: string): string {
     .digest("hex");
 }
 
+/** `legacy` only describes the record (no install-time digest); it grants nothing. */
 export type PluginMcpIntegrity = "verified" | "changed" | "legacy";
-export type PluginMcpApprovalState = "approved" | "pending" | "changed" | "legacy" | "none";
+export type PluginMcpApprovalState = "approved" | "pending" | "changed" | "none";
 
 export function verifyPluginMcpIntegrity(entry: PluginInstallEntry): PluginMcpIntegrity {
   if (!entry.mcpDigest) return "legacy";
@@ -55,6 +57,11 @@ export function verifyPluginMcpIntegrity(entry: PluginInstallEntry): PluginMcpIn
  * Compute trust for one install. The caller supplies whether the declaration
  * currently normalizes to at least one runnable MCP server, keeping the trust
  * layer coupled to the runtime's strict schema rather than a second parser.
+ *
+ * Only `approved` connects. Like command hooks, approval covers both the
+ * declaration and every byte of the install tree (the declaration only names
+ * the server it launches), and records that predate either digest are
+ * `pending` whatever they approved before.
  */
 export function pluginMcpApprovalState(
   entry: PluginInstallEntry,
@@ -63,8 +70,12 @@ export function pluginMcpApprovalState(
   const integrity = verifyPluginMcpIntegrity(entry);
   if (integrity === "changed") return "changed";
   if (!hasMcpServers) return "none";
-  if (integrity === "legacy") return "legacy";
-  return entry.approvedMcpDigest === entry.mcpDigest ? "approved" : "pending";
+  if (integrity === "legacy" || !entry.contentDigest) return "pending";
+  const content = pluginContentState(entry);
+  if (content === "changed") return "changed";
+  return content === "approved" && entry.approvedMcpDigest === entry.mcpDigest
+    ? "approved"
+    : "pending";
 }
 
 /**

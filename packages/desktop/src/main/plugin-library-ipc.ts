@@ -84,6 +84,27 @@ export function registerPluginLibraryIpc(
   ipcMain.handle("plugins:installLocal", (event, input) =>
     localPluginReviews.install(input, desktopHost.documentSignal(event)),
   );
+  // One approval for the whole plugin: its native entry, hooks and MCP servers.
+  ipcMain.handle("plugins:approval", async (event, action: unknown, installKey: unknown) => {
+    if (typeof installKey !== "string" || !installKey) {
+      throw new Error("plugins:approval requires installKey");
+    }
+    if (action === "approve") {
+      return desktopHost.callBusiness(
+        "plugins/approve",
+        { installKey },
+        desktopHost.documentSignal(event),
+      );
+    }
+    if (action === "revoke") {
+      return desktopHost.callBusiness(
+        "plugins/revoke",
+        { installKey },
+        desktopHost.documentSignal(event),
+      );
+    }
+    throw new Error("plugins:approval requires approve or revoke");
+  });
   ipcMain.handle("hooks:approvePlugin", async (event, installKey: string) => {
     if (typeof installKey !== "string" || !installKey) {
       throw new Error("hooks:approvePlugin requires installKey");

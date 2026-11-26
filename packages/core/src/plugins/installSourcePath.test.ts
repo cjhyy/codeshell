@@ -190,6 +190,8 @@ describe("installPlugin marketplace source path containment", () => {
     expect(res.entry.approvedHookDigest).toBeUndefined();
     expect(res.entry.mcpDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(res.entry.approvedMcpDigest).toBeUndefined();
+    expect(res.entry.contentDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(res.entry.approvedContentDigest).toBeUndefined();
     const mcp = JSON.parse(readFileSync(join(res.entry.installPath, "mcp-servers.json"), "utf-8"));
     expect(mcp["p:files"]).toMatchObject({
       command: "files",

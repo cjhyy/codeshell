@@ -29,6 +29,7 @@ import {
 import { signalHotReload } from "./applyUpdates";
 import { useConfirm } from "../ui/DialogProvider";
 import { requestComposerSeed } from "../chat/composerSeed";
+import { NativePluginSection } from "./NativePluginSection";
 
 /**
  * Plugin detail (feedback#15: 插件列表只显 "N skills",看不到里面有啥) —
@@ -304,6 +305,14 @@ export function PluginDetailView({
           ))}
         </div>
       )}
+      {detail.native && (
+        <NativePluginSection
+          installKey={installKey}
+          name={detail.displayName}
+          review={detail.native}
+          onDetail={setDetail}
+        />
+      )}
       {hookApproval && (
         <section
           className={`flex flex-wrap items-center gap-2 rounded-md border p-3 ${
@@ -344,7 +353,7 @@ export function PluginDetailView({
               {t("ext.pluginDetail.approveHooks")}
             </Button>
           )}
-          {(hookApproval === "approved" || hookApproval === "legacy") && (
+          {hookApproval === "approved" && (
             <Button
               type="button"
               size="sm"
@@ -455,7 +464,7 @@ export function PluginDetailView({
               {t("ext.pluginDetail.approveMcp")}
             </Button>
           )}
-          {(detail.mcpTrust.status === "approved" || detail.mcpTrust.status === "legacy") && (
+          {detail.mcpTrust.status === "approved" && (
             <Button
               type="button"
               size="sm"

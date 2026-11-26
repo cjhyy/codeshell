@@ -181,16 +181,26 @@ describe("updatePluginByName", () => {
     let entry = readInstalledPlugins().plugins["u@local"]?.[0];
     expect(entry?.hookDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(entry?.approvedHookDigest).toBeUndefined();
+    expect(entry?.contentDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(entry?.approvedContentDigest).toBeUndefined();
+    expect(reviewPluginHooks("u")[0]?.status).toBe("pending");
 
     approvePluginHooks("u");
     const approvedEntry = readInstalledPlugins().plugins["u@local"]?.[0];
     const approvedDigest = approvedEntry?.approvedHookDigest;
     expect(approvedDigest).toBeDefined();
     expect(approvedEntry?.approvedHookSnapshot?.[0]?.command).toBe("echo v1");
+    expect(approvedEntry?.approvedContentDigest).toBe(approvedEntry?.contentDigest);
+    expect(reviewPluginHooks("u")[0]?.status).toBe("approved");
 
+    // Reinstalling the same bytes writes new installer timestamps into the
+    // tree; they are not plugin content, so the approval carries over.
     await updatePluginByName("u", "t3", true);
     entry = readInstalledPlugins().plugins["u@local"]?.[0];
     expect(entry?.approvedHookDigest).toBe(approvedDigest);
+    expect(entry?.contentDigest).toBe(approvedEntry?.contentDigest);
+    expect(entry?.approvedContentDigest).toBe(approvedEntry?.contentDigest);
+    expect(reviewPluginHooks("u")[0]?.status).toBe("approved");
 
     writeFileSync(
       join(src, "hooks", "hooks.json"),
@@ -209,6 +219,8 @@ describe("updatePluginByName", () => {
     entry = readInstalledPlugins().plugins["u@local"]?.[0];
     expect(entry?.hookDigest).not.toBe(approvedDigest);
     expect(entry?.approvedHookDigest).toBeUndefined();
+    expect(entry?.contentDigest).not.toBe(approvedEntry?.contentDigest);
+    expect(entry?.approvedContentDigest).toBeUndefined();
     expect(entry?.approvedHookSnapshot?.[0]?.command).toBe("echo v1");
     expect(reviewPluginHooks("u")[0]).toMatchObject({
       baselineAvailable: true,
@@ -220,6 +232,41 @@ describe("updatePluginByName", () => {
         },
       ],
     });
+  });
+
+  test("an update that only changes a script needs approval again", async () => {
+    mkdirSync(join(src, "hooks"), { recursive: true });
+    mkdirSync(join(src, "scripts"), { recursive: true });
+    writeFileSync(
+      join(src, "hooks", "hooks.json"),
+      JSON.stringify({
+        hooks: {
+          SessionStart: [
+            { hooks: [{ type: "command", command: "sh ${CODESHELL_PLUGIN_ROOT}/scripts/run.sh" }] },
+          ],
+        },
+      }),
+    );
+    writeFileSync(join(src, "scripts", "run.sh"), "echo v1\n");
+
+    await updatePluginByName("u", "t2", true);
+    approvePluginHooks("u");
+    const approved = readInstalledPlugins().plugins["u@local"]?.[0];
+    expect(reviewPluginHooks("u")[0]?.status).toBe("approved");
+
+    writeFileSync(join(src, "scripts", "run.sh"), "echo v2\n");
+    await updatePluginByName("u", "t3", true);
+    const entry = readInstalledPlugins().plugins["u@local"]?.[0];
+    // The declaration is byte-identical, so its own approval is kept...
+    expect(entry?.hookDigest).toBe(approved?.hookDigest);
+    expect(entry?.approvedHookDigest).toBe(approved?.approvedHookDigest);
+    // ...but the script it launches is not what the user approved.
+    expect(entry?.contentDigest).not.toBe(approved?.contentDigest);
+    expect(entry?.approvedContentDigest).toBeUndefined();
+    expect(reviewPluginHooks("u")[0]?.status).toBe("pending");
+
+    approvePluginHooks("u");
+    expect(reviewPluginHooks("u")[0]?.status).toBe("approved");
   });
 
   test("preserves approval for an unchanged MCP digest and resets it when config changes", async () => {

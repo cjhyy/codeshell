@@ -46,7 +46,12 @@ import type {
   PanelAppUpdateCheck,
   MobileServerEvent,
   RunResult,
+  NativePluginReview,
+  PluginApprovalSummary,
 } from "@cjhyy/code-shell-core";
+import type { NativePluginRuntimeView } from "../shared/native-plugins.js";
+import type { NativePluginsApi } from "./native-plugins-api";
+export type { NativePluginReview, NativePluginRuntimeView, PluginApprovalSummary };
 import type {
   ApprovalRequest,
   ReasoningControl,
@@ -434,8 +439,8 @@ export interface PluginHookEntry {
   disabled: boolean;
   /** Hook definition matches install-time digest, changed after install, or predates digests. */
   integrity: "verified" | "changed" | "legacy";
-  /** Explicit execution trust. Pending/changed hooks fail closed. */
-  approval: "approved" | "pending" | "changed" | "legacy" | "none";
+  /** Explicit execution trust. Only approved hooks run; approval covers the whole plugin tree. */
+  approval: "approved" | "pending" | "changed" | "none";
   /** Stable per-hook identity (`plugin:RawEvent:command`) — the record key
    *  written to `capabilityOverrides.pluginHooks` to toggle just this hook. */
   key: string;
@@ -473,7 +478,7 @@ export interface PluginHookReview {
   error?: string;
 }
 
-export type PluginMcpApprovalState = "approved" | "pending" | "changed" | "legacy" | "none";
+export type PluginMcpApprovalState = "approved" | "pending" | "changed" | "none";
 
 export interface PluginMcpTrustEntry {
   installKey: string;
@@ -1101,7 +1106,8 @@ export interface CodeshellApi
     ProjectAuthorityApi,
     ProjectPanelVersionApi,
     ProfilePluginExportApi,
-    ProfileMemoryPromotionApi {
+    ProfileMemoryPromotionApi,
+    NativePluginsApi {
   /** Workbench only. Subscribers receive the current connection state immediately. */
   onDesktopHostStatus?(listener: (status: DesktopHostStatus) => void): () => void;
   /** Main-owned sidebar catalogue and transcript checkpoints. Optional for older hosts. */
@@ -2863,6 +2869,8 @@ export interface PluginSummary {
 /** Full inventory for the plugin detail view (plugins:detail). */
 export interface PluginDetail extends PluginSummary {
   mcpTrust?: PluginMcpTrustEntry;
+  /** Present for a plugin with a native entry (`.codeshell-plugin/plugin.json`, schemaVersion 2). */
+  native?: NativePluginReview;
   content: {
     skills: { name: string; description?: string }[];
     commands: string[];

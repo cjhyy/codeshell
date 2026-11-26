@@ -747,6 +747,7 @@ export class Engine {
       this.hooks.setIdentity(() => ({
         preset: this.preset.name,
         isSubAgent: this.config.isSubAgent === true,
+        ...(this.config.parentSessionId ? { parentSessionId: this.config.parentSessionId } : {}),
         ...this.hookRunIdentity,
       }));
       this.lifetime.own(() => this.hooks.clear());
@@ -3308,6 +3309,7 @@ export class Engine {
           ...(session.state.kind ? { kind: session.state.kind } : {}),
           ...(profile?.id ? { profileId: profile.id } : {}),
           isSubAgent: this.config.isSubAgent === true,
+          ...(this.config.parentSessionId ? { parentId: this.config.parentSessionId } : {}),
         },
         providerRunParams: profileParams,
         getSettingsManager: () => this.getSettingsManager(),

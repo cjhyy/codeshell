@@ -25,6 +25,25 @@ export function composeCapabilityModulesEnv(
   return entries.join(",");
 }
 
+/** Worker-wide module switches for one Desktop worker spawn. */
+export interface WorkerModuleEnv {
+  CODE_SHELL_CAPABILITY_MODULES: string;
+  /** Always present, so a value inherited from a shell is cleared when the flag is off. */
+  CODE_SHELL_NATIVE_PLUGINS: "host" | undefined;
+}
+
+/** The capability list plus whether approved native plugins load in this worker. */
+export function composeWorkerModuleEnv(
+  urls: CoreCapabilityModuleUrls,
+  flags: FeatureFlagOverrides,
+  resolveOptimizationLab: () => string,
+): WorkerModuleEnv {
+  return {
+    CODE_SHELL_CAPABILITY_MODULES: composeCapabilityModulesEnv(urls, flags, resolveOptimizationLab),
+    CODE_SHELL_NATIVE_PLUGINS: isFeatureEnabled(flags, "native_plugins") ? "host" : undefined,
+  };
+}
+
 /** Matches main/index.ts: worker-wide module flags come only from user settings. */
 export function readUserFeatureFlags(cwd: string): FeatureFlagOverrides {
   return new SettingsManager(cwd, "full").getForScope("user").featureFlags ?? {};

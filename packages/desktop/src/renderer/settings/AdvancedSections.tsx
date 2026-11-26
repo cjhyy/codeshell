@@ -609,18 +609,15 @@ function ProjectHooksEditor({
                     className={cn(
                       "shrink-0 text-[10px]",
                       h.approval === "approved" && "text-status-ok",
-                      h.approval === "legacy" && "text-status-warn",
                       h.approval === "pending" && "text-status-warn",
                       h.approval === "changed" && "text-status-err",
                     )}
                   >
                     {h.approval === "approved"
                       ? t("settingsX.adv.hookApprovalApproved")
-                      : h.approval === "pending"
-                        ? t("settingsX.adv.hookApprovalPending")
-                        : h.approval === "changed"
-                          ? t("settingsX.adv.hookApprovalChanged")
-                          : t("settingsX.adv.hookApprovalLegacy")}
+                      : h.approval === "changed"
+                        ? t("settingsX.adv.hookApprovalChanged")
+                        : t("settingsX.adv.hookApprovalPending")}
                   </span>
                   {!isGlobal && (
                     <Switch

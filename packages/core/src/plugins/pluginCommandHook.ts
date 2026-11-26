@@ -178,6 +178,11 @@ export async function runPluginCommandHook(
         ...(invocation.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
         env: {
           ...parentEnv,
+          // Approval covers every byte of the install tree, so a hook must not
+          // write into it as a side effect of running. CPython would otherwise
+          // drop __pycache__ next to the scripts it imports and turn an
+          // approved plugin into a changed one on its first run.
+          PYTHONDONTWRITEBYTECODE: "1",
           ...invocation.environment,
           CODESHELL_PLUGIN_ROOT: spec.installPath,
           PLUGIN_ROOT: spec.installPath,

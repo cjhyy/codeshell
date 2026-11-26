@@ -42,6 +42,10 @@
       "types": "./dist/index.extension.d.ts",
       "import": "./dist/index.extension.js"
     },
+    "./plugin": {
+      "types": "./dist/plugin-sdk.d.ts",
+      "import": "./dist/plugin-sdk.js"
+    },
     "./bin/agent-server-stdio": "./dist/cli/agent-server-stdio.js"
   },
   "sideEffects": [

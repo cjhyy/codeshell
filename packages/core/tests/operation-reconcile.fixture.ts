@@ -670,25 +670,39 @@ test("enabled configured settings and plugin hooks fail closed without executing
     }),
   );
   mkdirSync(join(home, ".code-shell/plugins"), { recursive: true });
-  writeFileSync(
-    join(home, ".code-shell/plugins/installed_plugins.json"),
-    JSON.stringify({
-      version: 2,
-      plugins: {
-        "synthetic@fixture": [
-          {
-            scope: "user",
-            installPath,
-            version: "1",
-            installedAt: "2026-10-09",
-            lastUpdated: "2026-10-09",
-          },
-        ],
-      },
-    }),
-  );
+  // Only an approved hook can run, so only an approved hook has to close the read.
+  const { pluginHooksDigest } = await import("../src/plugins/pluginHookIntegrity.js");
+  const { computePluginTreeDigest } = await import("../src/plugins/pluginTreeDigest.js");
+  const hookDigest = pluginHooksDigest(installPath);
+  const tree = computePluginTreeDigest(installPath);
+  assert(tree.ok);
+  const writeInstall = (approval: Record<string, string>) =>
+    writeFileSync(
+      join(home, ".code-shell/plugins/installed_plugins.json"),
+      JSON.stringify({
+        version: 2,
+        plugins: {
+          "synthetic@fixture": [
+            {
+              scope: "user",
+              installPath,
+              version: "1",
+              installedAt: "2026-10-09",
+              lastUpdated: "2026-10-09",
+              hookDigest,
+              contentDigest: tree.digest,
+              ...approval,
+            },
+          ],
+        },
+      }),
+    );
+  writeInstall({});
   process.env.HOME = home;
   try {
+    // A hook the user has not approved never runs, so it does not close the read.
+    createGithubOperationReader(options);
+    writeInstall({ approvedHookDigest: hookDigest, approvedContentDigest: tree.digest });
     expect(() => createGithubOperationReader(options)).toThrow("Operation read unavailable");
     writeFileSync(settings, JSON.stringify({ disabledPlugins: ["synthetic"] }));
     const reader = createGithubOperationReader(options);

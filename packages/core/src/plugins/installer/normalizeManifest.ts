@@ -12,6 +12,7 @@ import {
   type CanonicalPluginManifest as CanonicalPluginManifestData,
 } from "./types.js";
 import { validateSchedule } from "../../automation/scheduler.js";
+import { nativeNamingProblem, parseNativePluginManifest } from "../native/manifest.js";
 import { validatePluginComposerSvg } from "../static-svg.js";
 
 export interface NormalizePluginManifestOptions {
@@ -340,7 +341,7 @@ async function normalizeInterfaceAssets(
   return normalized;
 }
 
-async function readCodeShellOverlay(sourceRoot: string) {
+async function readCodeShellOverlay(sourceRoot: string, pluginName: string) {
   const file = join(sourceRoot, CODESHELL_PLUGIN_OVERLAY_FILE);
   if (!existsSync(file)) return null;
   const info = await stat(file);
@@ -355,6 +356,20 @@ async function readCodeShellOverlay(sourceRoot: string) {
       "Agent Plugin packages cannot declare panels; package Desktop UI as a separate " +
         ".codeshell-panel/panel.json Panel App",
     );
+  }
+  // schemaVersion 2 is the native plugin manifest. It is validated in full here
+  // so a malformed one fails the install; what this function returns is still
+  // only the part the canonical manifest carries.
+  if (raw.schemaVersion === 2) {
+    const native = parseNativePluginManifest(raw);
+    if (native.kind !== "native") {
+      throw new Error(
+        `${CODESHELL_PLUGIN_OVERLAY_FILE}: ${native.kind === "invalid" ? native.error : "not a native plugin manifest"}`,
+      );
+    }
+    const naming = nativeNamingProblem(pluginName, native.manifest);
+    if (naming) throw new Error(`${CODESHELL_PLUGIN_OVERLAY_FILE}: ${naming}`);
+    return { schemaVersion: 1 as const, automations: native.manifest.automations };
   }
   return CodeShellPluginOverlay.parse(raw);
 }
@@ -387,7 +402,7 @@ export async function normalizePluginManifest(
           interface: undefined,
         };
 
-  const overlay = await readCodeShellOverlay(sourceRoot);
+  const overlay = await readCodeShellOverlay(sourceRoot, options.name);
   if (raw.panels !== undefined) {
     throw new Error(
       "Agent Plugin packages cannot declare panels; package Desktop UI as a separate " +

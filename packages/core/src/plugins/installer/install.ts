@@ -7,6 +7,7 @@ import { type CSMeta, PluginInstallError } from "./types.js";
 import { appendInstallEntry, pluginInstallKey } from "../installedPlugins.js";
 import { pluginHookInstallRecord } from "../pluginHookIntegrity.js";
 import { pluginMcpInstallRecord } from "../pluginMcpIntegrity.js";
+import { pluginContentInstallRecord } from "../pluginTreeDigest.js";
 import { readPluginMcp } from "./loadPluginMcp.js";
 import { projectPluginSource } from "./projectPluginSource.js";
 
@@ -65,6 +66,7 @@ export async function installPluginFromPath(
       version: meta.version ?? "local",
       installedAt,
       lastUpdated: installedAt,
+      ...pluginContentInstallRecord(finalDir),
       ...pluginHookInstallRecord(finalDir),
       ...pluginMcpInstallRecord(finalDir, Object.keys(readPluginMcp(finalDir, name)).length > 0),
     });

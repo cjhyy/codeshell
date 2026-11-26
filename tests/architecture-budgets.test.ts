@@ -131,7 +131,7 @@ const CORE_LAYERS: readonly (readonly string[])[] = [
   ["cli", "product"],
   ["run", "protocol"],
   ["engine"],
-  ["tool-system/builtin", "composition"],
+  ["tool-system/builtin", "composition", "plugin-runtime"],
   [
     "automation",
     "skills",
@@ -420,7 +420,10 @@ describe("architecture growth budgets", () => {
       // +1 type-only preset routing policy/rule contract; no runtime or permission authority.
       // +1 CONTRACTS: read-only contract version table reported by initialize and /health; no host state.
       // Explicit history recovery adds one public type-only contract export.
-      "packages/core/src/index.ts": 135,
+      // +2 native plugins: the one-decision approval/review API (next to the hook
+      // and MCP approval exports) and the worker's status query names and types,
+      // consumed by Desktop and TUI. No plugin process or runtime handle is exported.
+      "packages/core/src/index.ts": 137,
       // +3 reviewed Optimization Lab foundations: read-only Skill snapshots,
       // the shared file lock, and text-connection resolution (§5.2 of the plan).
       // +1 type-only LifetimeScope/Disposable contract lets capability modules

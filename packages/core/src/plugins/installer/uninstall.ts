@@ -5,6 +5,7 @@ import { pluginInstallDir, assertSafePluginName } from "./paths.js";
 import { removeInstallEntries, pluginInstallKey } from "../installedPlugins.js";
 import { PluginInstallError } from "./types.js";
 import { pruneDisabledSettingsForPlugin } from "./pruneDisabled.js";
+import { removeNativeRuntimeFiles } from "../native/snapshot.js";
 
 /** Remove a locally-installed plugin dir + its installed_plugins.json entry. */
 function uninstallLocal(name: string, removeDirectory: (dir: string) => void): void {
@@ -15,6 +16,7 @@ function uninstallLocal(name: string, removeDirectory: (dir: string) => void): v
   }
   removeDirectory(dir);
   removeInstallEntries(pluginInstallKey(name, "local"));
+  removeNativeRuntimeFiles(name, pluginInstallKey(name, "local"));
   // Clear orphaned disable flags (disabledSkills "name:skill" /
   // disabledPlugins "name") so a removed plugin leaves no dangling entries.
   pruneDisabledSettingsForPlugin(name);

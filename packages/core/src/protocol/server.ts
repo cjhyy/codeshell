@@ -316,6 +316,13 @@ export interface AgentServerOptions {
    */
   settingsReader?: (cwd?: string) => ValidatedSettings;
   /**
+   * Called whenever the host asks for a settings reload, for one session or
+   * for all of them, before any session is patched. Installed-capability state
+   * (plugin approvals, disables) changes through the same signal, so its
+   * owner re-reads it here.
+   */
+  onSettingsReload?: () => void;
+  /**
    * Disk-only active-goal reader, used by agent/goalGet when the session is NOT
    * live in chatManager. In worker (chatManager) mode there is no legacyEngine
    * to fall back to, and a reopened-after-restart session isn't a live
@@ -409,6 +416,7 @@ export class AgentServer {
   private transport: Transport;
   /** Fresh-disk settings reader for config hot-reload; null when not wired. */
   private readonly settingsReader: ((cwd?: string) => ValidatedSettings) | null;
+  private readonly onSettingsReload: (() => void) | undefined;
   /** Disk-only active-goal reader for agent/goalGet on a non-live session. */
   private readonly readActiveGoalFromDisk:
     | ((sessionId: string) => import("../goal/lifecycle.js").GoalConfig | undefined)
@@ -566,6 +574,7 @@ export class AgentServer {
     this.sessionDiskRoot = options.sessionDiskRoot;
     this.legacyEngine = options.engine ?? null;
     this.settingsReader = options.settingsReader ?? null;
+    this.onSettingsReload = options.onSettingsReload;
     this.readActiveGoalFromDisk = options.readActiveGoalFromDisk ?? null;
     this.updateActiveGoalOnDisk = options.updateActiveGoalOnDisk ?? null;
     this.clearActiveGoalOnDisk = options.clearActiveGoalOnDisk ?? null;
@@ -2807,7 +2816,10 @@ export class AgentServer {
     // Editing an existing SKILL.md does not change its base directory's mtime.
     // A host settings refresh must invalidate the worker's discovery cache too,
     // so Desktop/Hub edits become visible at the next turn without a restart.
-    if (params.reloadSettings === true) invalidateSkillCache();
+    if (params.reloadSettings === true) {
+      invalidateSkillCache();
+      this.onSettingsReload?.();
+    }
 
     // If a sessionId is present, mutate that specific session's engine
     if (this.chatManager && typeof params.sessionId === "string") {

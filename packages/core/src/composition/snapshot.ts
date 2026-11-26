@@ -13,7 +13,12 @@ export function toCompositionSnapshot(
 ): CompositionSnapshot {
   return {
     version: 1,
-    modules: composition.modules.map((m) => ({ id: m.id, order: m.order, source: m.source })),
+    modules: composition.modules.map((m) => ({
+      id: m.id,
+      order: m.order,
+      source: m.source,
+      ...(m.revision === undefined ? {} : { revision: m.revision }),
+    })),
     tools: composition.engine.tools.map((t) => ({
       name: t.tool.definition.name,
       moduleId: t.moduleId,

@@ -59,3 +59,41 @@ test("configure reloadSettings refreshes edited Skill content without restarting
   });
   server.close();
 });
+
+test("every settings reload tells the owner of installed-plugin state, before any session", () => {
+  let onMessage: (message: any) => void = () => {};
+  const sent: any[] = [];
+  const order: string[] = [];
+  const engine = createFakeEngine({
+    dispose: undefined,
+    getComposition: undefined,
+    getConfig: undefined,
+    isHeadless: () => false,
+    getEffectiveDisabledLists: () => ({
+      disabledSkills: [],
+      disabledPlugins: [],
+      disabledPluginHooks: [],
+    }),
+    refreshRuntimeConfig() {
+      order.push("engine");
+    },
+  });
+  const server = new AgentServer({
+    engine,
+    settingsReader: () => validateSettings({}),
+    onSettingsReload: () => order.push("plugins"),
+    transport: {
+      send: (message) => sent.push(message),
+      onMessage: (callback) => {
+        onMessage = callback;
+      },
+      close() {},
+    } as any,
+  });
+  onMessage({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadSettings: true } });
+  expect(sent.find((message) => message.id === 1)?.result).toEqual({ ok: true });
+  expect(order[0]).toBe("plugins");
+  onMessage({ jsonrpc: "2.0", id: 2, method: "agent/configure", params: { reloadModels: true } });
+  expect(order.filter((step) => step === "plugins")).toHaveLength(1);
+  server.close();
+});

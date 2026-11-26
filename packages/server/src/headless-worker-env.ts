@@ -5,6 +5,8 @@ const HEADLESS_WORKER_HOST_ENV_KEYS = [
   "CODE_SHELL_MODEL_REQUEST_SIGNING",
   "CODE_SHELL_WORKSPACE_ACCESS",
   "CODE_SHELL_HOST_MCP_SERVERS",
+  // Native plugins load in Desktop workers only (plugin API 1).
+  "CODE_SHELL_NATIVE_PLUGINS",
 ] as const;
 
 /** Preserve the caller's environment while disabling Desktop-only host access. */

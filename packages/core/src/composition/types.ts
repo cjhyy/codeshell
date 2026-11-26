@@ -115,7 +115,14 @@ export interface AgentModule {
 export interface ResolvedModule {
   readonly id: string;
   readonly order: number;
-  readonly source: "core" | "host";
+  /** "plugin": generated from an installed native plugin, not shipped with the host. */
+  readonly source: "core" | "host" | "plugin";
+  /**
+   * Identity of what a plugin module declares. Host modules never carry one:
+   * their content is fixed by the build. It is part of the composition digest,
+   * so two compositions with the same plugins at different revisions differ.
+   */
+  readonly revision?: string;
 }
 
 export interface ResolvedContribution<T> {
@@ -203,8 +210,19 @@ export interface CompileCompositionOptions {
   /** Defaults to CORE_AGENT_MODULE. Overridable only for unit tests. */
   readonly core?: AgentModule;
   readonly modules?: readonly AgentModule[];
+  /**
+   * Modules generated from installed native plugins, after every host module.
+   * They may only contribute tools, presets, preset extensions, prompt
+   * sections, dynamic context and hooks.
+   */
+  readonly pluginModules?: readonly PluginAgentModule[];
   /** Module ids the host requires; missing ids are a compile error. */
   readonly expectedModules?: readonly string[];
+}
+
+export interface PluginAgentModule {
+  readonly module: AgentModule;
+  readonly revision: string;
 }
 
 // ─── Serializable snapshot ───────────────────────────────────────
@@ -212,7 +230,7 @@ export interface CompileCompositionOptions {
 /** Pure-data projection; never contains functions, prompt bodies or paths. */
 export interface CompositionSnapshot {
   version: 1;
-  modules: Array<{ id: string; order: number; source: string }>;
+  modules: Array<{ id: string; order: number; source: string; revision?: string }>;
   tools: Array<{
     name: string;
     moduleId: string;

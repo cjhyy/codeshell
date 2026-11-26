@@ -1,4 +1,6 @@
 import {
+  approvePlugin,
+  revokePlugin,
   approvePluginHooks,
   revokePluginHooks,
   approvePluginMcp,
@@ -30,6 +32,8 @@ function assertOpen(): void {
 }
 
 const handlers: Handlers = {
+  "plugins/approve": ({ installKey }, claim) => approvePlugin(installKey, claim),
+  "plugins/revoke": ({ installKey }, claim) => revokePlugin(installKey, claim),
   "plugins/approveHooks": ({ installKey }, claim) => approvePluginHooks(installKey, claim),
   "plugins/revokeHooks": ({ installKey }, claim) => revokePluginHooks(installKey, claim),
   "plugins/approveMcp": ({ installKey }, claim) => approvePluginMcp(installKey, claim),

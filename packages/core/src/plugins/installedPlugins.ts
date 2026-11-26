@@ -15,7 +15,12 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import type { InstalledPluginsV2, PluginInstallEntry, StoredPluginHookReview } from "./types.js";
+import type {
+  InstalledPluginsV2,
+  PluginInstallEntry,
+  StoredNativePluginSurface,
+  StoredPluginHookReview,
+} from "./types.js";
 import { mutateJsonFile } from "../utils/file-mutex.js";
 import { readInstalledPluginSnapshot } from "./installedPluginSnapshot.js";
 
@@ -115,6 +120,9 @@ function installEntryOf(value: unknown): PluginInstallEntry | undefined {
     "approvedHookDigest",
     "mcpDigest",
     "approvedMcpDigest",
+    "contentDigest",
+    "approvedContentDigest",
+    "approvedNativeDigest",
   ] as const) {
     const digest = raw[field];
     if (typeof digest === "string" && DIGEST_RE.test(digest)) entry[field] = digest;
@@ -128,7 +136,48 @@ function installEntryOf(value: unknown): PluginInstallEntry | undefined {
       .filter((item): item is StoredPluginHookReview => item !== undefined);
     if (snapshot.length === raw.approvedHookSnapshot.length) entry.approvedHookSnapshot = snapshot;
   }
+  const surface = nativeSurfaceOf(raw.approvedNativeSurface);
+  if (surface) entry.approvedNativeSurface = surface;
   return entry;
+}
+
+const NATIVE_SURFACE_LISTS = [
+  "hooks",
+  "tools",
+  "presets",
+  "promptSections",
+  "context",
+  "coreCapabilities",
+  "hostCapabilities",
+] as const;
+
+/** Display metadata only; a malformed one is dropped rather than failing the registry. */
+function nativeSurfaceOf(value: unknown): StoredNativePluginSurface | undefined {
+  const raw = recordOf(value);
+  if (!raw || typeof raw.apiVersion !== "number" || !Number.isSafeInteger(raw.apiVersion)) {
+    return undefined;
+  }
+  if (typeof raw.background !== "boolean") return undefined;
+  const lists = {} as Record<(typeof NATIVE_SURFACE_LISTS)[number], string[]>;
+  for (const list of NATIVE_SURFACE_LISTS) {
+    const items = raw[list];
+    if (!Array.isArray(items) || items.length > 64) return undefined;
+    if (!items.every((item) => boundedString(item, 64) !== undefined)) return undefined;
+    lists[list] = [...(items as string[])];
+  }
+  const companionPanel = boundedString(raw.companionPanel, 64);
+  return {
+    apiVersion: raw.apiVersion,
+    hooks: lists.hooks,
+    tools: lists.tools,
+    presets: lists.presets,
+    promptSections: lists.promptSections,
+    context: lists.context,
+    background: raw.background,
+    coreCapabilities: lists.coreCapabilities,
+    hostCapabilities: lists.hostCapabilities,
+    ...(companionPanel ? { companionPanel } : {}),
+  };
 }
 
 function registryOf(value: unknown): InstalledPluginsV2 | undefined {

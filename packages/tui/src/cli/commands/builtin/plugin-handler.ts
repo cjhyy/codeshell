@@ -6,10 +6,16 @@
 
 import { SettingsManager } from "@cjhyy/code-shell-core";
 import {
+  approvePlugin,
+  revokePlugin,
+  listNativePlugins,
+  reviewNativePlugin,
+  type NativePluginReview,
   approvePluginHooks,
   approvePluginMcp,
   listPluginMcpTrust,
   listPluginHooks,
+  pluginHookApprovalState,
   reviewPluginHooks,
   revokePluginMcp,
   revokePluginHooks,
@@ -39,6 +45,10 @@ const USAGE = [
   "  /plugin install <plugin>@<marketplace>",
   "  /plugin uninstall <plugin>@<marketplace>",
   "  /plugin list",
+  "  /plugin approve <plugin-or-install-key>",
+  "  /plugin revoke <plugin-or-install-key>",
+  "  /plugin native list",
+  "  /plugin native review <plugin-or-install-key>",
   "  /plugin hooks list",
   "  /plugin hooks diff <plugin-or-install-key>",
   "  /plugin hooks approve <plugin-or-install-key>",
@@ -57,6 +67,47 @@ const USAGE = [
   "  /plugin automations create <install-key> <template-id> --revision <sha256> --confirm",
 ].join("\n");
 
+/** Native plugins run in the desktop app's agent; this host only manages their approval. */
+const NATIVE_HOST_NOTE =
+  "Native plugins run in the CodeShell desktop app with the native_plugins feature flag on; this terminal does not load them.";
+
+const NATIVE_SURFACE_LISTS = [
+  "hooks",
+  "tools",
+  "presets",
+  "promptSections",
+  "context",
+  "coreCapabilities",
+  "hostCapabilities",
+] as const;
+
+function formatNativeReview(review: NativePluginReview): string {
+  const lines = [`${review.installKey}  [${review.state}]`];
+  if (review.error) lines.push(`  error: ${review.error}`);
+  const surface = review.surface;
+  if (!surface) return lines.join("\n");
+  const diff = review.baselineAvailable ? review.diff : undefined;
+  lines.push(
+    diff
+      ? "  compared with the last approval (+ added, - removed):"
+      : "  first approval; everything below is new:",
+  );
+  for (const list of NATIVE_SURFACE_LISTS) {
+    const added = new Set(diff?.added[list] ?? []);
+    const items = [
+      ...surface[list].map((name) => `${added.has(name) ? "+" : ""}${name}`),
+      ...(diff?.removed[list] ?? []).map((name) => `-${name}`),
+    ];
+    if (items.length > 0) lines.push(`  ${list}: ${items.join(", ")}`);
+  }
+  if (surface.background || diff?.background) {
+    lines.push(
+      `  background: ${surface.background ? "yes" : "no"}${diff?.background ? " (changed)" : ""}`,
+    );
+  }
+  return lines.join("\n");
+}
+
 function splitInstallKey(arg: string): { plugin: string; marketplace: string } | null {
   const atIdx = arg.lastIndexOf("@");
   if (atIdx <= 0 || atIdx === arg.length - 1) return null;
@@ -69,7 +120,7 @@ export function pluginHookDecisionSucceeded(rawArg: string, output: string): boo
 
 export function pluginTrustDecisionSucceeded(rawArg: string, output: string): boolean {
   return (
-    /^(?:hooks\s+(?:approve|revoke)|mcp\s+(?:approve|revoke|enable|disable|allow|deny|tools-reset))\s+\S+/u.test(
+    /^(?:approve|revoke|hooks\s+(?:approve|revoke)|mcp\s+(?:approve|revoke|enable|disable|allow|deny|tools-reset))\s+\S+/u.test(
       rawArg.trim(),
     ) &&
     !output.startsWith("Failed to ") &&
@@ -173,13 +224,64 @@ export async function runPluginCommand(
         `  rewrote: ${r.varRewrite.filesRewritten} file(s) — \${CLAUDE_PLUGIN_ROOT} → \${CODESHELL_PLUGIN_ROOT}`,
       );
     }
-    if (r.entry.hookDigest && !r.entry.approvedHookDigest) {
+    // Ask the trust layer instead of reading digest fields: a reinstall can
+    // keep an identical declaration approved while its other files are new.
+    if (pluginHookApprovalState(r.entry) === "pending") {
       lines.push(`  hooks:   pending approval — run /plugin hooks approve ${target}`);
     }
-    if (r.entry.mcpDigest && !r.entry.approvedMcpDigest) {
+    if (listPluginMcpTrust().find((entry) => entry.installKey === target)?.status === "pending") {
       lines.push(`  MCP:     pending approval — run /plugin mcp approve ${target}`);
     }
+    if (listNativePlugins().find((entry) => entry.installKey === target)?.state === "pending") {
+      lines.push(
+        `  native:  pending approval — run /plugin native review ${target}, then /plugin approve ${target}`,
+      );
+    }
     return lines.join("\n");
+  }
+
+  if (sub === "approve" || sub === "revoke") {
+    const target = args[1];
+    if (!target) return `Usage: /plugin ${sub} <plugin-or-install-key>`;
+    try {
+      const results = sub === "approve" ? approvePlugin(target) : revokePlugin(target);
+      const lines = results.map(
+        (result) =>
+          `${sub === "approve" ? "Approved" : "Revoked"} ${result.installKey}  hooks=${result.hooks} mcp=${result.mcp} native=${result.native}`,
+      );
+      if (results.some((result) => result.native !== "none")) lines.push(NATIVE_HOST_NOTE);
+      return lines.join("\n");
+    } catch (error) {
+      return `Failed to ${sub} ${target}: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
+  if (sub === "native") {
+    const op = args[1] ?? "list";
+    if (op === "list") {
+      const plugins = listNativePlugins();
+      if (plugins.length === 0) return `No installed native plugins.\n${NATIVE_HOST_NOTE}`;
+      return [
+        `Native plugins (${plugins.length}):`,
+        ...plugins.map(
+          (plugin) =>
+            `  ${plugin.installKey}  [${plugin.state}]${plugin.error ? `  ${plugin.error}` : ""}`,
+        ),
+        NATIVE_HOST_NOTE,
+      ].join("\n");
+    }
+    if (op === "review") {
+      const target = args[2];
+      if (!target) return "Usage: /plugin native review <plugin-or-install-key>";
+      try {
+        const reviews = reviewNativePlugin(target).filter((review) => review.state !== "none");
+        if (reviews.length === 0) return `${target} has no native entry.`;
+        return reviews.map(formatNativeReview).join("\n\n");
+      } catch (error) {
+        return `Failed to review ${target}: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
+    return `Unknown subcommand "native ${op}".\n${USAGE}`;
   }
 
   if (sub === "uninstall") {

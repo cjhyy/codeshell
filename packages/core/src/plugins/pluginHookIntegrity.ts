@@ -10,6 +10,7 @@ import {
   realpathSync,
 } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
+import { pluginContentState } from "./pluginTreeDigest.js";
 import type { PluginInstallEntry, StoredPluginHookReview } from "./types.js";
 
 const DIGEST_DOMAIN = "codeshell-plugin-hooks-v1";
@@ -63,8 +64,9 @@ export interface PluginHooksSnapshot {
   error?: string;
 }
 
+/** `legacy` only describes the record (no install-time digest); it grants nothing. */
 export type PluginHookIntegrity = "verified" | "changed" | "legacy";
-export type PluginHookApprovalState = "approved" | "pending" | "changed" | "legacy" | "none";
+export type PluginHookApprovalState = "approved" | "pending" | "changed" | "none";
 
 const SUPPORTED_EVENT_SET = new Set<string>(SUPPORTED_PLUGIN_HOOK_EVENTS);
 
@@ -388,9 +390,10 @@ export function pluginHookReviewSnapshot(snapshot: PluginHooksSnapshot): StoredP
 }
 
 /**
- * Older installed_plugins.json entries predate hook digests and remain
- * compatible as `legacy`. New entries fail closed when their effective hook
- * file no longer matches the bytes approved by install/update.
+ * Whether the hook declaration still matches the bytes recorded at
+ * install/update. Entries that predate hook digests report `legacy`, which is
+ * a description of the record and not a trust state: see
+ * {@link pluginHookApprovalState} for what may run.
  */
 export function verifyPluginHookIntegrity(
   entry: PluginInstallEntry,
@@ -401,20 +404,28 @@ export function verifyPluginHookIntegrity(
 }
 
 /**
- * Runtime trust state for one installed plugin. Legacy entries stay compatible;
- * new entries with executable hooks remain pending until the approved digest
- * matches the install-time digest. Invalid definitions always fail closed as
- * hook-free regardless of legacy state.
+ * Runtime trust state for one installed plugin's command hooks. Only
+ * `approved` runs. Approval covers two things that must both still hold: the
+ * declaration (hooks/hooks.json) and every byte of the install tree, because
+ * the declaration only names the scripts it launches.
+ *
+ * Entries recorded before whole-tree approval existed have no content digest.
+ * They are `pending`, including the ones approved under the declaration-only
+ * rule: that approval never covered the scripts. Invalid definitions are
+ * hook-free regardless of what the record says.
  */
 export function pluginHookApprovalState(
   entry: PluginInstallEntry,
   snapshot: PluginHooksSnapshot = inspectPluginHooks(entry.installPath),
 ): PluginHookApprovalState {
   if (!snapshot.hasExecutableHooks) return "none";
-  const integrity = verifyPluginHookIntegrity(entry, snapshot);
-  if (integrity === "legacy") return "legacy";
-  if (integrity === "changed") return "changed";
-  return entry.approvedHookDigest === entry.hookDigest ? "approved" : "pending";
+  if (entry.hookDigest && snapshot.digest !== entry.hookDigest) return "changed";
+  if (!entry.hookDigest || !entry.contentDigest) return "pending";
+  const content = pluginContentState(entry);
+  if (content === "changed") return "changed";
+  return content === "approved" && entry.approvedHookDigest === entry.hookDigest
+    ? "approved"
+    : "pending";
 }
 
 /**

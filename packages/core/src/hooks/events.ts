@@ -139,6 +139,14 @@ export interface HookContext {
   data: Record<string, unknown>;
   sessionId?: string;
   turnNumber?: number;
+  /**
+   * What the handlers that already ran for this emit have produced, merged
+   * the way the final result is. Read-only. A handler that rewrites input can
+   * start from an earlier rewrite here instead of from `data`, which still
+   * holds the original; without it a later rewrite silently discards an
+   * earlier one.
+   */
+  readonly pending?: Readonly<HookResult>;
 }
 
 export interface HookResult {
