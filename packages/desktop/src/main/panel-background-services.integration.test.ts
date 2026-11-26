@@ -1,6 +1,16 @@
 import { expect, test } from "bun:test";
-import { readFile, mkdtemp, realpath, mkdir, writeFile, rm, copyFile } from "node:fs/promises";
-import { join } from "node:path";
+import { constants } from "node:fs";
+import {
+  readFile,
+  mkdtemp,
+  realpath,
+  mkdir,
+  writeFile,
+  rm,
+  copyFile,
+  readdir,
+} from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
 import { runInNewContext } from "node:vm";
@@ -37,6 +47,29 @@ const methods = [
     .find((node) => ts.isMethodDeclaration(node) && node.name.getText(parsed) === name)!
     .getText(parsed),
 );
+/**
+ * Copy a Node executable into a fixture runtime. Official builds are one
+ * self-contained file; Homebrew's `node` is a small launcher that loads
+ * `libnode.<abi>.dylib` from `@loader_path/../lib`, so a lone copy of it
+ * aborts in the dynamic linker before Node starts. Bring that library along.
+ */
+async function copyNodeExecutable(node: string, runtimeRoot: string): Promise<string> {
+  const target = join(runtimeRoot, "bin", "node");
+  await copyFile(node, target);
+  const libraries = join(dirname(await realpath(node)), "..", "lib");
+  const names = await readdir(libraries).catch(() => [] as string[]);
+  for (const name of names.filter((entry) => entry.startsWith("libnode."))) {
+    await mkdir(join(runtimeRoot, "lib"), { recursive: true });
+    // A clone where the filesystem supports it: the library is tens of megabytes.
+    await copyFile(
+      join(libraries, name),
+      join(runtimeRoot, "lib", name),
+      constants.COPYFILE_FICLONE,
+    );
+  }
+  return target;
+}
+
 const compiled = ts.transpileModule(`class Bridge { ${methods.join("\n")} }`, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText;
@@ -73,8 +106,7 @@ test("Desktop authorization/dispatch/events survive closing all guests and selec
   const runtimeRoot = join(root, "resources", "runtimes", "node");
   await mkdir(join(runtimeRoot, "bin"), { recursive: true });
   const safeNode = (await resolvePanelExecutable("node"))!;
-  const managedNode = join(runtimeRoot, "bin", "node");
-  await copyFile(safeNode, managedNode);
+  const managedNode = await copyNodeExecutable(safeNode, runtimeRoot);
   await writeFile(
     join(runtimeRoot, "LICENSE"),
     "Node.js executable copied solely for this temporary managed-runtime test fixture.\n",
