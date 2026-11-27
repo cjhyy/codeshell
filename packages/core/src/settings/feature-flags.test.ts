@@ -63,9 +63,10 @@ describe("feature flags", () => {
     expect(isFeatureEnabled({ optimization_lab: false }, "optimization_lab")).toBe(false);
   });
 
-  test("native_plugins defaults OFF and can be switched on", () => {
-    expect(isFeatureEnabled(undefined, "native_plugins")).toBe(false);
-    expect(isFeatureEnabled({ native_plugins: true }, "native_plugins")).toBe(true);
+  test("native_plugins defaults ON and can be switched off", () => {
+    expect(isFeatureEnabled(undefined, "native_plugins")).toBe(true);
+    expect(isFeatureEnabled({}, "native_plugins")).toBe(true);
+    expect(isFeatureEnabled({ native_plugins: false }, "native_plugins")).toBe(false);
   });
 
   test("computer_use_cua defaults OFF and can be switched on", () => {

@@ -5,8 +5,9 @@ entry module registers hooks, tools, presets, prompt sections, dynamic context
 and background logic through a `ctx` object, and it runs in a process of its
 own next to the agent worker.
 
-Status: experimental. Only the Desktop agent worker loads native plugins, and
-only while the user-level feature flag `native_plugins` is on (restart after
+Status: plugin API 1. Only the Desktop agent worker loads native plugins, and
+only the ones the user approved. The user-level feature flag `native_plugins`
+is on by default; setting it to `false` turns them all off (restart after
 changing it). Installing, reviewing and approving them works everywhere.
 
 ## What makes a plugin native

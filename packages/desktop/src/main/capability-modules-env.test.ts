@@ -55,20 +55,19 @@ describe("composeCapabilityModulesEnv", () => {
 });
 
 describe("composeWorkerModuleEnv", () => {
-  test("asks the worker for native plugins only while the user flag is on", () => {
+  test("asks the worker for native plugins unless the user turned the flag off", () => {
     expect(composeWorkerModuleEnv(urls, {}, mustNotResolve)).toEqual({
-      CODE_SHELL_CAPABILITY_MODULES: baseline,
-      CODE_SHELL_NATIVE_PLUGINS: undefined,
-    });
-    expect(composeWorkerModuleEnv(urls, { native_plugins: true }, mustNotResolve)).toEqual({
       CODE_SHELL_CAPABILITY_MODULES: baseline,
       CODE_SHELL_NATIVE_PLUGINS: "host",
     });
-    // The key is always there, so spreading it over an inherited environment clears it.
-    const inherited = { CODE_SHELL_NATIVE_PLUGINS: "host" };
-    expect({ ...inherited, ...composeWorkerModuleEnv(urls, {}, mustNotResolve) }).toMatchObject({
+    expect(composeWorkerModuleEnv(urls, { native_plugins: false }, mustNotResolve)).toEqual({
+      CODE_SHELL_CAPABILITY_MODULES: baseline,
       CODE_SHELL_NATIVE_PLUGINS: undefined,
     });
+    // The key is always there, so spreading it over an inherited environment clears it.
+    const inherited = { CODE_SHELL_NATIVE_PLUGINS: "host" };
+    const off = composeWorkerModuleEnv(urls, { native_plugins: false }, mustNotResolve);
+    expect({ ...inherited, ...off }).toMatchObject({ CODE_SHELL_NATIVE_PLUGINS: undefined });
   });
 });
 
