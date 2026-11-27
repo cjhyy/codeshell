@@ -69,7 +69,7 @@ const USAGE = [
 
 /** Native plugins run in the desktop app's agent; this host only manages their approval. */
 const NATIVE_HOST_NOTE =
-  "Native plugins run in the CodeShell desktop app with the native_plugins feature flag on; this terminal does not load them.";
+  "Native plugins run in the CodeShell desktop app (unless its native_plugins feature flag is turned off); this terminal does not load them.";
 
 const NATIVE_SURFACE_LISTS = [
   "hooks",

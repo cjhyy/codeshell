@@ -525,7 +525,7 @@ export const extensions = {
           approvalFailed: "授权操作失败：{error}",
           runtime: {
             title: "运行状态",
-            off: "原生插件未开启：在用户设置的 featureFlags 里打开 native_plugins，然后重启应用。",
+            off: "原生插件已关闭：把用户设置 featureFlags 里的 native_plugins 删掉或改为 true，然后重启应用。",
             noWorker: "Agent 尚未启动；插件会随第一个会话一起启动。",
             notLoaded: "正在运行的 Agent 启动于开启原生插件之前；重启应用后加载。",
             notInWorker: "正在运行的 Agent 没有加载此插件；重启应用后加载。",
@@ -1812,7 +1812,7 @@ export const extensions = {
           approvalFailed: "Approval failed: {error}",
           runtime: {
             title: "Runtime",
-            off: "Native plugins are off: turn on native_plugins under featureFlags in your user settings, then restart the app.",
+            off: "Native plugins are turned off: remove native_plugins from featureFlags in your user settings, or set it to true, then restart the app.",
             noWorker: "The agent has not started yet; plugins start with the first session.",
             notLoaded:
               "The running agent started before native plugins were turned on; restart the app to load them.",

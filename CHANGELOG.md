@@ -8,6 +8,13 @@ breaking.
 
 ## [Unreleased]
 
+### Changed
+
+- Native plugins are on by default. Approved native plugins load in the
+  desktop app without turning on a feature flag; set
+  `featureFlags.native_plugins` to `false` in your user settings to turn them
+  all off.
+
 ## [0.12.0-rc.3] - 2026-11-27
 
 Same requirements as 0.12.0-rc.1.
