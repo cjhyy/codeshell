@@ -1,17 +1,18 @@
 /**
  * Whole-tree digest for one installed plugin.
  *
- * Approval of executable plugin content (command hooks, MCP servers) binds to
- * every byte under the install path, not only to the declaration file. The
- * declaration says WHICH command runs; the scripts that command launches live
- * elsewhere in the tree, so a digest of hooks/hooks.json alone lets them change
- * without invalidating the approval.
+ * It identifies a version of a plugin: every byte under the install path, not
+ * only the declaration file (the declaration says WHICH command runs; the
+ * scripts it launches live elsewhere in the tree). Approval binds to the
+ * version that was installed or updated, recorded in installed_plugins.json.
+ * What the user does to the files afterwards is theirs to do: local edits are
+ * not checked against the record. The native runtime digests the tree it is
+ * about to run to name and verify its snapshot.
  *
- * The digest is persisted in installed_plugins.json and re-verified by every
- * runtime that loads the plugin (Electron's Node, Bun, plain Node). Everything
- * that feeds it must therefore be identical across runtimes: entries are
- * ordered by UTF-16 code unit, never by `localeCompare` (Bun and Node disagree
- * on that order), and paths are written with `/` separators.
+ * Digests are compared across runtimes (Electron's Node, Bun, plain Node), so
+ * everything that feeds them must be identical everywhere: entries are ordered
+ * by UTF-16 code unit, never by `localeCompare` (Bun and Node disagree on that
+ * order), and paths are written with `/` separators.
  */
 
 import { createHash, type Hash } from "node:crypto";
@@ -45,15 +46,15 @@ export const MAX_PLUGIN_TREE_DEPTH = 32;
  *
  * Only the ROOT entries are skipped. The same names deeper in the tree are
  * plugin content. Apart from the one OS metadata file below, nothing else is
- * skipped: a skipped path is an executable path that approval does not
- * protect, which is why `node_modules` and `__pycache__` stay covered.
+ * skipped: a version includes everything that can run, which is why
+ * `node_modules` and `__pycache__` stay covered.
  */
 const SKIPPED_ROOT_ENTRIES = new Set([".git", ".cs-meta.json", ".code-shell-installed.json"]);
 
 /**
  * Finder writes this into any directory the user merely opens. It is skipped
- * at every depth: otherwise looking at an installed plugin in Finder would
- * turn it into changed content that only a reinstall can clear.
+ * at every depth: it is not plugin content, and looking at a plugin must not
+ * make it a different version.
  */
 const SKIPPED_OS_METADATA = ".DS_Store";
 
@@ -240,10 +241,9 @@ let cacheHits = 0;
 let cacheMisses = 0;
 
 /**
- * The tree's current digest. Loaders call this for every engine they build,
- * so an unchanged tree costs one metadata walk: the bytes are re-read only
- * when some entry's size, timestamps or inode moved since the cached hash.
- * The cache lives in this process only.
+ * The tree's current digest. An unchanged tree costs one metadata walk: the
+ * bytes are re-read only when some entry's size, timestamps or inode moved
+ * since the cached hash. The cache lives in this process only.
  */
 export function pluginTreeDigest(
   root: string,
@@ -301,38 +301,31 @@ export function _pluginTreeDigestCacheStats(): { hits: number; misses: number } 
 }
 
 /**
- * - `unrecorded`: the install predates whole-tree approval.
- * - `changed`: the bytes on disk are not the bytes recorded at install/update,
- *   or cannot be digested at all.
- * - `unapproved` / `approved`: the recorded bytes are intact; the user has not
- *   / has agreed to run them.
+ * Read from the install record only; the files on disk are not consulted.
+ * - `unrecorded`: the install predates whole-tree records.
+ * - `unapproved` / `approved`: the user has not / has agreed to run the
+ *   version that was installed. Local edits made afterwards keep that answer.
  */
-export type PluginContentState = "unrecorded" | "changed" | "unapproved" | "approved";
+export type PluginContentState = "unrecorded" | "unapproved" | "approved";
 
 export function pluginContentState(entry: PluginInstallEntry): PluginContentState {
   if (!entry.contentDigest) return "unrecorded";
-  const tree = pluginTreeDigest(entry.installPath);
-  if (!tree.ok || tree.digest !== entry.contentDigest) return "changed";
   return entry.approvedContentDigest === entry.contentDigest ? "approved" : "unapproved";
 }
 
 /**
- * Record the user's agreement to run executable content from the tree that is
- * on disk now. Bytes that changed since install cannot be blessed in place.
- * Returns whether the entry changed.
+ * Record the user's agreement to run the plugin as it was installed. A record
+ * that predates install digests is completed from the files on disk now, which
+ * is what the user is looking at when they approve. Returns whether the entry
+ * changed.
  */
 export function approvePluginContent(installKey: string, entry: PluginInstallEntry): boolean {
-  const tree = pluginTreeDigest(entry.installPath);
-  if (!tree.ok) {
-    throw new Error(`plugin "${installKey}" content cannot be approved: ${tree.reason}`);
-  }
-  if (entry.contentDigest && tree.digest !== entry.contentDigest) {
-    throw new Error(
-      `plugin "${installKey}" content changed after install; reinstall or update before approving`,
-    );
-  }
   let changed = false;
   if (!entry.contentDigest) {
+    const tree = pluginTreeDigest(entry.installPath);
+    if (!tree.ok) {
+      throw new Error(`plugin "${installKey}" content cannot be approved: ${tree.reason}`);
+    }
     entry.contentDigest = tree.digest;
     changed = true;
   }
@@ -344,20 +337,33 @@ export function approvePluginContent(installKey: string, entry: PluginInstallEnt
 }
 
 /**
- * Fields written at install/update. Content is never approved implicitly: the
- * approval survives an update only when the new tree is byte-identical to one
+ * How an install or update treats the approvals of the entries it replaces.
+ * `keepApprovals` carries them over to new bytes; it is set only when those
+ * bytes come from a directory on the user's own machine, never for a download
+ * (a git clone, a package, an archive).
+ */
+export interface InstallRecordOptions {
+  keepApprovals?: boolean;
+}
+
+/**
+ * Fields written at install/update. Content is never approved implicitly: a
+ * downloaded version keeps the approval only when it is byte-identical to one
  * the user already approved. A tree that cannot be digested gets no record,
- * which keeps its executable content pending and unapprovable.
+ * which keeps its executable content pending.
  */
 export function pluginContentInstallRecord(
   installPath: string,
   previousEntries: PluginInstallEntry[] = [],
+  options: InstallRecordOptions = {},
 ): Pick<PluginInstallEntry, "contentDigest" | "approvedContentDigest"> {
   const tree = pluginTreeDigest(installPath);
   if (!tree.ok) return {};
   const previouslyApproved = previousEntries.some(
     (entry) =>
-      entry.contentDigest === tree.digest && entry.approvedContentDigest === entry.contentDigest,
+      entry.contentDigest !== undefined &&
+      entry.approvedContentDigest === entry.contentDigest &&
+      (options.keepApprovals === true || entry.contentDigest === tree.digest),
   );
   return {
     contentDigest: tree.digest,

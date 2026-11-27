@@ -316,21 +316,13 @@ export function PluginDetailView({
       {hookApproval && (
         <section
           className={`flex flex-wrap items-center gap-2 rounded-md border p-3 ${
-            hookApproval === "changed"
-              ? "border-status-err/50 bg-status-err/5"
-              : hookApproval === "pending"
-                ? "border-status-warn/50 bg-status-warn/5"
-                : "bg-muted/20"
+            hookApproval === "pending" ? "border-status-warn/50 bg-status-warn/5" : "bg-muted/20"
           }`}
         >
           {hookApproval === "approved" ? (
             <ShieldCheck className="h-4 w-4 shrink-0 text-status-ok" />
           ) : (
-            <ShieldAlert
-              className={`h-4 w-4 shrink-0 ${
-                hookApproval === "changed" ? "text-status-err" : "text-status-warn"
-              }`}
-            />
+            <ShieldAlert className="h-4 w-4 shrink-0 text-status-warn" />
           )}
           <div className="min-w-0 flex-1">
             <div className="text-xs font-medium">
@@ -368,7 +360,7 @@ export function PluginDetailView({
           )}
         </section>
       )}
-      {(hookApproval === "pending" || hookApproval === "changed") && content.hookReview && (
+      {hookApproval === "pending" && content.hookReview && (
         <section className="rounded-md border p-3">
           <div className="mb-1 text-xs font-medium">{t("ext.pluginDetail.hookDiffTitle")}</div>
           <p className="mb-2 text-[11px] text-muted-foreground">
@@ -425,21 +417,15 @@ export function PluginDetailView({
       {detail.mcpTrust && detail.mcpTrust.status !== "none" && (
         <section
           className={`flex flex-wrap items-center gap-2 rounded-md border p-3 ${
-            detail.mcpTrust.status === "changed"
-              ? "border-status-err/50 bg-status-err/5"
-              : detail.mcpTrust.status === "pending"
-                ? "border-status-warn/50 bg-status-warn/5"
-                : "bg-muted/20"
+            detail.mcpTrust.status === "pending"
+              ? "border-status-warn/50 bg-status-warn/5"
+              : "bg-muted/20"
           }`}
         >
           {detail.mcpTrust.status === "approved" ? (
             <ShieldCheck className="h-4 w-4 shrink-0 text-status-ok" />
           ) : (
-            <ShieldAlert
-              className={`h-4 w-4 shrink-0 ${
-                detail.mcpTrust.status === "changed" ? "text-status-err" : "text-status-warn"
-              }`}
-            />
+            <ShieldAlert className="h-4 w-4 shrink-0 text-status-warn" />
           )}
           <div className="min-w-0 flex-1">
             <div className="text-xs font-medium">
@@ -595,11 +581,9 @@ export function PluginDetailView({
               <span className="truncate font-mono text-xs text-muted-foreground">{h.command}</span>
               <span
                 className={
-                  h.approval === "changed"
-                    ? "shrink-0 text-[10px] text-status-err"
-                    : h.approval === "approved"
-                      ? "shrink-0 text-[10px] text-status-ok"
-                      : "shrink-0 text-[10px] text-status-warn"
+                  h.approval === "approved"
+                    ? "shrink-0 text-[10px] text-status-ok"
+                    : "shrink-0 text-[10px] text-status-warn"
                 }
               >
                 {t(`ext.pluginDetail.hookApprovalLabel.${h.approval}`)}

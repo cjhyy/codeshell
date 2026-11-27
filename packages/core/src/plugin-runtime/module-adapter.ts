@@ -34,6 +34,8 @@ import { PluginCallError } from "./process.js";
 import {
   CONTEXT_TIMEOUT_MS,
   DENY_ON_ERROR_EVENTS,
+  MAX_HOOK_TIMEOUT_MS,
+  MAX_TOOL_TIMEOUT_MS,
   type NativeDeclarations,
   type NativeHookDeclaration,
   type NativeToolDeclaration,
@@ -115,12 +117,30 @@ function duplicate(names: readonly string[]): string | undefined {
   return names.find((name, index) => names.indexOf(name) !== index);
 }
 
+function wholeMillis(value: unknown, max: number): boolean {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= max;
+}
+
 /**
  * The authoritative check of what a plugin registered. The plugin process
- * produced these declarations, so nothing in them is assumed well-formed.
- * Returns the first problem, or null.
+ * produced these declarations: normally through the SDK, but the plugin's own
+ * code runs in that process and can answer the handshake itself. So nothing
+ * in them is assumed well-formed, limits the SDK applies are checked again,
+ * and a shape that breaks the check is a problem, not a crash. Returns the
+ * first problem, or null.
  */
 export function validateNativeDeclarations(
+  manifest: NativePluginManifest,
+  declarations: NativeDeclarations,
+): string | null {
+  try {
+    return firstProblem(manifest, declarations);
+  } catch (error) {
+    return `malformed declarations: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+function firstProblem(
   manifest: NativePluginManifest,
   declarations: NativeDeclarations,
 ): string | null {
@@ -150,6 +170,14 @@ export function validateNativeDeclarations(
       hook.onError === "deny" && !(DENY_ON_ERROR_EVENTS as readonly string[]).includes(hook.event),
   );
   if (badPolicy) return `hook "${badPolicy.event}" cannot fail closed; only tool gates can`;
+  for (const hook of declarations.hooks) {
+    if (!wholeMillis(hook.timeoutMs, MAX_HOOK_TIMEOUT_MS)) {
+      return `hook "${hook.event}" needs a timeout of 1 to ${MAX_HOOK_TIMEOUT_MS} ms`;
+    }
+    if (hook.onError !== "ignore" && hook.onError !== "deny") {
+      return `hook "${hook.event}" has an unknown error policy`;
+    }
+  }
 
   const tools = declarations.tools.map((tool) => tool?.name);
   const undeclaredTool = outside(tools, contributes.tools);
@@ -168,6 +196,15 @@ export function validateNativeDeclarations(
       Array.isArray(tool.inputSchema)
     ) {
       return `tool "${tool.name}" needs an object input schema`;
+    }
+    if (!wholeMillis(tool.timeoutMs, MAX_TOOL_TIMEOUT_MS)) {
+      return `tool "${tool.name}" needs a timeout of 1 to ${MAX_TOOL_TIMEOUT_MS} ms`;
+    }
+    if (tool.exposure !== "preset" && tool.exposure !== "always") {
+      return `tool "${tool.name}" has an unknown exposure`;
+    }
+    if (typeof tool.readOnly !== "boolean" || typeof tool.concurrencySafe !== "boolean") {
+      return `tool "${tool.name}" needs readOnly and concurrencySafe flags`;
     }
   }
 
@@ -439,8 +476,6 @@ export interface NativeModuleInput {
   plugin: string;
   declarations: NativeDeclarations;
   calls: NativePluginCalls;
-  /** Presets a preset extension may target: the host's own, never another plugin's. */
-  hostPresets: ReadonlySet<string>;
 }
 
 /** Build the module the composition compiler sees. Assumes validated declarations. */
@@ -450,9 +485,6 @@ export function buildNativeModule(input: NativeModuleInput): AgentModule {
     declarations.tools.map((tool) => [tool.name, nativeToolName(plugin, tool.name)]),
   );
   const ownSections = new Set(declarations.promptSections.map((section) => section.name));
-  const ownPresets = new Set(
-    declarations.presets.map((preset) => nativeScopedName(plugin, preset.name)),
-  );
   const presets: AgentPreset[] = declarations.presets.map((preset) => ({
     name: nativeScopedName(plugin, preset.name),
     label: preset.label,
@@ -467,21 +499,18 @@ export function buildNativeModule(input: NativeModuleInput): AgentModule {
       ...(rule.reason ? { reason: rule.reason } : {}),
     })),
   }));
+  // Targets are kept as declared. A preset named here may belong to another
+  // plugin, which can be installed later or removed at any time: the
+  // composition treats a name that is not loaded as a no-op. Dropping it here
+  // instead would leave the plugin without extensions, and its tools would
+  // join every preset, the opposite of what it asked for.
   const presetExtensions: AgentPresetExtension[] = declarations.presetExtensions.flatMap(
     (extension): AgentPresetExtension[] => {
       const tools = extension.tools.map((tool) => ownTools.get(tool)!);
-      const known = (name: string) => input.hostPresets.has(name) || ownPresets.has(name);
-      if ("presets" in extension.target) {
-        // A target that is not there (the host has no such preset) is skipped:
-        // the rest of the plugin still loads.
-        const targets = extension.target.presets.filter(known);
-        return targets.length > 0 && tools.length > 0
-          ? [{ target: { presets: targets }, tools }]
-          : [];
-      }
-      return tools.length > 0
-        ? [{ target: { allExcept: extension.target.allExcept.filter(known) }, tools }]
-        : [];
+      if (tools.length === 0) return [];
+      return "presets" in extension.target
+        ? [{ target: { presets: [...extension.target.presets] }, tools }]
+        : [{ target: { allExcept: [...extension.target.allExcept] }, tools }];
     },
   );
   return {

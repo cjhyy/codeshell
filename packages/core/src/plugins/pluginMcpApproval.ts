@@ -51,28 +51,23 @@ export function listPluginMcpTrust(): PluginMcpTrustEntry[] {
 }
 
 /**
- * Approve one install entry's MCP servers in place: only the install-time
- * declaration and, when it declares runnable servers, the whole install tree.
- * Tampered bytes require update/reinstall. A record that predates either
- * digest is completed from what is on disk now. Returns whether it changed.
+ * Approve one install entry's MCP servers in place: the install-time
+ * declaration and, when it declares runnable servers, the plugin as it was
+ * installed. Local edits since then do not stand in the way. A record that
+ * predates either digest is completed from what is on disk now. Returns
+ * whether it changed.
  */
 export function approveMcpEntry(
   installKey: string,
   plugin: string,
   entry: PluginInstallEntry,
 ): boolean {
-  const currentDigest = pluginMcpDigest(entry.installPath);
-  if (entry.mcpDigest && currentDigest !== entry.mcpDigest) {
-    throw new Error(
-      `plugin "${installKey}" MCP config changed after install; reinstall or update before approving`,
-    );
-  }
   let changed =
     Object.keys(readPluginMcp(entry.installPath, plugin)).length > 0
       ? approvePluginContent(installKey, entry)
       : false;
   if (!entry.mcpDigest) {
-    entry.mcpDigest = currentDigest;
+    entry.mcpDigest = pluginMcpDigest(entry.installPath);
     changed = true;
   }
   if (entry.approvedMcpDigest !== entry.mcpDigest) {
@@ -85,26 +80,13 @@ export function approveMcpEntry(
 /**
  * Revoke one install entry's MCP servers in place. The content approval is
  * left alone: it is shared with the plugin's other executable kinds, and
- * without an MCP approval it connects nothing. Returns whether it changed.
+ * without an MCP approval it connects nothing. Servers the user adds
+ * afterwards stay disconnected too. Returns whether it changed.
  */
-export function revokeMcpEntry(plugin: string, entry: PluginInstallEntry): boolean {
-  let changed = false;
-  const hasServers = Object.keys(readPluginMcp(entry.installPath, plugin)).length > 0;
-  const currentDigest = pluginMcpDigest(entry.installPath);
-  if (!entry.mcpDigest) {
-    entry.mcpDigest = currentDigest;
-    changed = true;
-  }
-  if (hasServers || currentDigest !== entry.mcpDigest) {
-    if (entry.approvedMcpDigest !== undefined) {
-      delete entry.approvedMcpDigest;
-      changed = true;
-    }
-  } else if (entry.approvedMcpDigest !== entry.mcpDigest) {
-    entry.approvedMcpDigest = entry.mcpDigest;
-    changed = true;
-  }
-  return changed;
+export function revokeMcpEntry(entry: PluginInstallEntry): boolean {
+  if (entry.approvedMcpDigest === undefined) return false;
+  delete entry.approvedMcpDigest;
+  return true;
 }
 
 function mutateMcpTrust(
@@ -143,7 +125,7 @@ export function revokePluginMcp(
   target: string,
   beforeCommit?: () => void,
 ): PluginMcpApprovalResult[] {
-  return mutateMcpTrust(target, beforeCommit, (_installKey, plugin, entry) =>
-    revokeMcpEntry(plugin, entry),
+  return mutateMcpTrust(target, beforeCommit, (_installKey, _plugin, entry) =>
+    revokeMcpEntry(entry),
   );
 }

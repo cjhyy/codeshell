@@ -85,10 +85,11 @@ export interface PluginInstallEntry {
    */
   contentDigest?: string;
   /**
-   * CodeShell extension: the tree digest the user agreed to run executable
-   * content from. Command hooks and MCP servers both require it to equal
-   * `contentDigest`, in addition to their own declaration approval, so a
-   * script changed after approval stops running like a changed declaration.
+   * CodeShell extension: the installed version the user agreed to run.
+   * Command hooks, MCP servers and the native entry all require it to equal
+   * `contentDigest`, in addition to their own approval. It is compared with
+   * the record, never with the files on disk: local edits after approval run
+   * as they are.
    */
   approvedContentDigest?: string;
   /**

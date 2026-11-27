@@ -17,16 +17,25 @@ import { join } from "node:path";
 import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule, PluginAgentModule } from "../composition/types.js";
 import { readInstalledPlugins } from "../plugins/installedPlugins.js";
-import { inspectNativePlugin, type NativePluginState } from "../plugins/native/approval.js";
-import { nativeModuleId, type NativePluginManifest } from "../plugins/native/manifest.js";
+import {
+  inspectNativePlugin,
+  nativeManifestProblem,
+  type NativePluginState,
+} from "../plugins/native/approval.js";
+import {
+  nativeModuleId,
+  readNativePluginManifest,
+  type NativePluginManifest,
+} from "../plugins/native/manifest.js";
 import {
   collectNativeSnapshots,
   nativeRuntimeRoot,
-  nativeSnapshotDir,
   prepareNativeSnapshot,
+  touchNativeSnapshot,
 } from "../plugins/native/snapshot.js";
 import { resolvePluginDataPath } from "../plugins/pluginCommandHook.js";
 import { pluginNameFromKey } from "../plugins/pluginHookApproval.js";
+import { pluginTreeDigest } from "../plugins/pluginTreeDigest.js";
 import type { PluginInstallEntry } from "../plugins/types.js";
 import {
   buildNativeModule,
@@ -54,6 +63,15 @@ const IDLE_REAP_MS = 10 * 60 * 1000;
 const IDLE_SWEEP_MS = 60 * 1000;
 /** How long a plugin with background logic stays down after its process died. */
 const BACKGROUND_REVIVE_MS = 1_000;
+/**
+ * Failures that say nothing about a plugin's health: the caller gave up, or
+ * this side refused to send the call (too large, or too many waiting).
+ */
+const NOT_THE_PLUGINS_FAULT: ReadonlySet<string> = new Set([
+  "CANCELLED",
+  "MESSAGE_TOO_LARGE",
+  "BUSY",
+]);
 
 /**
  * - `running`: part of this composition and serving calls.
@@ -111,8 +129,15 @@ interface Candidate {
   plugin: string;
   moduleId: string;
   entry: PluginInstallEntry;
-  manifest: NativePluginManifest;
-  contentDigest: string;
+  /** The installed version, from the record. A refresh reacts when it changes. */
+  recordDigest: string;
+}
+
+/** An update or local edit that could not take over a loaded plugin. */
+interface Declined {
+  recordDigest: string;
+  state: "failed" | "restart-required";
+  error: string;
 }
 
 function describe(error: unknown): string {
@@ -132,12 +157,24 @@ class PluginSlot implements NativePluginCalls {
   private consecutiveFailures = 0;
   /** Counters of processes that are gone, so the totals survive a restart. */
   private retired = { calls: 0, failures: 0, timeouts: 0 };
+  /** Bumped when an update takes over, so a start still on its way up cannot displace it. */
+  private generation = 0;
+  /** The process was given back for being idle: the next one is not a restart. */
+  private idleStopped = false;
+  /**
+   * The last update or local edit that could not take over. It is reported
+   * until something does, and the same update is not tried on every refresh.
+   */
+  declined: Declined | undefined;
 
   constructor(
     private readonly runtime: NativePluginRuntime,
     readonly candidate: Candidate,
     public spec: PluginProcessSpec,
-    public contentDigest: string,
+    /** The installed version this slot serves. */
+    public recordDigest: string,
+    /** The files it runs: the snapshot taken from disk when it last took over. */
+    public runDigest: string,
     readonly revision: string,
     readonly background: boolean,
     process: PluginProcess,
@@ -157,19 +194,26 @@ class PluginSlot implements NativePluginCalls {
     return this.runtime.options.sessionCwd(sessionId);
   }
 
+  /** Why no process may serve this plugin right now, if anything stands in the way. */
+  private refusal(): PluginCallError | undefined {
+    if (this.fenced) return new PluginCallError("REVOKED", "the plugin is no longer approved");
+    if (this.runtime.isClosed) {
+      return new PluginCallError("PLUGIN_UNAVAILABLE", "the host is shutting down");
+    }
+    if (this.circuitOpen) {
+      return new PluginCallError("CIRCUIT_OPEN", "the plugin keeps failing and was stopped");
+    }
+    return undefined;
+  }
+
   async invoke(
     kind: PluginInvocationKind,
     name: string,
     payload: unknown,
     options: { timeoutMs: number; signal?: AbortSignal },
   ): Promise<unknown> {
-    if (this.fenced) throw new PluginCallError("REVOKED", "the plugin is no longer approved");
-    if (this.runtime.isClosed) {
-      throw new PluginCallError("PLUGIN_UNAVAILABLE", "the host is shutting down");
-    }
-    if (this.circuitOpen) {
-      throw new PluginCallError("CIRCUIT_OPEN", "the plugin keeps failing and was stopped");
-    }
+    const refused = this.refusal();
+    if (refused) throw refused;
     this.lastCallAt = this.runtime.now();
     const process = await this.ensureProcess();
     try {
@@ -177,8 +221,7 @@ class PluginSlot implements NativePluginCalls {
       this.consecutiveFailures = 0;
       return value;
     } catch (error) {
-      // A cancelled call says nothing about the plugin's health.
-      if (!(error instanceof PluginCallError) || error.code !== "CANCELLED") {
+      if (!(error instanceof PluginCallError) || !NOT_THE_PLUGINS_FAULT.has(error.code)) {
         this.lastError = describe(error);
         this.consecutiveFailures += 1;
         if (this.consecutiveFailures >= CONSECUTIVE_FAILURE_LIMIT) {
@@ -191,15 +234,28 @@ class PluginSlot implements NativePluginCalls {
 
   /** The current process, started again if it exited or was given back while idle. */
   private ensureProcess(): Promise<PluginProcess> {
-    if (this.process?.isReady) return Promise.resolve(this.process);
-    this.starting ??= this.startProcess(this.spec).finally(() => {
+    const current = this.process;
+    if (current?.accepting) return Promise.resolve(current);
+    this.starting ??= this.startAfter(current).finally(() => {
       this.starting = undefined;
     });
     return this.starting;
   }
 
+  /** Start a new process once `leaving`, if any, is gone: two copies never run side by side. */
+  private async startAfter(leaving: PluginProcess | undefined): Promise<PluginProcess> {
+    if (leaving) await leaving.whenExited();
+    // An update may have taken over while the old copy was leaving: serve from
+    // it instead of starting a second copy that would displace it.
+    if (this.process?.accepting) return this.process;
+    const refused = this.refusal();
+    if (refused) throw refused;
+    return this.startProcess(this.spec);
+  }
+
   /** Start a process from `spec` and require it to declare exactly what this slot was built for. */
   async startProcess(spec: PluginProcessSpec): Promise<PluginProcess> {
+    const generation = this.generation;
     const process = this.runtime.createProcess(spec, (reason) => this.handleExit(process, reason));
     let declarations: NativeDeclarations;
     try {
@@ -216,6 +272,15 @@ class PluginSlot implements NativePluginCalls {
         "the plugin registered something different from what this session was built with",
       );
     }
+    // Revoked, closed or given up on while this copy was setting up, or an
+    // update took over meanwhile: it never serves.
+    const refused = this.refusal();
+    if (refused || generation !== this.generation) {
+      await process.stop();
+      if (refused) throw refused;
+      if (this.process?.accepting) return this.process;
+      throw new PluginCallError("PLUGIN_UNAVAILABLE", "the plugin was updated while starting");
+    }
     this.adopt(process, spec);
     return process;
   }
@@ -226,8 +291,15 @@ class PluginSlot implements NativePluginCalls {
     if (previous && previous !== process) this.absorb(previous);
     this.process = process;
     this.spec = spec;
-    this.restarts += 1;
+    if (this.idleStopped) this.idleStopped = false;
+    else this.restarts += 1;
     if (this.background) process.setBackground(true);
+  }
+
+  /** An update takes over: a start of the previous code still under way never serves. */
+  takeOver(process: PluginProcess, spec: PluginProcessSpec): void {
+    this.generation += 1;
+    this.adopt(process, spec);
   }
 
   private absorb(process: PluginProcess): void {
@@ -255,7 +327,7 @@ class PluginSlot implements NativePluginCalls {
   revive(delayMs = 0): void {
     if (!this.background) return;
     const timer = setTimeout(() => {
-      if (this.fenced || this.circuitOpen || this.runtime.isClosed || this.process) return;
+      if (this.refusal() || this.process) return;
       void this.ensureProcess().catch(() => {});
     }, delayMs);
     timer.unref?.();
@@ -286,6 +358,15 @@ class PluginSlot implements NativePluginCalls {
     await this.process?.stop();
   }
 
+  /**
+   * No longer approved or installed: refused from here on, in every session,
+   * and its process stopped, including one that is still starting.
+   */
+  async fence(): Promise<void> {
+    this.fenced = true;
+    await this.stopForGood();
+  }
+
   /** Forget past failures: the user asked to try again, or the plugin was updated. */
   resetCircuit(): void {
     this.circuitOpen = false;
@@ -295,9 +376,9 @@ class PluginSlot implements NativePluginCalls {
 
   reapIfIdle(now: number, idleMs: number): void {
     const process = this.process;
-    if (!process?.isReady || this.background) return;
+    if (!process?.accepting || this.background) return;
     if (process.inFlight > 0 || now - this.lastCallAt < idleMs) return;
-    this.restarts -= 1; // coming back from an idle stop is not a restart worth reporting
+    this.idleStopped = true;
     void process.stop();
   }
 
@@ -324,6 +405,8 @@ export class NativePluginRuntime {
   private readonly slots = new Map<string, PluginSlot>();
   /** Why an installed native plugin is not part of this composition. */
   private readonly notes = new Map<string, { state: NativePluginRuntimeState; error?: string }>();
+  /** Plugins that could not be loaded when this worker started, and the version that failed. */
+  private readonly loadFailures = new Map<string, { recordDigest: string; error: string }>();
   private accepted: PluginAgentModule[] = [];
   private sweeper: ReturnType<typeof setInterval> | undefined;
   private refreshing: Promise<void> = Promise.resolve();
@@ -352,6 +435,8 @@ export class NativePluginRuntime {
     spec: PluginProcessSpec,
     onExit: (reason: PluginExitReason) => void,
   ): PluginProcess {
+    // In use from now on: snapshot collection measures age from the last start.
+    touchNativeSnapshot(spec.root);
     return new PluginProcess(spec, {
       entry: this.options.entry,
       setupTimeoutMs: this.options.setupTimeoutMs,
@@ -360,17 +445,21 @@ export class NativePluginRuntime {
     });
   }
 
-  private specFor(candidate: Candidate, root: string): PluginProcessSpec {
+  private specFor(
+    candidate: Candidate,
+    root: string,
+    manifest: NativePluginManifest,
+  ): PluginProcessSpec {
     return {
       moduleId: candidate.moduleId,
       plugin: candidate.plugin,
       installKey: candidate.installKey,
       root,
-      main: candidate.manifest.main,
+      main: manifest.main,
       dataDir: resolvePluginDataPath(candidate.installKey),
       logFile: this.logFile(candidate.moduleId),
       pidDir: this.pidDir,
-      apiVersion: candidate.manifest.apiVersion,
+      apiVersion: manifest.apiVersion,
       hostKind: this.options.hostKind,
     };
   }
@@ -391,7 +480,7 @@ export class NativePluginRuntime {
       const inspection = inspectNativePlugin(installKey, entry);
       if (inspection.state === "none") continue;
       const plugin = pluginNameFromKey(installKey);
-      if (inspection.state !== "approved" || !inspection.manifest || !entry.contentDigest) {
+      if (inspection.state !== "approved" || !entry.contentDigest) {
         ineligible.set(installKey, {
           state: inspection.state === "approved" ? "invalid" : inspection.state,
           ...(inspection.error ? { error: inspection.error } : {}),
@@ -403,36 +492,46 @@ export class NativePluginRuntime {
         plugin,
         moduleId: nativeModuleId(plugin, installKey),
         entry,
-        manifest: inspection.manifest,
-        contentDigest: entry.contentDigest,
+        recordDigest: entry.contentDigest,
       });
     }
     return { candidates, ineligible };
   }
 
-  /** Snapshot, start and check one plugin. Throws with the reason it cannot be loaded. */
+  /**
+   * Snapshot the plugin's files as they are now, start it and check what it
+   * registered. Throws with the reason it cannot be loaded.
+   */
   private async prepare(candidate: Candidate): Promise<{
     process: PluginProcess;
     spec: PluginProcessSpec;
     declarations: NativeDeclarations;
     onExit: { current?: (reason: PluginExitReason) => void };
+    runDigest: string;
   }> {
     const snapshot = prepareNativeSnapshot({
       moduleId: candidate.moduleId,
       installPath: candidate.entry.installPath,
-      contentDigest: candidate.contentDigest,
     });
     if (!snapshot.ok) throw new Error(snapshot.reason);
-    const spec = this.specFor(candidate, snapshot.root);
+    // The manifest comes from the copy that runs, not from the install
+    // directory a moment earlier: local edits can land in between.
+    const read = readNativePluginManifest(snapshot.root);
+    if (read.kind !== "native") {
+      throw new Error(read.kind === "invalid" ? read.error : "the plugin has no native entry");
+    }
+    const unusable = nativeManifestProblem(candidate.installKey, read.manifest);
+    if (unusable) throw new Error(unusable.error);
+    const spec = this.specFor(candidate, snapshot.root, read.manifest);
     const onExit: { current?: (reason: PluginExitReason) => void } = {};
     const process = this.createProcess(spec, (reason) => onExit.current?.(reason));
     const declarations = await process.start();
-    const problem = validateNativeDeclarations(candidate.manifest, declarations);
+    const problem = validateNativeDeclarations(read.manifest, declarations);
     if (problem) {
       await process.stop();
       throw new Error(problem);
     }
-    return { process, spec, declarations, onExit };
+    return { process, spec, declarations, onExit, runDigest: snapshot.digest };
   }
 
   /**
@@ -450,23 +549,21 @@ export class NativePluginRuntime {
       candidates.map((candidate) => this.prepare(candidate)),
     );
 
-    const hostPresets = new Set(
-      compileComposition({ modules: this.options.baseModules }).engine.presets.map((p) => p.key),
-    );
     // In registry order, so of two plugins that collide the earlier install wins.
     for (const [index, candidate] of candidates.entries()) {
       const outcome = prepared[index]!;
       if (outcome.status === "rejected") {
-        this.fail(candidate.installKey, describe(outcome.reason));
+        this.fail(candidate, describe(outcome.reason));
         continue;
       }
-      const { process, spec, declarations, onExit } = outcome.value;
+      const { process, spec, declarations, onExit, runDigest } = outcome.value;
       const revision = nativeDeclarationsDigest(declarations);
       const slot = new PluginSlot(
         this,
         candidate,
         spec,
-        candidate.contentDigest,
+        candidate.recordDigest,
+        runDigest,
         revision,
         declarations.background,
         process,
@@ -476,7 +573,6 @@ export class NativePluginRuntime {
         plugin: candidate.plugin,
         declarations,
         calls: slot,
-        hostPresets,
       });
       try {
         compileComposition({
@@ -485,7 +581,7 @@ export class NativePluginRuntime {
         });
       } catch (error) {
         await process.stop();
-        this.fail(candidate.installKey, describe(error));
+        this.fail(candidate, describe(error));
         continue;
       }
       onExit.current = (reason) => slot.handleExit(process, reason);
@@ -494,19 +590,18 @@ export class NativePluginRuntime {
       this.slots.set(candidate.installKey, slot);
     }
 
-    collectNativeSnapshots(
-      new Set(
-        candidates.map((candidate) =>
-          nativeSnapshotDir(candidate.moduleId, candidate.contentDigest),
-        ),
-      ),
-    );
+    this.collectSnapshots();
     this.sweeper = setInterval(() => this.sweepIdle(), IDLE_SWEEP_MS);
     this.sweeper.unref?.();
     this.options.log?.("native_plugin.started", {
       loaded: [...this.slots.keys()],
       skipped: [...this.notes.keys()],
     });
+  }
+
+  /** Drop old snapshots no loaded plugin runs from. */
+  private collectSnapshots(): void {
+    collectNativeSnapshots(new Set([...this.slots.values()].map((slot) => slot.spec.root)));
   }
 
   /** Give back the processes of plugins nobody has called for a while. */
@@ -517,7 +612,9 @@ export class NativePluginRuntime {
     }
   }
 
-  private fail(installKey: string, error: string): void {
+  private fail(candidate: Candidate, error: string): void {
+    const { installKey, recordDigest } = candidate;
+    this.loadFailures.set(installKey, { recordDigest, error });
     this.notes.set(installKey, { state: "failed", error });
     this.options.log?.("native_plugin.load_failed", { plugin: installKey, error });
   }
@@ -527,12 +624,22 @@ export class NativePluginRuntime {
     return [...this.accepted];
   }
 
-  /** Apply the install registry as it is now. Safe to call often; calls run one at a time. */
-  refresh(): Promise<void> {
-    const run = this.refreshing.then(() => (this.closed ? undefined : this.applyRegistry()));
+  /** Run `task` after every refresh or restart queued before it, one at a time. */
+  private queue(task: () => Promise<void>): Promise<void> {
+    const run = this.refreshing.then(() => (this.closed ? undefined : task()));
     // One failed pass must not stop the ones after it.
     this.refreshing = run.catch(() => {});
     return run;
+  }
+
+  /**
+   * Apply the install registry as it is now. Safe to call often; calls run
+   * one at a time. Only what the registry records counts here (approvals,
+   * updates, uninstalls): local edits are picked up when a plugin is started
+   * again, so files a plugin or its tools write meanwhile swap nothing.
+   */
+  refresh(): Promise<void> {
+    return this.queue(() => this.applyRegistry());
   }
 
   private async applyRegistry(): Promise<void> {
@@ -544,69 +651,112 @@ export class NativePluginRuntime {
     for (const [installKey, slot] of this.slots) {
       const candidate = approved.get(installKey);
       if (!candidate) {
-        // Uninstalled, revoked, or changed on disk: withdrawn at once, in
-        // every session, including the ones that are running.
+        // Uninstalled or revoked: withdrawn at once, in every session,
+        // including the ones that are running.
         if (!slot.fenced) {
-          // Refused from this line on; the process itself is stopped next.
-          slot.fenced = true;
           this.options.log?.("native_plugin.fenced", { plugin: installKey });
-          await slot.process?.stop();
+          // Refused at once; then its process is stopped, a starting one included.
+          await slot.fence();
         }
         continue;
       }
       slot.fenced = false;
-      if (candidate.contentDigest === slot.contentDigest) continue;
+      if (candidate.recordDigest === slot.recordDigest) continue;
+      // Already tried and reported; it stays that way until the next start.
+      if (slot.declined?.recordDigest === candidate.recordDigest) continue;
       await this.replace(slot, candidate);
     }
     for (const candidate of candidates) {
-      if (!this.slots.has(candidate.installKey)) {
-        this.notes.set(candidate.installKey, {
-          state: "restart-required",
-          error: "approved after this worker started; it loads on the next start",
-        });
-      }
+      if (this.slots.has(candidate.installKey)) continue;
+      const failure = this.loadFailures.get(candidate.installKey);
+      this.notes.set(
+        candidate.installKey,
+        // The version that failed to load at start is still not loaded.
+        failure?.recordDigest === candidate.recordDigest
+          ? { state: "failed", error: failure.error }
+          : {
+              state: "restart-required",
+              error: failure
+                ? "updated after it failed to load; it loads on the next start"
+                : "approved after this worker started; it loads on the next start",
+            },
+      );
     }
   }
 
-  /** New approved bytes for a loaded plugin: take over in place if nothing the model sees changed. */
-  private async replace(slot: PluginSlot, candidate: Candidate): Promise<void> {
+  /**
+   * Run a loaded plugin's files as they are on disk now, in place, if nothing
+   * the model sees changed. Otherwise the version this composition was built
+   * with keeps serving and the reason is reported. Returns whether it took over.
+   */
+  private async replace(slot: PluginSlot, candidate: Candidate): Promise<boolean> {
+    const decline = (state: Declined["state"], error: string) => {
+      slot.declined = { recordDigest: candidate.recordDigest, state, error };
+      this.options.log?.("native_plugin.not_replaced", { plugin: candidate.installKey, error });
+      return false;
+    };
     let prepared: Awaited<ReturnType<NativePluginRuntime["prepare"]>>;
     try {
       prepared = await this.prepare(candidate);
     } catch (error) {
-      this.notes.set(candidate.installKey, { state: "failed", error: describe(error) });
-      return;
+      return decline("failed", describe(error));
     }
     if (this.closed) {
       await prepared.process.stop();
-      return;
+      return false;
     }
     if (nativeDeclarationsDigest(prepared.declarations) !== slot.revision) {
       await prepared.process.stop();
-      // The version this composition was built with keeps serving until then.
-      this.notes.set(candidate.installKey, {
-        state: "restart-required",
-        error: "the update declares something different; it loads on the next start",
-      });
-      return;
+      return decline(
+        "restart-required",
+        "the plugin now declares something different; it loads on the next start",
+      );
     }
+    // Background logic changes hands without overlap: the old copy's effects
+    // are cleaned up before the new copy starts its own.
+    if (slot.background) await slot.process?.stopBackground();
+    if (this.closed) {
+      await prepared.process.stop();
+      return false;
+    }
+    // Read after the wait: the old copy may have been replaced meanwhile.
     const previous = slot.process;
     prepared.onExit.current = (reason) => slot.handleExit(prepared.process, reason);
-    slot.contentDigest = candidate.contentDigest;
+    slot.recordDigest = candidate.recordDigest;
+    slot.runDigest = prepared.runDigest;
+    slot.declined = undefined;
     slot.resetCircuit();
-    slot.adopt(prepared.process, prepared.spec);
+    slot.takeOver(prepared.process, prepared.spec);
     this.options.log?.("native_plugin.replaced", { plugin: candidate.installKey });
     // Calls already running finish on the process they started on.
-    if (previous && previous !== prepared.process) void previous.retire();
+    if (previous && previous !== prepared.process) {
+      void previous.retire().then(() => this.collectSnapshots());
+    }
+    return true;
   }
 
-  /** Give a stopped plugin another chance. Returns false when it is not loaded here. */
+  /**
+   * Give a plugin another chance, with its files as they are on disk now: a
+   * local edit that declares the same things takes over in place. One that
+   * declares something new, or does not load, is reported and the current
+   * version is restarted instead. Returns false when it is not loaded here.
+   */
   async restart(installKey: string): Promise<boolean> {
     const slot = this.slots.get(installKey);
     if (!slot || slot.fenced) return false;
-    slot.resetCircuit();
-    await slot.process?.stop();
-    slot.revive();
+    await this.queue(async () => {
+      if (slot.fenced) return;
+      slot.resetCircuit();
+      const files = pluginTreeDigest(slot.candidate.entry.installPath);
+      if (files.ok && files.digest !== slot.runDigest) {
+        // The user asked to try again: a version reported before is retried.
+        if (await this.replace(slot, { ...slot.candidate, recordDigest: slot.recordDigest })) {
+          return;
+        }
+      }
+      await slot.process?.stop();
+      slot.revive();
+    });
     return true;
   }
 
@@ -615,7 +765,9 @@ export class NativePluginRuntime {
     const seen = new Set<string>();
     for (const [installKey, slot] of this.slots) {
       seen.add(installKey);
-      const note = this.notes.get(installKey);
+      const note = slot.fenced
+        ? this.notes.get(installKey)
+        : (slot.declined ?? this.notes.get(installKey));
       out.push({
         installKey,
         plugin: slot.candidate.plugin,
@@ -628,7 +780,7 @@ export class NativePluginRuntime {
               ? note.state
               : "running",
         ...(note?.error ? { error: note.error } : {}),
-        restarts: Math.max(0, slot.restarts),
+        restarts: slot.restarts,
         ...slot.stats(),
         logFile: slot.spec.logFile,
       });

@@ -396,15 +396,15 @@ describe("plugin tree digest", () => {
     expect(pluginContentInstallRecord(join(root, "missing"))).toEqual({});
   });
 
-  test("content state distinguishes unrecorded, changed, unapproved and approved", () => {
+  test("content state comes from the install record; local edits do not touch it", () => {
     expect(pluginContentState(entry())).toBe("unrecorded");
     expect(pluginContentState(entry({ contentDigest: digest() }))).toBe("unapproved");
     const approved = entry({ contentDigest: digest(), approvedContentDigest: digest() });
     expect(pluginContentState(approved)).toBe("approved");
 
-    writeFileSync(join(installPath, "scripts", "run.sh"), "echo tampered\n");
-    expect(pluginContentState(approved)).toBe("changed");
+    writeFileSync(join(installPath, "scripts", "run.sh"), "echo edited locally\n");
+    expect(pluginContentState(approved)).toBe("approved");
     rmSync(installPath, { recursive: true, force: true });
-    expect(pluginContentState(approved)).toBe("changed");
+    expect(pluginContentState(approved)).toBe("approved");
   });
 });

@@ -89,16 +89,24 @@ function build(
   plugin: string,
   declared: NativeDeclarations,
   calls: NativePluginCalls,
-  hostPresets = new Set(["general"]),
 ): AgentModule {
   return buildNativeModule({
     moduleId: `plugin-${plugin}-00000000`,
     plugin,
     declarations: declared,
     calls,
-    hostPresets,
   });
 }
+
+/** Compile as the worker does: every module a plugin module, in install order. */
+function compilePlugins(...modules: AgentModule[]) {
+  return compileComposition({
+    pluginModules: modules.map((module) => ({ module, revision: module.id })),
+  });
+}
+
+const injectedNames = (composition: ReturnType<typeof compileComposition>, preset: string) =>
+  presetInjectedTools(composition, preset).map((tool) => tool.definition.name);
 
 describe("validating what a plugin registered", () => {
   test("accepts registrations the manifest announced", () => {
@@ -195,6 +203,42 @@ describe("validating what a plugin registered", () => {
       "an extension that adds a tool it does not own",
       { presetExtensions: [{ target: { presets: ["general"] }, tools: ["Bash"] }] },
       "Bash",
+    ],
+    // What follows never comes out of the SDK; a plugin can still send it itself.
+    [
+      "a hook deadline past the maximum",
+      { hooks: [{ event: "pre_tool_use", timeoutMs: 2_000_000_000, onError: "ignore" }] },
+      "timeout",
+    ],
+    [
+      "a tool deadline past the maximum",
+      { tools: [{ ...declarations().tools[0]!, timeoutMs: 600_001 }] },
+      "timeout",
+    ],
+    [
+      "a deadline that is not a whole number of milliseconds",
+      { tools: [{ ...declarations().tools[0]!, timeoutMs: 0.5 }] },
+      "timeout",
+    ],
+    [
+      "an unknown error policy",
+      { hooks: [{ event: "pre_tool_use", timeoutMs: 5000, onError: "retry" as never }] },
+      "error policy",
+    ],
+    [
+      "an unknown exposure",
+      { tools: [{ ...declarations().tools[0]!, exposure: "sometimes" as never }] },
+      "exposure",
+    ],
+    [
+      "a read-only flag that is not a boolean",
+      { tools: [{ ...declarations().tools[0]!, readOnly: "yes" as never }] },
+      "readOnly",
+    ],
+    [
+      "a malformed preset",
+      { presets: [{ name: "reviewer", builtinTools: 5 } as never] },
+      "malformed",
     ],
   ])("rejects %s", (_label, overrides, mention) => {
     expect(validateNativeDeclarations(manifest(), declarations(overrides))).toContain(mention);
@@ -296,11 +340,102 @@ describe("the generated module", () => {
       }),
       fakeCalls(),
     );
-    // The missing target is skipped instead of failing the whole plugin.
+    // Names are kept as declared; one that is not loaded adds nothing and fails nothing.
     expect(extended.engine?.presetExtensions).toEqual([
-      { target: { presets: ["general"] }, tools: ["plugin__reviewer__lookup"] },
+      { target: { presets: ["general", "not-installed"] }, tools: ["plugin__reviewer__lookup"] },
     ]);
-    expect(() => compileComposition({ modules: [extended] })).not.toThrow();
+    expect(injectedNames(compilePlugins(extended), "general")).toContain(
+      "plugin__reviewer__lookup",
+    );
+  });
+
+  test("an extension naming only presets that are not loaded keeps its tools out of every preset", () => {
+    const absent = build(
+      "a",
+      declarations({
+        presetExtensions: [{ target: { presets: ["b:reviewer"] }, tools: ["lookup"] }],
+      }),
+      fakeCalls(),
+    );
+    expect(injectedNames(compilePlugins(absent), "general")).not.toContain("plugin__a__lookup");
+  });
+
+  test("an extension reaches another plugin's preset by name, whichever plugin loads first", () => {
+    const owning = build(
+      "b",
+      declarations({
+        tools: [],
+        presets: [
+          {
+            name: "reviewer",
+            label: "Reviewer",
+            description: "",
+            promptSections: [],
+            builtinTools: ["Read"],
+            defaultPermissionRules: [],
+          },
+        ],
+      }),
+      fakeCalls(),
+    );
+    const extending = build(
+      "a",
+      declarations({
+        presetExtensions: [{ target: { presets: ["b:reviewer"] }, tools: ["lookup"] }],
+      }),
+      fakeCalls(),
+    );
+    for (const order of [
+      [extending, owning],
+      [owning, extending],
+    ]) {
+      const composition = compilePlugins(...order);
+      expect(injectedNames(composition, "b:reviewer")).toContain("plugin__a__lookup");
+      expect(injectedNames(composition, "general")).not.toContain("plugin__a__lookup");
+    }
+  });
+
+  test("an extension to every preset leaves out the presets it names, another plugin's included", () => {
+    const owning = build(
+      "b",
+      declarations({
+        tools: [],
+        presets: [
+          {
+            name: "reviewer",
+            label: "Reviewer",
+            description: "",
+            promptSections: [],
+            builtinTools: ["Read"],
+            defaultPermissionRules: [],
+          },
+        ],
+      }),
+      fakeCalls(),
+    );
+    const extending = (allExcept: string[]) =>
+      build(
+        "a",
+        declarations({ presetExtensions: [{ target: { allExcept }, tools: ["lookup"] }] }),
+        fakeCalls(),
+      );
+    const injected = (modules: AgentModule[], preset: string) =>
+      presetInjectedTools(
+        compileComposition({
+          pluginModules: modules.map((module) => ({ module, revision: module.id })),
+        }),
+        preset,
+      ).map((tool) => tool.definition.name);
+
+    expect(injected([extending(["b:reviewer"]), owning], "b:reviewer")).not.toContain(
+      "plugin__a__lookup",
+    );
+    expect(injected([extending(["b:reviewer"]), owning], "general")).toContain("plugin__a__lookup");
+    // The preset it names may be gone: the plugin still loads.
+    expect(() => injected([extending(["b:reviewer"])], "general")).not.toThrow();
+    // Naming nothing, it reaches every preset, another plugin's too, like a
+    // plugin that has neither presets nor extensions.
+    expect(injected([extending([]), owning], "b:reviewer")).toContain("plugin__a__lookup");
   });
 
   test("two plugins with the same tool name do not collide", () => {

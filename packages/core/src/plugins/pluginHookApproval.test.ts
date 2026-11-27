@@ -153,30 +153,72 @@ describe("plugin hook approval", () => {
     });
   });
 
-  test("revoking an unrecorded install records the digest and stays pending", () => {
+  test("revoking only removes approvals; an unrecorded install stays as it was", () => {
     writeEntry();
 
     expect(revokePluginHooks("demo")[0]).toMatchObject({
       status: "pending",
-      changed: true,
+      changed: false,
     });
     const entry = readInstalledPlugins().plugins["demo@local"]?.[0];
-    expect(entry?.hookDigest).toBe(pluginHooksDigest(installPath));
+    expect(entry?.hookDigest).toBeUndefined();
     expect(entry?.approvedHookDigest).toBeUndefined();
   });
 
-  test("refuses to approve bytes that changed after installation", () => {
-    writeEntry({ hookDigest: pluginHooksDigest(installPath) });
+  test("hooks edited after installation are approved in place, and the edit is what runs", () => {
+    const installedDigest = pluginHooksDigest(installPath);
+    writeEntry({ hookDigest: installedDigest });
     writeFileSync(
       join(installPath, "hooks", "hooks.json"),
       JSON.stringify({
         hooks: {
-          SessionStart: [{ hooks: [{ type: "command", command: "echo tampered" }] }],
+          SessionStart: [{ hooks: [{ type: "command", command: "echo edited locally" }] }],
         },
       }),
     );
 
-    expect(() => approvePluginHooks("demo")).toThrow(/changed after install/);
+    expect(approvePluginHooks("demo")[0]).toMatchObject({ status: "approved", changed: true });
+    // The record still names the installed version; the review baseline is what was approved.
+    expect(installed()?.hookDigest).toBe(installedDigest);
+    expect(installed()?.approvedHookSnapshot).toMatchObject([{ command: "echo edited locally" }]);
+  });
+
+  test("revoking a plugin without hooks keeps hooks added later from running", () => {
+    rmSync(join(installPath, "hooks"), { recursive: true, force: true });
+    const absent = pluginHooksDigest(installPath);
+    // As installed: content approved, the absent hooks approved along with it.
+    writeEntry({
+      hookDigest: absent,
+      approvedHookDigest: absent,
+      contentDigest: treeDigest(),
+      approvedContentDigest: treeDigest(),
+    });
+    revokePluginHooks("demo");
+
+    mkdirSync(join(installPath, "hooks"));
+    writeFileSync(
+      join(installPath, "hooks", "hooks.json"),
+      JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: "command", command: "x" }] }] } }),
+    );
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("pending");
+  });
+
+  test("hooks added locally to an approved plugin run", () => {
+    rmSync(join(installPath, "hooks"), { recursive: true, force: true });
+    const absent = pluginHooksDigest(installPath);
+    writeEntry({
+      hookDigest: absent,
+      approvedHookDigest: absent,
+      contentDigest: treeDigest(),
+      approvedContentDigest: treeDigest(),
+    });
+
+    mkdirSync(join(installPath, "hooks"));
+    writeFileSync(
+      join(installPath, "hooks", "hooks.json"),
+      JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: "command", command: "x" }] }] } }),
+    );
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
   });
 
   test("an install recorded before whole-tree approval is pending until approved once", () => {
@@ -201,27 +243,23 @@ describe("plugin hook approval", () => {
     expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
   });
 
-  test("a script changed after approval stops the hooks and cannot be approved in place", () => {
+  test("a script edited after approval keeps the hooks approved", () => {
     mkdirSync(join(installPath, "scripts"));
     writeFileSync(join(installPath, "scripts", "run.sh"), "echo approved\n");
     writeEntry();
     approvePluginHooks("demo");
     expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
 
-    writeFileSync(join(installPath, "scripts", "run.sh"), "echo tampered\n");
-    expect(reviewPluginHooks("demo")[0]?.status).toBe("changed");
-    expect(() => approvePluginHooks("demo")).toThrow(/changed after install/);
-    expect(installed()?.approvedContentDigest).not.toBe(treeDigest());
-
-    writeFileSync(join(installPath, "scripts", "run.sh"), "echo approved\n");
+    writeFileSync(join(installPath, "scripts", "run.sh"), "echo edited locally\n");
     expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
+    expect(approvePluginHooks("demo")[0]).toMatchObject({ status: "approved", changed: false });
   });
 
-  test("a file added after approval counts as changed content", () => {
+  test("a file added after approval leaves the approval alone", () => {
     writeEntry();
     approvePluginHooks("demo");
     writeFileSync(join(installPath, "extra.sh"), "echo extra\n");
-    expect(reviewPluginHooks("demo")[0]?.status).toBe("changed");
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
   });
 
   test("the installer's own root metadata does not disturb an approval", () => {
@@ -232,7 +270,7 @@ describe("plugin hook approval", () => {
     expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
   });
 
-  test("an update whose tree is intact but unapproved is pending, not changed", () => {
+  test("an update that is not approved yet is pending", () => {
     writeEntry({ hookDigest: pluginHooksDigest(installPath), contentDigest: treeDigest() });
     expect(reviewPluginHooks("demo")[0]?.status).toBe("pending");
   });

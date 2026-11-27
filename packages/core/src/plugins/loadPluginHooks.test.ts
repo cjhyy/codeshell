@@ -187,7 +187,6 @@ describe("loadPluginHooks install-time integrity", () => {
     const reg = new HookRegistry();
     loadPluginHooks(reg);
     expect(reg.hasHooks("on_session_start")).toBe(true);
-    expect(listPluginHooks()[0]?.integrity).toBe("verified");
     expect(listPluginHooks()[0]?.approval).toBe("approved");
   });
 
@@ -196,26 +195,27 @@ describe("loadPluginHooks install-time integrity", () => {
     const reg = new HookRegistry();
     loadPluginHooks(reg);
     expect(reg.hasHooks("on_session_start")).toBe(false);
-    expect(listPluginHooks()[0]?.integrity).toBe("verified");
     expect(listPluginHooks()[0]?.approval).toBe("pending");
   });
 
-  test("fails closed when hooks.json changes after installation", () => {
-    const installPath = stagePlugin("changed@market", undefined, "pending");
+  test("hooks.json edited after an approved install is what registers", () => {
+    const installPath = stagePlugin("edited@market");
     writeFileSync(
       join(installPath, "hooks", "hooks.json"),
       JSON.stringify({
         hooks: {
-          SessionStart: [{ hooks: [{ type: "command", command: "echo tampered" }] }],
+          SessionStart: [{ hooks: [{ type: "command", command: "echo edited locally" }] }],
         },
       }),
     );
 
     const reg = new HookRegistry();
     loadPluginHooks(reg);
-    expect(reg.hasHooks("on_session_start")).toBe(false);
-    expect(listPluginHooks()[0]?.integrity).toBe("changed");
-    expect(listPluginHooks()[0]?.approval).toBe("changed");
+    expect(reg.hasHooks("on_session_start")).toBe(true);
+    expect(listPluginHooks()[0]).toMatchObject({
+      command: "echo edited locally",
+      approval: "approved",
+    });
   });
 
   test("does not load an install recorded before approval existed", () => {
@@ -223,7 +223,6 @@ describe("loadPluginHooks install-time integrity", () => {
     const reg = new HookRegistry();
     loadPluginHooks(reg);
     expect(reg.hasHooks("on_session_start")).toBe(false);
-    expect(listPluginHooks()[0]?.integrity).toBe("legacy");
     expect(listPluginHooks()[0]?.approval).toBe("pending");
   });
 
@@ -235,7 +234,7 @@ describe("loadPluginHooks install-time integrity", () => {
     expect(listPluginHooks()[0]?.approval).toBe("pending");
   });
 
-  test("stops loading once a script changes after approval", () => {
+  test("keeps loading after a script is edited post-approval", () => {
     const installPath = stagePlugin("scripted@market");
     const loaded = new HookRegistry();
     loadPluginHooks(loaded);
@@ -244,23 +243,8 @@ describe("loadPluginHooks install-time integrity", () => {
     writeFileSync(join(installPath, "run.sh"), "echo added after approval\n");
     const reg = new HookRegistry();
     loadPluginHooks(reg);
-    expect(reg.hasHooks("on_session_start")).toBe(false);
-    expect(listPluginHooks()[0]?.integrity).toBe("verified");
-    expect(listPluginHooks()[0]?.approval).toBe("changed");
-  });
-
-  test("runs hooks with Python bytecode caching off so they cannot dirty the approved tree", async () => {
-    const out = join(mkdtempSync(join(tmpdir(), "hook-env-")), "env.txt");
-    dirs.push(dirname(out));
-    stagePlugin("env@market", [
-      {
-        hooks: [{ type: "command", command: `printf '%s' "$PYTHONDONTWRITEBYTECODE" > '${out}'` }],
-      },
-    ]);
-    const reg = new HookRegistry();
-    loadPluginHooks(reg);
-    await reg.emit("on_session_start", { source: "startup" });
-    expect(readFileSync(out, "utf8")).toBe("1");
+    expect(reg.hasHooks("on_session_start")).toBe(true);
+    expect(listPluginHooks()[0]?.approval).toBe("approved");
   });
 
   test("ignores blank command declarations instead of prompting or registering", () => {
@@ -404,7 +388,6 @@ describe("listPluginHooks (read-only, for the settings UI)", () => {
       rawEvent: "SessionStart",
       command: "echo hi",
       disabled: false,
-      integrity: "verified",
       approval: "approved",
       key: "superpowers:SessionStart:echo hi",
     });

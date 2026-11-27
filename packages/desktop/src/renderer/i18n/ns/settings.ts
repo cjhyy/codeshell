@@ -859,7 +859,6 @@ export const settingsNs = {
         pluginTrust: {
           approved: "已授权 {count} 个外部进程/远程连接。",
           pending: "待明确授权；{count} 个外部进程/远程连接当前已阻止。",
-          changed: "插件文件在安装后有变化，连接已阻止；请更新或重新安装插件。",
           none: "没有可运行的插件 MCP server。",
         },
         supplementCred: "工具策略/凭证",
@@ -1051,12 +1050,8 @@ export const settingsNs = {
         pluginProvidedHooks: "插件提供的钩子",
         providedByPluginShort: "由「{plugin}」提供",
         pluginDisabledSuffix: "（插件已禁用）",
-        hookIntegrityVerified: "安装摘要已验证",
-        hookIntegrityChanged: "安装后已变更，已阻止执行",
-        hookIntegrityLegacy: "旧安装，尚未校验",
         hookApprovalApproved: "已显式授权",
         hookApprovalPending: "等待授权，已阻止执行",
-        hookApprovalChanged: "插件文件在安装后有变更，需更新后重新授权",
         enablePluginHook: "启用此插件钩子",
         disablePluginHook: "停用此插件钩子",
         pluginHookGlobalHint:
@@ -2168,8 +2163,6 @@ export const settingsNs = {
           approved: "{count} external process / remote connection(s) approved.",
           pending:
             "Explicit approval required; {count} external process / remote connection(s) are blocked.",
-          changed:
-            "Plugin files changed after installation and connections are blocked; update or reinstall the plugin.",
           none: "No runnable plugin MCP servers.",
         },
         supplementCred: "Tool policy / credentials",
@@ -2377,12 +2370,8 @@ export const settingsNs = {
         pluginProvidedHooks: "Plugin-provided hooks",
         providedByPluginShort: 'Provided by "{plugin}"',
         pluginDisabledSuffix: " (plugin disabled)",
-        hookIntegrityVerified: "Install digest verified",
-        hookIntegrityChanged: "Changed after install; execution blocked",
-        hookIntegrityLegacy: "Legacy install; not yet verified",
         hookApprovalApproved: "Explicitly approved",
         hookApprovalPending: "Pending approval; execution blocked",
-        hookApprovalChanged: "Plugin files changed after install; update before re-approving",
         enablePluginHook: "Enable this plugin hook",
         disablePluginHook: "Disable this plugin hook",
         pluginHookGlobalHint:

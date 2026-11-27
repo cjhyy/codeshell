@@ -10,7 +10,7 @@ import {
   realpathSync,
 } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
-import { pluginContentState } from "./pluginTreeDigest.js";
+import { pluginContentState, type InstallRecordOptions } from "./pluginTreeDigest.js";
 import type { PluginInstallEntry, StoredPluginHookReview } from "./types.js";
 
 const DIGEST_DOMAIN = "codeshell-plugin-hooks-v1";
@@ -64,9 +64,7 @@ export interface PluginHooksSnapshot {
   error?: string;
 }
 
-/** `legacy` only describes the record (no install-time digest); it grants nothing. */
-export type PluginHookIntegrity = "verified" | "changed" | "legacy";
-export type PluginHookApprovalState = "approved" | "pending" | "changed" | "none";
+export type PluginHookApprovalState = "approved" | "pending" | "none";
 
 const SUPPORTED_EVENT_SET = new Set<string>(SUPPORTED_PLUGIN_HOOK_EVENTS);
 
@@ -390,24 +388,11 @@ export function pluginHookReviewSnapshot(snapshot: PluginHooksSnapshot): StoredP
 }
 
 /**
- * Whether the hook declaration still matches the bytes recorded at
- * install/update. Entries that predate hook digests report `legacy`, which is
- * a description of the record and not a trust state: see
- * {@link pluginHookApprovalState} for what may run.
- */
-export function verifyPluginHookIntegrity(
-  entry: PluginInstallEntry,
-  snapshot: PluginHooksSnapshot = inspectPluginHooks(entry.installPath),
-): PluginHookIntegrity {
-  if (!entry.hookDigest) return "legacy";
-  return snapshot.digest === entry.hookDigest ? "verified" : "changed";
-}
-
-/**
  * Runtime trust state for one installed plugin's command hooks. Only
- * `approved` runs. Approval covers two things that must both still hold: the
- * declaration (hooks/hooks.json) and every byte of the install tree, because
- * the declaration only names the scripts it launches.
+ * `approved` runs. Approval covers the plugin as it was installed: its
+ * declaration and every byte of its tree, recorded at install/update. The
+ * hooks that run are the ones on disk now; local edits after approval are the
+ * user's own and do not withdraw it.
  *
  * Entries recorded before whole-tree approval existed have no content digest.
  * They are `pending`, including the ones approved under the declaration-only
@@ -419,11 +404,8 @@ export function pluginHookApprovalState(
   snapshot: PluginHooksSnapshot = inspectPluginHooks(entry.installPath),
 ): PluginHookApprovalState {
   if (!snapshot.hasExecutableHooks) return "none";
-  if (entry.hookDigest && snapshot.digest !== entry.hookDigest) return "changed";
   if (!entry.hookDigest || !entry.contentDigest) return "pending";
-  const content = pluginContentState(entry);
-  if (content === "changed") return "changed";
-  return content === "approved" && entry.approvedHookDigest === entry.hookDigest
+  return pluginContentState(entry) === "approved" && entry.approvedHookDigest === entry.hookDigest
     ? "approved"
     : "pending";
 }
@@ -431,27 +413,33 @@ export function pluginHookApprovalState(
 /**
  * Integrity fields written at install/update. Hook-free packages approve the
  * absent-hooks digest automatically; executable hooks require explicit trust.
- * A previously approved identical digest remains approved across an update.
+ * A previously approved identical digest remains approved across an update,
+ * and with `keepApprovals` (bytes from the user's own directory) any previous
+ * approval does. The review baseline stays what the user last looked at.
  */
 export function pluginHookInstallRecord(
   installPath: string,
   previousEntries: PluginInstallEntry[] = [],
+  options: InstallRecordOptions = {},
 ): Pick<PluginInstallEntry, "hookDigest" | "approvedHookDigest" | "approvedHookSnapshot"> {
   const snapshot = inspectPluginHooks(installPath);
-  const previouslyApproved = previousEntries.find(
-    (entry) =>
-      entry.hookDigest === snapshot.digest && entry.approvedHookDigest === entry.hookDigest,
+  const wasApproved = (entry: PluginInstallEntry) =>
+    entry.hookDigest !== undefined && entry.approvedHookDigest === entry.hookDigest;
+  const identicalApproved = previousEntries.some(
+    (entry) => entry.hookDigest === snapshot.digest && wasApproved(entry),
   );
+  const carried = options.keepApprovals === true && previousEntries.some(wasApproved);
   const previousReview = previousEntries.find(
-    (entry) =>
-      entry.approvedHookDigest === entry.hookDigest && entry.approvedHookSnapshot !== undefined,
+    (entry) => wasApproved(entry) && entry.approvedHookSnapshot !== undefined,
   )?.approvedHookSnapshot;
-  const approved =
-    snapshot.state !== "invalid" && (!snapshot.hasExecutableHooks || previouslyApproved);
+  const valid = snapshot.state !== "invalid";
+  // A new baseline only when nothing new is being carried over unseen.
+  const reviewed = valid && (!snapshot.hasExecutableHooks || identicalApproved);
+  const approved = reviewed || (valid && carried);
   return {
     hookDigest: snapshot.digest,
     ...(approved ? { approvedHookDigest: snapshot.digest } : {}),
-    ...(approved
+    ...(reviewed
       ? { approvedHookSnapshot: pluginHookReviewSnapshot(snapshot) }
       : previousReview
         ? { approvedHookSnapshot: previousReview }

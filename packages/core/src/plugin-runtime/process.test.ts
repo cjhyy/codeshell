@@ -365,6 +365,118 @@ describe("plugin process", () => {
     },
   );
 
+  const EFFECTS = `
+import { appendFileSync } from "node:fs";
+import { join } from "node:path";
+export default { setup(ctx) {
+  const note = (line) => appendFileSync(join(ctx.plugin.dataDir, "effects.log"), line + "\\n");
+  ctx.effect((signal) => {
+    note("started");
+    signal.addEventListener("abort", () => note("aborted"));
+    return () => note("cleaned up");
+  });
+} };
+`;
+
+  const effects = () => {
+    try {
+      return readFileSync(join(home, "data", "effects.log"), "utf8")
+        .trim()
+        .split("\n");
+    } catch {
+      return [];
+    }
+  };
+
+  async function waitFor(condition: () => boolean, timeoutMs = 5_000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (!condition() && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+
+  const alive = (pid: number) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  test("stopping aborts the plugin's background logic and runs its cleanup", async () => {
+    const plugin = create(EFFECTS);
+    await plugin.start();
+    plugin.setBackground(true);
+    await waitFor(() => effects().includes("started"));
+    await plugin.stop();
+    expect(effects()).toEqual(["started", "aborted", "cleaned up"]);
+  });
+
+  test("background logic can be stopped on its own, and the call returns once it is cleaned up", async () => {
+    const plugin = create(EFFECTS);
+    await plugin.start();
+    plugin.setBackground(true);
+    await waitFor(() => effects().includes("started"));
+    await plugin.stopBackground();
+    expect(effects()).toEqual(["started", "aborted", "cleaned up"]);
+    // The process itself keeps serving.
+    expect(plugin.isReady).toBe(true);
+  });
+
+  const SPAWNS = `
+import { spawn } from "node:child_process";
+export default { setup(ctx) {
+  ctx.hooks.on("pre_tool_use", async (event) => {
+    if (event.data.toolName === "Spawn") {
+      const child = spawn("/bin/sleep", ["30"], { stdio: "ignore" });
+      return { messages: [String(child.pid)] };
+    }
+    if (event.data.toolName === "Crash") {
+      // Longer than one log message holds: the line is cut, not lost.
+      setTimeout(() => { throw new Error("async boom " + "x".repeat(9000)); }, 10);
+    }
+    return null;
+  });
+} };
+`;
+
+  test.skipIf(process.platform === "win32")(
+    "what a plugin started does not outlive it, whether it was stopped or crashed",
+    async () => {
+      const stopped = create(SPAWNS);
+      await stopped.start();
+      const first = Number(((await hook(stopped, "Spawn")) as { messages: string[] }).messages[0]);
+      expect(alive(first)).toBe(true);
+      await stopped.stop();
+      await waitFor(() => !alive(first));
+      expect(alive(first)).toBe(false);
+
+      const crashing = create(SPAWNS);
+      await crashing.start();
+      const second = Number(
+        ((await hook(crashing, "Spawn")) as { messages: string[] }).messages[0],
+      );
+      await hook(crashing, "Crash");
+      await waitFor(() => exits.length === 2);
+      expect(exits).toEqual(["requested", "crashed"]);
+      await waitFor(() => !alive(second));
+      expect(alive(second)).toBe(false);
+    },
+    15_000,
+  );
+
+  test("a plugin that crashes says why in its log before it goes", async () => {
+    const plugin = create(SPAWNS);
+    await plugin.start();
+    await hook(plugin, "Crash");
+    await waitFor(() => exits.length === 1);
+    expect(exits).toEqual(["crashed"]);
+    const log = readFileSync(join(home, "logs", "demo.log"), "utf8");
+    expect(log).toContain("uncaught exception");
+    expect(log).toContain("async boom");
+  });
+
   test("reaping never signals a process whose record does not match it", async () => {
     mkdirSync(join(home, "pids"), { recursive: true });
     // This test process's own id with a token it does not carry.

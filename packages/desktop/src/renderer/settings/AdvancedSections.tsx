@@ -585,7 +585,7 @@ function ProjectHooksEditor({
           <ul className="flex flex-col gap-1">
             {pluginHooks.map((h, i) => {
               const overrideOff = hookOverrides[h.key] === "off";
-              const trustBlocked = h.approval === "pending" || h.approval === "changed";
+              const trustBlocked = h.approval === "pending";
               const off = h.disabled || overrideOff || trustBlocked;
               return (
                 <li
@@ -610,14 +610,11 @@ function ProjectHooksEditor({
                       "shrink-0 text-[10px]",
                       h.approval === "approved" && "text-status-ok",
                       h.approval === "pending" && "text-status-warn",
-                      h.approval === "changed" && "text-status-err",
                     )}
                   >
                     {h.approval === "approved"
                       ? t("settingsX.adv.hookApprovalApproved")
-                      : h.approval === "changed"
-                        ? t("settingsX.adv.hookApprovalChanged")
-                        : t("settingsX.adv.hookApprovalPending")}
+                      : t("settingsX.adv.hookApprovalPending")}
                   </span>
                   {!isGlobal && (
                     <Switch

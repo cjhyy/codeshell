@@ -25,6 +25,12 @@ export interface InstallLocalOptions {
    * from a private copy (e.g. a reviewed snapshot that is deleted afterwards).
    */
   source?: string;
+  /**
+   * On overwrite, carry the replaced install's approvals over to the new
+   * bytes. Only for bytes from a directory on the user's machine; an archive
+   * is reviewed again like any download.
+   */
+  keepApprovals?: boolean;
 }
 
 export interface LocalPluginSourceInput {
@@ -92,6 +98,7 @@ async function installRootMaybeOverwrite(
         options.source ?? root,
         () => installPluginFromPath(root, resolvedName, installedAt, pathOptions),
         options.beforeCommit,
+        { keepApprovals: options.keepApprovals === true },
       );
       return finalDir;
     }

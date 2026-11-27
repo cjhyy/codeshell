@@ -61,14 +61,13 @@ export function shouldLoadPluginListMedia(mediaAvailability: {
   return mediaAvailability.logo || mediaAvailability.logoDark || mediaAvailability.composerIcon;
 }
 
-export type PluginHookApprovalSummary = "approved" | "pending" | "changed";
+export type PluginHookApprovalSummary = "approved" | "pending";
 
 export function summarizePluginHookApproval(
   hooks: Pick<PluginHookEntry, "approval">[],
 ): PluginHookApprovalSummary | null {
   const executable = hooks.filter((hook) => hook.approval !== "none");
   if (executable.length === 0) return null;
-  if (executable.some((hook) => hook.approval === "changed")) return "changed";
   if (executable.some((hook) => hook.approval === "pending")) return "pending";
   return "approved";
 }

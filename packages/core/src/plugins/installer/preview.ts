@@ -482,7 +482,10 @@ export async function installReviewedLocalPlugin(
         { kind: "dir", path: snapshotRoot },
         installedAt,
         snapshotPreview.name,
-        input.kind === "dir" ? { ...options, source: sourceRoot } : options,
+        // A directory is the user's own; an archive is reviewed like a download.
+        input.kind === "dir"
+          ? { ...options, source: sourceRoot, keepApprovals: true }
+          : { ...options, keepApprovals: false },
       );
     } finally {
       await rm(snapshotContainer, { recursive: true, force: true });
