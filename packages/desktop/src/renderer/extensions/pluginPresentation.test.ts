@@ -106,7 +106,7 @@ describe("plugin presentation", () => {
     ).toBe(false);
   });
 
-  test("summarizes hook approval with fail-closed states taking precedence", () => {
+  test("summarizes hook approval with pending taking precedence", () => {
     expect(summarizePluginHookApproval([])).toBeNull();
     expect(summarizePluginHookApproval([{ approval: "none" }])).toBeNull();
     expect(summarizePluginHookApproval([{ approval: "approved" }])).toBe("approved");
@@ -115,9 +115,6 @@ describe("plugin presentation", () => {
     );
     expect(summarizePluginHookApproval([{ approval: "approved" }, { approval: "pending" }])).toBe(
       "pending",
-    );
-    expect(summarizePluginHookApproval([{ approval: "pending" }, { approval: "changed" }])).toBe(
-      "changed",
     );
   });
 

@@ -58,11 +58,9 @@ import { runPluginCommandHook } from "./pluginCommandHook.js";
 import {
   inspectPluginHooks,
   pluginHookApprovalState,
-  verifyPluginHookIntegrity,
   type ParsedPluginCommandHook,
   type ParsedPluginHooksDefinition,
   type PluginHookApprovalState,
-  type PluginHookIntegrity,
   type SupportedPluginHookEvent,
 } from "./pluginHookIntegrity.js";
 
@@ -218,9 +216,9 @@ export function loadPluginHooks(
       const installPath = entry.installPath;
       if (!installPath) continue;
       const snapshot = inspectPluginHooks(installPath);
-      // Only an explicit approval of the current bytes loads. Pending and
-      // changed executable definitions fail closed; the rest of the plugin
-      // remains available, and hook-free installs have nothing to load.
+      // Only an approved plugin's hooks load, as they are on disk now. Pending
+      // executable definitions fail closed; the rest of the plugin remains
+      // available, and hook-free installs have nothing to load.
       if (pluginHookApprovalState(entry, snapshot) !== "approved") continue;
       if (!snapshot.definition) continue;
 
@@ -291,8 +289,6 @@ export interface PluginHookEntry {
   matcher?: string;
   /** Whether the owning plugin is currently disabled (its hooks don't fire). */
   disabled: boolean;
-  /** Install-time integrity state for the executable hook definition. */
-  integrity: PluginHookIntegrity;
   /** Explicit execution trust state. Only approved hooks register. */
   approval: PluginHookApprovalState;
   /** Stable per-hook identity ({@link pluginHookKey}) — the record key the
@@ -359,7 +355,6 @@ export function listPluginHooksForHost(disabledPlugins: string[] = []): HostPlug
       } catch {
         hooksIdentity = undefined;
       }
-      const integrity = verifyPluginHookIntegrity(entry, snapshot);
       const approval = pluginHookApprovalState(entry, snapshot);
       if (!snapshot.definition) continue;
       for (const hook of iteratePluginHooks(snapshot.definition)) {
@@ -378,7 +373,6 @@ export function listPluginHooksForHost(disabledPlugins: string[] = []): HostPlug
           command: hook.command.command,
           matcher: hook.matcher,
           disabled,
-          integrity,
           approval,
           key: stableKey,
           source: {

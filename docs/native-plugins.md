@@ -118,11 +118,14 @@ and at most 600 s, context providers 2 s, `setup` 10 s. One message is at most
 ## Approval
 
 One decision covers the whole plugin: its native entry, its command hooks and
-its MCP servers. It binds to a digest of every file in the install directory,
-so any change after installation makes the plugin `changed`; that cannot be
-approved in place, only updated or reinstalled. An update keeps the surface
-approved last time as the baseline, and the review lists what was added or
-removed since then.
+its MCP servers, including kinds it adds later. It covers the version that was
+downloaded: installing or updating records a digest of every file, and a new
+download needs approval again unless it is byte-identical to one already
+approved. A plugin installed or updated from a directory on your own machine
+keeps its approval. After that the files are yours: local edits do not touch
+the approval, and what runs is what is on disk. The review compares the
+current surface with the one approved last time and lists what was added or
+removed.
 
 - Desktop: Extensions, plugin detail, "Approve this plugin".
 - Terminal: `/plugin native review <plugin>`, then `/plugin approve <plugin>`;
@@ -140,9 +143,10 @@ registers something it did not declare, or collides with another plugin's
 public names is reported as failed; the others still load. When two plugins
 collide, the one installed first wins.
 
-- Code: a verified, read-only copy at
-  `~/.code-shell/plugin-runtime/<module id>/<digest>/`. What runs is exactly the
-  bytes that were approved.
+- Code: a read-only copy of the plugin's files, taken and verified when it
+  starts, at `~/.code-shell/plugin-runtime/<module id>/<digest>/`. Local edits
+  run once the plugin is restarted from its detail page, or when the worker
+  starts again.
 - Data: `CODESHELL_PLUGIN_DATA` (also `ctx.plugin.dataDir`).
 - Log: `~/.code-shell/plugin-runtime/.logs/<module id>.log`, readable from the
   plugin detail page.
@@ -163,9 +167,11 @@ stopped together with its process. Processes left behind by a worker that was
 killed are stopped when the next worker starts.
 
 Approving, revoking, updating and switching plugins off all end in a settings
-reload. An update that only changes code takes over in place; one that changes
-what the plugin declares, and a plugin approved after the worker started, load
-when the worker starts again. A plugin switched off for a project
+reload. An update, or a local edit applied by restarting the plugin, takes over
+in place when it declares the same things; one that changes what the plugin
+declares, and a plugin approved after the worker started, load when the worker
+starts again. Until then the version this worker loaded keeps serving, and the
+plugin detail page says why. A plugin switched off for a project
 (`disabledPlugins`, project capability overrides) receives no calls from that
 project's sessions; sub-agents follow the session that spawned them.
 
@@ -179,18 +185,13 @@ Desktop asks only a worker that is already running.
 - Restricting a plugin's file, network or process access.
 - Allow rules in presets; plugins can only ask or deny.
 - Loading a new plugin, or new declarations, without restarting the worker.
-- A plugin that writes into its own install directory turns itself into changed
-  content; keep state in the data directory. Command hooks and MCP servers run
-  from the install directory with `PYTHONDONTWRITEBYTECODE=1`, so Python does
-  not write bytecode there; a tool that creates files there at run time, such
-  as `uv run` creating `.venv`, still does.
 
 ## Code map
 
 | Area                             | Files                                                                                                                         |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Manifest, approval, snapshots    | `packages/core/src/plugins/native/`                                                                                           |
-| Whole-tree digest                | `packages/core/src/plugins/pluginTreeDigest.ts`                                                                               |
+| Version digest                   | `packages/core/src/plugins/pluginTreeDigest.ts`                                                                               |
 | Author SDK                       | `packages/core/src/plugin-sdk.ts` (`@cjhyy/code-shell-core/plugin`)                                                           |
 | Process, protocol, child entry   | `packages/core/src/plugin-runtime/process.ts`, `protocol.ts`, `child-main.ts`                                                 |
 | Generated modules and policy     | `packages/core/src/plugin-runtime/module-adapter.ts`, `runtime.ts`                                                            |

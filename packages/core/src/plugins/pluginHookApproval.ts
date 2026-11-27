@@ -136,12 +136,12 @@ export function reviewPluginHooks(target: string): PluginHookReview[] {
 }
 
 /**
- * Approve one install entry's hooks in place: the exact install-time
- * declaration and, when it declares executable hooks, the whole install tree.
- * Bytes that changed on disk since install cannot be blessed; they need a
- * reinstall or an update. A record that predates either digest is completed
- * from what is on disk now, which is what the user is looking at when they
- * approve. Returns whether the entry changed.
+ * Approve one install entry's hooks in place: the install-time declaration
+ * and, when it declares executable hooks, the plugin as it was installed.
+ * Local edits since then do not stand in the way; what is approved is the
+ * plugin, and what runs is what is on disk. A record that predates either
+ * digest is completed from what is on disk now, which is what the user is
+ * looking at when they approve. Returns whether the entry changed.
  */
 export function approveHookEntry(
   installKey: string,
@@ -151,11 +151,6 @@ export function approveHookEntry(
   if (snapshot.state === "invalid") {
     throw new Error(
       `plugin "${installKey}" hooks definition is invalid and cannot be approved: ${snapshot.error ?? "unknown error"}`,
-    );
-  }
-  if (entry.hookDigest && snapshot.digest !== entry.hookDigest) {
-    throw new Error(
-      `plugin "${installKey}" hooks changed after install; reinstall or update before approving`,
     );
   }
   let changed = snapshot.hasExecutableHooks ? approvePluginContent(installKey, entry) : false;
@@ -178,27 +173,13 @@ export function approveHookEntry(
 /**
  * Revoke one install entry's hooks in place. The content approval is left
  * alone: it is shared with the plugin's other executable kinds, and without a
- * hook approval it runs nothing. Returns whether the entry changed.
+ * hook approval it runs nothing. Hooks the user adds afterwards stay pending
+ * too. Returns whether the entry changed.
  */
-export function revokeHookEntry(
-  entry: PluginInstallEntry,
-  snapshot: PluginHooksSnapshot = inspectPluginHooks(entry.installPath),
-): boolean {
-  let changed = false;
-  if (!entry.hookDigest) {
-    entry.hookDigest = snapshot.digest;
-    changed = true;
-  }
-  if (snapshot.hasExecutableHooks || snapshot.state === "invalid") {
-    if (entry.approvedHookDigest !== undefined) {
-      delete entry.approvedHookDigest;
-      changed = true;
-    }
-  } else if (entry.approvedHookDigest !== entry.hookDigest) {
-    entry.approvedHookDigest = entry.hookDigest;
-    changed = true;
-  }
-  return changed;
+export function revokeHookEntry(entry: PluginInstallEntry): boolean {
+  if (entry.approvedHookDigest === undefined) return false;
+  delete entry.approvedHookDigest;
+  return true;
 }
 
 function mutateHookTrust(
@@ -237,7 +218,5 @@ export function revokePluginHooks(
   target: string,
   beforeCommit?: () => void,
 ): PluginHookApprovalResult[] {
-  return mutateHookTrust(target, beforeCommit, (_installKey, entry, snapshot) =>
-    revokeHookEntry(entry, snapshot),
-  );
+  return mutateHookTrust(target, beforeCommit, (_installKey, entry) => revokeHookEntry(entry));
 }

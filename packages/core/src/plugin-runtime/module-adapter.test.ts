@@ -89,16 +89,24 @@ function build(
   plugin: string,
   declared: NativeDeclarations,
   calls: NativePluginCalls,
-  hostPresets = new Set(["general"]),
 ): AgentModule {
   return buildNativeModule({
     moduleId: `plugin-${plugin}-00000000`,
     plugin,
     declarations: declared,
     calls,
-    hostPresets,
   });
 }
+
+/** Compile as the worker does: every module a plugin module, in install order. */
+function compilePlugins(...modules: AgentModule[]) {
+  return compileComposition({
+    pluginModules: modules.map((module) => ({ module, revision: module.id })),
+  });
+}
+
+const injectedNames = (composition: ReturnType<typeof compileComposition>, preset: string) =>
+  presetInjectedTools(composition, preset).map((tool) => tool.definition.name);
 
 describe("validating what a plugin registered", () => {
   test("accepts registrations the manifest announced", () => {
@@ -332,11 +340,59 @@ describe("the generated module", () => {
       }),
       fakeCalls(),
     );
-    // The missing target is skipped instead of failing the whole plugin.
+    // Names are kept as declared; one that is not loaded adds nothing and fails nothing.
     expect(extended.engine?.presetExtensions).toEqual([
-      { target: { presets: ["general"] }, tools: ["plugin__reviewer__lookup"] },
+      { target: { presets: ["general", "not-installed"] }, tools: ["plugin__reviewer__lookup"] },
     ]);
-    expect(() => compileComposition({ modules: [extended] })).not.toThrow();
+    expect(injectedNames(compilePlugins(extended), "general")).toContain(
+      "plugin__reviewer__lookup",
+    );
+  });
+
+  test("an extension naming only presets that are not loaded keeps its tools out of every preset", () => {
+    const absent = build(
+      "a",
+      declarations({
+        presetExtensions: [{ target: { presets: ["b:reviewer"] }, tools: ["lookup"] }],
+      }),
+      fakeCalls(),
+    );
+    expect(injectedNames(compilePlugins(absent), "general")).not.toContain("plugin__a__lookup");
+  });
+
+  test("an extension reaches another plugin's preset by name, whichever plugin loads first", () => {
+    const owning = build(
+      "b",
+      declarations({
+        tools: [],
+        presets: [
+          {
+            name: "reviewer",
+            label: "Reviewer",
+            description: "",
+            promptSections: [],
+            builtinTools: ["Read"],
+            defaultPermissionRules: [],
+          },
+        ],
+      }),
+      fakeCalls(),
+    );
+    const extending = build(
+      "a",
+      declarations({
+        presetExtensions: [{ target: { presets: ["b:reviewer"] }, tools: ["lookup"] }],
+      }),
+      fakeCalls(),
+    );
+    for (const order of [
+      [extending, owning],
+      [owning, extending],
+    ]) {
+      const composition = compilePlugins(...order);
+      expect(injectedNames(composition, "b:reviewer")).toContain("plugin__a__lookup");
+      expect(injectedNames(composition, "general")).not.toContain("plugin__a__lookup");
+    }
   });
 
   test("an extension to every preset leaves out the presets it names, another plugin's included", () => {

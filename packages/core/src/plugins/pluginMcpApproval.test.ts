@@ -117,19 +117,54 @@ describe("plugin MCP approval", () => {
     expect(mergePluginMcpServers({})["demo:server"]).toBeUndefined();
   });
 
-  test("a server script changed after approval disconnects the server", () => {
+  test("a server script edited after approval keeps the server connected", () => {
     writeFileSync(join(installPath, "server.js"), "console.log('approved');\n");
     writeEntry();
     approvePluginMcp("demo");
     expect(mergePluginMcpServers({})["demo:server"]).toBeDefined();
 
-    writeFileSync(join(installPath, "server.js"), "console.log('tampered');\n");
-    expect(listPluginMcpTrust()[0]?.status).toBe("changed");
-    expect(mergePluginMcpServers({})["demo:server"]).toBeUndefined();
-    expect(() => approvePluginMcp("demo")).toThrow(/changed after install/);
-
-    writeFileSync(join(installPath, "server.js"), "console.log('approved');\n");
+    writeFileSync(join(installPath, "server.js"), "console.log('edited locally');\n");
     expect(listPluginMcpTrust()[0]?.status).toBe("approved");
+    expect(mergePluginMcpServers({})["demo:server"]).toBeDefined();
+    expect(approvePluginMcp("demo")[0]).toMatchObject({ status: "approved", changed: false });
+  });
+
+  test("revoking a plugin without servers keeps servers added later disconnected", () => {
+    writeFileSync(join(installPath, "mcp-servers.json"), JSON.stringify({}));
+    const none = pluginMcpDigest(installPath);
+    // As installed: content approved, the server-free config approved along with it.
+    writeEntry("demo@local", {
+      mcpDigest: none,
+      approvedMcpDigest: none,
+      contentDigest: treeDigest(),
+      approvedContentDigest: treeDigest(),
+    });
+    revokePluginMcp("demo");
+
+    writeFileSync(
+      join(installPath, "mcp-servers.json"),
+      JSON.stringify({ "demo:server": { command: "demo-mcp", name: "demo:server" } }),
+    );
+    expect(listPluginMcpTrust()[0]?.status).toBe("pending");
+    expect(mergePluginMcpServers({})["demo:server"]).toBeUndefined();
+  });
+
+  test("servers added locally to an approved plugin connect", () => {
+    writeFileSync(join(installPath, "mcp-servers.json"), JSON.stringify({}));
+    const none = pluginMcpDigest(installPath);
+    writeEntry("demo@local", {
+      mcpDigest: none,
+      approvedMcpDigest: none,
+      contentDigest: treeDigest(),
+      approvedContentDigest: treeDigest(),
+    });
+
+    writeFileSync(
+      join(installPath, "mcp-servers.json"),
+      JSON.stringify({ "demo:server": { command: "demo-mcp", name: "demo:server" } }),
+    );
+    expect(listPluginMcpTrust()[0]?.status).toBe("approved");
+    expect(mergePluginMcpServers({})["demo:server"]).toBeDefined();
   });
 
   test("hooks and MCP share the content approval but are still approved separately", () => {
@@ -154,16 +189,18 @@ describe("plugin MCP approval", () => {
     expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
   });
 
-  test("post-install MCP changes cannot be directly approved", () => {
-    writeEntry("demo@local", { mcpDigest: pluginMcpDigest(installPath) });
+  test("an MCP config edited after installation is approved in place and is what connects", () => {
+    const installedDigest = pluginMcpDigest(installPath);
+    writeEntry("demo@local", { mcpDigest: installedDigest });
     writeFileSync(
       join(installPath, "mcp-servers.json"),
-      JSON.stringify({ "demo:server": { command: "tampered", name: "demo:server" } }),
+      JSON.stringify({ "demo:server": { command: "edited-locally", name: "demo:server" } }),
     );
 
-    expect(listPluginMcpTrust()[0]?.status).toBe("changed");
-    expect(mergePluginMcpServers({})["demo:server"]).toBeUndefined();
-    expect(() => approvePluginMcp("demo")).toThrow(/changed after install/);
+    expect(listPluginMcpTrust()[0]?.status).toBe("pending");
+    expect(approvePluginMcp("demo")[0]).toMatchObject({ status: "approved", changed: true });
+    expect(readInstalledPlugins().plugins["demo@local"]?.[0]?.mcpDigest).toBe(installedDigest);
+    expect(mergePluginMcpServers({})["demo:server"]?.command).toBe("edited-locally");
   });
 
   test("bare plugin names require an install key when multiple installs exist", () => {

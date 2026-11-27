@@ -17,7 +17,7 @@ import {
 } from "../installedPlugins.js";
 import { pluginHookInstallRecord } from "../pluginHookIntegrity.js";
 import { pluginMcpInstallRecord } from "../pluginMcpIntegrity.js";
-import { pluginContentInstallRecord } from "../pluginTreeDigest.js";
+import { pluginContentInstallRecord, type InstallRecordOptions } from "../pluginTreeDigest.js";
 import { pluginNativeInstallRecord } from "../native/approval.js";
 import { readPluginMcp } from "./loadPluginMcp.js";
 import { CodexPluginManifest, CSMeta, PluginInstallError } from "./types.js";
@@ -50,6 +50,7 @@ export async function reinstallAtomic(
   source: string,
   doInstall: () => Promise<unknown>,
   beforeCommit?: () => void,
+  options: InstallRecordOptions = {},
 ): Promise<void> {
   const dir = pluginInstallDir(name);
   const backup = `${dir}.bak-${process.pid}-${randomUUID()}`;
@@ -73,13 +74,18 @@ export async function reinstallAtomic(
         const installed = data.plugins[key] ?? [];
         let changed = false;
         for (const entry of installed) {
-          const next = pluginHookInstallRecord(entry.installPath, savedEntries);
-          const nextContent = pluginContentInstallRecord(entry.installPath, savedEntries);
-          const nextNative = pluginNativeInstallRecord(nextContent.contentDigest, savedEntries);
+          const next = pluginHookInstallRecord(entry.installPath, savedEntries, options);
+          const nextContent = pluginContentInstallRecord(entry.installPath, savedEntries, options);
+          const nextNative = pluginNativeInstallRecord(
+            nextContent.contentDigest,
+            savedEntries,
+            options,
+          );
           const nextMcp = pluginMcpInstallRecord(
             entry.installPath,
             Object.keys(readPluginMcp(entry.installPath, name)).length > 0,
             savedEntries,
+            options,
           );
           if (
             entry.hookDigest !== next.hookDigest ||
@@ -200,11 +206,13 @@ export async function updatePluginByName(
       }
     }
 
+    // The bytes come from the user's own directory, not a download.
     await reinstallAtomic(
       name,
       meta.source,
       () => installPluginFromPath(meta.source, name, installedAt),
       options.beforeCommit,
+      { keepApprovals: true },
     );
     return { updated: true, reason: "reinstalled" };
   });

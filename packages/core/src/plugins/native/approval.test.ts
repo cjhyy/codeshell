@@ -118,8 +118,28 @@ describe("native plugin approval", () => {
       native: "pending",
       changed: true,
     });
+    expect(entry().approvedContentDigest).toBeUndefined();
     // The surface stays as the baseline for the next review.
     expect(entry().approvedNativeSurface).toBeDefined();
+  });
+
+  test("a native entry added locally to an approved plugin is approved with it", async () => {
+    const plain = join(home, "plain");
+    mkdirSync(join(plain, "hooks"), { recursive: true });
+    writeFileSync(
+      join(plain, "hooks", "hooks.json"),
+      JSON.stringify({
+        hooks: { SessionStart: [{ hooks: [{ type: "command", command: "echo hi" }] }] },
+      }),
+    );
+    const installed = await installPluginFromPath(plain, "plain", "t1");
+    approvePlugin("plain");
+
+    mkdirSync(join(installed, ".codeshell-plugin"));
+    mkdirSync(join(installed, "dist"));
+    writeFileSync(join(installed, "dist", "index.js"), "export default { setup() {} };\n");
+    writeManifest({ contributes: { tools: ["lookup"] } }, installed);
+    expect(nativeState("plain@local")).toBe("approved");
   });
 
   test("approving only the command hooks does not start the native entry", async () => {
@@ -138,16 +158,16 @@ describe("native plugin approval", () => {
     expect(nativeState()).toBe("pending");
   });
 
-  test("code changed after approval is changed content and cannot be approved in place", async () => {
+  test("code edited after approval stays approved", async () => {
     const installed = await installPluginFromPath(source, "demo", "t1");
     approvePlugin("demo");
     writeFileSync(
       join(installed, "dist", "index.js"),
-      "export default { setup() { /* new */ } };\n",
+      "export default { setup() { /* edited locally */ } };\n",
     );
 
-    expect(nativeState()).toBe("changed");
-    expect(() => approvePlugin("demo")).toThrow(/changed after install/);
+    expect(nativeState()).toBe("approved");
+    expect(approvePlugin("demo")[0]?.changed).toBe(false);
   });
 
   test("an unusable manifest or a newer API fails the whole approval and writes nothing", async () => {
@@ -175,23 +195,20 @@ describe("native plugin approval", () => {
     });
   });
 
-  test("an update keeps the approval for identical bytes and reviews what a new version changes", async () => {
+  test("an update from a local directory keeps the approval; the review shows what changed", async () => {
     await installPluginFromPath(source, "demo", "t1");
     approvePlugin("demo");
-
-    await updatePluginByName("demo", "t2", true);
-    expect(nativeState()).toBe("approved");
 
     writeManifest({
       contributes: { hooks: ["pre_tool_use", "on_stop"], tools: ["search"], background: true },
       coreCapabilities: ["llm"],
     });
-    await updatePluginByName("demo", "t3", true);
-    expect(nativeState()).toBe("pending");
-    expect(entry().approvedNativeDigest).toBeUndefined();
+    await updatePluginByName("demo", "t2", true);
+    // The new bytes come from the user's own directory, not from a download.
+    expect(nativeState()).toBe("approved");
     expect(reviewNativePlugin("demo")[0]).toMatchObject({
       installKey: "demo@local",
-      state: "pending",
+      state: "approved",
       baselineAvailable: true,
       diff: {
         added: { hooks: ["on_stop"], tools: ["search"], coreCapabilities: ["llm"] },

@@ -20,7 +20,11 @@ import {
 } from "../pluginHookIntegrity.js";
 import { approveMcpEntry, revokeMcpEntry } from "../pluginMcpApproval.js";
 import { pluginMcpApprovalState, type PluginMcpApprovalState } from "../pluginMcpIntegrity.js";
-import { approvePluginContent, pluginContentState } from "../pluginTreeDigest.js";
+import {
+  approvePluginContent,
+  pluginContentState,
+  type InstallRecordOptions,
+} from "../pluginTreeDigest.js";
 import type { PluginInstallEntry } from "../types.js";
 import {
   diffNativeSurface,
@@ -37,16 +41,10 @@ import {
  * - `none`: the plugin has no native entry.
  * - `invalid`: it has one, but the manifest or its names cannot be used.
  * - `incompatible`: it was written against a newer `ctx` than this host has.
- * - `pending` / `changed` / `approved`: as for hooks and MCP servers. Only
- *   `approved` may start a process.
+ * - `pending` / `approved`: as for hooks and MCP servers. Only `approved` may
+ *   start a process.
  */
-export type NativePluginState =
-  | "none"
-  | "invalid"
-  | "incompatible"
-  | "pending"
-  | "changed"
-  | "approved";
+export type NativePluginState = "none" | "invalid" | "incompatible" | "pending" | "approved";
 
 export interface NativePluginInspection {
   state: NativePluginState;
@@ -56,9 +54,30 @@ export interface NativePluginInspection {
 }
 
 /**
+ * Why a readable manifest cannot run under this install key on this host.
+ * Checked when the plugin is inspected, and again on the copy that is about
+ * to run.
+ */
+export function nativeManifestProblem(
+  installKey: string,
+  manifest: NativePluginManifest,
+): { state: "invalid" | "incompatible"; error: string } | undefined {
+  const naming = nativeNamingProblem(pluginNameFromKey(installKey), manifest);
+  if (naming) return { state: "invalid", error: naming };
+  if (manifest.apiVersion > NATIVE_PLUGIN_API_VERSION) {
+    return {
+      state: "incompatible",
+      error: `needs plugin API ${manifest.apiVersion}; this CodeShell provides ${NATIVE_PLUGIN_API_VERSION}`,
+    };
+  }
+  return undefined;
+}
+
+/**
  * Read one install's native manifest and decide whether it may run. Approval
- * binds to the whole install tree, like hooks and MCP servers, and has its own
- * record so that approving another executable kind never starts this one.
+ * binds to the plugin as it was installed, like hooks and MCP servers, and has
+ * its own record so that approving another executable kind never starts this
+ * one. The manifest is read from disk as it is now: local edits count.
  */
 export function inspectNativePlugin(
   installKey: string,
@@ -69,21 +88,11 @@ export function inspectNativePlugin(
   if (read.kind === "invalid") return { state: "invalid", error: read.error };
   const manifest = read.manifest;
   const surface = nativePluginSurface(manifest);
-  const naming = nativeNamingProblem(pluginNameFromKey(installKey), manifest);
-  if (naming) return { state: "invalid", manifest, surface, error: naming };
-  if (manifest.apiVersion > NATIVE_PLUGIN_API_VERSION) {
-    return {
-      state: "incompatible",
-      manifest,
-      surface,
-      error: `needs plugin API ${manifest.apiVersion}; this CodeShell provides ${NATIVE_PLUGIN_API_VERSION}`,
-    };
-  }
-  const content = pluginContentState(entry);
-  if (content === "changed") return { state: "changed", manifest, surface };
+  const problem = nativeManifestProblem(installKey, manifest);
+  if (problem) return { ...problem, manifest, surface };
   return {
     state:
-      content === "approved" && entry.approvedNativeDigest === entry.contentDigest
+      pluginContentState(entry) === "approved" && entry.approvedNativeDigest === entry.contentDigest
         ? "approved"
         : "pending",
     manifest,
@@ -92,19 +101,23 @@ export function inspectNativePlugin(
 }
 
 /**
- * Fields written at install/update. The native approval survives only for a
- * byte-identical tree; the approved surface is kept across updates because it
- * is what the next review is compared against.
+ * Fields written at install/update. The native approval survives a download
+ * only for a byte-identical tree, and any update from the user's own
+ * directory (`keepApprovals`). The approved surface is kept across updates
+ * because it is what the next review is compared against.
  */
 export function pluginNativeInstallRecord(
   contentDigest: string | undefined,
   previousEntries: PluginInstallEntry[] = [],
+  options: InstallRecordOptions = {},
 ): Pick<PluginInstallEntry, "approvedNativeDigest" | "approvedNativeSurface"> {
   const approved =
     contentDigest !== undefined &&
     previousEntries.some(
       (entry) =>
-        entry.contentDigest === contentDigest && entry.approvedNativeDigest === contentDigest,
+        entry.contentDigest !== undefined &&
+        entry.approvedNativeDigest === entry.contentDigest &&
+        (options.keepApprovals === true || entry.contentDigest === contentDigest),
     );
   const baseline = previousEntries.find(
     (entry) => entry.approvedNativeSurface !== undefined,
@@ -130,7 +143,8 @@ function approveNativeEntry(
     entry.approvedNativeDigest = entry.contentDigest;
     changed = true;
   }
-  if (!isDeepStrictEqual(entry.approvedNativeSurface, inspection.surface)) {
+  // Without a native entry there is no surface to review; keep the last one.
+  if (inspection.surface && !isDeepStrictEqual(entry.approvedNativeSurface, inspection.surface)) {
     entry.approvedNativeSurface = inspection.surface;
     changed = true;
   }
@@ -166,11 +180,12 @@ function summarize(
 }
 
 /**
- * Approve everything executable in a plugin with one decision: its command
- * hooks, its MCP servers and its native entry. Each kind is approved only if
- * the plugin actually has it. One registry write covers all of them, so a kind
- * that cannot be approved (changed bytes, an unusable manifest) fails the
- * whole action and leaves the record untouched.
+ * Approve a plugin with one decision. Every kind is approved together,
+ * including kinds it does not have yet, so command hooks, MCP servers or a
+ * native entry the user adds locally later run as part of the approved plugin.
+ * A plugin with nothing executable has nothing to approve. One registry write
+ * covers it all, so a kind that cannot be approved (an unusable native
+ * manifest) fails the whole action and leaves the record untouched.
  */
 export function approvePlugin(target: string, beforeCommit?: () => void): PluginApprovalSummary[] {
   return (
@@ -182,12 +197,15 @@ export function approvePlugin(target: string, beforeCommit?: () => void): Plugin
         for (const entry of data.plugins[installKey] ?? []) {
           let changed = false;
           const hooks = inspectPluginHooks(entry.installPath);
-          if (hooks.hasExecutableHooks) changed = approveHookEntry(installKey, entry, hooks);
-          if (Object.keys(readPluginMcp(entry.installPath, plugin)).length > 0) {
-            changed = approveMcpEntry(installKey, plugin, entry) || changed;
-          }
+          const hasServers = Object.keys(readPluginMcp(entry.installPath, plugin)).length > 0;
           const native = inspectNativePlugin(installKey, entry);
-          if (native.state !== "none") {
+          if (hooks.hasExecutableHooks || hasServers || native.state !== "none") {
+            changed = approvePluginContent(installKey, entry);
+            // A definition that does not parse runs nothing either way.
+            if (hooks.state !== "invalid") {
+              changed = approveHookEntry(installKey, entry, hooks) || changed;
+            }
+            changed = approveMcpEntry(installKey, plugin, entry) || changed;
             changed = approveNativeEntry(installKey, entry, native) || changed;
           }
           writeNeeded ||= changed;
@@ -201,8 +219,9 @@ export function approvePlugin(target: string, beforeCommit?: () => void): Plugin
 }
 
 /**
- * Revoke everything executable in a plugin. The approved surface is kept: it
- * is display metadata and the baseline for the next review.
+ * Revoke everything executable in a plugin, the approval of the plugin itself
+ * included. The approved surface is kept: it is display metadata and the
+ * baseline for the next review.
  */
 export function revokePlugin(target: string, beforeCommit?: () => void): PluginApprovalSummary[] {
   return (
@@ -210,13 +229,14 @@ export function revokePlugin(target: string, beforeCommit?: () => void): PluginA
       const out: PluginApprovalSummary[] = [];
       let writeNeeded = false;
       for (const installKey of matchingInstallKeys(data, target, "plugin approval")) {
-        const plugin = pluginNameFromKey(installKey);
         for (const entry of data.plugins[installKey] ?? []) {
           let changed = revokeHookEntry(entry);
-          changed = revokeMcpEntry(plugin, entry) || changed;
-          if (entry.approvedNativeDigest !== undefined) {
-            delete entry.approvedNativeDigest;
-            changed = true;
+          changed = revokeMcpEntry(entry) || changed;
+          for (const field of ["approvedNativeDigest", "approvedContentDigest"] as const) {
+            if (entry[field] !== undefined) {
+              delete entry[field];
+              changed = true;
+            }
           }
           writeNeeded ||= changed;
           out.push(summarize(installKey, entry, changed));

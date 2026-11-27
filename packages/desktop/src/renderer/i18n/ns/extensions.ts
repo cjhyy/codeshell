@@ -466,11 +466,7 @@ export const extensions = {
           pending: {
             title: "插件 MCP 等待授权",
             description:
-              "这 {count} 个外部进程/远程连接在明确授权前不会启动或连接。授权覆盖插件目录里的全部文件；此前安装或授权的插件需要重新授权一次。",
-          },
-          changed: {
-            title: "插件文件在安装后发生变化",
-            description: "连接已阻止。请更新或重新安装插件，再审查并授权。",
+              "这 {count} 个外部进程/远程连接在明确授权前不会启动或连接。授权针对安装或更新下来的版本，之后在本地修改插件不影响授权；此前安装或授权的插件需要重新授权一次。",
           },
         },
         native: {
@@ -480,15 +476,11 @@ export const extensions = {
             approved: {
               title: "原生插件已授权",
               description:
-                "授权覆盖插件目录里的全部文件和下面列出的能力，也包括它的 Hook 与 MCP server。",
+                "授权针对安装或更新下来的版本和下面列出的能力，也包括它的 Hook 与 MCP server。之后在本地修改插件不影响授权，重启插件即可用上改动。",
             },
             pending: {
               title: "原生插件等待授权",
               description: "授权前不会运行它的任何代码。一次授权同时启用它的 Hook 与 MCP server。",
-            },
-            changed: {
-              title: "插件文件在安装后发生变化",
-              description: "已停止加载。请更新或重新安装插件，再审查并授权。",
             },
             invalid: {
               title: "原生插件清单无效",
@@ -544,7 +536,6 @@ export const extensions = {
               "restart-required": "重启应用后生效",
               failed: "加载失败",
               pending: "等待授权",
-              changed: "文件已变化",
               invalid: "清单无效",
               incompatible: "版本不兼容",
             },
@@ -564,28 +555,18 @@ export const extensions = {
         hookApproval: {
           approved: {
             title: "Hook 已授权",
-            description: "当前安装摘要与已授权摘要一致；Hook 可在新会话中执行。",
+            description: "插件已授权；Hook 按插件目录里的当前内容在新会话中执行。",
           },
           pending: {
             title: "Hook 等待授权",
             description:
-              "插件的其他能力仍可使用，但这些 shell Hook 在明确授权前不会执行。授权覆盖插件目录里的全部文件；此前安装或授权的插件需要重新授权一次。",
-          },
-          changed: {
-            title: "插件文件在安装后发生变化",
-            description: "执行已阻止。请更新或重新安装插件，再审查并授权。",
+              "插件的其他能力仍可使用，但这些 shell Hook 在明确授权前不会执行。授权针对安装或更新下来的版本，之后在本地修改插件不影响授权；此前安装或授权的插件需要重新授权一次。",
           },
         },
         hookApprovalLabel: {
           approved: "已授权",
           pending: "待授权，已阻止",
-          changed: "已变更，已阻止",
           none: "无可执行 Hook",
-        },
-        hookIntegrity: {
-          verified: "已验证",
-          changed: "安装后已变更，未执行",
-          legacy: "旧安装，未校验",
         },
       },
       batch: {
@@ -1770,12 +1751,7 @@ export const extensions = {
           pending: {
             title: "Plugin MCP pending approval",
             description:
-              "These {count} external process / remote connection(s) stay blocked until explicitly approved. Approval covers every file in the plugin directory; plugins installed or approved earlier need to be approved once more.",
-          },
-          changed: {
-            title: "Plugin files changed after installation",
-            description:
-              "Connections are blocked. Update or reinstall the plugin, then review and approve it.",
+              "These {count} external process / remote connection(s) stay blocked until explicitly approved. Approval covers the version that was installed or updated; editing the plugin locally afterwards keeps it. Plugins installed or approved earlier need to be approved once more.",
           },
         },
         native: {
@@ -1785,17 +1761,12 @@ export const extensions = {
             approved: {
               title: "Native plugin approved",
               description:
-                "The approval covers every file in the plugin directory and everything listed below, including its hooks and MCP servers.",
+                "The approval covers the version that was installed or updated and everything listed below, including its hooks and MCP servers. Editing the plugin locally afterwards keeps it; restart the plugin to run your edits.",
             },
             pending: {
               title: "Native plugin pending approval",
               description:
                 "None of its code runs before you approve it. One approval also enables its hooks and MCP servers.",
-            },
-            changed: {
-              title: "Plugin files changed after installation",
-              description:
-                "It is no longer loaded. Update or reinstall the plugin, then review and approve it.",
             },
             invalid: {
               title: "Invalid native plugin manifest",
@@ -1854,7 +1825,6 @@ export const extensions = {
               "restart-required": "Takes effect after a restart",
               failed: "Failed to load",
               pending: "Pending approval",
-              changed: "Files changed",
               invalid: "Invalid manifest",
               incompatible: "Incompatible",
             },
@@ -1875,29 +1845,18 @@ export const extensions = {
           approved: {
             title: "Hooks approved",
             description:
-              "The installed digest matches the approved digest; hooks may run in new sessions.",
+              "The plugin is approved; its hooks run in new sessions as they are in the plugin directory now.",
           },
           pending: {
             title: "Hooks pending approval",
             description:
-              "Other plugin capabilities remain available, but these shell hooks cannot run until explicitly approved. Approval covers every file in the plugin directory; plugins installed or approved earlier need to be approved once more.",
-          },
-          changed: {
-            title: "Plugin files changed after installation",
-            description:
-              "Execution is blocked. Update or reinstall the plugin, then review and approve it.",
+              "Other plugin capabilities remain available, but these shell hooks cannot run until explicitly approved. Approval covers the version that was installed or updated; editing the plugin locally afterwards keeps it. Plugins installed or approved earlier need to be approved once more.",
           },
         },
         hookApprovalLabel: {
           approved: "Approved",
           pending: "Pending; blocked",
-          changed: "Changed; blocked",
           none: "No executable hooks",
-        },
-        hookIntegrity: {
-          verified: "Verified",
-          changed: "Changed after install; blocked",
-          legacy: "Legacy install; unchecked",
         },
       },
       batch: {

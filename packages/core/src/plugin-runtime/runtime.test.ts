@@ -287,14 +287,82 @@ describe("native plugin runtime", () => {
     expect(state("demo@local")?.state).toBe("running");
   });
 
-  test("a file changed in the install directory withdraws the plugin on refresh", async () => {
+  test("a local edit leaves the plugin running; restarting it runs the edited code in place", async () => {
     const installed = await install("demo");
     await start();
-    writeFileSync(join(installed, "index.js"), source("tampered"));
+    const module = moduleOf();
+    const firstPid = state("demo@local")?.pid;
+    writeFileSync(join(installed, "index.js"), source("edited"));
     await runtime!.refresh();
-    expect(state("demo@local")?.state).toBe("changed");
-    expect(await hook("Write")).toEqual({});
+    // A settings reload does not pick up local edits on its own.
+    expect(state("demo@local")?.state).toBe("running");
+    expect((await hook("Write")).messages).toEqual(["[demo] v1"]);
+
+    expect(await runtime!.restart("demo@local")).toBe(true);
+    expect(moduleOf()).toBe(module);
+    expect((await hook("Write")).messages).toEqual(["[demo] edited"]);
+    expect(state("demo@local")).toMatchObject({ state: "running" });
+    expect(state("demo@local")?.pid).not.toBe(firstPid);
+    // One process serves; the one it replaced is gone.
+    await waitFor(() => readdirSync(join(runtimeRoot, ".pids")).length === 1);
+    expect(readdirSync(join(runtimeRoot, ".pids"))).toHaveLength(1);
   });
+
+  test("a local edit that declares something new is reported on restart; the old code serves on", async () => {
+    const installed = await install("demo");
+    await start();
+    writeFileSync(
+      join(installed, "index.js"),
+      source(
+        "v2",
+        `ctx.tools.register({ name: "extra", description: "New", inputSchema: {}, execute() { return "x"; } });`,
+      ),
+    );
+    await runtime!.restart("demo@local");
+    expect(state("demo@local")).toMatchObject({ state: "restart-required" });
+    expect((await hook("Write")).messages).toEqual(["[demo] v1"]);
+    await runtime!.refresh();
+    expect(state("demo@local")).toMatchObject({ state: "restart-required" });
+  });
+
+  test("a broken local edit is reported and the old code keeps serving", async () => {
+    const installed = await install("demo");
+    await start();
+    writeFileSync(
+      join(installed, "index.js"),
+      `export default { setup() { throw new Error("half-finished edit"); } };`,
+    );
+    await runtime!.restart("demo@local");
+    expect(state("demo@local")).toMatchObject({ state: "failed" });
+    expect(state("demo@local")?.error).toContain("half-finished edit");
+    expect((await hook("Write")).messages).toEqual(["[demo] v1"]);
+  });
+
+  test("an update that takes over while a call waits for the old process to leave serves that call", async () => {
+    // This plugin takes a while to leave once it is told to.
+    const lingering = (version: string) =>
+      source(
+        version,
+        `process.on("disconnect", () => { const end = Date.now() + 1200; while (Date.now() < end) {} });`,
+      );
+    await installPluginFromPath(writeSource("demo", lingering("v1")), "demo", "t1");
+    approvePlugin("demo");
+    await start();
+    await tool();
+
+    clock = Date.now() + 60_000;
+    runtime!.sweepIdle();
+    // The idle process is on its way out; this call waits for it to be gone.
+    const waiting = tool();
+    writeSource("demo", lingering("v2"));
+    await updatePluginByName("demo", "t2", true);
+    await runtime!.refresh();
+
+    expect(await waiting).toEqual({ ok: true, result: "v2:s-1" });
+    // The process that took over is the one serving; no second copy runs.
+    await waitFor(() => readdirSync(join(runtimeRoot, ".pids")).length === 1, 8_000);
+    expect(readdirSync(join(runtimeRoot, ".pids"))).toHaveLength(1);
+  }, 20_000);
 
   test("a plugin switched off for one session is silent there and unchanged elsewhere", async () => {
     await install("demo");
@@ -315,13 +383,8 @@ describe("native plugin runtime", () => {
     expect((await hook("Write")).messages).toEqual(["[demo] v1"]);
 
     writeSource("demo", source("v2"));
+    // From the user's own directory, so the approval carries over.
     await updatePluginByName("demo", "t2", true);
-    // Updated but not yet approved: the old approved version is withdrawn.
-    await runtime!.refresh();
-    expect(state("demo@local")?.state).toBe("pending");
-    expect(await hook("Write")).toEqual({});
-
-    approvePlugin("demo");
     await runtime!.refresh();
     // The same module object, now served by the new code.
     expect(moduleOf()).toBe(module);
@@ -347,6 +410,15 @@ describe("native plugin runtime", () => {
     expect(state("demo@local")).toMatchObject({ state: "restart-required" });
     // The version this composition was built with keeps serving.
     expect((await hook("Write")).messages).toEqual(["[demo] v1"]);
+
+    // Further reloads report it without starting the new version again.
+    const log = join(runtimeRoot, ".logs", `${state("demo@local")!.moduleId}.log`);
+    const starts = () => readFileSync(log, "utf8").split("started pid").length;
+    const before = starts();
+    await runtime!.refresh();
+    await runtime!.refresh();
+    expect(state("demo@local")).toMatchObject({ state: "restart-required" });
+    expect(starts()).toBe(before);
   });
 
   test("a plugin approved after the worker started is reported, not half-loaded", async () => {

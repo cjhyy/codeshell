@@ -301,9 +301,9 @@ function collectEngine(
       }
       const named =
         "presets" in extension.target ? extension.target.presets : extension.target.allExcept;
-      // A plugin may leave out another plugin's preset, which can be
-      // uninstalled at any time; leaving out one that is not there is a no-op.
-      const mayBeAbsent = resolved.source === "plugin" && !("presets" in extension.target);
+      // A plugin may name another plugin's preset, which can be uninstalled at
+      // any time: adding to, or leaving out, a preset that is not there is a no-op.
+      const mayBeAbsent = resolved.source === "plugin";
       for (const name of named) {
         if (!mayBeAbsent && !presetNames.has(name)) {
           throw new CompositionError(

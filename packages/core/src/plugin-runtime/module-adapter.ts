@@ -476,12 +476,6 @@ export interface NativeModuleInput {
   plugin: string;
   declarations: NativeDeclarations;
   calls: NativePluginCalls;
-  /**
-   * Presets an extension can name as its target, along with the plugin's own.
-   * Another plugin's preset can be uninstalled at any time, so naming it as a
-   * target adds nothing.
-   */
-  hostPresets: ReadonlySet<string>;
 }
 
 /** Build the module the composition compiler sees. Assumes validated declarations. */
@@ -491,9 +485,6 @@ export function buildNativeModule(input: NativeModuleInput): AgentModule {
     declarations.tools.map((tool) => [tool.name, nativeToolName(plugin, tool.name)]),
   );
   const ownSections = new Set(declarations.promptSections.map((section) => section.name));
-  const ownPresets = new Set(
-    declarations.presets.map((preset) => nativeScopedName(plugin, preset.name)),
-  );
   const presets: AgentPreset[] = declarations.presets.map((preset) => ({
     name: nativeScopedName(plugin, preset.name),
     label: preset.label,
@@ -508,25 +499,18 @@ export function buildNativeModule(input: NativeModuleInput): AgentModule {
       ...(rule.reason ? { reason: rule.reason } : {}),
     })),
   }));
+  // Targets are kept as declared. A preset named here may belong to another
+  // plugin, which can be installed later or removed at any time: the
+  // composition treats a name that is not loaded as a no-op. Dropping it here
+  // instead would leave the plugin without extensions, and its tools would
+  // join every preset, the opposite of what it asked for.
   const presetExtensions: AgentPresetExtension[] = declarations.presetExtensions.flatMap(
     (extension): AgentPresetExtension[] => {
       const tools = extension.tools.map((tool) => ownTools.get(tool)!);
-      const known = (name: string) => input.hostPresets.has(name) || ownPresets.has(name);
-      if ("presets" in extension.target) {
-        // A target that is not there (the host has no such preset) is skipped:
-        // the rest of the plugin still loads.
-        const targets = extension.target.presets.filter(known);
-        return targets.length > 0 && tools.length > 0
-          ? [{ target: { presets: targets }, tools }]
-          : [];
-      }
-      // Every preset but the named ones. Like the tools of a plugin without
-      // presets or extensions, this reaches presets other plugins add, so a
-      // name is kept even when no such preset is loaded: leaving out another
-      // plugin's preset must work, and leaving out one that is not there is a no-op.
-      return tools.length > 0
-        ? [{ target: { allExcept: [...extension.target.allExcept] }, tools }]
-        : [];
+      if (tools.length === 0) return [];
+      return "presets" in extension.target
+        ? [{ target: { presets: [...extension.target.presets] }, tools }]
+        : [{ target: { allExcept: [...extension.target.allExcept] }, tools }];
     },
   );
   return {

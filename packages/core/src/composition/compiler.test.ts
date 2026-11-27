@@ -291,6 +291,21 @@ describe("preset extensions", () => {
     expect(injected(composition, "general")).toEqual([]);
   });
 
+  test("a plugin module may name presets that are not loaded; a host module may not", () => {
+    // Another plugin's preset can be uninstalled at any time.
+    for (const target of [{ presets: ["plugin-gone"] }, { allExcept: ["plugin-gone"] }]) {
+      const module = { ...owner([{ target, tools: ["OwnerA"] }]), id: "plugin-owner-00000000" };
+      expect(() =>
+        compileComposition({ pluginModules: [{ module, revision: "r" }] }),
+      ).not.toThrow();
+    }
+    expect(() =>
+      compileComposition({
+        modules: [owner([{ target: { allExcept: ["missing"] }, tools: ["OwnerA"] }])],
+      }),
+    ).toThrow(CompositionError);
+  });
+
   test("an extension may not add another module's tool or target an unknown preset", () => {
     expect(() =>
       compileComposition({

@@ -437,10 +437,8 @@ export interface PluginHookEntry {
   command: string;
   matcher?: string;
   disabled: boolean;
-  /** Hook definition matches install-time digest, changed after install, or predates digests. */
-  integrity: "verified" | "changed" | "legacy";
-  /** Explicit execution trust. Only approved hooks run; approval covers the whole plugin tree. */
-  approval: "approved" | "pending" | "changed" | "none";
+  /** Explicit execution trust. Only approved hooks run; approval covers the plugin as installed. */
+  approval: "approved" | "pending" | "none";
   /** Stable per-hook identity (`plugin:RawEvent:command`) — the record key
    *  written to `capabilityOverrides.pluginHooks` to toggle just this hook. */
   key: string;
@@ -478,7 +476,7 @@ export interface PluginHookReview {
   error?: string;
 }
 
-export type PluginMcpApprovalState = "approved" | "pending" | "changed" | "none";
+export type PluginMcpApprovalState = "approved" | "pending" | "none";
 
 export interface PluginMcpTrustEntry {
   installKey: string;

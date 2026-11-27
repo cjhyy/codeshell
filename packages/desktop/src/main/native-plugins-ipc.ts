@@ -31,6 +31,11 @@ export interface NativePluginRuntimeDeps {
 /** JSON-RPC "invalid params": a worker without the native plugin module does not know the query. */
 const UNKNOWN_QUERY = -32602;
 const QUERY_TIMEOUT_MS = 10_000;
+/**
+ * A restart runs the plugin's files as they are now: it may snapshot them,
+ * start a process and wait out its setup (10 s) and the old copy's cleanup.
+ */
+const RESTART_TIMEOUT_MS = 30_000;
 const MAX_INSTALL_KEY = 512;
 
 function data<T>(reply: Extract<WorkerReply, { ok: true }>): T | undefined {
@@ -77,7 +82,8 @@ export function registerNativePluginIpc(
     query: async (type, params) => {
       const current = bridge();
       if (!current) return { ok: false, message: "The agent worker is not running" };
-      return current.requestWorker("agent/query", { ...params, type }, QUERY_TIMEOUT_MS, {
+      const timeout = type === NATIVE_PLUGINS_RESTART_QUERY ? RESTART_TIMEOUT_MS : QUERY_TIMEOUT_MS;
+      return current.requestWorker("agent/query", { ...params, type }, timeout, {
         settleOnExit: true,
         failFast: true,
         meta: { origin: "host", producer: "native-plugins" },
