@@ -24,6 +24,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildSandboxEnv, groupAlive, killProcessGroup } from "../runtime/spawn-common.js";
 import {
+  EFFECT_CLEANUP_MS,
   fitsPluginMessage,
   PING_TIMEOUT_MS,
   PLUGIN_PROTOCOL_VERSION,
@@ -135,6 +136,8 @@ export class PluginProcess {
   private logBytes = 0;
   private pidFile: string | undefined;
   private exited: Promise<void> = Promise.resolve();
+  /** Waiting for the plugin to confirm its background logic stopped. */
+  private readonly backgroundStops = new Set<() => void>();
   readonly stats: PluginProcessStats = { calls: 0, failures: 0, timeouts: 0 };
 
   constructor(
@@ -142,8 +145,19 @@ export class PluginProcess {
     private readonly options: PluginProcessOptions = {},
   ) {}
 
+  /** Set up and still alive; it may already be on its way out. */
   get isReady(): boolean {
     return this.ready;
+  }
+
+  /** Set up and not being stopped: new calls can go here. */
+  get accepting(): boolean {
+    return this.ready && !this.exitReason;
+  }
+
+  /** Settles once the process has exited; at once if it never started. */
+  whenExited(): Promise<void> {
+    return this.exited;
   }
 
   get inFlight(): number {
@@ -305,7 +319,27 @@ export class PluginProcess {
 
   /** Start or stop the plugin's background effects. */
   setBackground(run: boolean): void {
-    if (this.ready) this.post({ t: "background", run });
+    if (!run) void this.stopBackground();
+    else if (this.ready) this.post({ t: "background", run });
+  }
+
+  /**
+   * Stop the plugin's background effects while the process keeps serving.
+   * Resolves once their cleanups have run, the process has exited, or the
+   * plugin took longer than it is given to clean up.
+   */
+  stopBackground(timeoutMs = EFFECT_CLEANUP_MS): Promise<void> {
+    if (!this.ready || this.exitReason || !this.child?.connected) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        this.backgroundStops.delete(done);
+        resolve();
+      };
+      const timer = setTimeout(done, timeoutMs);
+      this.backgroundStops.add(done);
+      this.post({ t: "background", run: false });
+    });
   }
 
   /**
@@ -391,6 +425,8 @@ export class PluginProcess {
       }
     } else if (raw.t === "log") {
       this.writeLog(String(raw.level), String(raw.message));
+    } else if (raw.t === "background-stopped") {
+      for (const done of [...this.backgroundStops]) done();
     }
   }
 
@@ -445,6 +481,13 @@ export class PluginProcess {
     }
     this.queue.length = 0;
     this.active = 0;
+    for (const done of [...this.backgroundStops]) done();
+    // What the plugin started is in its process group and goes with it,
+    // however the plugin itself left. A group that is already empty is
+    // left alone; while it has members its id cannot be reused.
+    if (child.pid !== undefined && process.platform !== "win32") {
+      void killProcessGroup(child.pid, { graceMs: STOP_GRACE_MS });
+    }
     this.writeLog("info", `exited code=${code} signal=${signal}`);
     this.log?.end();
     this.log = undefined;

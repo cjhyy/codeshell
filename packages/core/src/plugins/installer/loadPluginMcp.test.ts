@@ -100,7 +100,11 @@ describe("mergePluginMcpServers", () => {
       bare: { command: "bare", name: "bare" },
     });
     const merged = mergePluginMcpServers({}, []);
-    expect(merged["safe:ok"]).toEqual({ command: "ok", name: "safe:ok" });
+    expect(merged["safe:ok"]).toEqual({
+      command: "ok",
+      name: "safe:ok",
+      env: { PYTHONDONTWRITEBYTECODE: "1" },
+    });
     expect(merged["other:escape"]).toBeUndefined();
     expect(merged.bare).toBeUndefined();
   });
@@ -134,12 +138,27 @@ describe("mergePluginMcpServers", () => {
       name: "bad:valid",
       command: "mcp-server",
       args: ["--stdio"],
-      env: { MODE: "safe" },
+      env: { PYTHONDONTWRITEBYTECODE: "1", MODE: "safe" },
       envVars: ["TOKEN"],
       enabled: false,
       allowedTools: ["read", "search"],
       disabledTools: ["delete"],
     });
+  });
+
+  test("a server it launches cannot write Python bytecode into the approved install", () => {
+    regCcPlugin("py", {
+      mcpServers: {
+        server: { command: "python3", args: ["server.py"] },
+        tuned: { command: "python3", args: ["server.py"], env: { TOKEN: "x" } },
+        remote: { url: "https://example.com/mcp" },
+      },
+    });
+    const merged = mergePluginMcpServers({}, [], { "py:tuned": { env: { TOKEN: "y" } } });
+    expect(merged["py:server"]?.env).toEqual({ PYTHONDONTWRITEBYTECODE: "1" });
+    // A user override replaces the plugin's env; the setting survives it.
+    expect(merged["py:tuned"]?.env).toEqual({ PYTHONDONTWRITEBYTECODE: "1", TOKEN: "y" });
+    expect(merged["py:remote"]?.env).toBeUndefined();
   });
 
   test("rejects an excessive server map as a unit", () => {
@@ -220,7 +239,7 @@ describe("mergePluginMcpServers", () => {
       expect(merged["gh:server"].allowedTools).toEqual(["search"]);
       expect(merged["gh:server"].disabledTools).toEqual(["delete"]);
       expect(merged["gh:server"].envVars).toEqual(["GITHUB_TOKEN"]);
-      expect(merged["gh:server"].env).toEqual({ FOO: "bar" });
+      expect(merged["gh:server"].env).toEqual({ PYTHONDONTWRITEBYTECODE: "1", FOO: "bar" });
     });
 
     test("override NEVER replaces command/args/url/transport — those stay from the plugin", () => {

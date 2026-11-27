@@ -146,7 +146,11 @@ export type PluginContextProvider = (
   | undefined
   | Promise<string | { text?: string } | null | undefined>;
 
-/** Runs while the plugin is loaded; may return a cleanup function. */
+/**
+ * Runs while the plugin is loaded; may return a cleanup function. When the
+ * plugin is stopped, updated or revoked, `signal` is aborted and the cleanup
+ * runs, within 1.5 s; processes the plugin started are stopped with it.
+ */
 export type PluginEffect = (
   signal: AbortSignal,
 ) => void | (() => void | Promise<void>) | Promise<void | (() => void | Promise<void>)>;

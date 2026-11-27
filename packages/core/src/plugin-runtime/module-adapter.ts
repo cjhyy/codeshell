@@ -34,6 +34,8 @@ import { PluginCallError } from "./process.js";
 import {
   CONTEXT_TIMEOUT_MS,
   DENY_ON_ERROR_EVENTS,
+  MAX_HOOK_TIMEOUT_MS,
+  MAX_TOOL_TIMEOUT_MS,
   type NativeDeclarations,
   type NativeHookDeclaration,
   type NativeToolDeclaration,
@@ -115,12 +117,30 @@ function duplicate(names: readonly string[]): string | undefined {
   return names.find((name, index) => names.indexOf(name) !== index);
 }
 
+function wholeMillis(value: unknown, max: number): boolean {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= max;
+}
+
 /**
  * The authoritative check of what a plugin registered. The plugin process
- * produced these declarations, so nothing in them is assumed well-formed.
- * Returns the first problem, or null.
+ * produced these declarations: normally through the SDK, but the plugin's own
+ * code runs in that process and can answer the handshake itself. So nothing
+ * in them is assumed well-formed, limits the SDK applies are checked again,
+ * and a shape that breaks the check is a problem, not a crash. Returns the
+ * first problem, or null.
  */
 export function validateNativeDeclarations(
+  manifest: NativePluginManifest,
+  declarations: NativeDeclarations,
+): string | null {
+  try {
+    return firstProblem(manifest, declarations);
+  } catch (error) {
+    return `malformed declarations: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+function firstProblem(
   manifest: NativePluginManifest,
   declarations: NativeDeclarations,
 ): string | null {
@@ -150,6 +170,14 @@ export function validateNativeDeclarations(
       hook.onError === "deny" && !(DENY_ON_ERROR_EVENTS as readonly string[]).includes(hook.event),
   );
   if (badPolicy) return `hook "${badPolicy.event}" cannot fail closed; only tool gates can`;
+  for (const hook of declarations.hooks) {
+    if (!wholeMillis(hook.timeoutMs, MAX_HOOK_TIMEOUT_MS)) {
+      return `hook "${hook.event}" needs a timeout of 1 to ${MAX_HOOK_TIMEOUT_MS} ms`;
+    }
+    if (hook.onError !== "ignore" && hook.onError !== "deny") {
+      return `hook "${hook.event}" has an unknown error policy`;
+    }
+  }
 
   const tools = declarations.tools.map((tool) => tool?.name);
   const undeclaredTool = outside(tools, contributes.tools);
@@ -168,6 +196,15 @@ export function validateNativeDeclarations(
       Array.isArray(tool.inputSchema)
     ) {
       return `tool "${tool.name}" needs an object input schema`;
+    }
+    if (!wholeMillis(tool.timeoutMs, MAX_TOOL_TIMEOUT_MS)) {
+      return `tool "${tool.name}" needs a timeout of 1 to ${MAX_TOOL_TIMEOUT_MS} ms`;
+    }
+    if (tool.exposure !== "preset" && tool.exposure !== "always") {
+      return `tool "${tool.name}" has an unknown exposure`;
+    }
+    if (typeof tool.readOnly !== "boolean" || typeof tool.concurrencySafe !== "boolean") {
+      return `tool "${tool.name}" needs readOnly and concurrencySafe flags`;
     }
   }
 
@@ -439,7 +476,11 @@ export interface NativeModuleInput {
   plugin: string;
   declarations: NativeDeclarations;
   calls: NativePluginCalls;
-  /** Presets a preset extension may target: the host's own, never another plugin's. */
+  /**
+   * Presets an extension can name as its target, along with the plugin's own.
+   * Another plugin's preset can be uninstalled at any time, so naming it as a
+   * target adds nothing.
+   */
   hostPresets: ReadonlySet<string>;
 }
 
@@ -479,8 +520,12 @@ export function buildNativeModule(input: NativeModuleInput): AgentModule {
           ? [{ target: { presets: targets }, tools }]
           : [];
       }
+      // Every preset but the named ones. Like the tools of a plugin without
+      // presets or extensions, this reaches presets other plugins add, so a
+      // name is kept even when no such preset is loaded: leaving out another
+      // plugin's preset must work, and leaving out one that is not there is a no-op.
       return tools.length > 0
-        ? [{ target: { allExcept: extension.target.allExcept.filter(known) }, tools }]
+        ? [{ target: { allExcept: [...extension.target.allExcept] }, tools }]
         : [];
     },
   );

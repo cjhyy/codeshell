@@ -293,6 +293,18 @@ function applyOverride(
 }
 
 /**
+ * Approval covers every byte of a plugin's install tree, and a local server
+ * the plugin declares runs from that tree. CPython would drop __pycache__ next
+ * to each module it imports there and turn the approved plugin into a changed
+ * one on its first run, the same guard its command hooks get. A value the
+ * plugin or the user set explicitly still wins.
+ */
+function withoutBytecodeWrites(config: MCPServerConfig): MCPServerConfig {
+  if (!config.command || (config.transport ?? "stdio") !== "stdio") return config;
+  return { ...config, env: { PYTHONDONTWRITEBYTECODE: "1", ...config.env } };
+}
+
+/**
  * Read a single plugin's MCP servers, already keyed `<plugin>:<server>`.
  *
  * Two on-disk shapes are supported:
@@ -358,7 +370,7 @@ export function mergePluginMcpServers(
       if (approval === "pending" || approval === "changed" || approval === "none") continue;
       for (const [k, cfg] of Object.entries(servers)) {
         if (k in merged) continue; // user / earlier wins
-        merged[k] = applyOverride(cfg, overrides[k]);
+        merged[k] = withoutBytecodeWrites(applyOverride(cfg, overrides[k]));
       }
     }
   }

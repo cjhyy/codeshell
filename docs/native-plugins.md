@@ -92,9 +92,16 @@ against the manifest. The handlers stay in the plugin process.
   stderr.
 - `ctx.hooks.on(event, handler, { timeoutMs, onError })`.
 - `ctx.tools.register({ name, description, inputSchema, readOnly, concurrencySafe, timeoutMs, exposure, execute })`.
-- `ctx.presets.add(...)` and `ctx.presets.extend(target, tools)`.
+- `ctx.presets.add(...)` and `ctx.presets.extend(target, tools)`. A target is a
+  list of presets, the host's or the plugin's own (any other name is skipped),
+  or `{ allExcept: [...] }`: every preset but the named ones, including presets
+  other plugins add, as for the tools of a plugin with neither presets nor
+  extensions.
 - `ctx.prompt.section(name, text)` and `ctx.context.provide(name, provider)`.
-- `ctx.effect(effect)`: background logic; it gets an abort signal and may return a cleanup function.
+- `ctx.effect(effect)`: background logic; it gets an abort signal and may return
+  a cleanup function. When the plugin is stopped, updated, revoked or the worker
+  exits, the signal is aborted and the cleanup runs, within 1.5 s. An update
+  cleans up the old copy's effects before the new copy starts its own.
 - `ctx.core.has(name)` and `ctx.host.has(name)`: always false in plugin API 1.
 
 What a hook can change depends on the event (see `PluginHookReply` in
@@ -147,11 +154,13 @@ collide, the one installed first wins.
 A call that times out is followed by a liveness check, and a process that does
 not answer it is killed. A plugin whose process fails three times within a
 minute, or whose calls fail five times in a row, is stopped until the user
-restarts it from the plugin detail page. A plugin without background logic
-gives its process back after ten minutes without calls and gets a new one on
-the next call; one with background logic is restarted automatically after a
-crash. Processes left behind by a worker that was killed are stopped when the
-next worker starts.
+restarts it from the plugin detail page; a call that could not be sent (larger
+than one message, or too many calls waiting) does not count against it. A
+plugin without background logic gives its process back after ten minutes
+without calls and gets a new one on the next call; one with background logic is
+restarted automatically after a crash. Processes the plugin started itself are
+stopped together with its process. Processes left behind by a worker that was
+killed are stopped when the next worker starts.
 
 Approving, revoking, updating and switching plugins off all end in a settings
 reload. An update that only changes code takes over in place; one that changes
@@ -171,7 +180,10 @@ Desktop asks only a worker that is already running.
 - Allow rules in presets; plugins can only ask or deny.
 - Loading a new plugin, or new declarations, without restarting the worker.
 - A plugin that writes into its own install directory turns itself into changed
-  content; keep state in the data directory.
+  content; keep state in the data directory. Command hooks and MCP servers run
+  from the install directory with `PYTHONDONTWRITEBYTECODE=1`, so Python does
+  not write bytecode there; a tool that creates files there at run time, such
+  as `uv run` creating `.venv`, still does.
 
 ## Code map
 

@@ -14,6 +14,7 @@ import type { PluginContext } from "../plugin-sdk.js";
 import {
   DEFAULT_HOOK_TIMEOUT_MS,
   DEFAULT_TOOL_TIMEOUT_MS,
+  EFFECT_CLEANUP_MS,
   fitsPluginMessage,
   MAX_HOOK_TIMEOUT_MS,
   MAX_TOOL_TIMEOUT_MS,
@@ -54,7 +55,9 @@ const declarations: NativeDeclarations = {
 const effects: Effect[] = [];
 const running = new Map<number, AbortController>();
 let registering = false;
-let background: { controller: AbortController; cleanups: unknown[] } | undefined;
+/** The running effects: aborted through `controller`, cleaned up once `started` settles. */
+let background: { controller: AbortController; started: Promise<unknown[]> } | undefined;
+let leaving = false;
 
 function send(message: PluginToWorkerMessage): void {
   // The worker going away closes the channel; there is nobody left to tell.
@@ -308,30 +311,95 @@ async function invoke(message: Extract<WorkerToPluginMessage, { t: "invoke" }>):
   }
 }
 
-async function setBackground(run: boolean): Promise<void> {
-  if (run === (background !== undefined)) return;
-  if (!run) {
-    const stopping = background!;
-    background = undefined;
-    stopping.controller.abort();
-    for (const cleanup of stopping.cleanups) {
+function startBackground(): void {
+  if (background || leaving) return;
+  const controller = new AbortController();
+  const started = (async () => {
+    const cleanups: unknown[] = [];
+    for (const effect of effects) {
+      // Stopped while starting: the rest never start.
+      if (controller.signal.aborted) break;
       try {
-        if (typeof cleanup === "function") await cleanup();
+        cleanups.push(await effect(controller.signal));
       } catch (error) {
-        log("warn", ["effect cleanup failed:", String(error)]);
+        log("error", ["effect failed to start:", String(error)]);
       }
     }
-    return;
-  }
-  const started = { controller: new AbortController(), cleanups: [] as unknown[] };
-  background = started;
-  for (const effect of effects) {
+    return cleanups;
+  })();
+  background = { controller, started };
+}
+
+/** Abort the effects and run their cleanups, including those of effects still starting. */
+async function stopBackground(): Promise<void> {
+  const stopping = background;
+  if (!stopping) return;
+  background = undefined;
+  stopping.controller.abort();
+  for (const cleanup of await stopping.started) {
     try {
-      started.cleanups.push(await effect(started.controller.signal));
+      if (typeof cleanup === "function") await cleanup();
     } catch (error) {
-      log("error", ["effect failed to start:", String(error)]);
+      log("warn", ["effect cleanup failed:", String(error)]);
     }
   }
+}
+
+/**
+ * Exit, and take along whatever the plugin started. The worker starts this
+ * process detached, so it leads its own process group and the plugin's own
+ * child processes are in that group too.
+ */
+function exit(code: number): never {
+  if (process.platform !== "win32") {
+    // The signal reaches this process as well; it leaves through exit() instead.
+    process.on("SIGTERM", () => {});
+    try {
+      process.kill(-process.pid, "SIGTERM");
+    } catch {
+      /* not a group leader: nothing else to take along */
+    }
+  }
+  process.exit(code);
+}
+
+/**
+ * The channel closed: the worker stopped this plugin, or is itself gone.
+ * Background logic gets to clean up within a deadline, then the process goes.
+ */
+async function leave(): Promise<void> {
+  if (leaving) return;
+  leaving = true;
+  for (const controller of running.values()) controller.abort();
+  // Holds even when a cleanup never returns.
+  setTimeout(() => exit(0), EFFECT_CLEANUP_MS);
+  await stopBackground().catch(() => {});
+  exit(0);
+}
+
+let failing = false;
+
+/**
+ * The plugin broke this process. The worker only sees an exit code, so the
+ * reason goes out first, and the exit waits until it has been handed over:
+ * a message still queued when the process exits is lost.
+ */
+function fail(what: string, error: unknown): void {
+  if (failing) return;
+  failing = true;
+  setTimeout(() => exit(1), 1_000);
+  const message = `${what}: ${String((error as Error)?.stack ?? error)}`.slice(0, 8_192);
+  try {
+    if (process.connected && process.send) {
+      process.send({ t: "log", level: "error", message } satisfies PluginToWorkerMessage, () =>
+        exit(1),
+      );
+      return;
+    }
+  } catch {
+    /* the channel is closing */
+  }
+  exit(1);
 }
 
 process.on("message", (raw: WorkerToPluginMessage) => {
@@ -350,7 +418,8 @@ process.on("message", (raw: WorkerToPluginMessage) => {
       running.get(raw.id)?.abort();
       break;
     case "background":
-      void setBackground(raw.run);
+      if (raw.run) startBackground();
+      else void stopBackground().then(() => send({ t: "background-stopped" }));
       break;
     case "ping":
       send({ t: "pong", id: raw.id });
@@ -358,16 +427,9 @@ process.on("message", (raw: WorkerToPluginMessage) => {
   }
 });
 
-// The worker is gone, whether it exited or crashed: nothing is left to serve.
-process.on("disconnect", () => process.exit(0));
+// Stopped by the worker, or the worker is gone: nothing is left to serve.
+process.on("disconnect", () => void leave());
 
-// A plugin that breaks itself is restarted by the worker on its next call;
-// say why before going, because the worker only sees an exit code.
-process.on("uncaughtException", (error) => {
-  log("error", ["uncaught exception:", String(error?.stack ?? error)]);
-  process.exit(1);
-});
-process.on("unhandledRejection", (reason) => {
-  log("error", ["unhandled rejection:", String((reason as Error)?.stack ?? reason)]);
-  process.exit(1);
-});
+// A plugin that breaks itself is started again by the worker.
+process.on("uncaughtException", (error) => fail("uncaught exception", error));
+process.on("unhandledRejection", (reason) => fail("unhandled rejection", reason));

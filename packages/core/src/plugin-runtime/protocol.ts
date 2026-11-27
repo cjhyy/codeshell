@@ -23,6 +23,11 @@ export const MAX_TOOL_TIMEOUT_MS = 600_000;
 export const CONTEXT_TIMEOUT_MS = 2_000;
 export const SETUP_TIMEOUT_MS = 10_000;
 export const PING_TIMEOUT_MS = 2_000;
+/**
+ * How long a plugin's background logic gets to clean up once it is stopped.
+ * Shorter than the worker's grace before it kills a process that does not leave.
+ */
+export const EFFECT_CLEANUP_MS = 1_500;
 
 /** Events whose handler may ask to fail closed when the plugin cannot answer. */
 export const DENY_ON_ERROR_EVENTS = ["pre_tool_use", "on_permission_check"] as const;
@@ -105,7 +110,9 @@ export type PluginToWorkerMessage =
   | { t: "result"; id: number; ok: true; value: unknown }
   | { t: "result"; id: number; ok: false; error: PluginErrorPayload }
   | { t: "pong"; id: number }
-  | { t: "log"; level: "debug" | "info" | "warn" | "error"; message: string };
+  | { t: "log"; level: "debug" | "info" | "warn" | "error"; message: string }
+  /** Answers `background` with `run: false` once every cleanup has run. */
+  | { t: "background-stopped" };
 
 // What a plugin's handlers receive and return; type-only, so nothing is loaded.
 export type {

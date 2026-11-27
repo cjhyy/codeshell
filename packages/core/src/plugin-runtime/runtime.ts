@@ -54,6 +54,15 @@ const IDLE_REAP_MS = 10 * 60 * 1000;
 const IDLE_SWEEP_MS = 60 * 1000;
 /** How long a plugin with background logic stays down after its process died. */
 const BACKGROUND_REVIVE_MS = 1_000;
+/**
+ * Failures that say nothing about a plugin's health: the caller gave up, or
+ * this side refused to send the call (too large, or too many waiting).
+ */
+const NOT_THE_PLUGINS_FAULT: ReadonlySet<string> = new Set([
+  "CANCELLED",
+  "MESSAGE_TOO_LARGE",
+  "BUSY",
+]);
 
 /**
  * - `running`: part of this composition and serving calls.
@@ -132,6 +141,10 @@ class PluginSlot implements NativePluginCalls {
   private consecutiveFailures = 0;
   /** Counters of processes that are gone, so the totals survive a restart. */
   private retired = { calls: 0, failures: 0, timeouts: 0 };
+  /** Bumped when an update takes over, so a start still on its way up cannot displace it. */
+  private generation = 0;
+  /** The process was given back for being idle: the next one is not a restart. */
+  private idleStopped = false;
 
   constructor(
     private readonly runtime: NativePluginRuntime,
@@ -157,19 +170,26 @@ class PluginSlot implements NativePluginCalls {
     return this.runtime.options.sessionCwd(sessionId);
   }
 
+  /** Why no process may serve this plugin right now, if anything stands in the way. */
+  private refusal(): PluginCallError | undefined {
+    if (this.fenced) return new PluginCallError("REVOKED", "the plugin is no longer approved");
+    if (this.runtime.isClosed) {
+      return new PluginCallError("PLUGIN_UNAVAILABLE", "the host is shutting down");
+    }
+    if (this.circuitOpen) {
+      return new PluginCallError("CIRCUIT_OPEN", "the plugin keeps failing and was stopped");
+    }
+    return undefined;
+  }
+
   async invoke(
     kind: PluginInvocationKind,
     name: string,
     payload: unknown,
     options: { timeoutMs: number; signal?: AbortSignal },
   ): Promise<unknown> {
-    if (this.fenced) throw new PluginCallError("REVOKED", "the plugin is no longer approved");
-    if (this.runtime.isClosed) {
-      throw new PluginCallError("PLUGIN_UNAVAILABLE", "the host is shutting down");
-    }
-    if (this.circuitOpen) {
-      throw new PluginCallError("CIRCUIT_OPEN", "the plugin keeps failing and was stopped");
-    }
+    const refused = this.refusal();
+    if (refused) throw refused;
     this.lastCallAt = this.runtime.now();
     const process = await this.ensureProcess();
     try {
@@ -177,8 +197,7 @@ class PluginSlot implements NativePluginCalls {
       this.consecutiveFailures = 0;
       return value;
     } catch (error) {
-      // A cancelled call says nothing about the plugin's health.
-      if (!(error instanceof PluginCallError) || error.code !== "CANCELLED") {
+      if (!(error instanceof PluginCallError) || !NOT_THE_PLUGINS_FAULT.has(error.code)) {
         this.lastError = describe(error);
         this.consecutiveFailures += 1;
         if (this.consecutiveFailures >= CONSECUTIVE_FAILURE_LIMIT) {
@@ -191,15 +210,25 @@ class PluginSlot implements NativePluginCalls {
 
   /** The current process, started again if it exited or was given back while idle. */
   private ensureProcess(): Promise<PluginProcess> {
-    if (this.process?.isReady) return Promise.resolve(this.process);
-    this.starting ??= this.startProcess(this.spec).finally(() => {
+    const current = this.process;
+    if (current?.accepting) return Promise.resolve(current);
+    this.starting ??= this.startAfter(current).finally(() => {
       this.starting = undefined;
     });
     return this.starting;
   }
 
+  /** Start a new process once `leaving`, if any, is gone: two copies never run side by side. */
+  private async startAfter(leaving: PluginProcess | undefined): Promise<PluginProcess> {
+    if (leaving) await leaving.whenExited();
+    const refused = this.refusal();
+    if (refused) throw refused;
+    return this.startProcess(this.spec);
+  }
+
   /** Start a process from `spec` and require it to declare exactly what this slot was built for. */
   async startProcess(spec: PluginProcessSpec): Promise<PluginProcess> {
+    const generation = this.generation;
     const process = this.runtime.createProcess(spec, (reason) => this.handleExit(process, reason));
     let declarations: NativeDeclarations;
     try {
@@ -216,6 +245,15 @@ class PluginSlot implements NativePluginCalls {
         "the plugin registered something different from what this session was built with",
       );
     }
+    // Revoked, closed or given up on while this copy was setting up, or an
+    // update took over meanwhile: it never serves.
+    const refused = this.refusal();
+    if (refused || generation !== this.generation) {
+      await process.stop();
+      if (refused) throw refused;
+      if (this.process?.accepting) return this.process;
+      throw new PluginCallError("PLUGIN_UNAVAILABLE", "the plugin was updated while starting");
+    }
     this.adopt(process, spec);
     return process;
   }
@@ -226,8 +264,15 @@ class PluginSlot implements NativePluginCalls {
     if (previous && previous !== process) this.absorb(previous);
     this.process = process;
     this.spec = spec;
-    this.restarts += 1;
+    if (this.idleStopped) this.idleStopped = false;
+    else this.restarts += 1;
     if (this.background) process.setBackground(true);
+  }
+
+  /** An update takes over: a start of the previous code still under way never serves. */
+  takeOver(process: PluginProcess, spec: PluginProcessSpec): void {
+    this.generation += 1;
+    this.adopt(process, spec);
   }
 
   private absorb(process: PluginProcess): void {
@@ -255,7 +300,7 @@ class PluginSlot implements NativePluginCalls {
   revive(delayMs = 0): void {
     if (!this.background) return;
     const timer = setTimeout(() => {
-      if (this.fenced || this.circuitOpen || this.runtime.isClosed || this.process) return;
+      if (this.refusal() || this.process) return;
       void this.ensureProcess().catch(() => {});
     }, delayMs);
     timer.unref?.();
@@ -286,6 +331,15 @@ class PluginSlot implements NativePluginCalls {
     await this.process?.stop();
   }
 
+  /**
+   * No longer approved or installed: refused from here on, in every session,
+   * and its process stopped, including one that is still starting.
+   */
+  async fence(): Promise<void> {
+    this.fenced = true;
+    await this.stopForGood();
+  }
+
   /** Forget past failures: the user asked to try again, or the plugin was updated. */
   resetCircuit(): void {
     this.circuitOpen = false;
@@ -295,9 +349,9 @@ class PluginSlot implements NativePluginCalls {
 
   reapIfIdle(now: number, idleMs: number): void {
     const process = this.process;
-    if (!process?.isReady || this.background) return;
+    if (!process?.accepting || this.background) return;
     if (process.inFlight > 0 || now - this.lastCallAt < idleMs) return;
-    this.restarts -= 1; // coming back from an idle stop is not a restart worth reporting
+    this.idleStopped = true;
     void process.stop();
   }
 
@@ -324,6 +378,8 @@ export class NativePluginRuntime {
   private readonly slots = new Map<string, PluginSlot>();
   /** Why an installed native plugin is not part of this composition. */
   private readonly notes = new Map<string, { state: NativePluginRuntimeState; error?: string }>();
+  /** Plugins that could not be loaded when this worker started, and the content that failed. */
+  private readonly loadFailures = new Map<string, { contentDigest: string; error: string }>();
   private accepted: PluginAgentModule[] = [];
   private sweeper: ReturnType<typeof setInterval> | undefined;
   private refreshing: Promise<void> = Promise.resolve();
@@ -457,7 +513,7 @@ export class NativePluginRuntime {
     for (const [index, candidate] of candidates.entries()) {
       const outcome = prepared[index]!;
       if (outcome.status === "rejected") {
-        this.fail(candidate.installKey, describe(outcome.reason));
+        this.fail(candidate, describe(outcome.reason));
         continue;
       }
       const { process, spec, declarations, onExit } = outcome.value;
@@ -485,7 +541,7 @@ export class NativePluginRuntime {
         });
       } catch (error) {
         await process.stop();
-        this.fail(candidate.installKey, describe(error));
+        this.fail(candidate, describe(error));
         continue;
       }
       onExit.current = (reason) => slot.handleExit(process, reason);
@@ -517,7 +573,9 @@ export class NativePluginRuntime {
     }
   }
 
-  private fail(installKey: string, error: string): void {
+  private fail(candidate: Candidate, error: string): void {
+    const { installKey, contentDigest } = candidate;
+    this.loadFailures.set(installKey, { contentDigest, error });
     this.notes.set(installKey, { state: "failed", error });
     this.options.log?.("native_plugin.load_failed", { plugin: installKey, error });
   }
@@ -547,10 +605,9 @@ export class NativePluginRuntime {
         // Uninstalled, revoked, or changed on disk: withdrawn at once, in
         // every session, including the ones that are running.
         if (!slot.fenced) {
-          // Refused from this line on; the process itself is stopped next.
-          slot.fenced = true;
           this.options.log?.("native_plugin.fenced", { plugin: installKey });
-          await slot.process?.stop();
+          // Refused at once; then its process is stopped, a starting one included.
+          await slot.fence();
         }
         continue;
       }
@@ -559,12 +616,20 @@ export class NativePluginRuntime {
       await this.replace(slot, candidate);
     }
     for (const candidate of candidates) {
-      if (!this.slots.has(candidate.installKey)) {
-        this.notes.set(candidate.installKey, {
-          state: "restart-required",
-          error: "approved after this worker started; it loads on the next start",
-        });
-      }
+      if (this.slots.has(candidate.installKey)) continue;
+      const failure = this.loadFailures.get(candidate.installKey);
+      this.notes.set(
+        candidate.installKey,
+        // The bytes that failed to load at start are still not loaded.
+        failure?.contentDigest === candidate.contentDigest
+          ? { state: "failed", error: failure.error }
+          : {
+              state: "restart-required",
+              error: failure
+                ? "updated after it failed to load; it loads on the next start"
+                : "approved after this worker started; it loads on the next start",
+            },
+      );
     }
   }
 
@@ -590,11 +655,19 @@ export class NativePluginRuntime {
       });
       return;
     }
+    // Background logic changes hands without overlap: the old copy's effects
+    // are cleaned up before the new copy starts its own.
+    if (slot.background) await slot.process?.stopBackground();
+    if (this.closed) {
+      await prepared.process.stop();
+      return;
+    }
+    // Read after the wait: the old copy may have been replaced meanwhile.
     const previous = slot.process;
     prepared.onExit.current = (reason) => slot.handleExit(prepared.process, reason);
     slot.contentDigest = candidate.contentDigest;
     slot.resetCircuit();
-    slot.adopt(prepared.process, prepared.spec);
+    slot.takeOver(prepared.process, prepared.spec);
     this.options.log?.("native_plugin.replaced", { plugin: candidate.installKey });
     // Calls already running finish on the process they started on.
     if (previous && previous !== prepared.process) void previous.retire();
@@ -628,7 +701,7 @@ export class NativePluginRuntime {
               ? note.state
               : "running",
         ...(note?.error ? { error: note.error } : {}),
-        restarts: Math.max(0, slot.restarts),
+        restarts: slot.restarts,
         ...slot.stats(),
         logFile: slot.spec.logFile,
       });

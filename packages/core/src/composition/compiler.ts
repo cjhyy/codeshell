@@ -288,7 +288,7 @@ function collectEngine(
   // that exist; the target decides membership at use time (resolve-preset).
   const presetNames = new Set(presets.map((p) => p.key));
   const presetExtensions: Array<ResolvedContribution<AgentPresetExtension>> = [];
-  for (const { module } of registered) {
+  for (const { module, resolved } of registered) {
     (module.engine?.presetExtensions ?? []).forEach((extension, index) => {
       for (const toolName of extension.tools) {
         const tool = presetTagTools.find((t) => t.tool.definition.name === toolName);
@@ -301,8 +301,11 @@ function collectEngine(
       }
       const named =
         "presets" in extension.target ? extension.target.presets : extension.target.allExcept;
+      // A plugin may leave out another plugin's preset, which can be
+      // uninstalled at any time; leaving out one that is not there is a no-op.
+      const mayBeAbsent = resolved.source === "plugin" && !("presets" in extension.target);
       for (const name of named) {
-        if (!presetNames.has(name)) {
+        if (!mayBeAbsent && !presetNames.has(name)) {
           throw new CompositionError(
             `Preset extension of "${module.id}" targets unknown preset "${name}"`,
             { code: "unknown_preset_tool", key: name, firstModuleId: module.id },
