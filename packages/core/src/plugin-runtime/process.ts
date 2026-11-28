@@ -219,8 +219,7 @@ export class PluginProcess {
     child.stderr?.on("data", (chunk: Buffer) => this.writeLog("stderr", chunk.toString("utf8")));
     this.exited = new Promise<void>((resolve) => {
       child.once("exit", (code, signal) => {
-        this.onExit(child, code, signal);
-        resolve();
+        resolve(this.onExit(child, code, signal));
       });
     });
 
@@ -469,7 +468,11 @@ export class PluginProcess {
     this.pump();
   }
 
-  private onExit(child: ChildProcess, code: number | null, signal: NodeJS.Signals | null): void {
+  private onExit(
+    child: ChildProcess,
+    code: number | null,
+    signal: NodeJS.Signals | null,
+  ): Promise<void> | void {
     if (this.child !== child) return;
     const reason = this.exitReason ?? "crashed";
     this.child = undefined;
@@ -489,10 +492,13 @@ export class PluginProcess {
       void killProcessGroup(child.pid, { graceMs: STOP_GRACE_MS });
     }
     this.writeLog("info", `exited code=${code} signal=${signal}`);
-    this.log?.end();
+    const log = this.log;
     this.log = undefined;
+    // stop() callers can read the exit record as soon as shutdown completes.
+    const flushed = log && new Promise<void>((done) => log.end(() => done()));
     if (this.pidFile) rmSync(this.pidFile, { force: true });
     this.options.onExit?.({ code, signal, reason });
+    return flushed;
   }
 
   private openLog(): void {
