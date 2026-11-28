@@ -582,16 +582,16 @@ async function checkExists(
 // drops the positives too.
 let filesChangedNonce = 0;
 const filesChangedListeners = new Set<() => void>();
-function bumpFilesChanged(): void {
+export function recheckUnresolvedFileLinks(): void {
   filesChangedNonce++;
   for (const listener of filesChangedListeners) listener();
 }
 export function invalidateFileExistsCache(): void {
   existsCache.clear();
-  bumpFilesChanged();
+  recheckUnresolvedFileLinks();
 }
 if (typeof window !== "undefined") {
-  window.addEventListener("codeshell:files-changed", bumpFilesChanged);
+  window.addEventListener("codeshell:files-changed", recheckUnresolvedFileLinks);
 }
 function subscribeFilesChanged(cb: () => void): () => void {
   filesChangedListeners.add(cb);

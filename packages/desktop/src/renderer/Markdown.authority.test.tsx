@@ -4,7 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import type { SessionWorkspaceAuthority } from "../preload/types";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 ensureMiniDom();
-const { Markdown, invalidateFileExistsCache } = await import("./Markdown");
+const { Markdown, invalidateFileExistsCache, recheckUnresolvedFileLinks } =
+  await import("./Markdown");
 
 interface MiniElementNode {
   tagName?: string;
@@ -386,7 +387,8 @@ test("a turn-end files-changed event rechecks missing links but keeps confirmed 
   checked.length = 0;
   present.add("/turn-end/later.ts");
   await act(async () => {
-    window.dispatchEvent(new Event("codeshell:files-changed"));
+    // The module listens for codeshell:files-changed with this function.
+    recheckUnresolvedFileLinks();
     await flushMicrotasks();
   });
   expect(checked).toEqual(["/turn-end/later.ts"]);
