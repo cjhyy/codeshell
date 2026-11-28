@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import React, { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import {
@@ -95,7 +95,6 @@ function ProjectGroupHarness({
     onSessionContextMenu: () => undefined,
     onPinSession: () => undefined,
     onArchiveSession: () => undefined,
-    workspaceChange: null,
     ...overrides,
   });
 }
@@ -331,6 +330,117 @@ describe("Sidebar project session visibility", () => {
     expect(buttonWithText(container, "展开显示3")).toBeDefined();
   });
 
+  test("project branch hovers share pending and recent reads, and a branch change supersedes both", async () => {
+    ensureMiniDom();
+    const clock = spyOn(performance, "now");
+    let now = 10_000;
+    clock.mockImplementation(() => now);
+    const requests: Array<ReturnType<typeof Promise.withResolvers<{ branch: string }>>> = [];
+    Object.assign(window, {
+      codeshell: {
+        getProjectGitStatus: () => {
+          const request = Promise.withResolvers<{ branch: string }>();
+          requests.push(request);
+          return request.promise;
+        },
+      },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    try {
+      await act(async () => {
+        root?.render(React.createElement(ProjectGroupHarness));
+      });
+      expect(requests).toHaveLength(0);
+      const rows = findElements(container, "LI");
+      const focus = (i: number) => reactPropsOf(rows[i]).onFocus();
+      focus(0);
+      focus(1);
+      expect(requests).toHaveLength(1);
+      await act(async () => {
+        requests[0].resolve({ branch: "main" });
+      });
+      focus(1);
+      expect(requests).toHaveLength(1);
+      const branchChanged = (cwd: string) =>
+        window.dispatchEvent(
+          new CustomEvent("codeshell:git-branches-changed", { detail: { cwd } }),
+        );
+      branchChanged("/other");
+      expect(requests).toHaveLength(1);
+      branchChanged("/repo");
+      expect(requests).toHaveLength(2);
+      branchChanged("/repo");
+      expect(requests).toHaveLength(3);
+      await act(async () => {
+        requests[1].resolve({ branch: "obsolete" });
+      });
+      focus(0);
+      expect(requests).toHaveLength(3);
+      await act(async () => {
+        requests[2].resolve({ branch: "next" });
+      });
+      now += 2_001;
+      focus(0);
+      expect(requests).toHaveLength(4);
+      await act(async () => {
+        requests[3].reject(new Error("temporary failure"));
+      });
+      focus(1);
+      expect(requests).toHaveLength(5);
+      await act(async () => {
+        requests[4].resolve({ branch: "next" });
+      });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  test("workspace changes refresh only their visible session, including back-to-back events", async () => {
+    ensureMiniDom();
+    const authority: string[] = [];
+    const git: string[] = [];
+    const listeners = new Set<(sessionId: string) => void>();
+    Object.assign(window, {
+      codeshell: {
+        getSessionWorkspaceAuthority: async (sessionId: string) => {
+          authority.push(sessionId);
+          return { workspace: { root: "/repo", kind: "main" }, rootStatus: "ok" };
+        },
+        getSessionGitStatus: async (id: string) => {
+          git.push(id);
+          return { branch: "main" };
+        },
+      },
+    });
+    const index = {
+      ...sessionIndex,
+      sessions: sessionIndex.sessions.map((s) => ({ ...s, engineSessionId: s.id })),
+    };
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        React.createElement(ProjectGroupHarness, { index, workspaceListeners: listeners }),
+      );
+    });
+    expect(authority).toHaveLength(5);
+    expect(git).toHaveLength(5);
+    authority.length = git.length = 0;
+    await act(async () => {
+      for (const id of ["hidden", "session-4", "session-4", "session-4", "session-8"]) {
+        for (const refresh of listeners) refresh(id);
+      }
+    });
+    expect(authority).toEqual(["session-4", "session-8", "session-4"]);
+    expect(git.sort()).toEqual(["session-4", "session-8"]);
+    // A row with its own branch never requests the project fallback on focus.
+    expect(reactPropsOf(findElements(container, "LI")[0]).onFocus).toBeUndefined();
+    await act(async () => root?.unmount());
+    root = null;
+    expect(listeners.size).toBe(0);
+  });
+
   test("probes an old Session's Git branch through the Session-scoped API", async () => {
     ensureMiniDom();
     const calls: string[] = [];
@@ -390,7 +500,6 @@ describe("Sidebar project session visibility", () => {
           onSessionContextMenu: () => undefined,
           onPinSession: () => undefined,
           onArchiveSession: () => undefined,
-          workspaceChange: null,
         }),
       );
       await flushMicrotasks();
@@ -487,7 +596,6 @@ describe("Sidebar project session visibility", () => {
           onSessionContextMenu: () => undefined,
           onPinSession: () => undefined,
           onArchiveSession: () => undefined,
-          workspaceChange: null,
         }),
       );
       await flushMicrotasks();
@@ -560,7 +668,6 @@ test("cloud rows never probe local roots or reuse a colliding local repair actio
     onSessionContextMenu: () => {},
     onPinSession: () => {},
     onArchiveSession: () => {},
-    workspaceChange: null,
   };
   await act(async () => {
     root?.render(React.createElement(ProjectGroup, common));

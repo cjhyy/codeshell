@@ -378,6 +378,27 @@ async function exercise(page, config) {
 async function behaviors(page, config) {
   const names = labels(config.language);
   await mount(page, config);
+  await page.evaluate((root) => {
+    window.fixture.readErrors[root] = "Too many pending Desktop Host requests (-32001)";
+  }, rootA);
+  await openProject(page);
+  await page.waitForFunction(
+    (root) =>
+      window.calls.reads.filter((call) => call.path === root && call.method === "getTrust")
+        .length >= 2,
+    rootA,
+  );
+  assert.equal(await page.getByRole("dialog").count(), 0, "Host congestion waits quietly");
+  assert.deepEqual(await page.evaluate(() => window.calls.decisions), []);
+  await page.evaluate((root) => {
+    delete window.fixture.readErrors[root];
+  }, rootA);
+  await page.getByRole("dialog").getByRole("button", { name: names.trust, exact: true }).waitFor();
+  assert.equal(await page.getByRole("alert").count(), 0);
+  assert.deepEqual(await page.evaluate(() => window.calls.decisions), []);
+  reports.push({ ...config, behavior: "host-busy-waits-then-prompts-for-unknown" });
+
+  await mount(page, config);
   await page.evaluate(
     (root) => (window.fixture.readErrors[root] = "Owned trust read failed"),
     rootA,

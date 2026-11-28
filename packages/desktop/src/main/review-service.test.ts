@@ -95,6 +95,29 @@ function workspace(
 }
 
 describe("ReviewService multi-repository aggregation", () => {
+  test("availability discovers secondary repositories without reading their changed files", async () => {
+    let present = true;
+    const getGitStatus = mock(async () => {
+      throw Error("unexpected status");
+    });
+    const service = new ReviewService({
+      resolveWorkspace: async () =>
+        workspace([
+          { id: "main", path: "/missing" },
+          { id: "second", path: "/secondary" },
+        ]),
+      resolveGitTopLevel: async (root) => {
+        if (root === "/missing") throw Error("unreadable");
+        return present ? root : null;
+      },
+      getGitStatus,
+    });
+    expect(await service.getAvailability("session")).toBe("available");
+    present = false;
+    expect(await service.getAvailability("session")).toBe("error");
+    expect(getGitStatus).not.toHaveBeenCalled();
+  });
+
   test("prepares a review with authoritative repository identity and user focus", async () => {
     const repository = repo("ai-review");
     const before = git(repository, ["status", "--porcelain"]);

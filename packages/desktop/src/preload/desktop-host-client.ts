@@ -24,6 +24,9 @@ type Listener = (status: DesktopHostStatus) => void;
 
 const providerMethod = "links/listLocalProviders";
 const replyDeadlineMs = 15_000;
+// Leave room in the shared 128-slot Host window for interactive commands,
+// stream handoffs and workbench IPC. Bulk reads wait in their originating preload.
+const concurrentReads = 32;
 // Network-backed discoveries have their own protocol or provider deadline.
 const serviceDeadlines: ReadonlySet<keyof DesktopBusinessReads> = new Set([
   "ccRoom/sessions",
@@ -52,6 +55,8 @@ export const desktopHostRoutes: Record<
 };
 
 type PendingReply = {
+  method: string;
+  startedAt: number;
   resolve: (value: RpcResponse) => void;
   reject: (error: Error) => void;
   timeout?: ReturnType<typeof setTimeout>;
@@ -96,12 +101,21 @@ export class DesktopHostClient {
   private status: DesktopHostStatus = "connecting";
   private readonly listeners = new Set<Listener>();
   private readonly pending = new Map<number, PendingReply>();
+  private activeReads = 0;
+  private nextQueueLogAt = 0;
+  private readonly waitingReads: Array<{
+    resolve: () => void;
+    reject: (reason: Error) => void;
+  }> = [];
   private nextId = 0;
   private initialPort?: Promise<MessagePort | undefined>;
   private finishStartup?: (port?: MessagePort) => void;
   private readonly startupTimeout: ReturnType<typeof setTimeout>;
 
-  constructor(private readonly timeoutMs = replyDeadlineMs) {
+  constructor(
+    private readonly timeoutMs = replyDeadlineMs,
+    private readonly logQueue?: (data: Record<string, unknown>) => void,
+  ) {
     this.initialPort = new Promise((resolve) => {
       this.finishStartup = resolve;
     });
@@ -238,6 +252,12 @@ export class DesktopHostClient {
       request.reject(error);
     }
     this.pending.clear();
+    this.activeReads = 0;
+    this.nextQueueLogAt = 0;
+    // An unsent read was admitted by this document only. Do not send it to a
+    // replacement Host or through the legacy IPC fallback after disconnect.
+    const retired = rpcError(DesktopHostErrors.revoked, "Desktop Host read connection retired");
+    for (const waiter of this.waitingReads.splice(0)) waiter.reject(retired);
     this.publish(status);
   }
 
@@ -266,7 +286,7 @@ export class DesktopHostClient {
     if (!port || port !== this.port || this.status !== "ready") {
       throw rpcError(DesktopHostErrors.reconnecting, `Desktop Host ${this.status}`);
     }
-    return (await this.request(port, providerMethod)) as LocalLinkProviderView[];
+    return (await this.readOnPort(port, providerMethod)) as LocalLinkProviderView[];
   }
 
   async listDiskSessions(
@@ -445,7 +465,7 @@ export class DesktopHostClient {
   ): Promise<DesktopBusinessReads[K]["result"]> {
     if (!fallback && this.initialPort) await this.initialPort;
     if (this.status === "ready" && this.port && this.methods.has(method))
-      return (await this.request(
+      return (await this.readOnPort(
         this.port,
         method,
         params,
@@ -463,7 +483,7 @@ export class DesktopHostClient {
   ): Promise<T> {
     if (this.status !== "ready" || !this.port || !this.methods.has(method)) return readIpc();
     try {
-      return (await this.request(this.port, method, params)) as T;
+      return (await this.readOnPort(this.port, method, params)) as T;
     } catch (error) {
       // Keep the original session catalog's fallback for older Hosts. Revocation,
       // validation and application errors from the task Host are authoritative.
@@ -475,6 +495,52 @@ export class DesktopHostClient {
       )
         return readIpc();
       throw error;
+    }
+  }
+
+  private async readOnPort(
+    port: MessagePort,
+    method: string,
+    params?: Record<string, unknown>,
+    timeoutMs = this.timeoutMs,
+  ): Promise<unknown> {
+    if (this.activeReads >= concurrentReads) {
+      const slot = new Promise<void>((resolve, reject) => {
+        this.waitingReads.push({ resolve, reject });
+      });
+      if (this.logQueue && performance.now() >= this.nextQueueLogAt) {
+        this.nextQueueLogAt = performance.now() + 5_000;
+        // Count the rest of this synchronous burst before writing one snapshot.
+        queueMicrotask(() => {
+          if (this.port !== port || !this.waitingReads.length) return;
+          const inFlight: Record<string, number> = {};
+          let oldestMs = 0;
+          for (const request of this.pending.values()) {
+            inFlight[request.method] = (inFlight[request.method] ?? 0) + 1;
+            oldestMs = Math.max(oldestMs, Math.round(performance.now() - request.startedAt));
+          }
+          this.logQueue?.({
+            waiting: this.waitingReads.length,
+            activeReads: this.activeReads,
+            inFlight,
+            oldestMs,
+          });
+        });
+      }
+      await slot;
+      if (this.port !== port)
+        throw rpcError(DesktopHostErrors.revoked, "Desktop Host read connection retired");
+    } else {
+      this.activeReads++;
+    }
+    try {
+      return await this.request(port, method, params, timeoutMs);
+    } finally {
+      if (this.port === port) {
+        const next = this.waitingReads.shift();
+        if (next) next.resolve();
+        else this.activeReads--;
+      }
     }
   }
 
@@ -510,7 +576,7 @@ export class DesktopHostClient {
                 ),
               );
             }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timeout });
+      this.pending.set(id, { method, startedAt: performance.now(), resolve, reject, timeout });
       try {
         port.postMessage(request);
       } catch (error) {

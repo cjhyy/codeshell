@@ -68,6 +68,12 @@ const text = (node: any): string =>
     : node.childNodes?.length
       ? node.childNodes.map(text).join("")
       : (node.textContent ?? "");
+function visiblePaths(container: HTMLElement): string[] {
+  return nodes(container)
+    .filter((node) => node.getAttribute?.("data-review-path") != null)
+    .map((node) => node.getAttribute("title"));
+}
+
 const hasControl = (container: HTMLElement, label: string): boolean =>
   nodes(container).some((node) => node.getAttribute?.("aria-label") === label);
 const snapshot =
@@ -123,13 +129,9 @@ describe("ReviewPanel workspace requests", () => {
       await clickButton(container, "准备 AI 代码审查");
       await clickButton(container, "添加审查草稿");
       expect({
-        onlyPath: componentProps(container, UnifiedDiffViewer).onlyPath,
-        visiblePaths: nodes(container)
-          .map((node) => node.getAttribute?.("title"))
-          .filter((title) => title === "__all__" || title === "other.txt"),
+        visiblePaths: visiblePaths(container),
         request: requests[0],
       }).toEqual({
-        onlyPath: "__all__",
         visiblePaths: ["__all__"],
         request: [
           "session-a",
@@ -138,7 +140,7 @@ describe("ReviewPanel workspace requests", () => {
       });
       await chooseReviewFile(container, "全部文件（2）");
       await clickButton(container, "添加审查草稿");
-      expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+      expect(visiblePaths(container)).toEqual(["__all__", "other.txt"]);
       expect(text(container)).toContain("other.txt");
       expect(requests[1]).toEqual([
         "session-a",
@@ -193,10 +195,7 @@ describe("ReviewPanel workspace requests", () => {
       for (const [index, path] of paths.entries()) {
         await chooseReviewFile(container, path);
         await clickButton(container, "添加审查草稿");
-        expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBe(path);
-        expect(
-          nodes(container).filter((node) => node.getAttribute?.("title") === path),
-        ).toHaveLength(1);
+        expect(visiblePaths(container)).toEqual([path]);
         expect(requests[index]).toEqual([
           "session-a",
           { kind: "snapshot", diff: patchFor(path), label: path, instructions: "" },
@@ -207,7 +206,7 @@ describe("ReviewPanel workspace requests", () => {
         componentProps(container, SimpleSelect).onChange("");
         await flushMicrotasks();
       });
-      expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+      expect(visiblePaths(container)).toEqual(paths);
       await clickButton(container, "添加审查草稿");
       expect(requests.at(-1)).toEqual([
         "session-a",
@@ -480,7 +479,7 @@ describe("ReviewPanel workspace requests", () => {
           );
           await flushMicrotasks();
         });
-        expect(text(container)).toContain("no changes");
+        expect(text(container)).toContain("当前范围没有改动");
       }
     }
     expect(requests).toEqual([]);
@@ -560,11 +559,11 @@ describe("ReviewPanel workspace requests", () => {
     await render(["c", "d"]);
     expect(text(container)).toContain("after-c");
     expect(text(container)).toContain("after-d");
-    expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+    expect(visiblePaths(container)).toEqual(["c.ts", "d.ts"]);
 
     // Restoring an earlier path must not reactivate an unavailable selection.
     await render(["a", "b"]);
-    expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+    expect(visiblePaths(container)).toEqual(["a.ts", "b.ts"]);
     expect(text(container)).toContain("after-a");
     expect(text(container)).toContain("after-b");
     await chooseReviewFile(container, "a.ts");
@@ -573,18 +572,37 @@ describe("ReviewPanel workspace requests", () => {
       (option: any) => option.label === "a.ts",
     ).value;
     await render([]);
-    expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+    expect(visiblePaths(container)).toEqual([]);
     expect(hasControl(container, "选择文件")).toBe(false);
-    expect(text(container)).toContain("no changes");
+    expect(text(container)).toContain("当前范围没有改动");
     await act(async () => {
       obsoleteSelect.onChange(obsoleteValue);
       await flushMicrotasks();
     });
     await render(["a", "b"]);
-    expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+    expect(visiblePaths(container)).toEqual(["a.ts", "b.ts"]);
     expect(text(container)).toContain("after-a");
     expect(text(container)).toContain("after-b");
   });
+});
+
+test("folding all visible files respects the turn file filter", async () => {
+  const container = document.createElement("div");
+  root = createRoot(container);
+  const diff =
+    snapshot + snapshot.replaceAll("note.txt", "second.txt").replace("after-note", "after-second");
+  await act(async () => {
+    root?.render(<ReviewPanel cwd="/repo" sessionId={null} gitAvailable={false} turnDiff={diff} />);
+    await flushMicrotasks();
+  });
+  await clickButton(container, "折叠全部文件");
+  expect(text(container)).not.toContain("after-note");
+  expect(text(container)).not.toContain("after-second");
+  await chooseReviewFile(container, "second.txt");
+  await clickButton(container, "展开全部文件");
+  await chooseReviewFile(container, "全部文件（2）");
+  expect(text(container)).toContain("after-second");
+  expect(text(container)).not.toContain("after-note");
 });
 
 test("zero-hunk files all stay listed without pages or a line budget", async () => {

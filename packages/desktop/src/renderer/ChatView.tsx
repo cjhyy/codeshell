@@ -410,6 +410,8 @@ function appendReference(
   return [...refs, ref];
 }
 
+const EMPTY_PLUGIN_COMMANDS: PluginCommandDescriptor[] = [];
+
 export function ChatView({
   variant = "main",
   localRuntime = true,
@@ -881,7 +883,7 @@ export function ChatView({
   const [mentionSelected, setMentionSelected] = useState(0);
   const [slash, setSlash] = useState<{ query: string } | null>(null);
   const [slashSelected, setSlashSelected] = useState(0);
-  const [pluginCommands, setPluginCommands] = useState<PluginCommandDescriptor[]>([]);
+
   const [expandingPluginCommand, setExpandingPluginCommand] = useState(false);
   const configurationTargetKey =
     "sessionId" in configurationTarget
@@ -902,44 +904,47 @@ export function ChatView({
     [configurationTargetKey],
   );
 
+  const needsPluginCommands =
+    localRuntime && configurationAvailable && draft.trimStart().startsWith("/");
+  const [pluginRevision, setPluginRevision] = useState(0);
+  const commandRequest = useMemo(
+    () => (needsPluginCommands ? { target: pluginCommandTarget, revision: pluginRevision } : null),
+    [needsPluginCommands, pluginCommandTarget, pluginRevision],
+  );
+  const [commandResult, setCommandResult] = useState<{
+    request: NonNullable<typeof commandRequest>;
+    commands: PluginCommandDescriptor[];
+  } | null>(null);
+  const pendingSlashSubmit = useRef<{ owner: string; draft: string } | null>(null);
   useEffect(() => {
-    if (!localRuntime) {
-      setPluginCommands([]);
-      return;
-    }
-    let cancelled = false;
-    const load = async (): Promise<void> => {
-      if (!configurationAvailable) {
-        if (!cancelled) setPluginCommands([]);
-        return;
-      }
-      try {
-        if (typeof window.codeshell.listPluginCommands !== "function") {
-          if (!cancelled) setPluginCommands([]);
-          return;
-        }
-        const commands = await window.codeshell.listPluginCommands(pluginCommandTarget);
-        if (!cancelled) setPluginCommands(commands);
-      } catch {
-        if (!cancelled) setPluginCommands([]);
-      }
-    };
-    const refresh = (): void => {
-      void load();
-    };
-
-    void load();
+    if (!needsPluginCommands) return;
+    const refresh = () => setPluginRevision((revision) => revision + 1);
     window.addEventListener("codeshell:settings-changed", refresh);
-    const off =
-      typeof window.codeshell.onPluginCommandsChanged === "function"
-        ? window.codeshell.onPluginCommandsChanged(refresh)
-        : undefined;
+    const off = window.codeshell.onPluginCommandsChanged?.(refresh);
     return () => {
-      cancelled = true;
       window.removeEventListener("codeshell:settings-changed", refresh);
       off?.();
     };
-  }, [configurationAvailable, pluginCommandTarget, localRuntime]);
+  }, [needsPluginCommands]);
+  useEffect(() => {
+    if (!commandRequest) return;
+    let cancelled = false;
+    const load = async () => {
+      let commands: PluginCommandDescriptor[] = [];
+      try {
+        commands = (await window.codeshell.listPluginCommands?.(commandRequest.target)) ?? [];
+      } catch {
+        // Built-in commands remain available when discovery fails.
+      }
+      if (!cancelled) setCommandResult({ request: commandRequest, commands });
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [commandRequest]);
+  const pluginCommands =
+    commandResult?.request === commandRequest ? commandResult.commands : EMPTY_PLUGIN_COMMANDS;
 
   const activeModel = modelOptions.find((o) => o.key === activeModelKey) ?? null;
   const activeSupportsVision = activeModel?.supportsVision === true;
@@ -1087,7 +1092,8 @@ export function ChatView({
 
     if (mention) closeMention();
 
-    const nextSlash = slashCommands.length > 0 ? detectSlashCommand(value, caret) : null;
+    const nextSlash =
+      localRuntime || slashCommands.length > 0 ? detectSlashCommand(value, caret) : null;
     if (nextSlash) {
       if (!slash || slash.query !== nextSlash.query) setSlashSelected(0);
       setSlash(nextSlash);
@@ -1266,6 +1272,10 @@ export function ChatView({
 
   const submit = (): void => {
     if (composerDisabled || compacting || expandingPluginCommand) return;
+    if (commandRequest && commandResult?.request !== commandRequest) {
+      pendingSlashSubmit.current = { owner: draftOwner, draft };
+      return;
+    }
     const pluginInvocation = parsePluginSlashInvocation(draft, slashCommands);
     if (pluginInvocation) {
       executeSlashCommand(pluginInvocation.command, pluginInvocation.rawArguments);
@@ -1369,6 +1379,19 @@ export function ChatView({
     liveDraftStash.current = "";
     onClearAnchors?.();
   };
+
+  // Enter can follow a pasted command before discovery completes. Replay once
+  // with the current composer state, only while the same draft still owns it.
+  useEffect(() => {
+    const pending = pendingSlashSubmit.current;
+    if (!pending) return;
+    if (!commandRequest || pending.owner !== draftOwner || pending.draft !== draft) {
+      pendingSlashSubmit.current = null;
+    } else if (commandResult?.request === commandRequest) {
+      pendingSlashSubmit.current = null;
+      submit();
+    }
+  });
 
   const attachmentSelectionIsCurrent = (selection: AttachmentSelection | null | undefined) =>
     mountedRef.current && (!onBeginAttachmentSelection || Boolean(selection?.isCurrent()));

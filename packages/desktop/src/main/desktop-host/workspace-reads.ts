@@ -8,7 +8,7 @@ import type { FileRoot } from "../../shared/workspace-read-contracts.js";
 import { fileExists, readDirectory, readFile } from "../fs-service.js";
 import { searchProjectFiles } from "../file-search-service.js";
 import { readGitBlobVersion } from "../file-version-service.js";
-import { getGitBranches, getGitStatus } from "../git-services.js";
+import { getGitBranches, getGitHead, getGitStatus } from "../git-services.js";
 import { requireMountedProjectRoot } from "../mounted-project-root.js";
 import {
   requireRendererProject,
@@ -248,6 +248,9 @@ export function workspaceReads(list: ListSessions, trackGitRoot: (root: string) 
     scopedBusinessRead("workspace/gitStatus", list, session, sessionScope, ({ sessionId }, ctx) =>
       atSessionRoot(sessionId, ctx, gitRead(ctx, getGitStatus), true),
     ),
+    scopedBusinessRead("workspace/gitHead", list, session, sessionScope, ({ sessionId }, ctx) =>
+      atSessionRoot(sessionId, ctx, gitRead(ctx, getGitHead), true),
+    ),
     scopedBusinessRead("workspace/gitBranches", list, session, sessionScope, ({ sessionId }, ctx) =>
       atSessionRoot(sessionId, ctx, gitRead(ctx, getGitBranches), true),
     ),
@@ -278,6 +281,9 @@ export function workspaceReads(list: ListSessions, trackGitRoot: (root: string) 
       sessionScope,
       ({ sessionId, worktreePath }, ctx) =>
         atSessionRoot(sessionId, ctx, () => getSessionWorktreeDiffForUi(sessionId, worktreePath)),
+    ),
+    scopedBusinessRead("review/availability", list, session, sessionScope, ({ sessionId }, ctx) =>
+      review(sessionId, ctx, (s) => s.getAvailability(sessionId)),
     ),
     scopedBusinessRead("review/status", list, session, sessionScope, ({ sessionId }, ctx) =>
       review(sessionId, ctx, (s) => s.getStatus(sessionId)),

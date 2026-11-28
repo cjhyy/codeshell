@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import {
   DesktopHostErrors,
   type DesktopHostIdentity,
@@ -7,6 +7,7 @@ import {
   type RpcResponse,
 } from "../../shared/desktop-host-protocol.js";
 import { hostSessionVisible } from "../../shared/disk-session-query.js";
+import * as desktopLogger from "../desktop-logger.js";
 import { outputMethods } from "./output-methods.js";
 import { DesktopHostServer, desktopHostMethods, type DesktopHostMethod } from "./server.js";
 
@@ -62,6 +63,60 @@ function connect(server: DesktopHostServer, identity: DesktopHostIdentity) {
   expect(port.responses(0)[0]).toHaveProperty("result.protocolVersion", "2.0");
   return port;
 }
+
+test.each(["port", "workbench"] as const)(
+  "a full window reports both request paths on %s rejection",
+  async (route) => {
+    const log = spyOn(desktopLogger, "dlog").mockImplementation(() => {});
+    const pending = Promise.withResolvers<void>();
+    const methods = new Map<string, DesktopHostMethod>([
+      ["sessions/listDisk", { run: () => pending.promise }],
+      ["agent/subscribe", { sessionId: () => sessionId, run: () => pending.promise }],
+      ["projects/trust", { run: () => "trusted" }],
+    ]);
+    const server = new DesktopHostServer("test", methods);
+    const identity = frame(1);
+    const port = connect(server, identity);
+    server.setOwner(sessionId, 1);
+    const read = () => server.readWorkbenchOutput(identity, { sessionId });
+    try {
+      for (let id = 1; id <= 127; id++) port.request(id, "sessions/listDisk");
+      const compatibilityRead = read();
+      expect(log).not.toHaveBeenCalled();
+      if (route === "workbench") await expect(read()).rejects.toThrow("Too many pending");
+      port.request(128, "projects/trust", { path: "/private/example" });
+      expect(port.responses(128)[0].error?.code).toBe(-32001);
+      port.request(129, "projects/trust");
+      expect(log.mock.calls).toEqual([
+        [
+          "desktop-host",
+          "desktop_host.request_limit",
+          {
+            webContentsId: 1,
+            frameGeneration: 1,
+            rejectedMethod: route === "port" ? "projects/trust" : "agent/subscribe",
+            route,
+            limit: 128,
+            portRequests: 127,
+            workbenchRequests: 1,
+            byMethod: [
+              { method: "sessions/listDisk", count: 127, oldestMs: expect.any(Number) },
+              { method: "agent/subscribe", count: 1, oldestMs: expect.any(Number) },
+            ],
+          },
+        ],
+      ]);
+      pending.resolve();
+      await compatibilityRead;
+      port.request(130, "projects/trust");
+      await tick();
+      expect(port.responses(130)[0].result).toBe("trusted");
+    } finally {
+      pending.resolve();
+      log.mockRestore();
+    }
+  },
+);
 
 function fixture() {
   const effects: number[] = [];

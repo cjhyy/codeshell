@@ -63,11 +63,13 @@ describe("useSessionModelReconcile", () => {
   let bridgeBefore: PropertyDescriptor | undefined;
   let disk: Record<string, { provider?: string; model?: string; modelConnectionId?: string }>;
   let reads: unknown[];
+  let beforeRead: ((id: string) => Promise<void>) | undefined;
   const hooks: Array<{ unmount: () => Promise<void> }> = [];
 
   beforeEach(() => {
     ensureMiniDom();
     reads = [];
+    beforeRead = undefined;
     disk = {};
     bridgeBefore = Object.getOwnPropertyDescriptor(window, "codeshell");
     Object.defineProperty(window, "codeshell", {
@@ -76,6 +78,7 @@ describe("useSessionModelReconcile", () => {
         log: mock(() => {}),
         listDiskSessions: async (opts: { sessionId: string }) => {
           reads.push(opts);
+          await beforeRead?.(opts.sessionId);
           const meta = disk[opts.sessionId];
           return { sessions: meta ? [{ id: opts.sessionId, ...meta }] : [], nextCursor: null };
         },
@@ -108,6 +111,39 @@ describe("useSessionModelReconcile", () => {
     expect(reads).toEqual([{ limit: 1, sessionId: "s1" }]);
     expect(hook.result.current).toEqual({ "p::s1": "codex/gpt-6-astra" });
   });
+
+  test.each(["success", "failure"])(
+    "rapid switches read only the latest waiting session after %s",
+    async (outcome) => {
+      const first = Promise.withResolvers<void>();
+      beforeRead = async (id) => {
+        if (id === "first") await first.promise;
+      };
+      let id = "first";
+      disk.first = { modelConnectionId: "old" };
+      disk.last = { modelConnectionId: "latest" };
+      const hook = await renderHook(() => {
+        const [models, setModels] = useState<Record<string, string>>({});
+        useSessionModelReconcile(id, id, setModels);
+        return models;
+      });
+      hooks.push(hook);
+      id = "middle";
+      await hook.rerender();
+      id = "last";
+      await hook.rerender();
+      expect(reads).toEqual([{ limit: 1, sessionId: "first" }]);
+      await act(async () => {
+        if (outcome === "failure") first.reject(new Error("read failed"));
+        else first.resolve();
+      });
+      expect(reads).toEqual([
+        { limit: 1, sessionId: "first" },
+        { limit: 1, sessionId: "last" },
+      ]);
+      expect(hook.result.current).toEqual({ last: "latest" });
+    },
+  );
 
   test("a model the Desktop user just picked for the next turn survives reopening", async () => {
     disk["s2"] = { provider: "codex", model: "codex/gpt-6-astra" };

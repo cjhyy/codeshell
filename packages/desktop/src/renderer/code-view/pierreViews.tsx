@@ -53,6 +53,7 @@ export interface PierreFileDiffBodyProps {
   showRepository: boolean;
   commentable: boolean;
   diffStyle: DiffStyle;
+  wrap: boolean;
   /** Shown when Pierre cannot represent or render this section. */
   fallback: React.ReactNode;
 }
@@ -292,6 +293,7 @@ export const PierreFileDiffBody = memo(function PierreFileDiffBody({
   showRepository,
   commentable,
   diffStyle,
+  wrap,
   fallback,
 }: PierreFileDiffBodyProps) {
   const { t, lang } = useT();
@@ -321,7 +323,9 @@ export const PierreFileDiffBody = memo(function PierreFileDiffBody({
           theme: PIERRE_THEMES,
           themeType: dark ? "dark" : "light",
           diffStyle,
-          overflow: "scroll",
+          overflow: wrap ? "wrap" : "scroll",
+          diffIndicators: "bars",
+          lineDiffType: "word-alt",
           enableGutterUtility: commentable,
           lineHoverHighlight: "both",
           disableFileHeader: true,

@@ -15,8 +15,8 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0)) cleanup();
 });
 
-function clientWithStatus(timeoutMs?: number) {
-  const client = new DesktopHostClient(timeoutMs);
+function clientWithStatus(timeoutMs?: number, logQueue?: (data: Record<string, unknown>) => void) {
+  const client = new DesktopHostClient(timeoutMs, logQueue);
   const statuses: DesktopHostStatus[] = [];
   const unsubscribe = client.subscribe((status) => statuses.push(status));
   cleanups.push(unsubscribe, () => client.disconnect("unavailable"));
@@ -457,3 +457,61 @@ test("IPC compatibility keeps the same port generation, never replays input, and
   expect(exits).toEqual([sessionId]);
   expect(submitted).toBe(1);
 });
+
+test.each(["drain", "disconnect"])(
+  "bulk reads leave command capacity and %s safely",
+  async (finish) => {
+    const logs: Record<string, unknown>[] = [];
+    const { client } = clientWithStatus(undefined, (data) => logs.push(data));
+    const host = await attach(client, {
+      ...capabilities,
+      methods: [...capabilities.methods, "projects/trust", "agent/cancel"],
+    });
+    const received: RpcRequest[] = [];
+    let draining = false;
+    const reply = (id: number) => host.postMessage({ jsonrpc: "2.0", id, result: "trusted" });
+    host.onmessage = ({ data }: MessageEvent<RpcRequest>) => {
+      if (data.method === "agent/cancel") reply(data.id);
+      else {
+        received.push(data);
+        if (draining) reply(data.id);
+      }
+    };
+    const reads = Promise.allSettled(
+      Array.from({ length: 160 }, (_, n) =>
+        client.readBusiness("projects/trust", { path: "/fixture/" + n }),
+      ),
+    );
+    // The port delivers in order. This command marks the end of the initial burst.
+    await client.agentCommand("agent/cancel", {}, 1000, "marker", () => {
+      throw Error("unexpected fallback");
+    });
+    expect(received).toHaveLength(32);
+    expect(logs).toEqual([
+      {
+        waiting: 128,
+        activeReads: 32,
+        inFlight: { "projects/trust": 32 },
+        oldestMs: expect.any(Number),
+      },
+    ]);
+    if (finish === "disconnect") {
+      client.disconnect("unavailable", DesktopHostErrors.revoked);
+      expect(
+        (await reads).every(
+          (r) => r.status === "rejected" && r.reason.code === DesktopHostErrors.revoked,
+        ),
+      ).toBe(true);
+      expect(received).toHaveLength(32);
+      return;
+    }
+    draining = true;
+    for (const { id } of received) reply(id);
+    expect((await reads).every((r) => r.status === "fulfilled" && r.value === "trusted")).toBe(
+      true,
+    );
+    expect(received.map((r) => r.params?.path)).toEqual(
+      Array.from({ length: 160 }, (_, n) => "/fixture/" + n),
+    );
+  },
+);

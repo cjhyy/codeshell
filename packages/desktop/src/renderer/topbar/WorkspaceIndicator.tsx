@@ -35,6 +35,7 @@ interface Props {
   sessionId: string | null;
   projectPath: string | null;
   projectName: string | null;
+  sharedProfileLabel?: string | null;
   sessionBusy?: boolean;
   includeProjectNameInLabel?: boolean;
   /** Keep branch/worktree details out of the title bar; expose them on hover. */
@@ -160,6 +161,7 @@ export function WorkspaceIndicator({
   projectPath,
   projectName,
   sessionBusy = false,
+  sharedProfileLabel,
   includeProjectNameInLabel = true,
   iconOnly = false,
 }: Props) {
@@ -229,7 +231,11 @@ export function WorkspaceIndicator({
   const isGitRepo = visibleGitState?.isGitRepo ?? null;
   const mainBranch = visibleGitState?.mainBranch ?? null;
   const activeProfileLabel =
-    profileState?.targetKey === requestTargetKey ? profileState.value : null;
+    sharedProfileLabel !== undefined
+      ? sharedProfileLabel
+      : profileState?.targetKey === requestTargetKey
+        ? profileState.value
+        : null;
   const currentLoading = currentLoadingTarget === requestTargetKey;
   const listLoading = Boolean(activeTargetKey && listLoadingTarget === activeTargetKey);
   const isLoading = currentLoading || listLoading;
@@ -460,7 +466,9 @@ export function WorkspaceIndicator({
       return;
     }
     try {
-      const res = await window.codeshell.getSessionGitBranches(sessionId);
+      const res = await (
+        window.codeshell.getSessionGitHead ?? window.codeshell.getSessionGitBranches
+      )(sessionId);
       if (
         gitProbeRequestId.current !== requestId ||
         requestTargetKeyRef.current !== requestKey ||
@@ -524,6 +532,7 @@ export function WorkspaceIndicator({
 
   useEffect(() => {
     let cancelled = false;
+    if (sharedProfileLabel !== undefined) return;
     const profileTargetKey = requestTargetKey;
     if (!projectPath || !sessionId || typeof window.codeshell.listProfiles !== "function") {
       setProfileState({ targetKey: profileTargetKey, value: null });
@@ -551,7 +560,7 @@ export function WorkspaceIndicator({
     return () => {
       cancelled = true;
     };
-  }, [projectPath, requestTargetKey, sessionId]);
+  }, [projectPath, requestTargetKey, sessionId, sharedProfileLabel]);
 
   useEffect(() => {
     if (!projectPath) return;

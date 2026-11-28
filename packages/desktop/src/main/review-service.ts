@@ -7,6 +7,7 @@ import type {
   ReviewGitDiffRequest,
   ReviewGitDiffResult,
   ReviewGitStatusResult,
+  ReviewAvailability,
   ReviewRepositoryError,
   ReviewRepositoryIdentity,
 } from "../shared/review.js";
@@ -78,6 +79,12 @@ export class ReviewService {
     this.commitDiffForRepository = deps.getGitCommitDiff ?? getGitCommitDiff;
     this.branchBaseForRepository = deps.getGitBranchBase ?? getGitBranchBase;
     this.commitsForRepository = deps.getGitRecentCommits ?? getGitRecentCommits;
+  }
+
+  async getAvailability(sessionId: string): Promise<ReviewAvailability> {
+    const { repositories, errors } = await this.resolveRepositories(sessionId);
+    if (repositories.length) return "available";
+    return errors.length ? "error" : "unavailable";
   }
 
   async getStatus(sessionId: string): Promise<ReviewGitStatusResult> {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ReviewGitStatusResult } from "../../shared/review";
+import { reviewAvailabilityFromStatus } from "../../shared/review";
 
 export interface ReviewAvailabilityState {
   status: "loading" | "available" | "unavailable" | "error";
@@ -20,13 +20,6 @@ interface PendingRead {
 // a workspace identity change must never join a read of the previous roots.
 const pendingReads = new Map<string, PendingRead>();
 
-function availabilityFromStatus(result: ReviewGitStatusResult): ReviewAvailabilityState {
-  if (result.repositories.length > 0 || result.errors.some((error) => !!error.repoRoot)) {
-    return AVAILABLE;
-  }
-  return result.errors.length > 0 ? ERROR : UNAVAILABLE;
-}
-
 export async function readReviewAvailability(
   sessionId: string,
   workspaceKey?: string,
@@ -37,8 +30,12 @@ export async function readReviewAvailability(
   if (existing) return existing.promise;
 
   const promise = Promise.resolve()
-    .then(() => window.codeshell.getReviewStatus(sessionId))
-    .then(availabilityFromStatus)
+    .then(async () => {
+      const result = window.codeshell.getReviewAvailability
+        ? await window.codeshell.getReviewAvailability(sessionId)
+        : reviewAvailabilityFromStatus(await window.codeshell.getReviewStatus(sessionId));
+      return result === "available" ? AVAILABLE : result === "unavailable" ? UNAVAILABLE : ERROR;
+    })
     .catch(() => ERROR)
     .finally(() => {
       if (pendingReads.get(key)?.promise === promise) pendingReads.delete(key);

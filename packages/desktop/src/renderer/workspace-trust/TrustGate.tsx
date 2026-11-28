@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { useT } from "../i18n/I18nProvider";
 import { createDialogFocusLease, useDialogFocus } from "../ui/useDialogFocus";
+import { readWhenHostBusy } from "./readWhenHostBusy";
 
 interface Props {
   projectPath: string | null;
@@ -35,7 +36,7 @@ interface TrustView {
 }
 interface TrustScope {
   root: string;
-  live: boolean;
+  controller: AbortController;
 }
 
 export function TrustGate({ projectPath, onDecide, promptWhenUntrusted = false }: Props) {
@@ -80,23 +81,25 @@ export function TrustGate({ projectPath, onDecide, promptWhenUntrusted = false }
       setView(null);
       return;
     }
-    const request: TrustScope = { root: projectPath, live: true };
+    const controller = new AbortController();
+    const request: TrustScope = { root: projectPath, controller };
     scope.current = request;
-    const isCurrent = () => request.live && scope.current === request;
+    const isCurrent = () => !request.controller.signal.aborted && scope.current === request;
     readPending.current = true;
     setReading(true);
     // A retry keeps its error and button mounted until a real response arrives.
     setView((previous) => (previous?.root === projectPath && previous.readError ? previous : null));
-    void window.codeshell
-      .getTrust(request.root)
+    void readWhenHostBusy(() => window.codeshell.getTrust(request.root), controller.signal)
       .then((trust) => {
         if (!isCurrent()) return;
         if (document.activeElement === retryButton.current) handoff.current = retryButton.current;
         const unknown = trust === "unknown" || (promptWhenUntrusted && trust === "untrusted");
         setView({ root: request.root, unknown, risks: null, readError: null, decisionError: null });
         if (unknown) {
-          void window.codeshell
-            .getTrustRisks(request.root)
+          void readWhenHostBusy(
+            () => window.codeshell.getTrustRisks(request.root),
+            controller.signal,
+          )
             .then((risks) => {
               if (isCurrent())
                 setView((previous) =>
@@ -127,7 +130,8 @@ export function TrustGate({ projectPath, onDecide, promptWhenUntrusted = false }
         }
       });
     return () => {
-      request.live = false;
+      scope.current = null;
+      controller.abort();
     };
   }, [projectPath, promptWhenUntrusted, reload]);
 
@@ -152,7 +156,8 @@ export function TrustGate({ projectPath, onDecide, promptWhenUntrusted = false }
   const decide = async (level: "trusted" | "untrusted") => {
     const request = scope.current;
     if (
-      !request?.live ||
+      !request ||
+      request.controller.signal.aborted ||
       request.root !== projectPath ||
       !currentView?.unknown ||
       decision.current ||
@@ -161,14 +166,17 @@ export function TrustGate({ projectPath, onDecide, promptWhenUntrusted = false }
       return;
     const operation = {};
     decision.current = operation;
-    const isCurrent = () => request.live && scope.current === request;
+    const isCurrent = () => !request.controller.signal.aborted && scope.current === request;
     setPending(true);
     setView((previous) => previous && { ...previous, decisionError: null });
     try {
       await window.codeshell.setTrust(request.root, level);
       if (!isCurrent()) return;
       onDecide(level);
-      if (isCurrent()) setView((previous) => previous && { ...previous, unknown: false });
+      if (isCurrent()) {
+        setView((previous) => previous && { ...previous, unknown: false });
+        request.controller.abort();
+      }
     } catch (error) {
       if (isCurrent())
         setView(
@@ -179,7 +187,7 @@ export function TrustGate({ projectPath, onDecide, promptWhenUntrusted = false }
             },
         );
     } finally {
-      if (isCurrent() && decision.current === operation) {
+      if (scope.current === request && decision.current === operation) {
         decision.current = null;
         setPending(false);
       }
