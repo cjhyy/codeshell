@@ -1299,8 +1299,11 @@ export class SessionOutputJournal {
   private persistHead(
     position: Position,
     admission?: { binding: OutputJournalBinding; storage?: OutputStoragePin },
+    // A caller that has just verified ownership under the same state lock may
+    // pass that result instead of re-reading state.json and the head again.
+    verified?: ReturnType<typeof sessionLocation>,
   ): void {
-    const current = this.assertOwner(true);
+    const current = verified ?? this.assertOwner(true);
     const head = { version: 1 as const, identity: this.identity, ...position };
     const pin = current.state.outputJournalHead;
     if (pin?.version === 2 || pin?.version === 3)
@@ -1514,8 +1517,7 @@ export class SessionOutputJournal {
       // Every published cursor covers fsync-completed records; terminal events
       // receive the same guarantee, rather than relying on eventual close.
       fsyncSync(target);
-      this.assertOwner();
-      this.persistHead(next);
+      this.persistHead(next, undefined, this.assertOwner());
       for (const event of events)
         if (
           event.type === "session_user_message" &&
