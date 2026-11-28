@@ -306,7 +306,11 @@ export class WechatAdapter implements ChannelAdapter {
             const message = this.normalizeInbound(raw, retryingHeldBatch);
             if (!message || this.isDuplicate(message.messageId)) continue;
             try {
-              if (raw.context_token) {
+              // Only a changed token needs the synchronous state rewrite.
+              if (
+                raw.context_token &&
+                this.state.contextTokens?.[message.target] !== raw.context_token
+              ) {
                 this.state.contextTokens ??= {};
                 this.state.contextTokens[message.target] = raw.context_token;
                 await this.persistState();

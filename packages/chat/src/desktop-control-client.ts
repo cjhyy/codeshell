@@ -16,6 +16,7 @@ import {
   type PetChatRequest,
   type PetChatResult,
 } from "./protocol.js";
+import { raceAbort } from "./lifecycle.js";
 
 type SpawnFn = (
   command: string,
@@ -296,7 +297,7 @@ export class DesktopControlClient {
         if (signal.aborted) return;
         recovering = true;
         options.onError?.(error);
-        await Promise.race([this.sleepFn(retryMs), waitForAbort(signal)]);
+        await raceAbort(this.sleepFn(retryMs), signal);
         retryMs = Math.min(retryMaxMs, retryMs * 2);
       }
     }
@@ -403,13 +404,6 @@ export class DesktopControlClient {
       signal?.removeEventListener("abort", abortRequest);
     }
   }
-}
-
-async function waitForAbort(signal: AbortSignal): Promise<void> {
-  if (signal.aborted) return;
-  await new Promise<void>((resolve) =>
-    signal.addEventListener("abort", () => resolve(), { once: true }),
-  );
 }
 
 export function parseDescriptor(raw: string): DesktopControlDescriptor {

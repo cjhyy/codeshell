@@ -5,7 +5,7 @@ import {
   UnroutableDeliveryError,
   type DeliveryQueueConfig,
 } from "./delivery-queue.js";
-import { waitForAbort } from "./lifecycle.js";
+import { raceAbort } from "./lifecycle.js";
 import {
   WebhookIngressServer,
   type WebhookIngressConfig,
@@ -458,11 +458,13 @@ export function createRateLimitMiddleware(
 
 async function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
   if (signal.aborted) return;
-  await Promise.race([
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await raceAbort(
     new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, ms);
+      timer = setTimeout(resolve, ms);
       timer.unref?.();
     }),
-    waitForAbort(signal),
-  ]);
+    signal,
+  );
+  clearTimeout(timer);
 }
