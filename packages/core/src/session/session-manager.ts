@@ -227,6 +227,32 @@ export class SessionManager {
     return processLocalSessionBundles.get(this.processLocalKey(sessionId));
   }
 
+  /**
+   * Tolerant state read for the cheap single-field probes below: the
+   * process-local state when loaded, otherwise state.json. Undefined for an
+   * unsafe id, a Quick Chat without process-local state, or a missing or
+   * unparseable file. The process-local object is returned by reference, so
+   * callers must copy nested values they hand out.
+   */
+  private peekSessionState(sessionId: string): SessionState | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+    } catch {
+      return undefined;
+    }
+    const processLocal = this.processLocalBundle(sessionId);
+    if (processLocal) return processLocal.state;
+    if (sessionId.startsWith("qchat-")) return undefined;
+    try {
+      const state: unknown = JSON.parse(
+        readFileSync(join(this.sessionsDir, sessionId, "state.json"), "utf-8"),
+      );
+      return state && typeof state === "object" ? (state as SessionState) : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   private storeProcessLocalBundle(bundle: SessionBundle): void {
     processLocalSessionBundles.set(this.processLocalKey(bundle.state.sessionId), {
       state: structuredClone(bundle.state),
@@ -491,90 +517,34 @@ export class SessionManager {
    * fallback when a worktree is unavailable or is being released.
    */
   readSessionMainRoot(sessionId: string): string | undefined {
-    try {
-      assertSafeSessionId(sessionId);
-    } catch {
-      return undefined;
-    }
-    const processLocal = this.processLocalBundle(sessionId);
-    if (processLocal) return sessionMainRoot(processLocal.state);
-    if (sessionId.startsWith("qchat-")) return undefined;
-    const stateFile = join(this.sessionsDir, sessionId, "state.json");
-    if (!existsSync(stateFile)) return undefined;
-    try {
-      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      return sessionMainRoot(state);
-    } catch {
-      return undefined;
-    }
+    const state = this.peekSessionState(sessionId);
+    return state ? sessionMainRoot(state) : undefined;
   }
 
   /** Cheap durable project-binding read; absent for legacy/no-repo Sessions. */
   readSessionProjectBinding(
     sessionId: string,
   ): import("../types.js").SessionProjectBinding | undefined {
-    try {
-      assertSafeSessionId(sessionId);
-      const processLocal = this.processLocalBundle(sessionId);
-      const state = processLocal
-        ? processLocal.state
-        : sessionId.startsWith("qchat-")
-          ? undefined
-          : (JSON.parse(
-              readFileSync(join(this.sessionsDir, sessionId, "state.json"), "utf-8"),
-            ) as SessionState);
-      const project = state?.project;
-      return project &&
-        typeof project.projectId === "string" &&
-        project.projectId.length > 0 &&
-        typeof project.mainRootId === "string" &&
-        project.mainRootId.length > 0
-        ? { projectId: project.projectId, mainRootId: project.mainRootId }
-        : undefined;
-    } catch {
-      return undefined;
-    }
+    const project = this.peekSessionState(sessionId)?.project;
+    return project &&
+      typeof project.projectId === "string" &&
+      project.projectId.length > 0 &&
+      typeof project.mainRootId === "string" &&
+      project.mainRootId.length > 0
+      ? { projectId: project.projectId, mainRootId: project.mainRootId }
+      : undefined;
   }
 
   /** Cheap durable classification read. Legacy sessions are ordinary work sessions. */
   readSessionKind(sessionId: string): SessionKind | undefined {
-    try {
-      assertSafeSessionId(sessionId);
-    } catch {
-      return undefined;
-    }
-    const processLocal = this.processLocalBundle(sessionId);
-    if (processLocal) return normalizedSessionKind(processLocal.state.kind);
-    if (sessionId.startsWith("qchat-")) return undefined;
-    const stateFile = join(this.sessionsDir, sessionId, "state.json");
-    if (!existsSync(stateFile)) return undefined;
-    try {
-      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      return normalizedSessionKind(state.kind);
-    } catch {
-      return undefined;
-    }
+    const state = this.peekSessionState(sessionId);
+    return state ? normalizedSessionKind(state.kind) : undefined;
   }
 
   /** Cheap durable digital-human binding read. */
   readSessionWorkspaceProfile(sessionId: string): string | undefined {
-    try {
-      assertSafeSessionId(sessionId);
-      const processLocal = this.processLocalBundle(sessionId);
-      if (processLocal) {
-        const profile = processLocal.state.workspaceProfile;
-        return typeof profile === "string" && profile ? profile : undefined;
-      }
-      if (sessionId.startsWith("qchat-")) return undefined;
-      const stateFile = join(this.sessionsDir, sessionId, "state.json");
-      if (!existsSync(stateFile)) return undefined;
-      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      return typeof state.workspaceProfile === "string" && state.workspaceProfile
-        ? state.workspaceProfile
-        : undefined;
-    } catch {
-      return undefined;
-    }
+    const profile = this.peekSessionState(sessionId)?.workspaceProfile;
+    return typeof profile === "string" && profile ? profile : undefined;
   }
 
   /** Clear this binding only while its latest durable value still matches. */
@@ -682,27 +652,8 @@ export class SessionManager {
 
   /** Direct-parent ACL metadata. Undefined means unprovable/corrupt. */
   readParentSessionId(sessionId: string): string | null | undefined {
-    try {
-      assertSafeSessionId(sessionId);
-    } catch {
-      return undefined;
-    }
-    const processLocal = this.processLocalBundle(sessionId);
-    if (processLocal) {
-      const parent = processLocal.state.parentSessionId;
-      return parent === null || typeof parent === "string" ? parent : undefined;
-    }
-    if (sessionId.startsWith("qchat-")) return undefined;
-    const stateFile = join(this.sessionsDir, sessionId, "state.json");
-    if (!existsSync(stateFile)) return undefined;
-    try {
-      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      return state.parentSessionId === null || typeof state.parentSessionId === "string"
-        ? state.parentSessionId
-        : undefined;
-    } catch {
-      return undefined;
-    }
+    const parent = this.peekSessionState(sessionId)?.parentSessionId;
+    return parent === null || typeof parent === "string" ? parent : undefined;
   }
 
   /** Validated frozen child scope. Missing/corrupt snapshots cannot authorize resume. */
@@ -723,29 +674,11 @@ export class SessionManager {
    * `state.cwd`; the read is intentionally non-mutating.
    */
   getSessionWorkspace(sessionId: string): SessionWorkspace | undefined {
-    try {
-      assertSafeSessionId(sessionId);
-    } catch {
-      return undefined;
-    }
-    const processLocal = this.processLocalBundle(sessionId);
-    if (processLocal) {
-      const state = processLocal.state;
-      if (isSessionWorkspace(state.workspace)) return structuredClone(state.workspace);
-      const mainRoot = sessionMainRoot(state);
-      return mainRoot ? { root: mainRoot, kind: "main" } : undefined;
-    }
-    if (sessionId.startsWith("qchat-")) return undefined;
-    const stateFile = join(this.sessionsDir, sessionId, "state.json");
-    if (!existsSync(stateFile)) return undefined;
-    try {
-      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      if (isSessionWorkspace(state.workspace)) return state.workspace;
-      const mainRoot = sessionMainRoot(state);
-      return mainRoot ? { root: mainRoot, kind: "main" } : undefined;
-    } catch {
-      return undefined;
-    }
+    const state = this.peekSessionState(sessionId);
+    if (!state) return undefined;
+    if (isSessionWorkspace(state.workspace)) return structuredClone(state.workspace);
+    const mainRoot = sessionMainRoot(state);
+    return mainRoot ? { root: mainRoot, kind: "main" } : undefined;
   }
 
   /**
@@ -845,22 +778,8 @@ export class SessionManager {
 
   /** Read the durable archival timestamp; undefined = not archived / unprovable. */
   readSessionArchivedAt(sessionId: string): number | undefined {
-    try {
-      assertSafeSessionId(sessionId);
-    } catch {
-      return undefined;
-    }
-    const processLocal = this.processLocalBundle(sessionId);
-    if (processLocal) return processLocal.state.archivedAt;
-    if (sessionId.startsWith("qchat-")) return undefined;
-    const stateFile = join(this.sessionsDir, sessionId, "state.json");
-    if (!existsSync(stateFile)) return undefined;
-    try {
-      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-      return typeof state.archivedAt === "number" ? state.archivedAt : undefined;
-    } catch {
-      return undefined;
-    }
+    const archivedAt = this.peekSessionState(sessionId)?.archivedAt;
+    return typeof archivedAt === "number" ? archivedAt : undefined;
   }
 
   /** Set (number) or clear (undefined) the durable archival marker. */
