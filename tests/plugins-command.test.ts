@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -13,6 +13,8 @@ import { loadPluginAutomationTemplateContributions } from "../packages/core/src/
 import { pluginHooksDigest } from "../packages/core/src/plugins/pluginHookIntegrity.js";
 import { pluginMcpDigest } from "../packages/core/src/plugins/pluginMcpIntegrity.js";
 import { installPluginFromPath } from "../packages/core/src/plugins/installer/install.js";
+import { pluginInstallDir } from "../packages/core/src/plugins/installer/paths.js";
+import { createPluginCommand } from "../packages/tui/src/cli/commands/plugin.js";
 import { CronScheduler } from "@cjhyy/code-shell-core/internal";
 
 function bareRepoWithFiles(scratch: string, name: string, files: Record<string, string>): string {
@@ -430,5 +432,47 @@ describe("/plugin command", () => {
       },
     });
     automationScheduler.stopAll();
+  });
+  it("CLI plugin install from a directory waits for the install and prints where it went", async () => {
+    const source = join(scratch, "cli-local");
+    mkdirSync(join(source, ".claude-plugin"), { recursive: true });
+    writeFileSync(
+      join(source, ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: "cli-local", version: "1.0.0" }),
+    );
+    const lines: string[] = [];
+    const log = console.log;
+    console.log = (...parts: unknown[]) => void lines.push(parts.join(" "));
+    try {
+      await createPluginCommand().parseAsync(["install", source], { from: "user" });
+    } finally {
+      console.log = log;
+    }
+    expect(lines).toEqual([`Installed 'cli-local' → ${pluginInstallDir("cli-local")}`]);
+    expect(existsSync(pluginInstallDir("cli-local"))).toBe(true);
+  });
+
+  it("CLI plugin install reports a missing directory without claiming success", async () => {
+    const missing = join(scratch, "not-there");
+    const lines: string[] = [];
+    const errors: string[] = [];
+    const log = console.log;
+    const error = console.error;
+    const exitCode = process.exitCode;
+    console.log = (...parts: unknown[]) => void lines.push(parts.join(" "));
+    console.error = (...parts: unknown[]) => void errors.push(parts.join(" "));
+    let failedWith: string | number | undefined;
+    try {
+      await createPluginCommand().parseAsync(["install", missing], { from: "user" });
+      failedWith = process.exitCode;
+    } finally {
+      console.log = log;
+      console.error = error;
+      // Bun keeps a non-zero exit code when it is set back to undefined.
+      process.exitCode = exitCode ?? 0;
+    }
+    expect(failedWith).toBe(1);
+    expect(lines).toEqual([]);
+    expect(errors).toEqual([`plugin install failed: source is not a directory: ${missing}`]);
   });
 });

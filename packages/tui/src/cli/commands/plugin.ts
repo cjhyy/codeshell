@@ -41,7 +41,7 @@ export function createPluginCommand(): Command {
         }
         const dir =
           parsed.kind === "local"
-            ? installPluginFromPath(parsed.path, name, ts)
+            ? await installPluginFromPath(parsed.path, name, ts)
             : await installPluginFromSource(parsed, name, ts);
         console.log(`Installed '${name}' → ${dir}`);
       });
