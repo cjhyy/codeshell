@@ -45,6 +45,7 @@ import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
 import { AgentDock, getVisibleAgents, MAX_VISIBLE } from "./components/AgentDock.js";
 import { asyncAgentRegistry } from "@cjhyy/code-shell-core/internal";
+import { useAgentRegistrySnapshot } from "./hooks/useAgentRegistrySnapshot.js";
 import {
   notificationQueue,
   buildNotificationMessage,
@@ -222,10 +223,10 @@ export function App({
   const [viewMode, setViewMode] = useState<ViewMode>({ kind: "main" });
   const [dockFocusIdx, setDockFocusIdx] = useState<number | null>(null);
 
-  const agentsSnapshot = useSyncExternalStore(
-    asyncAgentRegistry.subscribe,
-    asyncAgentRegistry.getSnapshot,
-  );
+  // Sub-agent tokens touch the registry once each; only row changes (status,
+  // fade, name…) re-render App, plus throttled transcript updates while a
+  // sub-agent transcript is the visible view.
+  const agentsSnapshot = useAgentRegistrySnapshot(viewMode.kind === "agent");
   useEffect(() => {
     if (viewMode.kind !== "agent") return;
     const entry = agentsSnapshot.find((a) => a.agentId === viewMode.agentId);

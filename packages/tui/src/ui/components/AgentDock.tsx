@@ -1,11 +1,9 @@
-import React, { useEffect, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Text } from "../../render/index.js";
-import {
-  asyncAgentRegistry,
-  type AsyncAgentEntry,
-} from "@cjhyy/code-shell-core/internal";
+import type { AsyncAgentEntry } from "@cjhyy/code-shell-core/internal";
 import { logger as uiLogger } from "@cjhyy/code-shell-core";
 import { stringWidth } from "../../render/stringWidth.js";
+import { useAgentRegistrySnapshot } from "../hooks/useAgentRegistrySnapshot.js";
 
 export const MAX_VISIBLE = 5;
 const NAME_MAX = 40;
@@ -14,9 +12,7 @@ const NAME_MAX = 40;
 // across 1Hz ticks — see AgentDockRow comment for the flicker rationale.
 const ELAPSED_WIDTH = 12;
 
-export type DockViewMode =
-  | { kind: "main" }
-  | { kind: "agent"; agentId: string };
+export type DockViewMode = { kind: "main" } | { kind: "agent"; agentId: string };
 
 export interface AgentDockProps {
   viewMode: DockViewMode;
@@ -31,14 +27,10 @@ export interface AgentDockProps {
  *
  * See docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md.
  */
-export function AgentDock({
-  viewMode,
-  focusedIndex,
-}: AgentDockProps): React.ReactElement | null {
-  const agents = useSyncExternalStore(
-    asyncAgentRegistry.subscribe,
-    asyncAgentRegistry.getSnapshot,
-  );
+export function AgentDock({ viewMode, focusedIndex }: AgentDockProps): React.ReactElement | null {
+  // Rows never show transcript content, so per-token transcript touches are
+  // ignored; only row-field changes (status, fade, name…) re-render.
+  const agents = useAgentRegistrySnapshot(false);
 
   const [, tick] = useState(0);
   const now = Date.now();
@@ -74,10 +66,7 @@ export function AgentDock({
   return (
     <Box flexDirection="column" paddingX={1}>
       <Text dim>agents</Text>
-      <MainDockRow
-        focused={focusedIndex === 0}
-        active={viewMode.kind === "main"}
-      />
+      <MainDockRow focused={focusedIndex === 0} active={viewMode.kind === "main"} />
       {rows.map((a, i) => (
         <AgentDockRow
           key={a.agentId}
@@ -126,10 +115,7 @@ function AgentDockRow({
   );
   // Truncate AND pad description so the name column doesn't change
   // width either (long descriptions truncate, short ones pad).
-  const description = padRightToWidth(
-    truncate(entry.description, NAME_MAX),
-    NAME_MAX,
-  );
+  const description = padRightToWidth(truncate(entry.description, NAME_MAX), NAME_MAX);
 
   return (
     <Box flexDirection="row" height={1} overflow="hidden">
@@ -138,10 +124,7 @@ function AgentDockRow({
       </Text>
       <Text color={dotColor}>{" ● "}</Text>
       {entry.name && (
-        <Text
-          color={focused ? "ansi:cyanBright" : active ? "ansi:cyan" : undefined}
-          bold={focused}
-        >
+        <Text color={focused ? "ansi:cyanBright" : active ? "ansi:cyan" : undefined} bold={focused}>
           {entry.name + "  "}
         </Text>
       )}
@@ -159,13 +142,7 @@ function AgentDockRow({
   );
 }
 
-function MainDockRow({
-  focused,
-  active,
-}: {
-  focused: boolean;
-  active: boolean;
-}) {
+function MainDockRow({ focused, active }: { focused: boolean; active: boolean }) {
   return (
     <Box flexDirection="row">
       <Text color={focused ? "ansi:cyanBright" : undefined} bold={focused}>
@@ -197,10 +174,7 @@ function MainDockRow({
  *
  * Exported so App.tsx's keyboard handler shares the same predicate.
  */
-export function getVisibleAgents(
-  all: AsyncAgentEntry[],
-  now: number,
-): AsyncAgentEntry[] {
+export function getVisibleAgents(all: AsyncAgentEntry[], now: number): AsyncAgentEntry[] {
   return all
     .filter((a) => {
       if (a.status === "running") return true;
