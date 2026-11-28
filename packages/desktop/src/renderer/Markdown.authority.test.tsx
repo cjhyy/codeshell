@@ -398,3 +398,22 @@ test("a turn-end files-changed event rechecks missing links but keeps confirmed 
   collect(container!);
   expect(links).toHaveLength(2);
 });
+
+test("a session scope change re-renders links in place instead of remounting them", async () => {
+  Object.assign(window, { codeshell: { localFileExists: async () => true } });
+  const find = (node: MiniElementNode): MiniElementNode | null => {
+    if (node.tagName === "A" && node.getAttribute?.("href") === "https://example.test/doc")
+      return node;
+    for (const child of node.childNodes ?? []) {
+      const found = find(child);
+      if (found) return found;
+    }
+    return null;
+  };
+  const text = "see [doc](https://example.test/doc) and `code`";
+  await renderMarkdown(<Markdown text={text} sessionId="scope-a" rootStatus="loading" />);
+  const before = find(container!);
+  expect(before).not.toBeNull();
+  await renderMarkdown(<Markdown text={text} sessionId="scope-a" rootStatus="ok" />);
+  expect(find(container!)).toBe(before);
+});
