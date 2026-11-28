@@ -480,7 +480,7 @@ describe("ReviewPanel workspace requests", () => {
           );
           await flushMicrotasks();
         });
-        expect(text(container)).toContain("no changes");
+        expect(text(container)).toContain("当前范围没有改动");
       }
     }
     expect(requests).toEqual([]);
@@ -575,7 +575,7 @@ describe("ReviewPanel workspace requests", () => {
     await render([]);
     expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
     expect(hasControl(container, "选择文件")).toBe(false);
-    expect(text(container)).toContain("no changes");
+    expect(text(container)).toContain("当前范围没有改动");
     await act(async () => {
       obsoleteSelect.onChange(obsoleteValue);
       await flushMicrotasks();
@@ -585,6 +585,25 @@ describe("ReviewPanel workspace requests", () => {
     expect(text(container)).toContain("after-a");
     expect(text(container)).toContain("after-b");
   });
+});
+
+test("folding all visible files respects the turn file filter", async () => {
+  const container = document.createElement("div");
+  root = createRoot(container);
+  const diff =
+    snapshot + snapshot.replaceAll("note.txt", "second.txt").replace("after-note", "after-second");
+  await act(async () => {
+    root?.render(<ReviewPanel cwd="/repo" sessionId={null} gitAvailable={false} turnDiff={diff} />);
+    await flushMicrotasks();
+  });
+  await clickButton(container, "折叠全部文件");
+  expect(text(container)).not.toContain("after-note");
+  expect(text(container)).not.toContain("after-second");
+  await chooseReviewFile(container, "second.txt");
+  await clickButton(container, "展开全部文件");
+  await chooseReviewFile(container, "全部文件（2）");
+  expect(text(container)).toContain("after-second");
+  expect(text(container)).not.toContain("after-note");
 });
 
 test("zero-hunk files all stay listed without pages or a line budget", async () => {

@@ -315,10 +315,12 @@ test("actual Review opens two same-relative external snapshots under their own r
       const nodes = descendants(container);
       expect(
         nodes
-          .filter((node) => propsOf(node).className === "truncate font-mono text-xs")
+          .filter((node) => propsOf(node)["data-review-path"] !== undefined)
           .map((node) => propsOf(node).title),
       ).toEqual(["/owned/one/src/a.ts", "/owned/two/src/a.ts"]);
-      for (const button of nodes.filter((node) => propsOf(node).role === "button"))
+      for (const button of nodes.filter(
+        (node) => propsOf(node)["data-review-open-file"] !== undefined,
+      ))
         await click(button);
       expect(internal).toEqual([
         { path: "/owned/one/src/a.ts", cwd: "/owned/parent" },
@@ -345,11 +347,9 @@ for (const path of [
       />,
       async (container, internal, external) => {
         const nodes = descendants(container);
-        const title = nodes.find(
-          (node) => propsOf(node).className === "truncate font-mono text-xs",
-        );
+        const title = nodes.find((node) => propsOf(node)["data-review-path"] !== undefined);
         expect(propsOf(title).title).toBe(path);
-        const open = nodes.find((node) => propsOf(node).role === "button");
+        const open = nodes.find((node) => propsOf(node)["data-review-open-file"] !== undefined);
         await click(open);
         await click(open, "ctrl");
         const target = path === "src/legacy.ts" ? "/owned/parent/src/legacy.ts" : path;

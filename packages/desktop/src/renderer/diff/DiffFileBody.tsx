@@ -17,6 +17,7 @@ interface Props {
   showRepository: boolean;
   commentable: boolean;
   diffStyle: DiffStyle;
+  wrap: boolean;
 }
 
 /**
@@ -31,7 +32,7 @@ export const DiffFileBody = memo(function DiffFileBody(props: Props) {
         {t("panels.diff.noTextChanges")}
       </div>
     );
-  const fallback = <PlainDiffBody file={props.section.file} />;
+  const fallback = <PlainDiffBody file={props.section.file} wrap={props.wrap} />;
   if (!pierreSupported()) return fallback;
   return (
     <Suspense fallback={fallback}>
@@ -41,7 +42,7 @@ export const DiffFileBody = memo(function DiffFileBody(props: Props) {
 });
 
 /** Minimal colored patch, used without Pierre (tests, unsupported input). */
-function PlainDiffBody({ file }: { file: DiffFile }) {
+function PlainDiffBody({ file, wrap }: { file: DiffFile; wrap: boolean }) {
   return (
     <div className="overflow-x-auto" data-diff-plain>
       {file.hunks.map((hunk, index) => (
@@ -54,7 +55,8 @@ function PlainDiffBody({ file }: { file: DiffFile }) {
               <div
                 key={lineIndex}
                 className={cn(
-                  "whitespace-pre px-2",
+                  "px-2",
+                  wrap ? "whitespace-pre-wrap [overflow-wrap:anywhere]" : "whitespace-pre",
                   line.kind === "add" && "bg-status-ok/10",
                   line.kind === "del" && "bg-status-err/10",
                 )}
