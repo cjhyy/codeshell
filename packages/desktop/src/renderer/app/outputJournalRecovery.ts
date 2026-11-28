@@ -44,11 +44,14 @@ export async function recoverDesktopOutputJournal(args: {
       {},
       () => false,
     );
-    if (snapshot.outputCursor || args.latestObservedCursor()) {
+    // A new Session can create and commit its journal after the first read;
+    // an external runtime also buffers its first frames, so the snapshot may
+    // carry the committed identity without any cursor yet. Either proof means
+    // the journal exists now: read it again, and only a second miss is a loss.
+    if (snapshot.outputCursor || args.latestObservedCursor() || snapshot.outputJournalIdentity) {
       page = await read();
       if (page.status === "unavailable") throw new Error("Output recovery journal is unavailable");
     } else {
-      if (snapshot.outputJournalIdentity) throw new Error("Output recovery journal is unavailable");
       return null;
     }
   }
