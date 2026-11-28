@@ -21,6 +21,7 @@ import {
   type WriteStream,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import { finished } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { buildSandboxEnv, groupAlive, killProcessGroup } from "../runtime/spawn-common.js";
 import {
@@ -40,6 +41,8 @@ export const MAX_IN_FLIGHT_CALLS = 16;
 const MAX_QUEUED_CALLS = 256;
 const MAX_LOG_BYTES = 1024 * 1024;
 const STOP_GRACE_MS = 2_000;
+/** How long the log waits for output still in the pipes after the process left. */
+const LOG_DRAIN_MS = STOP_GRACE_MS;
 const PROCESS_MARKER = "--codeshell-plugin-process=";
 
 export type PluginCallErrorCode =
@@ -136,6 +139,9 @@ export class PluginProcess {
   private logBytes = 0;
   private pidFile: string | undefined;
   private exited: Promise<void> = Promise.resolve();
+  /** Settles once the log holds everything the process wrote and is on disk. */
+  private logClosed: Promise<void> = Promise.resolve();
+  private resolveLogClosed: (() => void) | undefined;
   /** Waiting for the plugin to confirm its background logic stopped. */
   private readonly backgroundStops = new Set<() => void>();
   readonly stats: PluginProcessStats = { calls: 0, failures: 0, timeouts: 0 };
@@ -217,9 +223,26 @@ export class PluginProcess {
     }
     child.stdout?.on("data", (chunk: Buffer) => this.writeLog("stdout", chunk.toString("utf8")));
     child.stderr?.on("data", (chunk: Buffer) => this.writeLog("stderr", chunk.toString("utf8")));
+    let pipesClosed = false;
+    let afterPipesClose: (() => void) | undefined;
+    child.once("close", () => {
+      pipesClosed = true;
+      afterPipesClose?.();
+    });
     this.exited = new Promise<void>((resolve) => {
       child.once("exit", (code, signal) => {
-        resolve(this.onExit(child, code, signal));
+        this.onExit(child, code, signal);
+        resolve();
+        // What the plugin wrote just before it left can still be in its pipes,
+        // and something it started may hold them open: close the log once they
+        // are drained, or after the same grace its process group gets.
+        const closeLog = () => {
+          clearTimeout(timer);
+          this.closeLog(code, signal);
+        };
+        const timer = setTimeout(closeLog, LOG_DRAIN_MS);
+        if (pipesClosed) closeLog();
+        else afterPipesClose = closeLog;
       });
     });
 
@@ -347,7 +370,10 @@ export class PluginProcess {
    */
   async stop(): Promise<void> {
     const child = this.child;
-    if (!child || this.exitReason) return this.exited;
+    if (!child || this.exitReason) {
+      await this.exited;
+      return this.logClosed;
+    }
     this.exitReason = "requested";
     try {
       if (child.connected) child.disconnect();
@@ -357,6 +383,8 @@ export class PluginProcess {
     const timer = setTimeout(() => this.kill("requested"), STOP_GRACE_MS);
     await this.exited;
     clearTimeout(timer);
+    // Its log is complete once stop returns, also when the worker exits next.
+    await this.logClosed;
   }
 
   /**
@@ -468,11 +496,7 @@ export class PluginProcess {
     this.pump();
   }
 
-  private onExit(
-    child: ChildProcess,
-    code: number | null,
-    signal: NodeJS.Signals | null,
-  ): Promise<void> | void {
+  private onExit(child: ChildProcess, code: number | null, signal: NodeJS.Signals | null): void {
     if (this.child !== child) return;
     const reason = this.exitReason ?? "crashed";
     this.child = undefined;
@@ -491,14 +515,8 @@ export class PluginProcess {
     if (child.pid !== undefined && process.platform !== "win32") {
       void killProcessGroup(child.pid, { graceMs: STOP_GRACE_MS });
     }
-    this.writeLog("info", `exited code=${code} signal=${signal}`);
-    const log = this.log;
-    this.log = undefined;
-    // stop() callers can read the exit record as soon as shutdown completes.
-    const flushed = log && new Promise<void>((done) => log.end(() => done()));
     if (this.pidFile) rmSync(this.pidFile, { force: true });
     this.options.onExit?.({ code, signal, reason });
-    return flushed;
   }
 
   private openLog(): void {
@@ -507,10 +525,24 @@ export class PluginProcess {
     } catch {
       this.logBytes = 0;
     }
+    this.logClosed = new Promise<void>((resolve) => (this.resolveLogClosed = resolve));
     this.log = createWriteStream(this.spec.logFile, { flags: "a", mode: 0o600 });
     this.log.on("error", () => {
       this.log = undefined;
     });
+  }
+
+  /** The last line of a process's log; settles `logClosed` once it is on disk. */
+  private closeLog(code: number | null, signal: NodeJS.Signals | null): void {
+    const done = this.resolveLogClosed;
+    if (!done) return;
+    this.resolveLogClosed = undefined;
+    this.writeLog("info", `exited code=${code} signal=${signal}`);
+    const stream = this.log;
+    this.log = undefined;
+    if (!stream) return done();
+    finished(stream, () => done());
+    stream.end();
   }
 
   private writeLog(level: string, text: string): void {

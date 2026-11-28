@@ -167,11 +167,17 @@ export async function recoverMobileOutput(args: {
       {},
       () => true,
     );
-    if (snapshot?.journalIdentity && !snapshot.outputCursor && !args.latestCursor())
-      throw new Error("Required output journal is unavailable");
-    // Valid live input may precede the first canonical Run. Preserve its typed
-    // retry; an already observed cursor instead requires the real reread below.
-    if (snapshot?.inputIds?.length && !snapshot.outputCursor && !args.latestCursor())
+    if (snapshot?.journalIdentity && !snapshot.outputCursor && !args.latestCursor()) {
+      // A new Session can commit its journal after Main's unavailable read but
+      // before its snapshot, with no output published yet. The committed
+      // identity proves the journal exists: re-read once, requiring real proof.
+      reply = await args.read({});
+      if (!args.canContinue()) throw new Error("Recovery cancelled");
+      if (reply.page.status === "unavailable")
+        throw new Error("Required output journal is unavailable");
+    } else if (snapshot?.inputIds?.length && !snapshot.outputCursor && !args.latestCursor())
+      // Valid live input may precede the first canonical Run. Preserve its typed
+      // retry; an already observed cursor instead requires the real reread below.
       throw new MobilePendingInput(snapshot.inputIds);
   }
   if (

@@ -133,15 +133,17 @@ describe("PluginDetailView starter prompts", () => {
 });
 
 describe("PluginDetailView native plugins", () => {
-  // React writes a lone string child as textContent and anything else as text nodes.
+  // React writes a lone string child as textContent and anything else as text
+  // nodes, and updates a text node through nodeValue (the mini DOM keeps data apart).
   function textOf(node: unknown): string {
     const current = node as {
       nodeType?: number;
+      nodeValue?: string;
       data?: string;
       textContent?: string;
       childNodes?: unknown[];
     };
-    if (current.nodeType === 3) return current.data ?? "";
+    if (current.nodeType === 3) return current.nodeValue ?? current.data ?? "";
     const children = (current.childNodes ?? []).map(textOf).join("");
     return children || (current.textContent ?? "");
   }
@@ -260,5 +262,49 @@ describe("PluginDetailView native plugins", () => {
       await flushMicrotasks();
     });
     expect(nativePluginRuntime).toHaveBeenCalledWith("restart", "tickets@local");
+  });
+
+  test("an open log is read again after a restart and after a refresh", async () => {
+    const running = {
+      installKey: "tickets@local",
+      plugin: "tickets",
+      moduleId: "plugin-tickets-0123abcd",
+      state: "running",
+      pid: 4242,
+      restarts: 0,
+      calls: 0,
+      failures: 0,
+      timeouts: 0,
+      logFile: "/logs/plugin-tickets-0123abcd.log",
+    };
+    const nativePluginRuntime = mock(async () => ({ kind: "loaded", plugins: [running] }));
+    const logs = ["started pid 4242", "started pid 4243 after the restart", "after the refresh"];
+    let reads = 0;
+    const nativePluginLog = mock(async () => logs[Math.min(reads++, logs.length - 1)]);
+    const container = await render({
+      getPluginDetail: async () => detail({ state: "approved" }),
+      nativePluginRuntime,
+      nativePluginLog,
+    });
+    const click = async (label: string) => {
+      const button = buttonWithLabel(container, label);
+      expect(button).toBeDefined();
+      await act(async () => {
+        reactPropsOf(button).onClick();
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+    };
+
+    // A closed log is not read just because the plugin restarted.
+    await click("重启插件");
+    expect(nativePluginLog).not.toHaveBeenCalled();
+    await click("查看日志");
+    expect(textOf(container)).toContain("started pid 4242");
+    await click("重启插件");
+    expect(textOf(container)).toContain("started pid 4243 after the restart");
+    await click("刷新");
+    expect(textOf(container)).toContain("after the refresh");
+    expect(nativePluginLog).toHaveBeenCalledTimes(3);
   });
 });

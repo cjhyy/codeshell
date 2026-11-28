@@ -86,16 +86,19 @@ export async function chatFromOutputJournal(
         {},
         () => false,
       );
+    // A new Session can commit its journal after this detail was read, before
+    // any output is published: a committed identity proves the journal exists
+    // as much as a cursor does. Read it again; only a second miss is a loss.
     if (
       proof?.outputCursor ||
       latestOutputCursor?.() ||
-      buffered.some((p) => p.event.outputCursor)
+      buffered.some((p) => p.event.outputCursor) ||
+      proof?.journalIdentity ||
+      data.outputCoverage?.journalIdentity
     ) {
       page = await read({});
       if (page.status === "unavailable") throw new Error("Output recovery journal is unavailable");
     } else {
-      if (proof?.journalIdentity || data.outputCoverage?.journalIdentity)
-        throw new Error("Output recovery journal is unavailable");
       return null;
     }
   }

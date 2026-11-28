@@ -155,3 +155,21 @@ describe("createRendererBrowserSessionEventAccess", () => {
     expect(() => authorization.assertCurrent()).toThrow();
   });
 });
+
+describe("registering the browser of a Session that does not exist yet", () => {
+  test("the persisted lookup's miss is recognised as not created yet; other failures are not", async () => {
+    const { resolvePersistedBrowserSession, sessionNotCreatedYet } =
+      await import("./renderer-browser-session-ipc-authority.js");
+    const id = `s-not-created-${process.pid}-${Date.now()}`;
+    const miss = await resolvePersistedBrowserSession(id).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(sessionNotCreatedYet(miss, id)).toBe(true);
+    expect(sessionNotCreatedYet(miss, "s-another-session")).toBe(false);
+    expect(sessionNotCreatedYet(new Error("Session project is not mounted"), id)).toBe(false);
+    expect(sessionNotCreatedYet(Object.assign(new Error("gone"), { code: "ENOENT" }), id)).toBe(
+      false,
+    );
+  });
+});

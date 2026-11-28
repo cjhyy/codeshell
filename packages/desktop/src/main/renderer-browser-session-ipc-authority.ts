@@ -1,4 +1,5 @@
 import type { IpcMainEvent, IpcMainInvokeEvent } from "electron";
+import { basename } from "node:path";
 import { mobileSessionCommandAuthority } from "./mobile-remote/output-recovery-authority.js";
 import { getProjectStore } from "./project-store.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
@@ -13,6 +14,18 @@ export function browserPartitionForBucket(bucket: unknown): string | undefined {
   }
   // Keep the exact PanelArea/WebviewHost partition; never trim a cookie-jar key.
   return registryPartitionForBucket(bucket);
+}
+
+/**
+ * A new conversation registers its browser with its first message, before the
+ * Session directory exists. Main binds the same bucket when it admits the run
+ * (or starts the external runtime), so that miss is expected, not a failure.
+ */
+export function sessionNotCreatedYet(error: unknown, sessionId: string): boolean {
+  const cause = error as NodeJS.ErrnoException | undefined;
+  return (
+    cause?.code === "ENOENT" && typeof cause.path === "string" && basename(cause.path) === sessionId
+  );
 }
 
 export async function resolvePersistedBrowserSession(sessionId: string, requestedBucket?: string) {

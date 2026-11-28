@@ -8,6 +8,7 @@ import {
   createRendererBrowserSessionEventAccess,
   resolvePersistedBrowserSession,
   browserPartitionForBucket,
+  sessionNotCreatedYet,
 } from "./renderer-browser-session-ipc-authority.js";
 import {
   bucketForSession,
@@ -103,8 +104,8 @@ export function registerBrowserSessionIpc(deps: BrowserSessionIpcDeps) {
   ipcMain.on(
     "browser:register-session-bucket",
     async (event, payload: { sessionId?: unknown; bucket?: unknown; partition?: unknown }) => {
+      const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
       try {
-        const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
         const bucket = typeof payload?.bucket === "string" ? payload.bucket : "";
         const partition = typeof payload?.partition === "string" ? payload.partition : undefined;
         if (!sessionId || !bucket || bucket.length > 512 || bucket.includes("\0")) return;
@@ -123,6 +124,10 @@ export function registerBrowserSessionIpc(deps: BrowserSessionIpcDeps) {
         }
         registerSessionBucket(sessionId, bucket, partition);
       } catch (err) {
+        if (sessionNotCreatedYet(err, sessionId)) {
+          dlog("browser", "register_session_bucket_deferred", { reason: "session_not_created" });
+          return;
+        }
         dlog("browser", "register_session_bucket_failed", { error: String(err) });
       }
     },

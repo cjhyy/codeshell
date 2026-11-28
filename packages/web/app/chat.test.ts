@@ -445,3 +445,65 @@ test("browser recovery folds a complete redacted base without platform journal I
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("Hub reads a journal committed after its detail again instead of reporting it lost", async () => {
+  const root = mkdtempSync(join(tmpdir(), "hub-new-session-"));
+  try {
+    const manager = new SessionManager(root);
+    const session = manager.create(root, "fixture", "fixture", "fresh");
+    // The detail is read once the Session exists, before its first run commits a journal.
+    const transcript = JSON.parse(JSON.stringify(session.transcript.getEvents()));
+    const data = {
+      state: {},
+      transcript,
+      outputJournal: readOutputJournal(root, "fresh"),
+      outputCoverage: new SessionOutputCoverageStore(() => root).read("fresh"),
+    };
+    expect(data.outputJournal.status).toBe("unavailable");
+    expect(data.outputCoverage.journalIdentity).toBeUndefined();
+    manager.startSessionRun(session.state, "run");
+    const writer = new SessionOutputJournal(root, "fresh", "run", transcript.at(-1).id);
+    writer.append({ type: "session_user_message", text: "question", clientMessageId: "c" });
+    writer.append({ type: "text_delta", text: "answer" });
+    let reads = 0;
+    const result = await chatFromOutputJournal(
+      data as any,
+      async (options) => {
+        reads++;
+        return readOutputJournal(root, "fresh", options);
+      },
+      [],
+      undefined,
+      // The coverage read that follows carries the committed identity, but no
+      // output has been published yet, so there is no cursor.
+      async () => new SessionOutputCoverageStore(() => root).read("fresh") as any,
+    );
+    expect(reads).toBeGreaterThan(0);
+    expect(
+      result?.chat.items.some((item) => item.kind === "assistant" && item.text === "answer"),
+    ).toBe(true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("Hub reports a committed journal lost when it is still unavailable on a second read", async () => {
+  const unavailable = { version: 1, status: "unavailable", frames: [], complete: false } as const;
+  let reads = 0;
+  await expect(
+    chatFromOutputJournal(
+      {
+        state: {},
+        transcript: [],
+        outputJournal: unavailable,
+        outputCoverage: { journalIdentity: "a".repeat(64), unpaired: false, inputIds: [] },
+      } as any,
+      async () => {
+        reads++;
+        return unavailable as any;
+      },
+      [],
+    ),
+  ).rejects.toThrow("Output recovery journal is unavailable");
+  expect(reads).toBe(1);
+});

@@ -150,7 +150,9 @@ collide, the one installed first wins.
   starts again.
 - Data: `CODESHELL_PLUGIN_DATA` (also `ctx.plugin.dataDir`).
 - Log: `~/.code-shell/plugin-runtime/.logs/<module id>.log`, readable from the
-  plugin detail page.
+  plugin detail page. Output the process wrote just before it exited is kept:
+  the log closes once its pipes are drained, at most 2 s after the exit, and
+  stopping a plugin returns once its log is complete.
 - Environment: the same allowlist as sandboxed shells, plus
   `CODESHELL_PLUGIN_ROOT` and `CODESHELL_PLUGIN_DATA`. No credentials are passed.
 - Permissions: none are taken away. The process runs with the user's operating

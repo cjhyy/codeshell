@@ -81,3 +81,79 @@ test("actual Main IPC recovers output evicted from the snapshot and survives Mai
     rmSync(join(root, id), { recursive: true, force: true });
   }
 });
+
+test("a new Session whose journal appears before the snapshot is read again, not reported lost", async () => {
+  const root = sessionsRoot();
+  const id = `journal-race-${Date.now()}-${Math.floor(Math.random() * 1e8)}`;
+  const manager = new SessionManager(root);
+  const snapshots = new SessionSnapshotStore({
+    coverage: new SessionOutputCoverageStore(() => root),
+  });
+  const handlers = new Map<string, (...args: any[]) => any>();
+  registerSessionTranscriptIpc({
+    handle: (channel, listener) => {
+      handlers.set(channel, listener);
+    },
+  });
+  const reads: string[] = [];
+  let writer: SessionOutputJournal | undefined;
+  try {
+    const recovered = await recoverDesktopOutputJournal({
+      read: async (options) => {
+        const page = await handlers.get("sessions:outputJournal")!({}, id, options);
+        reads.push(page.status);
+        return page;
+      },
+      snapshot: async () => {
+        if (!writer) {
+          // The first read ran before the Session existed. The runtime creates
+          // it and commits its journal now, but its first frames have not
+          // reached Main's live stream yet (an external runtime buffers them).
+          const session = manager.create(root, "fixture", "fixture", id);
+          manager.startSessionRun(session.state, "run");
+          writer = new SessionOutputJournal(
+            root,
+            id,
+            "run",
+            session.transcript.getEvents().at(-1)!.id,
+          );
+          writer.append({ type: "session_user_message", text: "question", clientMessageId: "c" });
+        }
+        return snapshots.get(id) as any;
+      },
+      canContinue: () => true,
+      latestObservedCursor: () => undefined,
+    });
+    expect(reads[0]).toBe("unavailable");
+    expect(reads).toContain("ok");
+    expect(recovered?.state.messages).toEqual([
+      expect.objectContaining({ kind: "user", text: "question", clientMessageId: "c" }),
+    ]);
+  } finally {
+    rmSync(join(root, id), { recursive: true, force: true });
+  }
+});
+
+test("a committed journal that is still unreadable when read again is reported lost", async () => {
+  const unavailable = { version: 1, status: "unavailable", frames: [], complete: false } as const;
+  let reads = 0;
+  await expect(
+    recoverDesktopOutputJournal({
+      read: async () => {
+        reads++;
+        return unavailable as any;
+      },
+      snapshot: async () =>
+        ({
+          epoch: "epoch",
+          events: [],
+          nextSeq: 1,
+          topLevelRunning: false,
+          outputJournalIdentity: "a".repeat(64),
+        }) as any,
+      canContinue: () => true,
+      latestObservedCursor: () => undefined,
+    }),
+  ).rejects.toThrow("Output recovery journal is unavailable");
+  expect(reads).toBe(2);
+});

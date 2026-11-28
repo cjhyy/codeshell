@@ -216,3 +216,46 @@ test("cancellation between base pages prevents the next read", async () => {
   ).rejects.toThrow();
   expect(reads).toBe(1);
 });
+function journalCommittedAfterRead(f: ReturnType<typeof fixture>) {
+  // Main read the journal before the runtime committed it and took its
+  // snapshot after: the identity is there, but no output has reached Main yet.
+  return {
+    ...f.reply,
+    page: { version: 1, status: "unavailable", frames: [], complete: false },
+    legacyBaseComplete: false,
+    legacyBase: undefined,
+    snapshot: { ...f.reply.snapshot, outputCursor: undefined },
+  };
+}
+test("a journal committed after Main's unavailable read is read again, not reported lost", async () => {
+  const f = fixture();
+  const inline = await recoverMobileOutput({
+    read: async () => f.reply,
+    canContinue: () => true,
+    latestCursor: () => undefined,
+  });
+  const replies = [journalCommittedAfterRead(f), f.reply];
+  let reads = 0;
+  const result = await recoverMobileOutput({
+    read: async () => replies[reads++] as any,
+    canContinue: () => true,
+    latestCursor: () => undefined,
+  });
+  expect(reads).toBe(2);
+  expect(result).toEqual(inline);
+});
+test("a committed journal that is still unavailable when read again is reported lost", async () => {
+  const f = fixture();
+  let reads = 0;
+  await expect(
+    recoverMobileOutput({
+      read: async () => {
+        reads++;
+        return journalCommittedAfterRead(f) as any;
+      },
+      canContinue: () => true,
+      latestCursor: () => undefined,
+    }),
+  ).rejects.toThrow("Required output journal is unavailable");
+  expect(reads).toBe(2);
+});
