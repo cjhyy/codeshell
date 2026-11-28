@@ -1,4 +1,4 @@
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { memo, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { AgentClient } from "@cjhyy/code-shell-core";
 import {
   asyncAgentRegistry,
@@ -71,8 +71,12 @@ interface TuiControlSurfaceProps {
   viewMode: DockViewMode;
 }
 
-/** Bottom-of-screen modal/input router, kept separate from protocol state. */
-export function TuiControlSurface(props: TuiControlSurfaceProps) {
+/**
+ * Bottom-of-screen modal/input router, kept separate from protocol state.
+ * Memoized: App re-renders on every 50 ms stream flush, and every prop here
+ * is stable across those flushes (App passes memoized callbacks).
+ */
+export const TuiControlSurface = memo(function TuiControlSurface(props: TuiControlSurfaceProps) {
   const {
     client,
     screen,
@@ -404,4 +408,4 @@ export function TuiControlSurface(props: TuiControlSurfaceProps) {
       />
     </>
   );
-}
+});

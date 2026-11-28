@@ -27,7 +27,12 @@ export interface AgentDockProps {
  *
  * See docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md.
  */
-export function AgentDock({ viewMode, focusedIndex }: AgentDockProps): React.ReactElement | null {
+// Memoized: App re-renders on every stream flush; the dock has its own registry
+// subscription and 1 Hz tick, so it only needs props-driven renders.
+export const AgentDock = React.memo(function AgentDock({
+  viewMode,
+  focusedIndex,
+}: AgentDockProps): React.ReactElement | null {
   // Rows never show transcript content, so per-token transcript touches are
   // ignored; only row-field changes (status, fade, name…) re-render.
   const agents = useAgentRegistrySnapshot(false);
@@ -79,7 +84,7 @@ export function AgentDock({ viewMode, focusedIndex }: AgentDockProps): React.Rea
       {overflow > 0 && <Text dim>{`... +${overflow} more`}</Text>}
     </Box>
   );
-}
+});
 
 function AgentDockRow({
   entry,

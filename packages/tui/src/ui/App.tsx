@@ -39,6 +39,8 @@ import {
   activeQuestion,
   INITIAL_PENDING_QUESTIONS,
   reducePendingQuestions,
+  type PendingQuestion,
+  type QuestionDraft,
 } from "./pending-questions.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
@@ -1911,7 +1913,9 @@ export function App({
           clearTaskSnapshots();
           setShowBanner(true);
         },
-        chatLog,
+        // Read at dispatch time so handleSlashCommand doesn't change identity on
+        // every text flush (it is a prop of the memoized TuiControlSurface).
+        chatLog: chatStore.getEntries(),
         startOnboarding,
         openModelSelector,
         openSessionPicker,
@@ -2083,7 +2087,6 @@ export function App({
       currentEffort,
       tasks,
       clearTaskSnapshots,
-      chatLog,
       exit,
       startOnboarding,
       openModelSelector,
@@ -2093,19 +2096,47 @@ export function App({
     ],
   );
 
-  const addStatus = (reason: string) => {
+  // Stable identities: both are props of the memoized TuiControlSurface.
+  const addStatus = useCallback((reason: string) => {
     chatStore.update((prev) => [...prev, entry({ type: "status", reason })]);
-  };
+  }, []);
 
-  const applyModelConfigureResult = (result: unknown, fallbackModel: string): string => {
-    const data = result as { model?: string; maxContextTokens?: number } | undefined;
-    const newModel = data?.model ?? fallbackModel;
-    setModel(newModel);
-    if (typeof data?.maxContextTokens === "number") {
-      setActiveMaxContextTokens(data.maxContextTokens);
-    }
-    return newModel;
-  };
+  const applyModelConfigureResult = useCallback(
+    (result: unknown, fallbackModel: string): string => {
+      const data = result as { model?: string; maxContextTokens?: number } | undefined;
+      const newModel = data?.model ?? fallbackModel;
+      setModel(newModel);
+      if (typeof data?.maxContextTokens === "number") {
+        setActiveMaxContextTokens(data.maxContextTokens);
+      }
+      return newModel;
+    },
+    [],
+  );
+
+  const onQuestionResolved = useCallback(
+    (question: PendingQuestion) =>
+      dispatchQuestion({
+        type: "resolve",
+        requestId: question.requestId,
+        sessionId: question.sessionId,
+      }),
+    [],
+  );
+  const onQuestionDeferred = useCallback(
+    (requestId: string) => dispatchQuestion({ type: "defer", requestId }),
+    [],
+  );
+  const onQuestionDraftChange = useCallback(
+    (requestId: string, draft: QuestionDraft) =>
+      dispatchQuestion({ type: "draft", requestId, draft }),
+    [],
+  );
+  const onQuestionSubmittingChange = useCallback(
+    (requestId: string, submitting: boolean) =>
+      dispatchQuestion({ type: "submitting", requestId, submitting }),
+    [],
+  );
 
   const addMessage = (text: string) => {
     chatStore.update((prev) => [
@@ -2242,20 +2273,10 @@ export function App({
         wizard={wizard}
         setWizard={setWizard}
         pendingQuestion={pendingQuestion}
-        onQuestionResolved={(question) =>
-          dispatchQuestion({
-            type: "resolve",
-            requestId: question.requestId,
-            sessionId: question.sessionId,
-          })
-        }
-        onQuestionDeferred={(requestId) => dispatchQuestion({ type: "defer", requestId })}
-        onQuestionDraftChange={(requestId, draft) =>
-          dispatchQuestion({ type: "draft", requestId, draft })
-        }
-        onQuestionSubmittingChange={(requestId, submitting) =>
-          dispatchQuestion({ type: "submitting", requestId, submitting })
-        }
+        onQuestionResolved={onQuestionResolved}
+        onQuestionDeferred={onQuestionDeferred}
+        onQuestionDraftChange={onQuestionDraftChange}
+        onQuestionSubmittingChange={onQuestionSubmittingChange}
         pendingApproval={pendingApproval !== null}
         sessionId={sessionId}
         sidRef={sidRef}
