@@ -97,10 +97,26 @@ export function NativePluginSection({
     }
   };
 
+  const readLog = async () => {
+    try {
+      setLog(await window.codeshell.nativePluginLog(installKey));
+    } catch {
+      setLog("");
+    }
+  };
+
+  // An open log describes the process it was read from; read it again whenever
+  // the status is, so a restart or a refresh never leaves an old process's log.
+  const refresh = () => {
+    void refreshRuntime();
+    if (log !== null) void readLog();
+  };
+
   const restart = async () => {
     setBusy("restart");
     try {
       setRuntime(await window.codeshell.nativePluginRuntime("restart", installKey));
+      if (log !== null) await readLog();
       toast({ message: t("ext.pluginDetail.native.runtime.restartedToast"), variant: "success" });
     } catch (cause) {
       toast({
@@ -117,11 +133,7 @@ export function NativePluginSection({
       setLog(null);
       return;
     }
-    try {
-      setLog(await window.codeshell.nativePluginLog(installKey));
-    } catch {
-      setLog("");
-    }
+    await readLog();
   };
 
   const rows = nativeSurfaceRows(review);
@@ -245,7 +257,7 @@ export function NativePluginSection({
           place={place}
           busy={busy}
           log={log}
-          onRefresh={() => void refreshRuntime()}
+          onRefresh={refresh}
           onRestart={() => void restart()}
           onToggleLog={() => void toggleLog()}
         />
