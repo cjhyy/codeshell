@@ -70,7 +70,7 @@ import {
   observeComputerUseRunControl,
   observeComputerUseRunEvent,
 } from "./computer-use/service.js";
-import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-modules-env.js";
+import { composeWorkerModuleEnv, readUserFeatureFlags } from "./capability-modules-env.js";
 import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
 import { consumeSessionIndexNotification } from "./desktop-host/session-index-changes.js";
 import { parseWorkerLine, type ParsedWorkerLine } from "./worker-line.js";
@@ -508,7 +508,7 @@ export class AgentBridge implements PetStateBridge {
         CODE_SHELL_OPERATION_BATCH_ACCESS: "host",
         // This bridge handles workspace switches and authoritative Session runs.
         CODE_SHELL_WORKSPACE_ACCESS: "host",
-        CODE_SHELL_CAPABILITY_MODULES: composeCapabilityModulesEnv(
+        ...composeWorkerModuleEnv(
           {
             coding: codingModule,
             pet: petCapabilityModule,

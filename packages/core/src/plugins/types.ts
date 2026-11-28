@@ -78,6 +78,44 @@ export interface PluginInstallEntry {
    * pending approval. Installs without any valid MCP servers auto-approve.
    */
   approvedMcpDigest?: string;
+  /**
+   * CodeShell extension: digest of the whole install tree captured at
+   * install/update (see pluginTreeDigest). Missing on installs that predate
+   * whole-tree approval; their executable content is pending until approved.
+   */
+  contentDigest?: string;
+  /**
+   * CodeShell extension: the installed version the user agreed to run.
+   * Command hooks, MCP servers and the native entry all require it to equal
+   * `contentDigest`, in addition to their own approval. It is compared with
+   * the record, never with the files on disk: local edits after approval run
+   * as they are.
+   */
+  approvedContentDigest?: string;
+  /**
+   * CodeShell extension: the tree digest for which the user agreed to run the
+   * plugin's native entry (plugins/native). Separate from the hook and MCP
+   * approvals so approving one kind never starts another.
+   */
+  approvedNativeDigest?: string;
+  /**
+   * What the native manifest declared when it was last approved. Display
+   * metadata only: it is the baseline for showing what an update adds or drops.
+   */
+  approvedNativeSurface?: StoredNativePluginSurface;
+}
+
+export interface StoredNativePluginSurface {
+  apiVersion: number;
+  hooks: string[];
+  tools: string[];
+  presets: string[];
+  promptSections: string[];
+  context: string[];
+  background: boolean;
+  coreCapabilities: string[];
+  hostCapabilities: string[];
+  companionPanel?: string;
 }
 
 export interface StoredPluginHookReview {

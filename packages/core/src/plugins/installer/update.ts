@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { rename, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { detectPluginFormat } from "./detectFormat.js";
 import { pluginInstallDir } from "./paths.js";
 import { installPluginFromPath } from "./install.js";
@@ -16,6 +17,8 @@ import {
 } from "../installedPlugins.js";
 import { pluginHookInstallRecord } from "../pluginHookIntegrity.js";
 import { pluginMcpInstallRecord } from "../pluginMcpIntegrity.js";
+import { pluginContentInstallRecord, type InstallRecordOptions } from "../pluginTreeDigest.js";
+import { pluginNativeInstallRecord } from "../native/approval.js";
 import { readPluginMcp } from "./loadPluginMcp.js";
 import { CodexPluginManifest, CSMeta, PluginInstallError } from "./types.js";
 
@@ -47,6 +50,7 @@ export async function reinstallAtomic(
   source: string,
   doInstall: () => Promise<unknown>,
   beforeCommit?: () => void,
+  options: InstallRecordOptions = {},
 ): Promise<void> {
   const dir = pluginInstallDir(name);
   const backup = `${dir}.bak-${process.pid}-${randomUUID()}`;
@@ -70,11 +74,18 @@ export async function reinstallAtomic(
         const installed = data.plugins[key] ?? [];
         let changed = false;
         for (const entry of installed) {
-          const next = pluginHookInstallRecord(entry.installPath, savedEntries);
+          const next = pluginHookInstallRecord(entry.installPath, savedEntries, options);
+          const nextContent = pluginContentInstallRecord(entry.installPath, savedEntries, options);
+          const nextNative = pluginNativeInstallRecord(
+            nextContent.contentDigest,
+            savedEntries,
+            options,
+          );
           const nextMcp = pluginMcpInstallRecord(
             entry.installPath,
             Object.keys(readPluginMcp(entry.installPath, name)).length > 0,
             savedEntries,
+            options,
           );
           if (
             entry.hookDigest !== next.hookDigest ||
@@ -82,7 +93,11 @@ export async function reinstallAtomic(
             JSON.stringify(entry.approvedHookSnapshot) !==
               JSON.stringify(next.approvedHookSnapshot) ||
             entry.mcpDigest !== nextMcp.mcpDigest ||
-            entry.approvedMcpDigest !== nextMcp.approvedMcpDigest
+            entry.approvedMcpDigest !== nextMcp.approvedMcpDigest ||
+            entry.contentDigest !== nextContent.contentDigest ||
+            entry.approvedContentDigest !== nextContent.approvedContentDigest ||
+            entry.approvedNativeDigest !== nextNative.approvedNativeDigest ||
+            !isDeepStrictEqual(entry.approvedNativeSurface, nextNative.approvedNativeSurface)
           ) {
             entry.hookDigest = next.hookDigest;
             if (next.approvedHookDigest) entry.approvedHookDigest = next.approvedHookDigest;
@@ -92,6 +107,17 @@ export async function reinstallAtomic(
             entry.mcpDigest = nextMcp.mcpDigest;
             if (nextMcp.approvedMcpDigest) entry.approvedMcpDigest = nextMcp.approvedMcpDigest;
             else delete entry.approvedMcpDigest;
+            if (nextContent.contentDigest) entry.contentDigest = nextContent.contentDigest;
+            else delete entry.contentDigest;
+            if (nextContent.approvedContentDigest) {
+              entry.approvedContentDigest = nextContent.approvedContentDigest;
+            } else delete entry.approvedContentDigest;
+            if (nextNative.approvedNativeDigest) {
+              entry.approvedNativeDigest = nextNative.approvedNativeDigest;
+            } else delete entry.approvedNativeDigest;
+            if (nextNative.approvedNativeSurface) {
+              entry.approvedNativeSurface = nextNative.approvedNativeSurface;
+            } else delete entry.approvedNativeSurface;
             changed = true;
           }
         }
@@ -180,11 +206,13 @@ export async function updatePluginByName(
       }
     }
 
+    // The bytes come from the user's own directory, not a download.
     await reinstallAtomic(
       name,
       meta.source,
       () => installPluginFromPath(meta.source, name, installedAt),
       options.beforeCommit,
+      { keepApprovals: true },
     );
     return { updated: true, reason: "reinstalled" };
   });

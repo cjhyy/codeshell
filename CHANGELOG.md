@@ -10,6 +10,32 @@ breaking.
 
 ### Changed
 
+- Native plugins are on by default. Approved native plugins load in the
+  desktop app without turning on a feature flag; set
+  `featureFlags.native_plugins` to `false` in your user settings to turn them
+  all off.
+
+## [0.12.0-rc.3] - 2026-11-27
+
+Same requirements as 0.12.0-rc.1.
+
+### Upgrade notes
+
+- Plugin command hooks and plugin MCP servers approved in an earlier version
+  stop until you approve them once more: approval now covers the version of
+  the plugin that was installed, and older approvals are not carried over.
+  Open the plugin in Extensions and approve it, or reinstall it.
+
+### Added
+
+- Native plugins (experimental, off by default). A plugin can ship code that
+  runs in a process of its own and adds tools, hooks, presets, prompt
+  sections, context and background logic. Turn on the `native_plugins`
+  feature flag and restart to load the ones you approved. See
+  `docs/native-plugins.md`.
+
+### Changed
+
 - Background memory extraction makes far fewer model requests. It now runs
   once a work session has been quiet for 30 minutes instead of after every
   turn, reads only what was said since it last ran, and skips stretches in
@@ -20,6 +46,20 @@ breaking.
 - Claude Code and Codex sessions extract memories only with the background-task
   model you selected, never with the session's own model. With none selected
   they are not extracted, and Settings > Memory says so.
+- Plugin approval covers the version you downloaded. Installing or updating a
+  plugin from git, npm or an archive asks for approval again unless its files
+  are identical to a version you already approved; installs and updates from
+  a local directory keep their approval. Editing an installed plugin
+  afterwards does not withdraw it: what runs is what is on disk.
+- File and diff views scroll continuously. The file page searches the whole
+  file, wraps lines on request and takes line comments; Markdown files render
+  whole; Review and the files-changed dialog no longer split large diffs into
+  pages.
+
+### Fixed
+
+- Some archived sessions showed the history recovery card on every open, and
+  reloading brought it back. They open normally again.
 
 ## [0.12.0-rc.2] - 2026-11-24
 

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { mergePluginMcpServers } from "./loadPluginMcp.js";
 import { appendInstallEntry, pluginInstallKey } from "../installedPlugins.js";
+import { approvePluginMcp } from "../pluginMcpApproval.js";
 
 describe("mergePluginMcpServers", () => {
   let home: string, prev: string | undefined;
@@ -28,6 +29,7 @@ describe("mergePluginMcpServers", () => {
       installedAt: "t",
       lastUpdated: "t",
     });
+    approvePluginMcp(pluginInstallKey(name, "local"));
   }
 
   /** A CC plugin that only ships a raw .mcp.json (mcpServers wrapper, no prefix). */
@@ -42,6 +44,7 @@ describe("mergePluginMcpServers", () => {
       installedAt: "t",
       lastUpdated: "t",
     });
+    approvePluginMcp(pluginInstallKey(name, "local"));
   }
 
   test("falls back to .mcp.json when no mcp-servers.json (CC plugin), keying <plugin>:<server>", () => {

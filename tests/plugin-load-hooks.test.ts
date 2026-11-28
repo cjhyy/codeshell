@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { loadPluginHooks } from "../packages/core/src/plugins/loadPluginHooks.js";
+import { approvePluginHooks } from "../packages/core/src/plugins/pluginHookApproval.js";
 import { HookRegistry } from "../packages/core/src/hooks/registry.js";
 
 let workDir: string;
@@ -50,6 +51,13 @@ function installPlugin(
     },
   ];
   writeFileSync(manifestPath, JSON.stringify(manifest));
+  // Hooks only load after the user approves the installed bytes. A definition
+  // that cannot be approved (invalid) stays unapproved, like it would for a user.
+  try {
+    approvePluginHooks(`${pluginName}@${marketplace}`);
+  } catch {
+    /* left pending */
+  }
   return installPath;
 }
 

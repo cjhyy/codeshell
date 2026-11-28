@@ -6,6 +6,7 @@ import { createDesktopTaskInbox } from "./shell/task-inbox.js";
 import { createMimiPresenceShell } from "./shell/mimi-presence.js";
 import { createPanelCookieAdapter,registerPanelWindowShell } from "./shell/panel-app.js";
 import { registerPluginLibraryIpc } from "./plugin-library-ipc.js";
+import { registerNativePluginIpc } from "./native-plugins-ipc.js";
 import { registerHostedWechatLogin } from "./desktop-host/wechat-login-client.js";
 import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
 import type { SettingsChange } from "../shared/settings-change.js";
@@ -1124,6 +1125,7 @@ taskInboxDisposers.push(
   }),
 );
 backgroundWork.registerBackgroundWorkIpc(ipcMain, mainWindows, () => bridge);
+registerNativePluginIpc(ipcMain, mainWindows, () => bridge, resolveNoRepoCwd);
 const operationScope = {
   host: desktopHost,
   windows: () => [...mainWindows],

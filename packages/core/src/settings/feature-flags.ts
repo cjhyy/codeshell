@@ -99,6 +99,17 @@ export const FEATURE_FLAGS = {
     default: false,
     description: "Experimental: drive native macOS apps through an embedded Cua Driver (restart required)",
   },
+  /**
+   * Native plugins: an installed plugin with a `.codeshell-plugin/plugin.json`
+   * (schemaVersion 2) runs its own entry in a process of its own and can add
+   * hooks, tools, presets, prompt sections and context. Default ON: only
+   * plugins the user approved run. Read when a worker starts, so toggling
+   * needs a restart; installing and approving such plugins works either way.
+   */
+  native_plugins: {
+    default: true,
+    description: "Load approved native plugins in their own processes; off runs none (restart required)",
+  },
 } as const;
 
 export type FeatureFlagName = keyof typeof FEATURE_FLAGS;

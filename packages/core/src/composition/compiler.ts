@@ -29,7 +29,7 @@ function registerModules(options: CompileCompositionOptions): RegisteredModule[]
   const core = options.core ?? CORE_AGENT_MODULE;
   const registered: RegisteredModule[] = [];
   const seen = new Set<string>();
-  const push = (module: AgentModule, source: "core" | "host"): void => {
+  const push = (module: AgentModule, source: ResolvedModule["source"], revision?: string): void => {
     if (!MODULE_ID_PATTERN.test(module.id)) {
       throw new CompositionError(`Invalid module id: "${module.id}"`, {
         code: "invalid_module_id",
@@ -45,11 +45,20 @@ function registerModules(options: CompileCompositionOptions): RegisteredModule[]
     seen.add(module.id);
     registered.push({
       module,
-      resolved: { id: module.id, order: registered.length, source },
+      resolved: {
+        id: module.id,
+        order: registered.length,
+        source,
+        ...(revision === undefined ? {} : { revision }),
+      },
     });
   };
   push(core, "core");
   for (const module of options.modules ?? []) push(module, "host");
+  for (const { module, revision } of options.pluginModules ?? []) {
+    assertPluginModule(module);
+    push(module, "plugin", revision);
+  }
   for (const id of options.expectedModules ?? []) {
     if (!seen.has(id)) {
       throw new CompositionError(`Expected module "${id}" is missing`, {
@@ -61,10 +70,43 @@ function registerModules(options: CompileCompositionOptions): RegisteredModule[]
   return registered;
 }
 
+/** The only engine slots a plugin module may fill. */
+const PLUGIN_ENGINE_CONTRIBUTIONS = new Set([
+  "tools",
+  "presets",
+  "presetExtensions",
+  "promptSections",
+  "dynamicContextProviders",
+  "hooks",
+]);
+
+/**
+ * A plugin module is generated from third-party declarations, so it gets no
+ * protocol surface, no activators, no private service and none of the engine
+ * slots that change how sessions or files are handled.
+ */
+function assertPluginModule(module: AgentModule): void {
+  const forbidden = [
+    ...(module.protocol !== undefined ? ["protocol"] : []),
+    ...(module.activateHost !== undefined ? ["activateHost"] : []),
+    ...(module.activateEngine !== undefined ? ["activateEngine"] : []),
+    ...Object.entries(module.engine ?? {})
+      .filter(([key, value]) => value !== undefined && !PLUGIN_ENGINE_CONTRIBUTIONS.has(key))
+      .map(([key]) => `engine.${key}`),
+  ];
+  if (forbidden.length > 0) {
+    throw new CompositionError(
+      `Plugin module "${module.id}" may not contribute ${forbidden.join(", ")}`,
+      { code: "plugin_module_contribution", key: forbidden[0], firstModuleId: module.id },
+    );
+  }
+}
+
 function moduleDiagnostics(registered: RegisteredModule[]): CompositionDiagnostic[] {
   const diagnostics: CompositionDiagnostic[] = [];
   for (const { module, resolved } of registered) {
-    if (resolved.source === "core") continue;
+    // Plugin modules are engine-only by construction; that is not worth a diagnostic.
+    if (resolved.source !== "host") continue;
     const hasEngine = module.engine !== undefined || module.activateEngine !== undefined;
     const hasProtocol = module.protocol !== undefined || module.activateHost !== undefined;
     if (!hasEngine && !hasProtocol) {
@@ -179,7 +221,7 @@ function collectEngine(
   const presets: Array<ResolvedContribution<AgentPreset>> = [];
   const presetIndex = new Map<string, number>();
   const coreModuleId = registered[0]?.resolved.id ?? "core";
-  for (const { module } of registered) {
+  for (const { module, resolved } of registered) {
     for (const preset of module.engine?.presets ?? []) {
       const existing = presetIndex.get(preset.name);
       if (existing === undefined) {
@@ -188,7 +230,8 @@ function collectEngine(
         continue;
       }
       const owner = presets[existing];
-      if (!owner || owner.moduleId !== coreModuleId) {
+      // Only a host module may replace a core preset; a plugin never does.
+      if (!owner || owner.moduleId !== coreModuleId || resolved.source === "plugin") {
         throw duplicate("preset", preset.name, owner?.moduleId ?? coreModuleId, module.id);
       }
       presets[existing] = { key: preset.name, moduleId: module.id, value: preset };
@@ -245,7 +288,7 @@ function collectEngine(
   // that exist; the target decides membership at use time (resolve-preset).
   const presetNames = new Set(presets.map((p) => p.key));
   const presetExtensions: Array<ResolvedContribution<AgentPresetExtension>> = [];
-  for (const { module } of registered) {
+  for (const { module, resolved } of registered) {
     (module.engine?.presetExtensions ?? []).forEach((extension, index) => {
       for (const toolName of extension.tools) {
         const tool = presetTagTools.find((t) => t.tool.definition.name === toolName);
@@ -258,8 +301,11 @@ function collectEngine(
       }
       const named =
         "presets" in extension.target ? extension.target.presets : extension.target.allExcept;
+      // A plugin may name another plugin's preset, which can be uninstalled at
+      // any time: adding to, or leaving out, a preset that is not there is a no-op.
+      const mayBeAbsent = resolved.source === "plugin";
       for (const name of named) {
-        if (!presetNames.has(name)) {
+        if (!mayBeAbsent && !presetNames.has(name)) {
           throw new CompositionError(
             `Preset extension of "${module.id}" targets unknown preset "${name}"`,
             { code: "unknown_preset_tool", key: name, firstModuleId: module.id },

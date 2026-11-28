@@ -355,7 +355,7 @@ export function mergePluginMcpServers(
     for (const entry of entries) {
       const servers = readPluginMcp(entry.installPath, pluginName);
       const approval = pluginMcpApprovalState(entry, Object.keys(servers).length > 0);
-      if (approval === "pending" || approval === "changed" || approval === "none") continue;
+      if (approval !== "approved") continue;
       for (const [k, cfg] of Object.entries(servers)) {
         if (k in merged) continue; // user / earlier wins
         merged[k] = applyOverride(cfg, overrides[k]);

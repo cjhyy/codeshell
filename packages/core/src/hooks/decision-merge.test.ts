@@ -43,3 +43,50 @@ describe("HookRegistry decision merge", () => {
     expect((await reg.emit("pre_tool_use", {})).decision).toBe("allow");
   });
 });
+
+describe("HookRegistry rewrites across the chain", () => {
+  it("a handler that ignores earlier rewrites still replaces them, as before", async () => {
+    const reg = new HookRegistry();
+    reg.register("pre_tool_use", (ctx) => ({
+      updatedInput: { ...(ctx.data.args as object), redacted: true },
+    }));
+    reg.register("pre_tool_use", (ctx) => ({
+      updatedInput: { ...(ctx.data.args as object), dryRun: true },
+    }));
+    const result = await reg.emit("pre_tool_use", { args: { command: "deploy" } });
+    expect(result.updatedInput).toEqual({ command: "deploy", dryRun: true });
+  });
+
+  it("a handler can build on what earlier handlers produced", async () => {
+    const reg = new HookRegistry();
+    const seen: unknown[] = [];
+    reg.register("pre_tool_use", (ctx) => {
+      seen.push(ctx.pending?.updatedInput);
+      return { decision: "ask", updatedInput: { ...(ctx.data.args as object), redacted: true } };
+    });
+    reg.register("pre_tool_use", (ctx) => {
+      seen.push(ctx.pending?.updatedInput);
+      expect(ctx.pending?.decision).toBe("ask");
+      // The original is still in data; the earlier rewrite is in pending.
+      expect(ctx.data.args).toEqual({ command: "deploy" });
+      return {
+        updatedInput: { ...(ctx.pending?.updatedInput ?? (ctx.data.args as object)), dryRun: true },
+      };
+    });
+    const result = await reg.emit("pre_tool_use", { args: { command: "deploy" } });
+    expect(seen).toEqual([undefined, { command: "deploy", redacted: true }]);
+    expect(result.updatedInput).toEqual({ command: "deploy", redacted: true, dryRun: true });
+  });
+
+  it("each emit starts with nothing pending", async () => {
+    const reg = new HookRegistry();
+    const seen: unknown[] = [];
+    reg.register("user_prompt_submit", (ctx) => {
+      seen.push(ctx.pending?.updatedPrompt);
+      return { updatedPrompt: "rewritten" };
+    });
+    await reg.emit("user_prompt_submit", { prompt: "a" });
+    await reg.emit("user_prompt_submit", { prompt: "b" });
+    expect(seen).toEqual([undefined, undefined]);
+  });
+});

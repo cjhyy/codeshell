@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { PluginInstallError, type PluginCatalogEntry } from "@cjhyy/code-shell-core";
 import { updatePluginEntry } from "./plugins-service.js";
+import {
+  nativePluginLog,
+  nativePluginRuntime,
+  type NativePluginRuntimeDeps,
+} from "./native-plugins-ipc.js";
 
 function services(
   catalog: Array<
@@ -109,5 +114,59 @@ describe("updatePluginEntry", () => {
 
     await expect(updatePluginEntry("media@shop", fake.value)).rejects.toThrow("offline");
     expect(fake.calls).toEqual(["refresh:shop"]);
+  });
+});
+
+describe("native plugin runtime state", () => {
+  function deps(
+    options: {
+      enabled?: boolean;
+      live?: boolean;
+      reply?: Awaited<ReturnType<NativePluginRuntimeDeps["query"]>>;
+    } = {},
+  ) {
+    const queries: Array<{ type: string; params: Record<string, unknown> }> = [];
+    const value: NativePluginRuntimeDeps = {
+      enabled: () => options.enabled ?? true,
+      hasLiveWorker: () => options.live ?? true,
+      query: async (type, params) => {
+        queries.push({ type, params });
+        return options.reply ?? { ok: true, result: { type, data: { plugins: [], text: "log" } } };
+      },
+    };
+    return { queries, value };
+  }
+
+  test("never asks a worker while the flag is off or no worker runs", async () => {
+    const off = deps({ enabled: false });
+    expect(await nativePluginRuntime(off.value, "status")).toEqual({ kind: "off" });
+    expect(await nativePluginLog(off.value, "demo@local")).toBe("");
+    const idle = deps({ live: false });
+    expect(await nativePluginRuntime(idle.value, "status")).toEqual({ kind: "no-worker" });
+    expect(off.queries).toEqual([]);
+    expect(idle.queries).toEqual([]);
+  });
+
+  test("reads status, restarts and reads logs through the worker queries", async () => {
+    const live = deps();
+    expect(await nativePluginRuntime(live.value, "status")).toEqual({
+      kind: "loaded",
+      plugins: [],
+    });
+    await nativePluginRuntime(live.value, "restart", "demo@local");
+    expect(await nativePluginLog(live.value, "demo@local")).toBe("log");
+    expect(live.queries).toEqual([
+      { type: "native_plugins_status", params: {} },
+      { type: "native_plugins_restart", params: { installKey: "demo@local" } },
+      { type: "native_plugins_log", params: { installKey: "demo@local" } },
+    ]);
+  });
+
+  test("a worker that predates the flag does not know the queries", async () => {
+    const old = deps({ reply: { ok: false, message: "Unknown query type", code: -32602 } });
+    expect(await nativePluginRuntime(old.value, "status")).toEqual({ kind: "not-loaded" });
+    expect(await nativePluginLog(old.value, "demo@local")).toBe("");
+    const broken = deps({ reply: { ok: false, message: "worker exited", code: -32603 } });
+    await expect(nativePluginRuntime(broken.value, "status")).rejects.toThrow("worker exited");
   });
 });

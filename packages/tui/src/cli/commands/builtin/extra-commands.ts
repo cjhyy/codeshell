@@ -251,7 +251,7 @@ export const extraCommands: SlashCommand[] = [
     group: "config",
     description: "Manage plugin marketplaces and installed plugins",
     usage:
-      "/plugin marketplace add|remove|list ... | /plugin install|uninstall <p>@<mkt> | /plugin list | /plugin hooks list|diff|approve|revoke ... | /plugin mcp list|approve|revoke|enable|disable|tools|allow|deny|tools-reset ...",
+      "/plugin marketplace add|remove|list ... | /plugin install|uninstall <p>@<mkt> | /plugin list | /plugin approve|revoke <plugin> | /plugin native list|review ... | /plugin hooks list|diff|approve|revoke ... | /plugin mcp list|approve|revoke|enable|disable|tools|allow|deny|tools-reset ...",
     execute: async (arg, ctx) => {
       try {
         const { pluginTrustDecisionSucceeded, runPluginCommand } =

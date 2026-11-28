@@ -291,6 +291,21 @@ describe("preset extensions", () => {
     expect(injected(composition, "general")).toEqual([]);
   });
 
+  test("a plugin module may name presets that are not loaded; a host module may not", () => {
+    // Another plugin's preset can be uninstalled at any time.
+    for (const target of [{ presets: ["plugin-gone"] }, { allExcept: ["plugin-gone"] }]) {
+      const module = { ...owner([{ target, tools: ["OwnerA"] }]), id: "plugin-owner-00000000" };
+      expect(() =>
+        compileComposition({ pluginModules: [{ module, revision: "r" }] }),
+      ).not.toThrow();
+    }
+    expect(() =>
+      compileComposition({
+        modules: [owner([{ target: { allExcept: ["missing"] }, tools: ["OwnerA"] }])],
+      }),
+    ).toThrow(CompositionError);
+  });
+
   test("an extension may not add another module's tool or target an unknown preset", () => {
     expect(() =>
       compileComposition({
@@ -302,5 +317,99 @@ describe("preset extensions", () => {
         modules: [owner([{ target: { presets: ["missing"] }, tools: ["OwnerA"] }])],
       }),
     ).toThrow(CompositionError);
+  });
+});
+
+describe("compileComposition plugin modules", () => {
+  const pluginModule = (id: string, engine: AgentModule["engine"] = {}): AgentModule => ({
+    id,
+    engine,
+  });
+
+  test("plugin modules follow every host module and carry their revision", () => {
+    const c = compileComposition({
+      modules: [emptyModule("host-a")],
+      pluginModules: [
+        { module: pluginModule("plugin-one-00000000"), revision: "rev-1" },
+        { module: pluginModule("plugin-two-00000000"), revision: "rev-2" },
+      ],
+    });
+    expect(c.modules.slice(1)).toEqual([
+      { id: "host-a", order: 1, source: "host" },
+      { id: "plugin-one-00000000", order: 2, source: "plugin", revision: "rev-1" },
+      { id: "plugin-two-00000000", order: 3, source: "plugin", revision: "rev-2" },
+    ]);
+    // Engine-only is what a plugin module is; only host modules get the diagnostic.
+    expect(c.diagnostics.map((d) => d.moduleId)).toEqual(["host-a"]);
+  });
+
+  test("the digest follows the revision, so a changed plugin is a different composition", () => {
+    const compile = (revision: string) =>
+      compileComposition({
+        pluginModules: [{ module: pluginModule("plugin-one-00000000"), revision }],
+      }).digest;
+    expect(compile("rev-1")).toBe(compile("rev-1"));
+    expect(compile("rev-1")).not.toBe(compile("rev-2"));
+    expect(compile("rev-1")).not.toBe(compileComposition().digest);
+  });
+
+  test("a composition without plugin modules is unchanged by their existence", () => {
+    expect(compileComposition({ pluginModules: [] }).digest).toBe(compileComposition().digest);
+    expect(compileComposition().modules[0]).toEqual({ id: "core", order: 0, source: "core" });
+  });
+
+  test.each<[string, Partial<AgentModule>]>([
+    ["protocol queries", { protocol: { queries: { "x.get": () => null } } }],
+    ["a host activator", { activateHost: () => ({ dispose() {} }) }],
+    ["an engine activator", { activateEngine: () => ({ dispose() {} }) }],
+    ["a default preset", { engine: { defaultPreset: "general" } }],
+    ["a tool-selection adjuster", { engine: { adjustToolSelection: () => {} } }],
+    ["a private service", { engine: { privateService: { scope: "engine", create: () => ({}) } } }],
+    ["behavior profiles", { engine: { behaviorProfiles: [] } }],
+  ])("a plugin module may not contribute %s", (_label, extra) => {
+    expect(() =>
+      compileComposition({
+        pluginModules: [{ module: { id: "plugin-one-00000000", ...extra }, revision: "r" }],
+      }),
+    ).toThrow(/may not contribute/);
+  });
+
+  test("a plugin cannot replace a core preset the way a host module can", () => {
+    const core = compileComposition().engine.presets[0]!.key;
+    expect(() =>
+      compileComposition({
+        pluginModules: [
+          {
+            module: pluginModule("plugin-one-00000000", { presets: [preset(core)] }),
+            revision: "r",
+          },
+        ],
+      }),
+    ).toThrow(CompositionError);
+    expect(() =>
+      compileComposition({ modules: [pluginModule("host-a", { presets: [preset(core)] })] }),
+    ).not.toThrow();
+  });
+
+  test("a tool name clash between two plugins names both of them", () => {
+    try {
+      compileComposition({
+        pluginModules: [
+          {
+            module: pluginModule("plugin-one-00000000", { tools: [presetTagsTool("Shared")] }),
+            revision: "r",
+          },
+          {
+            module: pluginModule("plugin-two-00000000", { tools: [presetTagsTool("Shared")] }),
+            revision: "r",
+          },
+        ],
+      });
+      throw new Error("expected a conflict");
+    } catch (error) {
+      expect(error).toBeInstanceOf(CompositionError);
+      expect((error as CompositionError).message).toContain("plugin-one-00000000");
+      expect((error as CompositionError).message).toContain("plugin-two-00000000");
+    }
   });
 });

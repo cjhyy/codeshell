@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { composeCapabilityModulesEnv } from "./capability-modules-env.js";
+import { composeCapabilityModulesEnv, composeWorkerModuleEnv } from "./capability-modules-env.js";
 
 const urls = { coding: "file:///coding.js", pet: "file:///pet.js" };
 const baseline = "file:///coding.js#createCodingModule,file:///pet.js#createPetModule";
@@ -51,6 +51,23 @@ describe("composeCapabilityModulesEnv", () => {
       baseline,
     );
     expect(resolutions).toBe(1);
+  });
+});
+
+describe("composeWorkerModuleEnv", () => {
+  test("asks the worker for native plugins unless the user turned the flag off", () => {
+    expect(composeWorkerModuleEnv(urls, {}, mustNotResolve)).toEqual({
+      CODE_SHELL_CAPABILITY_MODULES: baseline,
+      CODE_SHELL_NATIVE_PLUGINS: "host",
+    });
+    expect(composeWorkerModuleEnv(urls, { native_plugins: false }, mustNotResolve)).toEqual({
+      CODE_SHELL_CAPABILITY_MODULES: baseline,
+      CODE_SHELL_NATIVE_PLUGINS: undefined,
+    });
+    // The key is always there, so spreading it over an inherited environment clears it.
+    const inherited = { CODE_SHELL_NATIVE_PLUGINS: "host" };
+    const off = composeWorkerModuleEnv(urls, { native_plugins: false }, mustNotResolve);
+    expect({ ...inherited, ...off }).toMatchObject({ CODE_SHELL_NATIVE_PLUGINS: undefined });
   });
 });
 

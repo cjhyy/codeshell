@@ -610,11 +610,9 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
               key={`${entry.installKey}:${entry.serverNames.join(",")}:${index}`}
               className={cn(
                 "rounded-md border p-3",
-                entry.status === "changed"
-                  ? "border-status-err/50 bg-status-err/5"
-                  : entry.status === "pending"
-                    ? "border-status-warn/50 bg-status-warn/5"
-                    : "bg-muted/20",
+                entry.status === "pending"
+                  ? "border-status-warn/50 bg-status-warn/5"
+                  : "bg-muted/20",
               )}
             >
               <div className="flex flex-wrap items-center gap-2">
@@ -644,7 +642,7 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
                       : t("settingsX.mcp.pluginTrustApprove")}
                   </Button>
                 )}
-                {(entry.status === "approved" || entry.status === "legacy") && (
+                {entry.status === "approved" && (
                   <Button
                     type="button"
                     size="sm"

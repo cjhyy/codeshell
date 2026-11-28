@@ -143,6 +143,10 @@ function main(): number {
         // Bash permission classification loads the read-redirect classifier;
         // measure it with its own approval-level tests.
         "packages/core/src/tool-system/permission-bash-redirects.test.ts",
+        // InstallCapability's plugin installs record the whole-tree digest and the
+        // native plugin approval; measure those modules with their own tests.
+        "packages/core/src/plugins/native",
+        "packages/core/src/plugins/pluginHookIntegrity.test.ts",
         "--coverage",
         "--coverage-reporter=text",
         "--coverage-reporter=lcov",

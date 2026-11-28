@@ -18,6 +18,8 @@ import {
   LocalPluginReviewChangedError,
   previewLocalPlugin,
 } from "./preview.js";
+import { approvePlugin } from "../native/approval.js";
+import { reviewPluginHooks } from "../pluginHookApproval.js";
 import { updatePluginByName } from "./update.js";
 
 const PNG_1X1 = Buffer.from(
@@ -271,6 +273,39 @@ describe("previewLocalPlugin", () => {
     ).rejects.toThrow("withdrawn");
     expect(readFileSync(output, "utf8")).toBe(before);
   });
+
+  test(
+    "a reviewed overwrite keeps the approval for a directory source, not for a zip",
+    async () => {
+      writeCodexPlugin();
+      const at = "2026-07-17T00:00:00.000Z";
+      const install = async (input: { kind: "dir" | "zip"; path: string }, overwrite = false) =>
+        installReviewedLocalPlugin(
+          input,
+          (await previewLocalPlugin(input)).reviewToken,
+          at,
+          overwrite ? { overwrite } : undefined,
+        );
+      const dir = { kind: "dir" as const, path: source };
+      const { name } = await install(dir);
+      approvePlugin(name);
+      const status = () => reviewPluginHooks(name)[0]?.status;
+      expect(status()).toBe("approved");
+
+      // New bytes from the user's own directory keep the approval...
+      writeFileSync(join(source, "prompts", "review.md"), "Review v2 $ARGUMENTS\n");
+      await install(dir, true);
+      expect(status()).toBe("approved");
+
+      // ...while an archive is treated like a download and reviewed again.
+      writeFileSync(join(source, "prompts", "review.md"), "Review v3 $ARGUMENTS\n");
+      const archive = join(scratch, "v3.zip");
+      zipDirectory(source, archive);
+      await install({ kind: "zip", path: archive }, true);
+      expect(status()).toBe("pending");
+    },
+    PREVIEW_TEST_TIMEOUT_MS,
+  );
 
   test("installs only the private snapshot that matches the review token", async () => {
     writeCodexPlugin();

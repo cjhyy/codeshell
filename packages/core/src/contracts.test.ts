@@ -14,6 +14,7 @@ describe("CONTRACTS", () => {
       desktopControl: 2,
       mobileRemote: 1,
       outputJournal: 1,
+      pluginApi: 1,
     });
   });
 

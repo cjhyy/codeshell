@@ -789,8 +789,7 @@ Marketplace 侧：`marketplaceManager.ts`（clone/refresh/remove/load）、`know
 - `inspectPluginHooks(installPath)`（:322）返回 `PluginHooksSnapshot{state:"absent"|"valid"|"invalid", digest, definition, hasExecutableHooks, error?}`。digest = sha256(`codeshell-plugin-hooks-v1\0` + 原始字节)；absent 和 invalid 各用一个固定的哨兵 digest。**所有消费方**（digest 计算、审批、列表、运行时）都用这一份快照。
 - `pluginHooksDigest`、`pluginHasExecutableHooks`：薄封装。
 - `pluginHookReviewSnapshot(snapshot)`（:370）：生成用于展示的 review 列表（命令截断到 4096，同时保留完整命令的 sha256）。
-- `verifyPluginHookIntegrity(entry, snap)`（:394）：entry 没有 `hookDigest` 就是 `legacy`，digest 相同是 `verified`，否则 `changed`。
-- `pluginHookApprovalState(entry, snap)`（:408）：没有可执行 hook → `none`；legacy → `legacy`；changed → `changed`；`approvedHookDigest === hookDigest` → `approved`，否则 `pending`。
+- `pluginHookApprovalState(entry, snap)`：没有可执行 hook → `none`；记录里缺 `hookDigest` 或 `contentDigest` → `pending`；插件内容已批准且 `approvedHookDigest === hookDigest` → `approved`，否则 `pending`。只看安装记录，不比对磁盘上的现有文件（2026-11-27 起本地改动不影响审批）。
 - `pluginHookInstallRecord(installPath, prev[])`（:424）：写入 `hookDigest`。如果没有可执行 hook，或者 prev 里有条 entry 已经批准过同一个 digest，就自动写 `approvedHookDigest` 和 `approvedHookSnapshot`；否则沿用 prev 里最后一次批准的 snapshot（给更新时做 diff 用）。invalid 永远不会自动批准。
 
 **审批（`pluginHookApproval.ts`）**
@@ -805,7 +804,7 @@ Marketplace 侧：`marketplaceManager.ts`（clone/refresh/remove/load）、`know
 - 事件映射 `EVENT_NAME_MAP`（:71）：SessionStart → `on_session_start`，UserPromptSubmit → `user_prompt_submit`，PreToolUse/PostToolUse → `pre_tool_use`/`post_tool_use`，PreCompact → `pre_compact`，Notification → `notification`，**Stop → `on_session_end`**，**SubagentStop → `notification`**（隐含 matcher `^agent_(completed|failed|cancelled)$`，`IMPLIED_NOTIFICATION_KIND`:88；只能通知，不能拦截）。
 - `matcherAccepts(event, matcher, ctx)`（:98）：没有 matcher 就放行；SessionStart 匹配 `ctx.data.source`；Pre/PostToolUse 匹配 `toolName`（拿不到 toolName 时拒绝）；notification 匹配 `kind`；其他事件忽略 matcher。
 - `pluginHookKey({plugin, rawEvent, command})`（:170）= `plugin:RawEvent:command`，作为 `capabilityOverrides.pluginHooks` 的单 hook 开关 key（matcher 不同但命令相同的两个 hook 会撞 key）。
-- **`loadPluginHooks(registry, disabledPlugins, disabledPluginHooks, owner?)`**（:192）：遍历注册表，跳过被禁用的插件，对每条 entry 调 `inspectPluginHooks` 和 `pluginHookApprovalState`。`pending`、`changed`、`none` 跳过，**`approved` 和 `legacy` 加载**。逐个 hook 先查单 hook 开关，然后 `registry.register(event, handler, 80, "plugin:<name>:<RawEvent>")`，dispose 函数交给 `owner.own` 管理。handler 先过 `matcherAccepts`，再调 `runPluginCommandHook`。
+- **`loadPluginHooks(registry, disabledPlugins, disabledPluginHooks, owner?)`**（:192）：遍历注册表，跳过被禁用的插件，对每条 entry 调 `inspectPluginHooks` 和 `pluginHookApprovalState`。只有 `approved` 加载。逐个 hook 先查单 hook 开关，然后 `registry.register(event, handler, 80, "plugin:<name>:<RawEvent>")`，dispose 函数交给 `owner.own` 管理。handler 先过 `matcherAccepts`，再调 `runPluginCommandHook`。
 - `listPluginHooks(disabled)`（:290）：给 UI 用，会去掉 installPath、timeout、source。`listPluginHooksForHost(disabled)`（:317）：给宿主用，额外带 `installPath`、`timeoutMs` 和 `source: PluginHookSource{installKey, installPath, installEntrySha256, hooksDigest, approval, approvedHookDigest, rawEvent, key, custody?{registryIdentity, hooksIdentity}}`。custody 只在注册表快照成功、并且 hooks.json 在 inspect 前后 identity 不变时才会给出。
 
 **执行（`pluginCommandHook.ts`、`pluginHookCommand.ts`）**
@@ -827,7 +826,7 @@ Marketplace 侧：`marketplaceManager.ts`（clone/refresh/remove/load）、`know
 - `normalizePluginMcpMap(raw, plugin, alreadyKeyed)`（:234）：最多 64 个 server，名字 ≤96 且匹配 `^[A-Za-z0-9][A-Za-z0-9._-]*$`，key 统一成 `<plugin>:<server>`。
 - `readPluginMcp(installPath, plugin)`（:307）：`mcp-servers.json` 存在时优先用它，即使它不合法也**不会**回退（返回 `{}`）；否则读 `.mcp.json`（CC 原生格式，接受 `{mcpServers}` 包装或裸 map）。读取统一走 `readContainedPluginJson`：拒绝 symlink、≤1 MiB、有 containment 检查。
 - `applyOverride(pluginCfg, override)`（:274）：用户的 `mcpServerOverrides` 只能补充 enabled、tools、超时、env、credential 这类字段，不能改 command/args/url/transport。
-- **`mergePluginMcpServers(base, disabledPlugins, overrides)`**（:344）：把 `base`（用户配置）复制一份，遍历注册表，跳过被禁用的插件；`pluginMcpApprovalState` 为 `pending`、`changed`、`none` 时跳过，**`approved` 和 `legacy` 合并**。key 已经在 base 里时不覆盖（用户配置优先）。最后套一层 `tool-system/host-mcp-servers.withHostMcpServers`。
+- **`mergePluginMcpServers(base, disabledPlugins, overrides)`**（:344）：把 `base`（用户配置）复制一份，遍历注册表，跳过被禁用的插件；`pluginMcpApprovalState` 不是 `approved` 的跳过。key 已经在 base 里时不覆盖（用户配置优先）。最后套一层 `tool-system/host-mcp-servers.withHostMcpServers`。
 - `pluginMcpDigest(installPath)`（`pluginMcpIntegrity.ts:38`）= sha256(`codeshell-plugin-mcp-v1\0` + `fileName\0` + bytes)。文件名也参与 digest，所以在 `mcp-servers.json` 和 `.mcp.json` 之间切换不会继承原来的审批。不存在用 `<absent>`，不安全用 `<unsafe>:<file>`。
 - `verifyPluginMcpIntegrity`（:49）、`pluginMcpApprovalState(entry, hasServers)`（:59）：顺序是 changed → none → legacy → approved/pending，和 hooks 那边的判定顺序略有不同。`pluginMcpInstallRecord(path, hasServers, prev)`（:74）：没有 server，或 prev 已经批准过同一个 digest 时自动批准。
 - `listPluginMcpTrust()`（`pluginMcpApproval.ts:56`）→ `PluginMcpTrustEntry{installKey, plugin, serverNames, status}`。`approvePluginMcp(target)`（:68）：digest 和记录不一致时拒绝，legacy 先补 digest，再写 approved。`revokePluginMcp(target)`（:104）：语义和 hooks 的 revoke 一致。
@@ -1010,7 +1009,7 @@ flowchart TD
 
 **信任与完整性**
 
-1. **digest 只覆盖声明文件，不覆盖被执行的脚本**。hook digest 只算 `hooks/hooks.json` 的字节，MCP digest 只算 `mcp-servers.json` 或 `.mcp.json`。hooks.json 里引用的 `${CODESHELL_PLUGIN_ROOT}/scripts/x.sh`，以及 MCP 的 command 所指向的二进制，在批准之后被改掉不会触发 `changed`。安装目录是用户可写的，这是信任模型里的已知边界。
+1. **审批只针对下载下来的版本**。安装和更新时记录整个插件目录的指纹（`plugins/pluginTreeDigest.ts`），批准绑定这个版本；之后在本地修改插件（脚本、hooks.json、MCP 配置）不再检查，按磁盘上的现有内容运行。这是 2026-11-27 的产品决定，安装目录是用户可写的。
 2. **`legacy` 照样执行**。没有 `hookDigest`/`mcpDigest` 的旧 entry，在 `loadPluginHooks.ts:208` 和 `loadPluginMcp.ts:358` 都只跳过 `pending/changed/none`，所以 legacy 会照常加载。`configured-tool-hooks.ts` 也明确接受 `["approved","legacy"]`。revoke 会先补写 digest，把 legacy 迁出这个状态。
 3. **approve 不能为“已经被篡改”的字节背书**。`approvePluginHooks` 和 `approvePluginMcp` 遇到磁盘 digest 和 install 时记录的不一致会直接抛错，要求先 reinstall 或 update（`pluginHookApproval.ts:149`、`pluginMcpApproval.ts:78`）。更新时只有 digest 完全相同才继承审批（`*InstallRecord` 里的 previousEntries）。
 4. **两套 approval 状态判定顺序不同**。hooks 是 none → legacy → changed，MCP 是 changed → none → legacy。所以 hooks 文件变成“无可执行内容”时显示 none，而 MCP 文件改动后即使已经没有 server 也显示 changed。

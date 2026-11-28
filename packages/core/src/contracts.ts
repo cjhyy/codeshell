@@ -22,6 +22,8 @@ export const CONTRACTS = Object.freeze({
   mobileRemote: 1,
   /** Output-journal segment storage manifest/pin `version: 1` (session/output-journal-storage.ts). */
   outputJournal: 1,
+  /** The `ctx` contract handed to native plugins (plugins/native/manifest.ts `apiVersion`). */
+  pluginApi: 1,
 } as const);
 
 export type Contracts = typeof CONTRACTS;
@@ -40,6 +42,7 @@ export type _ContractLiteralTypes = [
   Expect<Equal<typeof CONTRACTS.desktopControl, 2>>,
   Expect<Equal<typeof CONTRACTS.mobileRemote, 1>>,
   Expect<Equal<typeof CONTRACTS.outputJournal, 1>>,
+  Expect<Equal<typeof CONTRACTS.pluginApi, 1>>,
   Expect<Equal<typeof CONTRACTS.agentProtocol.supported, readonly ["1"]>>,
   Expect<Equal<typeof CONTRACTS.agentProtocol.preferred, "1">>,
 ];

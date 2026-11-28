@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readInstalledPlugins, writeInstalledPlugins } from "./installedPlugins.js";
 import { approvePluginHooks, reviewPluginHooks, revokePluginHooks } from "./pluginHookApproval.js";
 import { pluginHooksDigest } from "./pluginHookIntegrity.js";
+import { computePluginTreeDigest } from "./pluginTreeDigest.js";
 
 describe("plugin hook approval", () => {
   let home: string;
@@ -55,6 +56,16 @@ describe("plugin hook approval", () => {
     );
   }
 
+  function treeDigest(): string {
+    const tree = computePluginTreeDigest(installPath);
+    if (!tree.ok) throw new Error(tree.reason);
+    return tree.digest;
+  }
+
+  function installed() {
+    return readInstalledPlugins().plugins["demo@local"]?.[0];
+  }
+
   test("checks the initiating document before persisting either trust transition", () => {
     writeEntry({ hookDigest: pluginHooksDigest(installPath) });
     const registry = () => JSON.stringify(readInstalledPlugins());
@@ -86,6 +97,8 @@ describe("plugin hook approval", () => {
     expect(readInstalledPlugins().plugins["demo@local"]?.[0]?.approvedHookSnapshot).toMatchObject([
       { rawEvent: "SessionStart", command: "echo demo" },
     ]);
+    expect(installed()?.contentDigest).toBe(treeDigest());
+    expect(installed()?.approvedContentDigest).toBe(treeDigest());
 
     expect(revokePluginHooks("demo@local")[0]).toMatchObject({
       status: "pending",
@@ -116,6 +129,8 @@ describe("plugin hook approval", () => {
     const entry = data.plugins["demo@local"]![0]!;
     entry.hookDigest = pluginHooksDigest(installPath);
     delete entry.approvedHookDigest;
+    entry.contentDigest = treeDigest();
+    delete entry.approvedContentDigest;
     writeInstalledPlugins(data);
 
     expect(reviewPluginHooks("demo")[0]).toMatchObject({
@@ -138,31 +153,143 @@ describe("plugin hook approval", () => {
     });
   });
 
-  test("revoking a legacy install records the digest so it fails closed", () => {
+  test("revoking only removes approvals; an unrecorded install stays as it was", () => {
     writeEntry();
 
     expect(revokePluginHooks("demo")[0]).toMatchObject({
       status: "pending",
-      changed: true,
+      changed: false,
     });
     const entry = readInstalledPlugins().plugins["demo@local"]?.[0];
-    expect(entry?.hookDigest).toBe(pluginHooksDigest(installPath));
+    expect(entry?.hookDigest).toBeUndefined();
     expect(entry?.approvedHookDigest).toBeUndefined();
   });
 
-  test("refuses to approve bytes that changed after installation", () => {
-    writeEntry({ hookDigest: pluginHooksDigest(installPath) });
+  test("hooks edited after installation are approved in place, and the edit is what runs", () => {
+    const installedDigest = pluginHooksDigest(installPath);
+    writeEntry({ hookDigest: installedDigest });
     writeFileSync(
       join(installPath, "hooks", "hooks.json"),
       JSON.stringify({
         hooks: {
-          SessionStart: [{ hooks: [{ type: "command", command: "echo tampered" }] }],
+          SessionStart: [{ hooks: [{ type: "command", command: "echo edited locally" }] }],
         },
       }),
     );
 
-    expect(() => approvePluginHooks("demo")).toThrow(/changed after install/);
+    expect(approvePluginHooks("demo")[0]).toMatchObject({ status: "approved", changed: true });
+    // The record still names the installed version; the review baseline is what was approved.
+    expect(installed()?.hookDigest).toBe(installedDigest);
+    expect(installed()?.approvedHookSnapshot).toMatchObject([{ command: "echo edited locally" }]);
   });
+
+  test("revoking a plugin without hooks keeps hooks added later from running", () => {
+    rmSync(join(installPath, "hooks"), { recursive: true, force: true });
+    const absent = pluginHooksDigest(installPath);
+    // As installed: content approved, the absent hooks approved along with it.
+    writeEntry({
+      hookDigest: absent,
+      approvedHookDigest: absent,
+      contentDigest: treeDigest(),
+      approvedContentDigest: treeDigest(),
+    });
+    revokePluginHooks("demo");
+
+    mkdirSync(join(installPath, "hooks"));
+    writeFileSync(
+      join(installPath, "hooks", "hooks.json"),
+      JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: "command", command: "x" }] }] } }),
+    );
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("pending");
+  });
+
+  test("hooks added locally to an approved plugin run", () => {
+    rmSync(join(installPath, "hooks"), { recursive: true, force: true });
+    const absent = pluginHooksDigest(installPath);
+    writeEntry({
+      hookDigest: absent,
+      approvedHookDigest: absent,
+      contentDigest: treeDigest(),
+      approvedContentDigest: treeDigest(),
+    });
+
+    mkdirSync(join(installPath, "hooks"));
+    writeFileSync(
+      join(installPath, "hooks", "hooks.json"),
+      JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: "command", command: "x" }] }] } }),
+    );
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
+  });
+
+  test("an install recorded before whole-tree approval is pending until approved once", () => {
+    writeEntry();
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("pending");
+
+    expect(approvePluginHooks("demo")[0]).toMatchObject({ status: "approved", changed: true });
+    expect(installed()).toMatchObject({
+      hookDigest: pluginHooksDigest(installPath),
+      approvedHookDigest: pluginHooksDigest(installPath),
+      contentDigest: treeDigest(),
+      approvedContentDigest: treeDigest(),
+    });
+  });
+
+  test("a hook approval granted before whole-tree approval does not carry over", () => {
+    const hookDigest = pluginHooksDigest(installPath);
+    writeEntry({ hookDigest, approvedHookDigest: hookDigest });
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("pending");
+
+    approvePluginHooks("demo");
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
+  });
+
+  test("a script edited after approval keeps the hooks approved", () => {
+    mkdirSync(join(installPath, "scripts"));
+    writeFileSync(join(installPath, "scripts", "run.sh"), "echo approved\n");
+    writeEntry();
+    approvePluginHooks("demo");
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
+
+    writeFileSync(join(installPath, "scripts", "run.sh"), "echo edited locally\n");
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
+    expect(approvePluginHooks("demo")[0]).toMatchObject({ status: "approved", changed: false });
+  });
+
+  test("a file added after approval leaves the approval alone", () => {
+    writeEntry();
+    approvePluginHooks("demo");
+    writeFileSync(join(installPath, "extra.sh"), "echo extra\n");
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
+  });
+
+  test("the installer's own root metadata does not disturb an approval", () => {
+    writeEntry();
+    approvePluginHooks("demo");
+    writeFileSync(join(installPath, ".cs-meta.json"), JSON.stringify({ installedAt: "t2" }));
+    writeFileSync(join(installPath, ".code-shell-installed.json"), JSON.stringify({ at: "t2" }));
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("approved");
+  });
+
+  test("an update that is not approved yet is pending", () => {
+    writeEntry({ hookDigest: pluginHooksDigest(installPath), contentDigest: treeDigest() });
+    expect(reviewPluginHooks("demo")[0]?.status).toBe("pending");
+  });
+
+  test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "refuses to approve a tree it cannot read in full",
+    () => {
+      mkdirSync(join(installPath, "private"));
+      writeFileSync(join(installPath, "private", "run.sh"), "echo hidden\n");
+      writeEntry();
+      chmodSync(join(installPath, "private"), 0o000);
+      try {
+        expect(() => approvePluginHooks("demo")).toThrow(/cannot be approved/);
+        expect(installed()?.approvedContentDigest).toBeUndefined();
+      } finally {
+        chmodSync(join(installPath, "private"), 0o700);
+      }
+    },
+  );
 
   test("refuses to approve an invalid bounded definition", () => {
     writeEntry();

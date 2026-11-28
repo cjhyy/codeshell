@@ -40,6 +40,7 @@ describe("feature flags", () => {
       "external_host_tools",
       "fast_mode",
       "memory_segment_closure",
+      "native_plugins",
       "optimization_lab",
       "shell_snapshot",
       "shell_tool",
@@ -60,6 +61,12 @@ describe("feature flags", () => {
     expect(isFeatureEnabled({}, "optimization_lab")).toBe(false);
     expect(isFeatureEnabled({ optimization_lab: true }, "optimization_lab")).toBe(true);
     expect(isFeatureEnabled({ optimization_lab: false }, "optimization_lab")).toBe(false);
+  });
+
+  test("native_plugins defaults ON and can be switched off", () => {
+    expect(isFeatureEnabled(undefined, "native_plugins")).toBe(true);
+    expect(isFeatureEnabled({}, "native_plugins")).toBe(true);
+    expect(isFeatureEnabled({ native_plugins: false }, "native_plugins")).toBe(false);
   });
 
   test("computer_use_cua defaults OFF and can be switched on", () => {

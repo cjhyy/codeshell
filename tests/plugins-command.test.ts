@@ -12,6 +12,7 @@ import { readInstalledPlugins } from "../packages/core/src/plugins/installedPlug
 import { loadPluginAutomationTemplateContributions } from "../packages/core/src/plugins/pluginCatalog.js";
 import { pluginHooksDigest } from "../packages/core/src/plugins/pluginHookIntegrity.js";
 import { pluginMcpDigest } from "../packages/core/src/plugins/pluginMcpIntegrity.js";
+import { installPluginFromPath } from "../packages/core/src/plugins/installer/install.js";
 import { CronScheduler } from "@cjhyy/code-shell-core/internal";
 
 function bareRepoWithFiles(scratch: string, name: string, files: Record<string, string>): string {
@@ -298,6 +299,52 @@ describe("/plugin command", () => {
         "Failed to set MCP tool policy for demo:server: at least one exact MCP tool name is required",
       ),
     ).toBe(false);
+  });
+
+  it("reviews, approves and revokes a native plugin as one decision", async () => {
+    const source = join(scratch, "tickets");
+    mkdirSync(join(source, ".codeshell-plugin"), { recursive: true });
+    writeFileSync(
+      join(source, ".codeshell-plugin", "plugin.json"),
+      JSON.stringify({
+        schemaVersion: 2,
+        apiVersion: 1,
+        main: "./index.js",
+        contributes: { hooks: ["pre_tool_use"], tools: ["lookup"] },
+      }),
+    );
+    writeFileSync(join(source, "index.js"), "export default () => {};\n");
+    writeFileSync(
+      join(source, "mcp-servers.json"),
+      JSON.stringify({ "tickets:server": { command: "tickets-mcp", name: "tickets:server" } }),
+    );
+    await installPluginFromPath(source, "tickets", "t1");
+
+    const listed = await runPluginCommand("native list");
+    expect(listed).toContain("tickets@local  [pending]");
+    expect(listed).toContain("this terminal does not load them");
+    const review = await runPluginCommand("native review tickets");
+    expect(review).toContain("first approval; everything below is new:");
+    expect(review).toContain("hooks: pre_tool_use");
+    expect(review).toContain("tools: lookup");
+
+    const approved = await runPluginCommand("approve tickets");
+    expect(approved).toContain("Approved tickets@local  hooks=none mcp=approved native=approved");
+    expect(pluginTrustDecisionSucceeded("approve tickets", approved)).toBe(true);
+    expect(await runPluginCommand("native list")).toContain("tickets@local  [approved]");
+
+    const revoked = await runPluginCommand("revoke tickets@local");
+    expect(revoked).toContain("Revoked tickets@local  hooks=none mcp=pending native=pending");
+    expect(pluginTrustDecisionSucceeded("revoke tickets@local", revoked)).toBe(true);
+
+    expect(await runPluginCommand("approve missing")).toContain("Failed to approve missing");
+    expect(pluginTrustDecisionSucceeded("approve missing", "Failed to approve missing: x")).toBe(
+      false,
+    );
+    expect(pluginTrustDecisionSucceeded("native list", listed)).toBe(false);
+    expect(await runPluginCommand("approve")).toBe(
+      "Usage: /plugin approve <plugin-or-install-key>",
+    );
   });
 
   it("reviews and explicitly instantiates plugin automation templates", async () => {

@@ -75,7 +75,8 @@ sourceLayerIndex, definitionSha256}`. It must match the actual bounded RAW
 snapshot that produced that selected validated Hook. A plugin source is exactly
 `{kind: "plugin", installKey, installPath, installEntrySha256, hooksDigest,
 approval, approvedHookDigest, rawEvent, key}` and must match the actual installed
-registry and existing approval. Missing, ambiguous, higher-precedence unresolved,
+registry and existing approval. `approval` must be `approved`: a plan recorded for
+an install without digests (formerly accepted as `legacy`) is refused. Missing, ambiguous, higher-precedence unresolved,
 or unproven source selection cannot fall back to another resource plan. Ordinary
 Settings selection and closed-inline behavior retain their existing semantics.
 

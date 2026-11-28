@@ -31,12 +31,20 @@ export interface MarketplaceReads {
   "marketplace/jobs": { params: Empty; result: Result<Market["listPluginInstallJobsForUi"]> };
 }
 type Approval<
-  K extends "approvePluginHooks" | "revokePluginHooks" | "approvePluginMcp" | "revokePluginMcp",
+  K extends
+    | "approvePlugin"
+    | "revokePlugin"
+    | "approvePluginHooks"
+    | "revokePluginHooks"
+    | "approvePluginMcp"
+    | "revokePluginMcp",
 > = {
   input: { installKey: string };
   result: Result<(typeof import("@cjhyy/code-shell-core"))[K]>;
 };
 export interface MarketplaceChanges {
+  "plugins/approve": Approval<"approvePlugin">;
+  "plugins/revoke": Approval<"revokePlugin">;
   "plugins/approveHooks": Approval<"approvePluginHooks">;
   "plugins/revokeHooks": Approval<"revokePluginHooks">;
   "plugins/approveMcp": Approval<"approvePluginMcp">;

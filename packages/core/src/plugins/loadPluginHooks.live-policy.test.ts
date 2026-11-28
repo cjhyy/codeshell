@@ -9,10 +9,11 @@ import { SettingsManager } from "../settings/manager.js";
 import type { CapabilityOverrides } from "../settings/schema.js";
 import { loadPluginHooks, pluginHookKey, type PluginHookDisablePolicy } from "./loadPluginHooks.js";
 import { pluginHooksDigest } from "./pluginHookIntegrity.js";
+import { computePluginTreeDigest } from "./pluginTreeDigest.js";
 
 const originalHome = process.env.HOME;
 const command =
-  `printf x >> "$CODESHELL_PLUGIN_ROOT/invocations"; ` +
+  `printf x >> "$CODESHELL_PLUGIN_ROOT/../invocations"; ` +
   `printf '%s' '{"additionalContext":"hook-fired"}'`;
 const hookKey = pluginHookKey({ plugin: "guard", rawEvent: "PreToolUse", command });
 let home: string;
@@ -26,7 +27,9 @@ beforeEach(() => {
   installPath = join(home, "plugin-guard");
   mkdirSync(join(cwd, ".code-shell"), { recursive: true });
   mkdirSync(join(installPath, "hooks"), { recursive: true });
-  writeFileSync(join(installPath, "invocations"), "");
+  // Beside the install tree, not inside it: approval covers every byte of the
+  // tree, so a hook that wrote there would not load again after its first run.
+  writeFileSync(join(home, "invocations"), "");
 });
 
 afterEach(() => {
@@ -41,6 +44,8 @@ function stagePlugin(approved = true): void {
     JSON.stringify({ hooks: { PreToolUse: [{ hooks: [{ type: "command", command }] }] } }),
   );
   const digest = pluginHooksDigest(installPath);
+  const tree = computePluginTreeDigest(installPath);
+  if (!tree.ok) throw new Error(tree.reason);
   const pluginsDir = join(home, ".code-shell", "plugins");
   mkdirSync(pluginsDir, { recursive: true });
   writeFileSync(
@@ -56,7 +61,8 @@ function stagePlugin(approved = true): void {
             installedAt: "2026-01-01",
             lastUpdated: "2026-01-01",
             hookDigest: digest,
-            ...(approved ? { approvedHookDigest: digest } : {}),
+            contentDigest: tree.digest,
+            ...(approved ? { approvedHookDigest: digest, approvedContentDigest: tree.digest } : {}),
           },
         ],
       },
@@ -65,7 +71,7 @@ function stagePlugin(approved = true): void {
 }
 
 function invocationCount(): number {
-  return readFileSync(join(installPath, "invocations"), "utf8").length;
+  return readFileSync(join(home, "invocations"), "utf8").length;
 }
 
 describe("plugin hook live disable policy", () => {
