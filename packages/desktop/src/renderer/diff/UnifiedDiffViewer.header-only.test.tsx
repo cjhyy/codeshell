@@ -47,11 +47,10 @@ test("actual React Review titles and plain-click open callbacks use owned Git he
       const nodes = descendants(container);
       const titles = nodes
         .filter(
-          (node) =>
-            node.tagName === "SPAN" && propsOf(node).className === "truncate font-mono text-xs",
+          (node) => node.tagName === "SPAN" && propsOf(node)["data-review-path"] !== undefined,
         )
         .map((node) => propsOf(node).title);
-      const buttons = nodes.filter((node) => propsOf(node).role === "button");
+      const buttons = nodes.filter((node) => propsOf(node)["data-review-open-file"] !== undefined);
       for (const button of buttons)
         await act(async () => {
           propsOf(button).onClick({
@@ -76,8 +75,7 @@ test("actual React Review titles and plain-click open callbacks use owned Git he
       });
       const selected = descendants(container)
         .filter(
-          (node) =>
-            node.tagName === "SPAN" && propsOf(node).className === "truncate font-mono text-xs",
+          (node) => node.tagName === "SPAN" && propsOf(node)["data-review-path"] !== undefined,
         )
         .map((node) => propsOf(node).title);
       expect(selected).toEqual(["new empty.txt"]);

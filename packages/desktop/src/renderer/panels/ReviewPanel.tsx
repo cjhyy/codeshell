@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Check,
   ScanSearch,
+  GitCompareArrows,
   LoaderCircle,
   Columns2,
   Rows2,
@@ -11,6 +12,8 @@ import {
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
 import type { DiffStyle } from "../diff/DiffFileBody";
 import { parseUnifiedDiff } from "../diff/parseUnifiedDiff";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import {
   DropdownMenu,
@@ -137,9 +140,6 @@ export function ReviewPanel({
   // Keep all-files state separate from every possible literal file path.
   const [turnFileSel, setTurnFileSel] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  // Total +/- for the current scope, reported by the diff viewer — shown next
-  // to the scope dropdown (Codex style).
-  const [stats, setStats] = useState<{ added: number; removed: number } | null>(null);
   const [diffStyle, setDiffStyle] = useState<DiffStyle>(loadDiffStyle);
   const toggleDiffStyle = (): void =>
     setDiffStyle((current) => {
@@ -177,10 +177,9 @@ export function ReviewPanel({
   const { commits, loadCommits } = useWorkspaceRecentCommits(gitAvailable ? sessionId : null, cwd);
 
   // Git-derived selections belong to one workspace. A session switching from
-  // main to a worktree must not retain commits/ranges/stats from the old root.
+  // main to a worktree must not retain commits/ranges from the old root.
   useEffect(() => {
     setSelectedCommit(null);
-    setStats(null);
   }, [cwd, sessionId, gitAvailable]);
 
   // When the caller hands us a focus set (e.g. from a "files changed" card),
@@ -271,21 +270,24 @@ export function ReviewPanel({
     // style). Scope chips live top-left; a file dropdown narrows the turn
     // snapshot. Other scopes stack all changed files top-to-bottom; each hunk
     // scrolls horizontally (see diff.css) so long lines aren't force-wrapped.
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
       {/* Top bar: scope dropdown (top-left, with a 提交 submenu listing recent
           commits) + optional file dropdown + refresh. */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-2 py-1.5">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-border/70 px-3 py-2">
         {gitAvailable ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 type="button"
                 aria-label={t("panels.review.selectScope")}
-                className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 text-xs hover:bg-accent"
+                className="h-8 min-w-0 max-w-full justify-start gap-1.5 px-1.5 text-[13px] font-semibold"
               >
-                <span className="max-w-[180px] truncate">{triggerLabel}</span>
+                <GitCompareArrows className="text-muted-foreground" />
+                <span className="max-w-40 truncate">{triggerLabel}</span>
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[160px]">
               {REVIEW_SCOPES.filter((s) =>
@@ -343,12 +345,9 @@ export function ReviewPanel({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <span className="text-xs text-muted-foreground">{scopeLabel("turn")}</span>
-        )}
-        {stats && (stats.added > 0 || stats.removed > 0) && (
-          <span className="shrink-0 text-xs tabular-nums">
-            <span className="text-status-ok">+{stats.added}</span>{" "}
-            <span className="text-status-err">-{stats.removed}</span>
+          <span className="inline-flex items-center gap-2 text-[13px] font-semibold">
+            <GitCompareArrows className="size-4 text-muted-foreground" />
+            {scopeLabel("turn")}
           </span>
         )}
         {activeScope === "turn" && hasTurnSnapshot && turnFilePaths.length > 1 && (
@@ -371,28 +370,32 @@ export function ReviewPanel({
           />
         )}
         {sessionId && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             type="button"
             aria-label={t("panels.review.prepareAiReview")}
             title={t("panels.review.prepareAiReviewHint")}
             disabled={
               aiReview.phase === "preparing" || (activeScope === "turn" && !hasReviewableTurnDiff)
             }
-            className="ml-auto flex h-8 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-accent disabled:opacity-50"
+            className="ml-auto h-7 gap-1.5 rounded-lg bg-muted px-2 text-xs aria-expanded:bg-accent"
             onClick={() => setShowReviewOptions((value) => !value)}
             aria-expanded={showReviewOptions}
           >
             <ScanSearch className="h-3.5 w-3.5" />
             {t("panels.review.aiReview")}
-          </button>
+          </Button>
         )}
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           type="button"
           title={t(diffStyle === "split" ? "panels.diff.unifiedView" : "panels.diff.splitView")}
           aria-label={t(
             diffStyle === "split" ? "panels.diff.unifiedView" : "panels.diff.splitView",
           )}
-          className={`${sessionId ? "" : "ml-auto "}shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground`}
+          className={`${sessionId ? "" : "ml-auto "}size-7 shrink-0 px-0 text-muted-foreground hover:text-foreground`}
           onClick={toggleDiffStyle}
           data-review-diff-style={diffStyle}
         >
@@ -401,17 +404,19 @@ export function ReviewPanel({
           ) : (
             <Columns2 className="h-3.5 w-3.5" />
           )}
-        </button>
+        </Button>
         {gitAvailable && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             type="button"
             title={t("panels.common.refresh")}
             aria-label={t("panels.common.refresh")}
-            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="size-7 shrink-0 px-0 text-muted-foreground hover:text-foreground"
             onClick={() => setRefreshKey((k) => k + 1)}
           >
             <RefreshCw className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         )}
       </div>
 
@@ -420,7 +425,7 @@ export function ReviewPanel({
           <p className="text-xs text-muted-foreground">{t("panels.review.prepareAiReviewHint")}</p>
           <label className="flex flex-col gap-1 text-xs">
             {t("panels.review.reviewInstructions")}
-            <textarea
+            <Textarea
               value={instructions}
               onChange={(event) => setInstructions(event.target.value)}
               maxLength={2000}
@@ -429,7 +434,9 @@ export function ReviewPanel({
               className="resize-y rounded-md border border-border bg-background px-2 py-1.5 text-xs"
             />
           </label>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             type="button"
             onClick={prepareReview}
             disabled={
@@ -445,7 +452,7 @@ export function ReviewPanel({
                 ? "panels.review.preparingReview"
                 : "panels.review.addReviewDraft",
             )}
-          </button>
+          </Button>
           {aiReview.phase === "error" && (
             <p role="alert" className="text-xs text-status-err">
               {aiReview.error}
@@ -464,7 +471,7 @@ export function ReviewPanel({
       )}
 
       {/* Full-width diff. */}
-      <div className="flex min-h-0 flex-1 flex-col p-2">
+      <div className="flex min-h-0 flex-1 flex-col">
         {activeScope === "turn" && hasTurnSnapshot ? (
           // Authoritative turn-time snapshot — viewable even after the edits
           // were committed (git would no longer show them). The dropdown above
@@ -473,7 +480,6 @@ export function ReviewPanel({
             cwd={cwd}
             diffText={turnDiff}
             onlyPath={activeTurnFileSel}
-            onStats={setStats}
             diffStyle={diffStyle}
             scrollClassName="flex-1"
           />
@@ -485,7 +491,6 @@ export function ReviewPanel({
             cwd={cwd}
             reviewSessionId={sessionId ?? undefined}
             reviewRequest={reviewRequest}
-            onStats={setStats}
             diffStyle={diffStyle}
             scrollClassName="flex-1"
           />

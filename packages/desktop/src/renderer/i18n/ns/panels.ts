@@ -279,6 +279,11 @@ export const panels = {
         largeMarkdownSource: "Markdown 文件较大，已按源码打开。可切换到预览查看渲染效果。",
       },
       review: {
+        oneFile: "1 个文件",
+        fileCount: "{count} 个文件",
+        jumpFile: "跳转到文件",
+        expandAll: "展开全部文件",
+        collapseAll: "折叠全部文件",
         aiReview: "AI 审查",
         prepareAiReview: "准备 AI 代码审查",
         prepareAiReviewHint: "将当前范围的改动和关注点添加到对话输入框，发送后开始审查。",
@@ -312,9 +317,9 @@ export const panels = {
         scopeNoChanges: "此范围内没有变更",
       },
       diff: {
-        gitDiffFailed: "git diff failed: {error}",
-        loadingDiff: "loading diff…",
-        noChanges: "no changes",
+        gitDiffFailed: "读取差异失败：{error}",
+        loadingDiff: "正在读取改动…",
+        noChanges: "当前范围没有改动",
         noTextChanges: "二进制文件或仅权限、元数据变化，没有文本改动",
         unifiedView: "合并视图",
         splitView: "分栏视图",
@@ -725,6 +730,11 @@ export const panels = {
           "This Markdown file is large, so it opens as source. Switch to preview to render it.",
       },
       review: {
+        oneFile: "1 file",
+        fileCount: "{count} files",
+        jumpFile: "Jump to file",
+        expandAll: "Expand all files",
+        collapseAll: "Collapse all files",
         aiReview: "AI review",
         prepareAiReview: "Prepare AI code review",
         prepareAiReviewHint:
