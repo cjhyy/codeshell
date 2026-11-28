@@ -23,6 +23,29 @@ const RATIOS = {
 // images from spuriously exhausting the text context window.
 const IMAGE_TOKEN_ESTIMATE = 170;
 
+const CJK_CHAR = /[\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af]/;
+
+/**
+ * Count kana, CJK ideographs and Hangul syllables. A native scan finds the
+ * first one (or none, for ASCII text); counting the rest in a loop avoids the
+ * per-character match array a global regex allocates for CJK-heavy text.
+ */
+function countCjk(text: string): number {
+  const first = text.search(CJK_CHAR);
+  if (first < 0) return 0;
+  let count = 0;
+  for (let index = first; index < text.length; index++) {
+    const code = text.charCodeAt(index);
+    if (
+      (code >= 0x3040 && code <= 0x30ff) ||
+      (code >= 0x4e00 && code <= 0x9fff) ||
+      (code >= 0xac00 && code <= 0xd7af)
+    )
+      count++;
+  }
+  return count;
+}
+
 /**
  * Estimate token count for a string, detecting content type.
  */
@@ -30,7 +53,7 @@ export function estimateStringTokens(text: string): number {
   if (!text) return 0;
 
   // Detect CJK content ratio
-  const cjkChars = (text.match(/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g) ?? []).length;
+  const cjkChars = countCjk(text);
   const cjkRatio = cjkChars / text.length;
 
   if (cjkRatio > 0.3) {
