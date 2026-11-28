@@ -1,0 +1,7 @@
+{
+  "//": "Typechecks the non-activated output storage prototype, which is kept out of the published build.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["src/session/output-storage-prototype/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}
