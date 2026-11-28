@@ -15,6 +15,23 @@ breaking.
   `featureFlags.native_plugins` to `false` in your user settings to turn them
   all off.
 
+### Fixed
+
+- A new conversation no longer shows "this conversation's history needs
+  recovery" right after its first message. Loading its history could start
+  before the conversation had written its output record, most often with
+  Claude Code or Codex, and treated the record as lost. The desktop app, the
+  phone and the Hub web app now read the record again. They still report it
+  lost if it cannot be read on that second read.
+- The plugin detail page reads an open log again after you restart the
+  plugin or refresh its status, so it no longer shows the previous process.
+- `code-shell plugin install <directory>` waits for the install to finish: it
+  prints where the plugin went instead of `[object Promise]`, and a failed
+  install is reported as an error instead of a success followed by a crash.
+- Sending the first message of a new conversation no longer logs a failed
+  browser registration. The conversation's browser is registered when its run
+  starts, as before.
+
 ## [0.12.0-rc.3] - 2026-11-27
 
 Same requirements as 0.12.0-rc.1.
