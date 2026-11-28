@@ -25,6 +25,9 @@ breaking.
   lost if it cannot be read on that second read.
 - The plugin detail page reads an open log again after you restart the
   plugin or refresh its status, so it no longer shows the previous process.
+- A native plugin's log keeps the output its process wrote just before it
+  exited, such as a crash message on stderr, and stopping a plugin returns
+  only once its log is complete. That output could be dropped before.
 - `code-shell plugin install <directory>` waits for the install to finish: it
   prints where the plugin went instead of `[object Promise]`, and a failed
   install is reported as an error instead of a success followed by a crash.

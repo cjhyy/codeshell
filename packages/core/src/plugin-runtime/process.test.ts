@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
+  createReadStream,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -288,6 +289,61 @@ describe("plugin process", () => {
     expect(log).toContain("[warn] logged line");
     expect(log).toContain("exited code=0");
   });
+
+  test.skipIf(globalThis.process.platform === "win32")(
+    "output that reaches the pipes after the plugin exits still goes to its log, before the exit line",
+    async () => {
+      const process = create(`
+import { spawn } from "node:child_process";
+export default {
+  setup(ctx) {
+    ctx.hooks.on("pre_tool_use", () => {
+      // Started outside the plugin's process group, so it outlives the plugin
+      // and writes to the plugin's stdout after the plugin has left.
+      spawn("/bin/sh", ["-c", "sleep 0.3; echo late line"], {
+        stdio: ["ignore", "inherit", "inherit"],
+        detached: true,
+      }).unref();
+    });
+  },
+};
+`);
+      await process.start();
+      await hook(process, "Linger");
+      await process.stop();
+      const log = readFileSync(join(home, "logs", "demo.log"), "utf8");
+      expect(log).toContain("[stdout] late line");
+      expect(log.indexOf("[stdout] late line")).toBeLessThan(log.indexOf("exited code="));
+    },
+  );
+
+  test.skipIf(globalThis.process.platform === "win32")(
+    "stop settles only once the log has been written out",
+    async () => {
+      // A log that nobody reads yet cannot be written out, so stop must wait.
+      const logFile = join(home, "logs", "demo.log");
+      mkdirSync(dirname(logFile), { recursive: true });
+      execFileSync("mkfifo", [logFile]);
+      const process = create();
+      await process.start();
+      await hook(process, "Print");
+      let stopped = false;
+      const stopping = process.stop().then(() => {
+        stopped = true;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(stopped).toBe(false);
+      let log = "";
+      const reader = createReadStream(logFile);
+      reader.on("data", (chunk) => (log += chunk));
+      const ended = new Promise((resolve) => reader.once("end", resolve));
+      await stopping;
+      await ended;
+      expect(log).toContain("[stdout] printed line");
+      expect(log).toContain("[warn] logged line");
+      expect(log).toContain("exited code=0");
+    },
+  );
 
   test("stopping closes the channel, the process leaves and its record is removed", async () => {
     const process = create();
