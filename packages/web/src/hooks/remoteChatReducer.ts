@@ -1,4 +1,6 @@
 import type { MobileHistoryItem } from "@cjhyy/code-shell-core";
+import { useCallback, useEffect, useReducer, useRef } from "react";
+import { createStreamBatcher, type StreamBatcher } from "../lib/streamBatcher.js";
 import {
   appendUserMessage,
   initialChatState,
@@ -94,4 +96,29 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case "append":
       return action.events.reduce(reduceScopedStream, state);
   }
+}
+
+/**
+ * The remote chat reducer with render batching. Live stream envelopes arrive
+ * one per token; callers `push` them into the returned batcher, which applies
+ * token deltas as one `append` per frame. Every other chat action flushes the
+ * buffer first, and callers flush before handling any other inbound message,
+ * so the reducer still sees exactly the arrival order.
+ */
+export function useBatchedChatReducer(
+  init: () => ChatState,
+): [ChatState, (action: ChatAction) => void, StreamBatcher] {
+  const [chat, dispatchNow] = useReducer(chatReducer, undefined, init);
+  const batcherRef = useRef<StreamBatcher | null>(null);
+  batcherRef.current ??= createStreamBatcher((events) => dispatchNow({ kind: "append", events }));
+  const batcher = batcherRef.current;
+  const dispatch = useCallback(
+    (action: ChatAction) => {
+      batcher.flush();
+      dispatchNow(action);
+    },
+    [batcher],
+  );
+  useEffect(() => () => batcher.flush(), [batcher]);
+  return [chat, dispatch, batcher];
 }
