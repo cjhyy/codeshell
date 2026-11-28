@@ -105,10 +105,16 @@ export function getCurrentBranch(cwd: string): string {
   return git(cwd, ["branch", "--show-current"], 5000);
 }
 
+const GIT_STATUS_ARGS = ["--no-optional-locks", "status", "--porcelain", "-z"];
+
 export function getGitStatus(cwd: string): GitStatusEntry[] {
+  return parseGitStatus(gitRaw(cwd, GIT_STATUS_ARGS, 10000));
+}
+
+function parseGitStatus(raw: string): GitStatusEntry[] {
   // `-z` output is NUL-terminated and unquoted. It must not be trimmed: the
   // fixed-width `XY ` prefix of an unstaged entry starts with a space.
-  const records = gitRaw(cwd, ["--no-optional-locks", "status", "--porcelain", "-z"], 10000).split("\0");
+  const records = raw.split("\0");
   const entries: GitStatusEntry[] = [];
   for (let i = 0; i < records.length; i++) {
     const record = records[i]!;
@@ -145,13 +151,48 @@ export function getUntrackedFiles(cwd: string): string[] {
     .filter(Boolean);
 }
 
-export function getGitLog(cwd: string, n = 10): GitLogEntry[] {
+function gitLogArgs(n: number): string[] {
   // `n` is numeric — coerce/validate to keep the argv clean even if a caller
   // hands us a string.
   const count = Number.isFinite(n) && n > 0 ? Math.floor(n) : 10;
-  const raw = git(cwd, ["log", `--format=${GIT_LOG_FORMAT}`, `-${count}`], 10000);
+  return ["log", `--format=${GIT_LOG_FORMAT}`, `-${count}`];
+}
+
+export function getGitLog(cwd: string, n = 10): GitLogEntry[] {
+  const raw = git(cwd, gitLogArgs(n), 10000);
   if (!raw) return [];
   return parseGitLog(raw);
+}
+
+/** Nonblocking git invocation with the same argv, timeout and buffer limits. */
+async function gitRawAsync(cwd: string, args: string[], timeoutMs: number): Promise<string> {
+  const { stdout } = await execGitAsync(resolveGit(), args, {
+    cwd,
+    encoding: "utf8",
+    timeout: timeoutMs,
+  });
+  return stdout;
+}
+
+/**
+ * Branch, status and recent log for the per-run git context, without blocking
+ * the worker's event loop (a large repository's status can take seconds, and
+ * the worker hosts other Sessions). Undefined on a detached HEAD; git failures
+ * reject, like the synchronous readers throw.
+ */
+export async function readGitContextAsync(
+  cwd: string,
+  logCount: number,
+): Promise<{ branch: string; status: GitStatusEntry[]; log: GitLogEntry[] } | undefined> {
+  const branch = (await gitRawAsync(cwd, ["branch", "--show-current"], 5000)).trim();
+  if (!branch) return undefined;
+  const [status, log] = await Promise.all([
+    gitRawAsync(cwd, GIT_STATUS_ARGS, 10000).then(parseGitStatus),
+    gitRawAsync(cwd, gitLogArgs(logCount), 10000).then((raw) =>
+      raw.trim() ? parseGitLog(raw.trim()) : [],
+    ),
+  ]);
+  return { branch, status, log };
 }
 
 export function getRemoteUrl(cwd: string): string | undefined {

@@ -7,7 +7,7 @@ import type {
   SessionManager,
   ToolContext,
 } from "@cjhyy/code-shell-core/extension";
-import { getCurrentBranch, getGitLog, getGitStatus } from "./git/utils.js";
+import { readGitContextAsync } from "./git/utils.js";
 import { GIT_SNAPSHOT_COMMIT_LIMIT, renderGitContextSnapshot } from "./git/context-snapshot.js";
 
 export const CODING_CAPABILITY_ID = "coding";
@@ -70,17 +70,18 @@ export function findCodingInstructionBoundary(cwd: string): string | null {
   }
 }
 
-export const gitDynamicContextProvider: CapabilityDynamicContextProvider = ({ cwd, preset }) => {
+export const gitDynamicContextProvider: CapabilityDynamicContextProvider = async ({
+  cwd,
+  preset,
+}) => {
   if (preset.name !== "terminal-coding") return undefined;
-  const branch = getCurrentBranch(cwd);
-  if (!branch) return undefined;
+  // Runs on every run in the shared worker; synchronous git would block every
+  // other Session it hosts for as long as `git status` takes.
+  const context = await readGitContextAsync(cwd, GIT_SNAPSHOT_COMMIT_LIMIT);
+  if (!context) return undefined;
   return {
     key: "git-status",
-    text: renderGitContextSnapshot({
-      branch,
-      status: getGitStatus(cwd),
-      log: getGitLog(cwd, GIT_SNAPSHOT_COMMIT_LIMIT),
-    }),
+    text: renderGitContextSnapshot(context),
     // Changes on almost every run: shown once per context snapshot, never resent.
     compare: "snapshot-only",
   };
