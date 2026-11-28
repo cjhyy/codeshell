@@ -312,7 +312,20 @@ function innerItemToken(it: Message | ToolGroup): string {
   return `${it.kind}(${it.id}:${token})`;
 }
 
+// Built groups are never mutated, and reused ones survive into the next
+// reconcile as `prev`. Caching their signature avoids rebuilding a joined
+// string per group for both lists on every 50ms stream batch.
+const groupSignatures = new WeakMap<StreamItem, string>();
 function groupSignature(item: StreamItem): string {
+  let signature = groupSignatures.get(item);
+  if (signature === undefined) {
+    signature = computeGroupSignature(item);
+    groupSignatures.set(item, signature);
+  }
+  return signature;
+}
+
+function computeGroupSignature(item: StreamItem): string {
   if (item.kind === "tool_group") {
     return "g:" + item.items.map(innerItemToken).join(",");
   }

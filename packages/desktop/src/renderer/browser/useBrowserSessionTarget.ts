@@ -6,6 +6,11 @@ export function useBrowserSessionTarget(
   sessionId: string | null | undefined,
   bucket: string | undefined,
   partition: string | undefined,
+  /**
+   * Off-screen panels stay mounted per Session. They still notice a revoked
+   * grant (which lets the hidden guest be evicted), just less often.
+   */
+  visible = true,
 ) {
   const scope = useMemo(() => ({ sessionId, bucket, partition }), [sessionId, bucket, partition]);
   const current = useRef<typeof scope | null>(scope);
@@ -53,13 +58,14 @@ export function useBrowserSessionTarget(
       }
     };
     void refresh();
-    const timer = setInterval(() => void refresh(), 2_000);
+    // Each check is a Main IPC that re-validates the Session from disk.
+    const timer = setInterval(() => void refresh(), visible ? 2_000 : 15_000);
     return () => {
       cancelled = true;
       clearInterval(timer);
       if (current.current === scope) current.current = null;
     };
-  }, [scope, sessionId]);
+  }, [scope, sessionId, visible]);
 
   const update = useCallback(
     async (guestId?: number): Promise<BrowserRuntimeHandoffStatus | null> => {

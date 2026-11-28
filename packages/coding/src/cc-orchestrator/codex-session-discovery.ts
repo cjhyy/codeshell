@@ -11,6 +11,7 @@ import type {
 } from "./session-discovery.js";
 import { externalSessionCwdEnabled, selectRecentStats } from "./session-discovery.js";
 import { codexUserText } from "./codex-user-text.js";
+import { cachedSessionTitle } from "./session-title-cache.js";
 import { parseCodexRecentHistory } from "./codex-session-history.js";
 
 export interface CodexSessionList {
@@ -299,18 +300,19 @@ export function discoverRecentCodexSessions(
       cwd: meta.cwd,
       file: s.file,
       lastModified: s.mtimeMs,
-      firstMessage: readFirstUserMessage(s.file),
+      firstMessage: cachedSessionTitle(s.file, s.ino, () => readFirstUserMessage(s.file)),
     });
   }
   return [...out.values()];
 }
 
 /** Stat every rollout under <root>/sessions, skipping unreadable files. */
-function statAllRollouts(root: string): { file: string; mtimeMs: number }[] {
-  const stats: { file: string; mtimeMs: number }[] = [];
+function statAllRollouts(root: string): { file: string; mtimeMs: number; ino: number }[] {
+  const stats: { file: string; mtimeMs: number; ino: number }[] = [];
   for (const file of walkRollouts(root)) {
     try {
-      stats.push({ file, mtimeMs: statSync(file).mtimeMs });
+      const st = statSync(file);
+      stats.push({ file, mtimeMs: st.mtimeMs, ino: st.ino });
     } catch {
       continue;
     }
@@ -320,21 +322,26 @@ function statAllRollouts(root: string): { file: string; mtimeMs: number }[] {
 
 /** Recursively yield every `rollout-*.jsonl` file under `root`. */
 function* walkRollouts(root: string): Generator<string> {
-  let entries: string[];
+  let entries: Dirent[];
   try {
-    entries = readdirSync(root);
+    entries = readdirSync(root, { withFileTypes: true });
   } catch {
     return;
   }
-  for (const name of entries) {
+  // Directory entry types avoid a stat per entry across the whole history
+  // tree; only symlinks still need one to learn what they point at.
+  for (const entry of entries) {
+    const name = entry.name;
     const full = join(root, name);
-    let st: Stats;
-    try {
-      st = statSync(full);
-    } catch {
-      continue;
+    let isDirectory = entry.isDirectory();
+    if (entry.isSymbolicLink()) {
+      try {
+        isDirectory = statSync(full).isDirectory();
+      } catch {
+        continue;
+      }
     }
-    if (st.isDirectory()) {
+    if (isDirectory) {
       yield* walkRollouts(full);
     } else if (name.startsWith("rollout-") && name.endsWith(".jsonl")) {
       yield full;

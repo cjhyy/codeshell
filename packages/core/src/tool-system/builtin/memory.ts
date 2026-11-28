@@ -187,7 +187,7 @@ export async function memoryReadTool(
     // stream event so the UI can show the user this memory was actually used.
     // Best-effort — never let accounting failure break the read.
     try {
-      mm.recordRecall(entry.name);
+      mm.recordRecall(entry);
       const cb = ctx?.streamCallback;
       if (cb) {
         // scope here is always "user"|"dream" (validated above); pending is

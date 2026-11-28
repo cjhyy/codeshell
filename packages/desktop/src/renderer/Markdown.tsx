@@ -229,6 +229,220 @@ export const streamingMarkdownClassName = cn(
   "text-muted-foreground [&_pre]:m-0 [&_pre]:whitespace-pre-wrap [&_pre]:border-0 [&_pre]:bg-transparent [&_pre]:p-0 [&_pre]:font-sans",
 );
 
+/** Session scope the link and image components resolve paths against. */
+interface MarkdownLinkScope {
+  cwd?: string | null;
+  sessionId?: string | null;
+  sessionMainRootId?: string | null;
+  rootStatus?: MarkdownRootStatus;
+}
+const MarkdownLinkScopeContext = React.createContext<MarkdownLinkScope>({});
+
+const REMARK_PLUGINS = [remarkGfm, remarkPathLinks];
+// rehype-raw parses raw HTML embedded in markdown (e.g. a README's
+// `<p align="center"><img …></p>`) into real hast nodes so our `img`/`a`
+// component overrides apply to them too. rehype-sanitize IMMEDIATELY
+// after scrubs that HTML (script/iframe/event-handlers) — required
+// because this same renderer shows untrusted assistant/LLM output.
+// Order: raw → sanitize → highlight (highlight adds hljs spans last, so
+// sanitize must precede it or it'd strip the highlight classNames).
+const REHYPE_PLUGINS: React.ComponentProps<typeof ReactMarkdown>["rehypePlugins"] = [
+  rehypeRaw,
+  [rehypeSanitize, SANITIZE_SCHEMA],
+  rehypeDropEmptyClassNames,
+  // detect:false — auto-detection only pays off with the full grammar
+  // bundle; with an explicit set an unlabelled block is better left as
+  // plain text than guessed from a partial language list.
+  [rehypeHighlight, { detect: false, ignoreMissing: true, languages: HIGHLIGHT_LANGUAGES }],
+];
+
+function markdownUrlTransform(url: string): string {
+  return url.startsWith(CODESHELL_PATH_SCHEME) ? url : defaultUrlTransform(url);
+}
+
+type MarkdownImageProps = React.ComponentPropsWithoutRef<"img"> & { node?: unknown };
+function MarkdownImage({ src, alt, node: _node, ...rest }: MarkdownImageProps) {
+  const { cwd, sessionId, sessionMainRootId, rootStatus } =
+    React.useContext(MarkdownLinkScopeContext);
+  const localActions = useLocalRuntimeActions();
+  // Remote media stays an explicit link, including image-style media
+  // embeds. Never try to decode a remote MP3/MP4 as an image.
+  if (src && isRemoteMediaSource(src)) {
+    return (
+      <a href={src} onClick={(event) => openRemoteMarkdownLink(event, src)}>
+        {alt || src}
+      </a>
+    );
+  }
+  const localDecoded = src ? (decodePathHref(src) ?? decodeLocalPathHref(src)) : null;
+  if (!localActions && src && (localDecoded || !/^(data:|https?:|blob:)/i.test(src))) {
+    return (
+      <span title={localDecoded?.path ?? src}>{alt || basename(localDecoded?.path ?? src)}</span>
+    );
+  }
+  // Accept Codex-style ![label](path.mp3) as well as ordinary links.
+  // Bare filenames in image syntax are relative file references too.
+  const mediaPath = localDecoded?.path ?? (src ? decodeLocalMediaPath(src) : null);
+  const mediaKind = mediaPath ? classifyMediaPath(mediaPath) : null;
+  if (mediaPath && mediaKind) {
+    return (
+      <InlineMedia
+        path={mediaPath}
+        kind={mediaKind}
+        cwd={cwd}
+        sessionId={sessionId}
+        sessionMainRootId={sessionMainRootId}
+        rootStatus={rootStatus}
+        label={alt}
+      />
+    );
+  }
+  if (localDecoded && classifyPath(localDecoded.path) === "image") {
+    return (
+      <InlineImageLink
+        path={localDecoded.path}
+        cwd={cwd}
+        sessionId={sessionId}
+        rootStatus={rootStatus}
+        alt={alt}
+      />
+    );
+  }
+  // A plain local/relative image src (e.g. a README's
+  // `<img src="docs/images/x.png">` or markdown `![](docs/x.png)`)
+  // can't load via file:// (webSecurity + CSP `img-src 'self' data:`).
+  // Route it through InlineImageLink, which resolves it against cwd
+  // and loads the bytes as a data: URL. data:/http(s)/blob srcs are
+  // already loadable, so leave those as a plain <img>.
+  if (src && !/^(data:|https?:|blob:)/i.test(src)) {
+    return (
+      <InlineImageLink
+        path={src}
+        cwd={cwd}
+        sessionId={sessionId}
+        rootStatus={rootStatus}
+        alt={alt}
+      />
+    );
+  }
+  return <img src={src} alt={alt} {...rest} />;
+}
+
+type MarkdownLinkProps = React.ComponentPropsWithoutRef<"a"> & { node?: unknown };
+function MarkdownLink({ href, children, node: _node, ...rest }: MarkdownLinkProps) {
+  const { cwd, sessionId, sessionMainRootId, rootStatus } =
+    React.useContext(MarkdownLinkScopeContext);
+  const localActions = useLocalRuntimeActions();
+  const schemeDecoded = href ? decodePathHref(href) : null;
+  const localDecoded = href ? decodeLocalPathHref(href) : null;
+  const mediaFilename = href ? decodeLocalMediaPath(href) : null;
+  const decoded = schemeDecoded ?? localDecoded ?? (mediaFilename ? { path: mediaFilename } : null);
+  const isPathLink = decoded !== null;
+  if (decoded && !localActions) return <span title={decoded.path}>{children}</span>;
+  const mediaKind = decoded ? classifyMediaPath(decoded.path) : null;
+  if (decoded && mediaKind && !decoded.line) {
+    const caption = extractText(children);
+    return (
+      <InlineMedia
+        path={decoded.path}
+        kind={mediaKind}
+        cwd={cwd}
+        sessionId={sessionId}
+        sessionMainRootId={sessionMainRootId}
+        rootStatus={rootStatus}
+        label={caption === decoded.path ? undefined : caption}
+      />
+    );
+  }
+  // Inline-render image/SVG artifacts (GenerateImage output,
+  // Playwright screenshots, generated SVGs) as a thumbnail right
+  // in the answer, so the user sees the picture instead of an
+  // unclickable path. Click opens a full-screen Lightbox; the
+  // filename caption still opens the file in the OS app.
+  if (schemeDecoded && classifyPath(schemeDecoded.path) === "image") {
+    return (
+      <InlineImageLink
+        path={schemeDecoded.path}
+        cwd={cwd}
+        sessionId={sessionId}
+        rootStatus={rootStatus}
+      />
+    );
+  }
+  if (localDecoded && classifyPath(localDecoded.path) === "image") {
+    return (
+      <InlineImageLink
+        path={localDecoded.path}
+        cwd={cwd}
+        sessionId={sessionId}
+        rootStatus={rootStatus}
+      />
+    );
+  }
+  // A path reference: render it as a file link ONLY if the file
+  // actually exists (checked async in PathLink).
+  // Missing files fall back to plain text, so a path the model
+  // invented — or `obj.method` shaped like a path — never becomes a
+  // dead link. The link shows just the filename; hover reveals the
+  // full path.
+  if (isPathLink && decoded) {
+    return (
+      <PathLink
+        path={decoded.path}
+        line={decoded.line}
+        cwd={cwd}
+        sessionId={sessionId}
+        sessionMainRootId={sessionMainRootId}
+        rootStatus={rootStatus}
+        isScheme={schemeDecoded !== null}
+      >
+        {children}
+      </PathLink>
+    );
+  }
+  return (
+    <a
+      href={href}
+      {...rest}
+      onClick={(e) => {
+        if (href) openRemoteMarkdownLink(e, href);
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
+// Module-level so react-markdown sees the same component types on every
+// render. Inline definitions made each re-render remount every link, image
+// and code block, dropping their state and re-sending file checks.
+const MARKDOWN_COMPONENTS: React.ComponentProps<typeof ReactMarkdown>["components"] = {
+  img: MarkdownImage,
+  a: MarkdownLink,
+  table: MarkdownTable,
+  // Wrap multi-line code blocks with a header bar showing the language label
+  // (when react-markdown supplies a `language-*` class) and a copy button.
+  pre: ({ children, node: _node, ...rest }) => <CodeBlock {...rest}>{children}</CodeBlock>,
+};
+
+/**
+ * Parses only when `text` changes. Session scope reaches links and images
+ * through context, so a root-status or session change re-renders just those
+ * instead of re-running remark/rehype-highlight over the whole message.
+ */
+const MarkdownSource = memo(function MarkdownSource({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={REMARK_PLUGINS}
+      rehypePlugins={REHYPE_PLUGINS}
+      urlTransform={markdownUrlTransform}
+      components={MARKDOWN_COMPONENTS}
+    >
+      {text}
+    </ReactMarkdown>
+  );
+});
+
 /**
  * Memoized — re-parses markdown only when `text` actually changes.
  * Without memo, every dispatch from a streaming text_delta would
@@ -245,193 +459,16 @@ function MarkdownImpl({
   // Named apart from the global `document` inside this component.
   document: isDocument = false,
 }: Props) {
-  const localActions = useLocalRuntimeActions();
+  const scope = React.useMemo<MarkdownLinkScope>(
+    () => ({ cwd, sessionId, sessionMainRootId, rootStatus }),
+    [cwd, sessionId, sessionMainRootId, rootStatus],
+  );
   if (!isDocument && needsPagedMarkdown(text)) return <PagedText text={text} sourceNotice />;
   return (
     <div className={cn(markdownBodyClassName, isDocument && documentBodyClassName)}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkPathLinks]}
-        // rehype-raw parses raw HTML embedded in markdown (e.g. a README's
-        // `<p align="center"><img …></p>`) into real hast nodes so our `img`/`a`
-        // component overrides apply to them too. rehype-sanitize IMMEDIATELY
-        // after scrubs that HTML (script/iframe/event-handlers) — required
-        // because this same renderer shows untrusted assistant/LLM output.
-        // Order: raw → sanitize → highlight (highlight adds hljs spans last, so
-        // sanitize must precede it or it'd strip the highlight classNames).
-        rehypePlugins={[
-          rehypeRaw,
-          [rehypeSanitize, SANITIZE_SCHEMA],
-          rehypeDropEmptyClassNames,
-          // detect:false — auto-detection only pays off with the full grammar
-          // bundle; with an explicit set an unlabelled block is better left as
-          // plain text than guessed from a partial language list.
-          [rehypeHighlight, { detect: false, ignoreMissing: true, languages: HIGHLIGHT_LANGUAGES }],
-        ]}
-        urlTransform={(url) =>
-          url.startsWith(CODESHELL_PATH_SCHEME) ? url : defaultUrlTransform(url)
-        }
-        components={{
-          img: ({ src, alt, node: _node, ...rest }) => {
-            // Remote media stays an explicit link, including image-style media
-            // embeds. Never try to decode a remote MP3/MP4 as an image.
-            if (src && isRemoteMediaSource(src)) {
-              return (
-                <a href={src} onClick={(event) => openRemoteMarkdownLink(event, src)}>
-                  {alt || src}
-                </a>
-              );
-            }
-            const localDecoded = src ? (decodePathHref(src) ?? decodeLocalPathHref(src)) : null;
-            if (!localActions && src && (localDecoded || !/^(data:|https?:|blob:)/i.test(src))) {
-              return (
-                <span title={localDecoded?.path ?? src}>
-                  {alt || basename(localDecoded?.path ?? src)}
-                </span>
-              );
-            }
-            // Accept Codex-style ![label](path.mp3) as well as ordinary links.
-            // Bare filenames in image syntax are relative file references too.
-            const mediaPath = localDecoded?.path ?? (src ? decodeLocalMediaPath(src) : null);
-            const mediaKind = mediaPath ? classifyMediaPath(mediaPath) : null;
-            if (mediaPath && mediaKind) {
-              return (
-                <InlineMedia
-                  path={mediaPath}
-                  kind={mediaKind}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  sessionMainRootId={sessionMainRootId}
-                  rootStatus={rootStatus}
-                  label={alt}
-                />
-              );
-            }
-            if (localDecoded && classifyPath(localDecoded.path) === "image") {
-              return (
-                <InlineImageLink
-                  path={localDecoded.path}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  rootStatus={rootStatus}
-                  alt={alt}
-                />
-              );
-            }
-            // A plain local/relative image src (e.g. a README's
-            // `<img src="docs/images/x.png">` or markdown `![](docs/x.png)`)
-            // can't load via file:// (webSecurity + CSP `img-src 'self' data:`).
-            // Route it through InlineImageLink, which resolves it against cwd
-            // and loads the bytes as a data: URL. data:/http(s)/blob srcs are
-            // already loadable, so leave those as a plain <img>.
-            if (src && !/^(data:|https?:|blob:)/i.test(src)) {
-              return (
-                <InlineImageLink
-                  path={src}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  rootStatus={rootStatus}
-                  alt={alt}
-                />
-              );
-            }
-            return <img src={src} alt={alt} {...rest} />;
-          },
-          a: ({ href, children, node: _node, ...rest }) => {
-            const schemeDecoded = href ? decodePathHref(href) : null;
-            const localDecoded = href ? decodeLocalPathHref(href) : null;
-            const mediaFilename = href ? decodeLocalMediaPath(href) : null;
-            const decoded =
-              schemeDecoded ?? localDecoded ?? (mediaFilename ? { path: mediaFilename } : null);
-            const isPathLink = decoded !== null;
-            if (decoded && !localActions) return <span title={decoded.path}>{children}</span>;
-            const mediaKind = decoded ? classifyMediaPath(decoded.path) : null;
-            if (decoded && mediaKind && !decoded.line) {
-              const caption = extractText(children);
-              return (
-                <InlineMedia
-                  path={decoded.path}
-                  kind={mediaKind}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  sessionMainRootId={sessionMainRootId}
-                  rootStatus={rootStatus}
-                  label={caption === decoded.path ? undefined : caption}
-                />
-              );
-            }
-            // Inline-render image/SVG artifacts (GenerateImage output,
-            // Playwright screenshots, generated SVGs) as a thumbnail right
-            // in the answer, so the user sees the picture instead of an
-            // unclickable path. Click opens a full-screen Lightbox; the
-            // filename caption still opens the file in the OS app.
-            if (schemeDecoded && classifyPath(schemeDecoded.path) === "image") {
-              return (
-                <InlineImageLink
-                  path={schemeDecoded.path}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  rootStatus={rootStatus}
-                />
-              );
-            }
-            if (localDecoded && classifyPath(localDecoded.path) === "image") {
-              return (
-                <InlineImageLink
-                  path={localDecoded.path}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  rootStatus={rootStatus}
-                />
-              );
-            }
-            // A path reference: render it as a file link ONLY if the file
-            // actually exists (checked async in PathLink).
-            // Missing files fall back to plain text, so a path the model
-            // invented — or `obj.method` shaped like a path — never becomes a
-            // dead link. The link shows just the filename; hover reveals the
-            // full path.
-            if (isPathLink && decoded) {
-              return (
-                <PathLink
-                  path={decoded.path}
-                  line={decoded.line}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  sessionMainRootId={sessionMainRootId}
-                  rootStatus={rootStatus}
-                  isScheme={schemeDecoded !== null}
-                >
-                  {children}
-                </PathLink>
-              );
-            }
-            return (
-              <a
-                href={href}
-                {...rest}
-                onClick={(e) => {
-                  if (href) openRemoteMarkdownLink(e, href);
-                }}
-              >
-                {children}
-              </a>
-            );
-          },
-          table: MarkdownTable,
-          // Wrap multi-line code blocks with a header bar showing the
-          // language label (when react-markdown supplies a `language-*`
-          // class) and a copy button. Inline `code` (no language class
-          // and no newline) is left as-is.
-          pre: ({ children, ...rest }) => {
-            // The child should be a single <code> element whose
-            // className looks like "language-ts" when GFM/rehype-highlight
-            // resolved a language.
-            return <CodeBlock {...rest}>{children}</CodeBlock>;
-          },
-        }}
-      >
-        {text}
-      </ReactMarkdown>
+      <MarkdownLinkScopeContext.Provider value={scope}>
+        <MarkdownSource text={text} />
+      </MarkdownLinkScopeContext.Provider>
     </div>
   );
 }
@@ -537,17 +574,24 @@ async function checkExists(
 }
 
 // A bump source so PathLink re-checks existence after an AI turn writes files.
-// files-changed carries no payload, so we clear the whole cache and nudge every
-// mounted PathLink to re-run its check via useSyncExternalStore.
+// files-changed fires at every turn end and carries no payload. It only needs
+// to revive links whose earlier check raced a write (negatives are never
+// cached), so it keeps the cached positives: otherwise every visible path link
+// in the transcript would send its own fs:exists IPC after each turn.
+// A preview that finds a file missing calls invalidateFileExistsCache, which
+// drops the positives too.
 let filesChangedNonce = 0;
 const filesChangedListeners = new Set<() => void>();
-export function invalidateFileExistsCache(): void {
-  existsCache.clear();
+export function recheckUnresolvedFileLinks(): void {
   filesChangedNonce++;
   for (const listener of filesChangedListeners) listener();
 }
+export function invalidateFileExistsCache(): void {
+  existsCache.clear();
+  recheckUnresolvedFileLinks();
+}
 if (typeof window !== "undefined") {
-  window.addEventListener("codeshell:files-changed", invalidateFileExistsCache);
+  window.addEventListener("codeshell:files-changed", recheckUnresolvedFileLinks);
 }
 function subscribeFilesChanged(cb: () => void): () => void {
   filesChangedListeners.add(cb);

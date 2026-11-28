@@ -100,6 +100,21 @@ export function initialChatState(): ChatState {
   return { items: [], run: "idle", seq: 0, liveByAgent: {} };
 }
 
+type LiveAssistant = Extract<ChatItem, { kind: "assistant" }>;
+
+/** Index of the assistant item accumulating deltas for `key`, or -1. The live
+ *  item is almost always the last one, so scan from the end: a streamed token
+ *  then costs O(1) lookup instead of a full-list search. */
+function liveAssistantIndex(s: ChatState, key: string): number {
+  const liveId = s.liveByAgent[key];
+  if (liveId === undefined) return -1;
+  for (let i = s.items.length - 1; i >= 0; i--) {
+    const item = s.items[i]!;
+    if (item.id === liveId && item.kind === "assistant") return i;
+  }
+  return -1;
+}
+
 /** The agentId bucket key for an event ("" = main agent). */
 function agentKey(event: Record<string, unknown>): string {
   return (event.agentId as string | undefined) ?? "";
@@ -212,19 +227,12 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     case "text_delta": {
       const text = (event.text as string) ?? "";
       const key = agentKey(event);
-      const liveId = s.liveByAgent[key];
-      const live = s.items.find(
-        (i): i is Extract<ChatItem, { kind: "assistant" }> =>
-          i.id === liveId && i.kind === "assistant",
-      );
+      const liveIndex = liveAssistantIndex(s, key);
+      const live = liveIndex < 0 ? undefined : (s.items[liveIndex] as LiveAssistant);
       if (live && !live.done) {
-        return {
-          ...s,
-          run: event.agentId ? s.run : "running",
-          items: s.items.map((i) =>
-            i.id === liveId && i.kind === "assistant" ? { ...i, text: i.text + text } : i,
-          ),
-        };
+        const items = s.items.slice();
+        items[liveIndex] = { ...live, text: live.text + text };
+        return { ...s, run: event.agentId ? s.run : "running", items };
       }
       // No open assistant for this agent (e.g. text before stream_request_start)
       // → open one scoped to this agent.
@@ -249,19 +257,12 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     case "thinking_delta": {
       const text = (event.text as string) ?? "";
       const key = agentKey(event);
-      const liveId = s.liveByAgent[key];
-      const live = s.items.find(
-        (i): i is Extract<ChatItem, { kind: "assistant" }> =>
-          i.id === liveId && i.kind === "assistant",
-      );
+      const liveIndex = liveAssistantIndex(s, key);
+      const live = liveIndex < 0 ? undefined : (s.items[liveIndex] as LiveAssistant);
       if (live && !live.done) {
-        return {
-          ...s,
-          run: event.agentId ? s.run : "running",
-          items: s.items.map((i) =>
-            i.id === liveId && i.kind === "assistant" ? { ...i, reasoning: i.reasoning + text } : i,
-          ),
-        };
+        const items = s.items.slice();
+        items[liveIndex] = { ...live, reasoning: live.reasoning + text };
+        return { ...s, run: event.agentId ? s.run : "running", items };
       }
       const [id, s2] = freshId("a");
       const item: ChatItem = {

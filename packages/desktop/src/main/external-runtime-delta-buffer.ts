@@ -1,5 +1,13 @@
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 
+/**
+ * How long streamed text may wait for more deltas. Each commit runs on the
+ * Electron main thread with synchronous journal I/O and two fsyncs, so an 8ms
+ * window allowed ~125 commits a second per streaming session. The renderer
+ * coalesces stream updates every 50ms, so 32ms adds no visible delay.
+ */
+const DELTA_FLUSH_MS = 32;
+
 /** Bound uncommitted text while keeping every original event and its durable cursor. */
 export class ExternalRuntimeDeltaBuffer {
   private pending: StreamEvent[] = [];
@@ -35,7 +43,7 @@ export class ExternalRuntimeDeltaBuffer {
         } catch (error) {
           this.consume.failed(error);
         }
-      }, 8);
+      }, DELTA_FLUSH_MS);
       this.timer.unref?.();
     }
   }

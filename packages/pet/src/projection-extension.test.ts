@@ -147,6 +147,41 @@ describe("Pet projection observer", () => {
     expect(after.sessions[0]?.summary).toBeUndefined();
   });
 
+  test("streamed deltas publish at most one activity update per second", () => {
+    const live: ProtocolLiveSession = {
+      sessionId: "work-stream",
+      busy: true,
+      queueDepth: 0,
+      lastActivityAt: 100,
+      kind: "work",
+    };
+    let snapshotReads = 0;
+    const deltas: PetProjectionDelta[] = [];
+    const observer = createPetProjectionObserver({
+      getLiveSessionSnapshot: () => {
+        snapshotReads++;
+        return [live];
+      },
+      projectionGeneration: () => 1,
+      getSessionKind: () => live.kind,
+      isTransportDisconnected: () => false,
+      registerQuery: () => {},
+      notify: (_method, payload) => deltas.push(payload as unknown as PetProjectionDelta),
+    });
+    observer.onSessionAttached?.(live.sessionId, 100);
+    for (let index = 0; index < 50; index++)
+      observer.onSessionStream?.(live.sessionId, { type: "text_delta", text: `${index}` });
+    expect(deltas).toHaveLength(1);
+    const readsAfterDeltas = snapshotReads;
+    expect(readsAfterDeltas).toBeLessThanOrEqual(3);
+    observer.onSessionStream?.(live.sessionId, {
+      type: "tool_use_start",
+      toolCall: { id: "tool-1", toolName: "Bash", args: {} },
+    });
+    expect(deltas).toHaveLength(2);
+    expect(deltas.at(-1)).toMatchObject({ session: { phase: "tool" } });
+  });
+
   test("declares only the durable Pet session kind as hidden", () => {
     expect(PET_HIDDEN_SESSION_KINDS).toEqual(["pet"]);
   });

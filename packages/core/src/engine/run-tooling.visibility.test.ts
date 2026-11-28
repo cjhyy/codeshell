@@ -14,8 +14,21 @@
  *
  * These tests pin the builder as an independently-callable unit.
  */
-import { describe, expect, test } from "bun:test";
-import { buildToolVisibility } from "./run-tooling.js";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  assembleRunToolDefs,
+  buildToolVisibility,
+  initializeRunToolSurface,
+} from "./run-tooling.js";
+import { ToolRegistry } from "../tool-system/registry.js";
+import type { ToolContext } from "../tool-system/context.js";
+import { SettingsManager } from "../settings/manager.js";
+import { effectiveProjectOverrides } from "../capability-control/overlay.js";
+import { localCredentialAccess } from "../credentials/access.js";
+import { CredentialStore } from "../credentials/store.js";
 
 describe("buildToolVisibility", () => {
   test("carries the fields availability guards actually branch on", () => {
@@ -72,5 +85,98 @@ describe("buildToolVisibility", () => {
       sessionMessageTargets: [{ sessionId: "peer", title: "Peer" } as never],
     });
     expect(populated.sessionMessageTargets).toHaveLength(1);
+  });
+});
+
+/**
+ * The executor refreshes eligibility before every tool call so a capability
+ * revoked mid-run (settings override, removed credential) takes effect on the
+ * next call. Unchanged inputs must not be re-read and re-validated each time.
+ */
+describe("per-call eligibility refresh", () => {
+  const dirs: string[] = [];
+  const spies: { mockRestore(): void }[] = [];
+  afterEach(() => {
+    for (const spy of spies.splice(0)) spy.mockRestore();
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+
+  // Files written within the racy window are always re-read; age them so the
+  // cache is observable. Distinct ages keep each rewrite's stamp distinct.
+  const age = (path: string, seconds: number) => {
+    const at = Date.now() / 1000 - seconds;
+    utimesSync(path, at, at);
+  };
+
+  test("reuses unchanged settings and credentials, and sees changes on the next call", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "cs-refresh-"));
+    dirs.push(cwd);
+    mkdirSync(join(cwd, ".code-shell"));
+    const settingsPath = join(cwd, ".code-shell", "settings.json");
+    writeFileSync(settingsPath, JSON.stringify({ capabilityOverrides: { builtin: {} } }));
+    age(settingsPath, 120);
+
+    const settings = new SettingsManager(cwd, "project");
+    const registry = new ToolRegistry({ builtinTools: ["Read", "Bash", "UseCredential"] });
+    const ctx = { cwd, toolRegistry: registry } as ToolContext;
+    const settingsReads = spyOn(settings, "getRawForScope");
+    const credentialReads = spyOn(localCredentialAccess, "listMasked");
+    spies.push(settingsReads, credentialReads);
+    // Mirrors Engine.run's assembler: every input is re-read per assembly.
+    initializeRunToolSurface(ctx, undefined, () =>
+      assembleRunToolDefs({
+        toolRegistry: registry,
+        toolCtx: ctx,
+        guardCwd: cwd,
+        hasRunnableGoal: false,
+        settingsScope: "project",
+        builtinToolHost: undefined,
+        isSubAgent: false,
+        behaviorProfileId: undefined,
+        profileMeta: undefined,
+        builtinOverride: effectiveProjectOverrides(settings, cwd)?.builtin,
+        mcpServers: {},
+        mcpDisabled: true,
+        featureFlags: undefined,
+        profileAllowedToolNames: undefined,
+        runPlanMode: false,
+      }),
+    );
+    const names = () => ctx.searchableToolDefinitions!.map((tool) => tool.name);
+    expect(names()).toContain("Read");
+    expect(names()).not.toContain("UseCredential");
+    expect(settingsReads.mock.calls.length).toBeGreaterThan(0);
+    expect(credentialReads.mock.calls.length).toBeGreaterThan(0);
+
+    settingsReads.mockClear();
+    credentialReads.mockClear();
+    for (let call = 0; call < 5; call++) ctx.refreshRunToolEligibility!();
+    expect(settingsReads).not.toHaveBeenCalled();
+    expect(credentialReads).not.toHaveBeenCalled();
+
+    // Between two tool calls: revoke Read and add a credential.
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({ capabilityOverrides: { builtin: { Read: "off" } } }),
+    );
+    age(settingsPath, 60);
+    new CredentialStore(cwd).save("project", {
+      id: "gh",
+      type: "token",
+      label: "GitHub",
+      secret: "fixture-token",
+    });
+    age(join(cwd, ".code-shell", "credentials.json"), 60);
+    ctx.refreshRunToolEligibility!();
+    expect(ctx.disabledBuiltins?.has("Read")).toBe(true);
+    expect(names()).not.toContain("Read");
+    expect(names()).toContain("UseCredential");
+    expect(settingsReads).toHaveBeenCalled();
+    expect(credentialReads).toHaveBeenCalled();
+
+    // A change inside the racy window is never served from the cache.
+    writeFileSync(settingsPath, JSON.stringify({ capabilityOverrides: { builtin: {} } }));
+    ctx.refreshRunToolEligibility!();
+    expect(names()).toContain("Read");
   });
 });

@@ -305,7 +305,8 @@ export class ContextManager {
    * plus estimation for messages added since the last API call.
    */
   private estimateTokensHybridInfo(messages: Message[]): TokenEstimate {
-    const currentEstimate = estimateTokens(messages);
+    // The usual anchor_delta path estimates only the messages added since the
+    // last API call; the full-context estimate is computed only when needed.
     if (this.lastActualTokens !== undefined && this.lastActualAtMessageCount !== undefined) {
       if (this.lastActualAtMessageCount < messages.length) {
         const newMessages = messages.slice(this.lastActualAtMessageCount);
@@ -320,14 +321,14 @@ export class ContextManager {
       if (this.lastActualAnchorEstimate !== undefined && this.lastActualAnchorEstimate > 0) {
         return {
           tokens: Math.round(
-            this.lastActualTokens * (currentEstimate / this.lastActualAnchorEstimate),
+            this.lastActualTokens * (estimateTokens(messages) / this.lastActualAnchorEstimate),
           ),
           source: "anchor_rescale",
           confidence: "medium",
         };
       }
     }
-    return { tokens: currentEstimate, source: "heuristic_estimate", confidence: "low" };
+    return { tokens: estimateTokens(messages), source: "heuristic_estimate", confidence: "low" };
   }
 
   private estimateTokensHybrid(messages: Message[]): number {

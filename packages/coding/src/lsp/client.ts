@@ -34,6 +34,9 @@ export class LSPClient extends EventEmitter {
   // synchronize against Content-Length. Stay in Buffer-land until we've
   // sliced out exactly the right body length.
   private buffer = Buffer.alloc(0);
+  /** Chunks of a body still arriving, joined once it is complete. */
+  private bodyChunks: Buffer[] = [];
+  private bodyChunkBytes = 0;
   private contentLength = -1;
   private initialized = false;
   private failure: Error | undefined;
@@ -51,6 +54,8 @@ export class LSPClient extends EventEmitter {
     this.failure = undefined;
     this.initialized = false;
     this.buffer = Buffer.alloc(0);
+    this.bodyChunks = [];
+    this.bodyChunkBytes = 0;
     this.contentLength = -1;
     const child = spawn(this.command, this.args, {
       cwd: this.cwd,
@@ -230,7 +235,16 @@ export class LSPClient extends EventEmitter {
     // boundary corruption that string concatenation produces — a
     // multibyte codepoint split across two TCP/pipe chunks decodes to
     // U+FFFD, mangles the buffer length count, and breaks framing.
-    this.buffer = Buffer.concat([this.buffer, data]);
+    // While a known-length body is still arriving, collect the chunks and
+    // join them once: re-concatenating per chunk copies a multi-MB response
+    // (workspace/symbol, references) quadratically.
+    this.bodyChunks.push(data);
+    this.bodyChunkBytes += data.length;
+    if (this.contentLength >= 0 && this.buffer.length + this.bodyChunkBytes < this.contentLength)
+      return;
+    this.buffer = Buffer.concat([this.buffer, ...this.bodyChunks]);
+    this.bodyChunks = [];
+    this.bodyChunkBytes = 0;
     while (true) {
       if (this.contentLength < 0) {
         // Search for the header terminator in bytes, not chars.

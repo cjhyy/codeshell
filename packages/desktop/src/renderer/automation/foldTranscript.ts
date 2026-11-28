@@ -18,7 +18,73 @@ export function foldTranscript(
   items: FoldItem[],
   options: { live?: boolean } = {},
 ): MessagesReducerState {
-  let state = INITIAL_STATE;
+  return finishFold(foldTranscriptItems(INITIAL_STATE, items), options.live);
+}
+
+/** A fold that can be extended by the items appended since it was made. */
+export interface IncrementalTranscriptFold {
+  /** The rendered state (orphaned agents sealed unless `live`). */
+  value: MessagesReducerState;
+  live: boolean;
+  /** Unsealed state after `count` items, the base for appended items. */
+  base: MessagesReducerState;
+  count: number;
+  firstItem: string;
+  lastItem: string;
+}
+
+/**
+ * Fold a re-read transcript against the previous fold of the same session.
+ *
+ * Returns `previous` itself when nothing changed, so a poll can skip its state
+ * update. When the transcript only grew, folds just the appended items on top
+ * of the previous state: untouched messages keep their object identity (and
+ * ids), so rows do not re-render. Anything else — a rewrite, a shrink, a
+ * changed boundary item — is folded from scratch.
+ */
+export function foldTranscriptIncremental(
+  previous: IncrementalTranscriptFold | null,
+  items: FoldItem[],
+  options: { live?: boolean } = {},
+): IncrementalTranscriptFold {
+  const live = options.live === true;
+  const firstItem = items.length > 0 ? JSON.stringify(items[0]) : "";
+  const lastItem = items.length > 0 ? JSON.stringify(items[items.length - 1]) : "";
+  const extendsPrevious =
+    previous !== null &&
+    previous.count > 0 &&
+    items.length >= previous.count &&
+    previous.firstItem === firstItem &&
+    previous.lastItem === JSON.stringify(items[previous.count - 1]);
+  if (previous && extendsPrevious && items.length === previous.count) {
+    if (previous.live === live) return previous;
+    return { ...previous, live, value: finishFold(previous.base, live) };
+  }
+  const base = extendsPrevious
+    ? foldTranscriptItems(previous.base, items.slice(previous.count))
+    : foldTranscriptItems(INITIAL_STATE, items);
+  return {
+    value: finishFold(base, live),
+    live,
+    base,
+    count: items.length,
+    firstItem,
+    lastItem,
+  };
+}
+
+// A detail view can replay a snapshot while the child still runs. Its nested
+// agents remain live; absence of an end event is only orphan evidence for
+// historical replay.
+function finishFold(state: MessagesReducerState, live = false): MessagesReducerState {
+  return live ? state : sealOrphanedAgents(state);
+}
+
+function foldTranscriptItems(
+  initial: MessagesReducerState,
+  items: FoldItem[],
+): MessagesReducerState {
+  let state = initial;
   for (const item of items) {
     // Replay clock = the event's ORIGINAL persisted timestamp, so createdAt/
     // doneAt reflect when the message was actually asked/answered (and elapsed =
@@ -65,10 +131,7 @@ export function foldTranscript(
       state = applyTranscriptStreamEvent(state, item.event, replayClock);
     }
   }
-  // A detail view can replay a snapshot while the child still runs. Its nested
-  // agents remain live; absence of an end event is only orphan evidence for
-  // historical replay.
-  return options.live ? state : sealOrphanedAgents(state);
+  return state;
 }
 
 /**

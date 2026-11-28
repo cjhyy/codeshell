@@ -39,12 +39,15 @@ import {
   activeQuestion,
   INITIAL_PENDING_QUESTIONS,
   reducePendingQuestions,
+  type PendingQuestion,
+  type QuestionDraft,
 } from "./pending-questions.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
 import { AgentDock, getVisibleAgents, MAX_VISIBLE } from "./components/AgentDock.js";
 import { asyncAgentRegistry } from "@cjhyy/code-shell-core/internal";
+import { useAgentRegistrySnapshot } from "./hooks/useAgentRegistrySnapshot.js";
 import {
   notificationQueue,
   buildNotificationMessage,
@@ -83,6 +86,7 @@ import {
 } from "./perf-probes.js";
 import {
   ModeIndicator,
+  applyPendingToolArgs,
   canExecuteCommandWhileRunning,
   classifyError,
   dispatchSlashCommandSafely,
@@ -222,10 +226,10 @@ export function App({
   const [viewMode, setViewMode] = useState<ViewMode>({ kind: "main" });
   const [dockFocusIdx, setDockFocusIdx] = useState<number | null>(null);
 
-  const agentsSnapshot = useSyncExternalStore(
-    asyncAgentRegistry.subscribe,
-    asyncAgentRegistry.getSnapshot,
-  );
+  // Sub-agent tokens touch the registry once each; only row changes (status,
+  // fade, name…) re-render App, plus throttled transcript updates while a
+  // sub-agent transcript is the visible view.
+  const agentsSnapshot = useAgentRegistrySnapshot(viewMode.kind === "agent");
   useEffect(() => {
     if (viewMode.kind !== "agent") return;
     const entry = agentsSnapshot.find((a) => a.agentId === viewMode.agentId);
@@ -535,6 +539,9 @@ export function App({
 
   // ─── Text delta buffering ──────────────────────────────────────
   const textBufferRef = useRef<Map<string | undefined, string>>(new Map());
+  // Latest tool_use_args_delta args per toolCallId, flushed with the text
+  // buffer — large Write/Edit calls stream args at up to ~125 events/s.
+  const toolArgsBufferRef = useRef<Map<string, Record<string, unknown>>>(new Map());
   const streamAttemptRef = useRef(new StreamAttempt());
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Throttle ref for "we dropped a sub-agent text_delta" log so it doesn't
@@ -586,13 +593,16 @@ export function App({
     const flushEnter = Date.now();
     flushTimerRef.current = null;
     const buf = textBufferRef.current;
-    if (buf.size === 0) {
+    const argsBuf = toolArgsBufferRef.current;
+    if (buf.size === 0 && argsBuf.size === 0) {
       flushScheduledAtRef.current = 0;
       return;
     }
 
     const pending = new Map(buf);
     buf.clear();
+    const pendingArgs = new Map(argsBuf);
+    argsBuf.clear();
 
     const gap =
       STREAM_DIAG_ON && lastFlushAtRef.current !== 0 ? flushEnter - lastFlushAtRef.current : 0;
@@ -628,7 +638,7 @@ export function App({
           ];
         }
       }
-      return next;
+      return pendingArgs.size > 0 ? applyPendingToolArgs(next, pendingArgs) : next;
     });
     flushUpdateMsRef.current = STREAM_DIAG_ON ? performance.now() - updateStart : 0;
 
@@ -760,6 +770,7 @@ export function App({
           );
           if (!remaining) break;
           textBufferRef.current.delete(undefined);
+          toolArgsBufferRef.current.clear();
           if (flushTimerRef.current) {
             clearTimeout(flushTimerRef.current);
             flushTimerRef.current = null;
@@ -864,20 +875,13 @@ export function App({
 
         case "tool_use_args_delta": {
           if (agentId !== undefined) break;
-          const { toolCallId, args } = event;
-          chatStore.update((prev) => {
-            const idx = prev.findIndex(
-              (e) => e.type === "tool_start" && e.toolCallId === toolCallId,
-            );
-            // No matching tool_start yet (out-of-order event) — drop.
-            if (idx < 0) return prev;
-            // Mirror flushTextBuffer's pattern: clone the array and reseat
-            // ONLY the targeted entry. Sibling references stay stable so
-            // MessageRow.memo (Task 3) can bail for them.
-            const next = [...prev];
-            next[idx] = { ...prev[idx], args } as ChatEntry;
-            return next;
-          });
+          // Each delta carries the full args so far: keep only the latest per
+          // call and let the 50 ms text flush apply it (applyPendingToolArgs).
+          toolArgsBufferRef.current.set(event.toolCallId, event.args);
+          if (!flushTimerRef.current) {
+            flushScheduledAtRef.current = Date.now();
+            flushTimerRef.current = setTimeout(flushTextBuffer, 50);
+          }
           break;
         }
 
@@ -1909,7 +1913,9 @@ export function App({
           clearTaskSnapshots();
           setShowBanner(true);
         },
-        chatLog,
+        // Read at dispatch time so handleSlashCommand doesn't change identity on
+        // every text flush (it is a prop of the memoized TuiControlSurface).
+        chatLog: chatStore.getEntries(),
         startOnboarding,
         openModelSelector,
         openSessionPicker,
@@ -2081,7 +2087,6 @@ export function App({
       currentEffort,
       tasks,
       clearTaskSnapshots,
-      chatLog,
       exit,
       startOnboarding,
       openModelSelector,
@@ -2091,19 +2096,47 @@ export function App({
     ],
   );
 
-  const addStatus = (reason: string) => {
+  // Stable identities: both are props of the memoized TuiControlSurface.
+  const addStatus = useCallback((reason: string) => {
     chatStore.update((prev) => [...prev, entry({ type: "status", reason })]);
-  };
+  }, []);
 
-  const applyModelConfigureResult = (result: unknown, fallbackModel: string): string => {
-    const data = result as { model?: string; maxContextTokens?: number } | undefined;
-    const newModel = data?.model ?? fallbackModel;
-    setModel(newModel);
-    if (typeof data?.maxContextTokens === "number") {
-      setActiveMaxContextTokens(data.maxContextTokens);
-    }
-    return newModel;
-  };
+  const applyModelConfigureResult = useCallback(
+    (result: unknown, fallbackModel: string): string => {
+      const data = result as { model?: string; maxContextTokens?: number } | undefined;
+      const newModel = data?.model ?? fallbackModel;
+      setModel(newModel);
+      if (typeof data?.maxContextTokens === "number") {
+        setActiveMaxContextTokens(data.maxContextTokens);
+      }
+      return newModel;
+    },
+    [],
+  );
+
+  const onQuestionResolved = useCallback(
+    (question: PendingQuestion) =>
+      dispatchQuestion({
+        type: "resolve",
+        requestId: question.requestId,
+        sessionId: question.sessionId,
+      }),
+    [],
+  );
+  const onQuestionDeferred = useCallback(
+    (requestId: string) => dispatchQuestion({ type: "defer", requestId }),
+    [],
+  );
+  const onQuestionDraftChange = useCallback(
+    (requestId: string, draft: QuestionDraft) =>
+      dispatchQuestion({ type: "draft", requestId, draft }),
+    [],
+  );
+  const onQuestionSubmittingChange = useCallback(
+    (requestId: string, submitting: boolean) =>
+      dispatchQuestion({ type: "submitting", requestId, submitting }),
+    [],
+  );
 
   const addMessage = (text: string) => {
     chatStore.update((prev) => [
@@ -2240,20 +2273,10 @@ export function App({
         wizard={wizard}
         setWizard={setWizard}
         pendingQuestion={pendingQuestion}
-        onQuestionResolved={(question) =>
-          dispatchQuestion({
-            type: "resolve",
-            requestId: question.requestId,
-            sessionId: question.sessionId,
-          })
-        }
-        onQuestionDeferred={(requestId) => dispatchQuestion({ type: "defer", requestId })}
-        onQuestionDraftChange={(requestId, draft) =>
-          dispatchQuestion({ type: "draft", requestId, draft })
-        }
-        onQuestionSubmittingChange={(requestId, submitting) =>
-          dispatchQuestion({ type: "submitting", requestId, submitting })
-        }
+        onQuestionResolved={onQuestionResolved}
+        onQuestionDeferred={onQuestionDeferred}
+        onQuestionDraftChange={onQuestionDraftChange}
+        onQuestionSubmittingChange={onQuestionSubmittingChange}
         pendingApproval={pendingApproval !== null}
         sessionId={sessionId}
         sidRef={sidRef}

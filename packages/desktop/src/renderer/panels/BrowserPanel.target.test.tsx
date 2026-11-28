@@ -54,6 +54,7 @@ const originalClearInterval = globalThis.clearInterval;
 const originalSetTimeout = globalThis.setTimeout;
 const originalClearTimeout = globalThis.clearTimeout;
 const intervals = new Map<number, () => void>();
+const intervalDelays = new Map<number, number | undefined>();
 const evictionTimers = new Map<number, () => void>();
 let timerId = 100_000;
 
@@ -128,9 +129,10 @@ beforeEach(async () => {
   grantResult = statusResult = null;
   intervals.clear();
   evictionTimers.clear();
-  globalThis.setInterval = ((callback: () => void) => {
+  globalThis.setInterval = ((callback: () => void, delay?: number) => {
     const id = ++timerId;
     intervals.set(id, callback);
+    intervalDelays.set(id, delay);
     return id;
   }) as unknown as typeof setInterval;
   globalThis.clearInterval = ((id: number) => {
@@ -351,6 +353,17 @@ test("a failed selection reports an inline error and permits retry without any p
   await click(button("用于当前对话"));
   expect(props(button("当前对话正在使用")).disabled).toBe(true);
   expect(textOf(container)).not.toContain("guest closed");
+});
+
+test("a hidden panel keeps checking its grant at a slower interval", async () => {
+  await ready(0, 42, "A");
+  const live = () => [...intervals.keys()].map((id) => intervalDelays.get(id));
+  expect(live().length).toBeGreaterThan(0);
+  expect(live().every((delay) => delay === 2_000)).toBe(true);
+  visible = false;
+  await render();
+  expect(live().length).toBeGreaterThan(0);
+  expect(live().every((delay) => delay === 15_000)).toBe(true);
 });
 
 test("a failed status check preserves the selected guest until an explicit ungranted response", async () => {

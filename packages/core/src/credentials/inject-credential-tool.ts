@@ -20,6 +20,7 @@ import {
 } from "./use-gate.js";
 import { SettingsManager, type SettingsScope } from "../settings/manager.js";
 import { credentialAccessScope, getCredentialAccess } from "./access.js";
+import { listCredentialEntries } from "./listing-memo.js";
 
 const TOOL_NAME = "InjectCredential";
 
@@ -105,9 +106,9 @@ function readAutoApprove(cwd: string, scope: "full" | "project"): boolean {
 /** 该工具仅在有 cookie 凭证 且 宿主接了注入回调时才可见(BUILTIN_TOOL_GUARDS)。 */
 export function isInjectCredentialAvailable(cwd: string, settingsScope?: SettingsScope): boolean {
   try {
-    return getCredentialAccess()
-      .listMasked(cwd, credentialScope(settingsScope))
-      .some((c) => c.type === "cookie");
+    return listCredentialEntries(cwd, credentialScope(settingsScope)).some(
+      (c) => c.type === "cookie",
+    );
   } catch {
     return false;
   }

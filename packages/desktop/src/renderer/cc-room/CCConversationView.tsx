@@ -1,6 +1,8 @@
 import {
+  memo,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -169,6 +171,11 @@ export function CCConversationView({
   const sendRequestRef = useRef<object | null>(null);
   const draftRevisionRef = useRef(0);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  // Follows the history scroll only when rendered history changes.
+  const historyTrigger = useMemo(
+    () => [chat.items, pending, historyError] as const,
+    [chat.items, pending, historyError],
+  );
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyRevision, setHistoryRevision] = useState(0);
   const approvalRequestsRef = useRef(new Map<string, object>());
@@ -662,7 +669,10 @@ export function CCConversationView({
         </div>
       )}
 
-      <ConversationHistory jumpKey={`${roomId}:${sessionId}:${active}:${latestRequest ?? 0}`}>
+      <ConversationHistory
+        jumpKey={`${roomId}:${sessionId}:${active}:${latestRequest ?? 0}`}
+        trigger={historyTrigger}
+      >
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
           {historyError && (
             <div role="alert" className="flex items-center gap-2 text-sm text-destructive">
@@ -838,14 +848,25 @@ export function CCConversationView({
 }
 
 /** Mount separately so returning from a subagent view restores scroll listeners. */
-function ConversationHistory({ children, jumpKey }: { children: ReactNode; jumpKey: string }) {
+function ConversationHistory({
+  children,
+  jumpKey,
+  trigger,
+}: {
+  children: ReactNode;
+  jumpKey: string;
+  /** Changes only when the rendered history does. `children` is a new element
+   *  on every render, including each composer keystroke, and each snap forces
+   *  a synchronous layout read. */
+  trigger: unknown;
+}) {
   const { t } = useT();
-  const stick = useStickToBottom<HTMLDivElement>({ trigger: children, jumpKey });
+  const stick = useStickToBottom<HTMLDivElement>({ trigger, jumpKey });
   // The snapshot arrives asynchronously. Position it before paint, just like
   // opening a resident view, instead of flashing the oldest visible message.
   useLayoutEffect(() => {
     if (stick.following) stick.scrollToBottom();
-  }, [children, stick.following, stick.scrollToBottom]);
+  }, [trigger, stick.following, stick.scrollToBottom]);
   return (
     <div className="relative min-h-0 flex-1">
       <div ref={stick.ref} data-cc-room-history className="h-full overflow-y-auto p-4">
@@ -870,7 +891,9 @@ function ConversationHistory({ children, jumpKey }: { children: ReactNode; jumpK
 }
 
 // ── one chat row ───────────────────────────────────────────────────────────
-export function MessageRow({
+// Memoized: chat items are immutable reducer snapshots, so unchanged rows
+// skip re-rendering on each keystroke and room event.
+export const MessageRow = memo(function MessageRow({
   item,
   onViewSubagent,
 }: {
@@ -925,7 +948,7 @@ export function MessageRow({
         </div>
       );
   }
-}
+});
 
 function subagentLabel(item: SubagentItem): string {
   if (item.kind === "subagent") return item.label;

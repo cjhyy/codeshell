@@ -7,7 +7,7 @@ import {
 } from "./ccRoomSettingsRequests.js";
 import { localDeadline } from "../remote-deadline.js";
 import { RoomHistoryAccumulator } from "../lib/roomHistory.js";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   MobileServerEvent,
   MobileSessionMeta,
@@ -33,7 +33,7 @@ import {
   type TurnQueueStates,
 } from "./turnQueueState.js";
 import { initialChatState, type ChatState } from "../lib/streamReducer.js";
-import { chatReducer } from "./remoteChatReducer.js";
+import { useBatchedChatReducer } from "./remoteChatReducer.js";
 import { t } from "../i18n/translate.js";
 import { summarizeApproval, type Risk } from "../lib/riskClassify.js";
 import {
@@ -333,7 +333,8 @@ export interface RemoteAppOptions {
 export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const optionsRef = useRef(options);
   optionsRef.current = options;
-  const [chat, dispatchChat] = useReducer(chatReducer, undefined, initialChatState);
+  // Token deltas are batched per frame; flush before any other inbound message.
+  const [chat, dispatchChat, streamBatcher] = useBatchedChatReducer(initialChatState);
   const [sessions, setSessions] = useState<MobileSessionMeta[]>([]);
   const [sessionsHasMore, setSessionsHasMore] = useState(false);
   const sessionListCursorRef = useRef<string | null>(null);
@@ -1112,6 +1113,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const terminal = useMemo(() => new RemoteTerminalChannel(), []);
   const onServerEvent = useCallback(
     (event: MobileServerEvent) => {
+      streamBatcher.flush();
       if (terminal.accept(event)) return;
       const unsent = unsentCreatedSessionRef.current;
       const source = unsent ?? replacementSourceRef.current;
@@ -2157,6 +2159,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       settleMessageAck,
       setNotice,
       sessionCursor,
+      streamBatcher,
       terminal,
     ],
   );
@@ -2164,6 +2167,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const onRawLine = useCallback(
     (raw: unknown) => {
       const obj = raw as Record<string, unknown>;
+      if (obj.method !== "agent/streamEvent") streamBatcher.flush();
       if (typeof obj.method === "string") {
         optionsRef.current.onNotification?.(
           obj.method,
@@ -2263,11 +2267,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           return;
         }
         if (outputClient.rejectUnsequenced(boundSessionRef.current!)) return;
-        dispatchChat({ kind: "raw", raw });
+        streamBatcher.push(raw);
         clearApprovalsIfTerminal([params.event]);
       }
     },
-    [addApproval, clearApproval, clearApprovalsIfTerminal, sessionCwdById],
+    [addApproval, clearApproval, clearApprovalsIfTerminal, sessionCwdById, streamBatcher],
   );
 
   const requestActiveResync = useCallback(() => {

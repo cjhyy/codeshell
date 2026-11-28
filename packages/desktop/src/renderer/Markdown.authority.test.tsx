@@ -4,7 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import type { SessionWorkspaceAuthority } from "../preload/types";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 ensureMiniDom();
-const { Markdown, invalidateFileExistsCache } = await import("./Markdown");
+const { Markdown, invalidateFileExistsCache, recheckUnresolvedFileLinks } =
+  await import("./Markdown");
 
 interface MiniElementNode {
   tagName?: string;
@@ -368,4 +369,53 @@ test("invalidates positive file-exists cache without broadcasting a live file re
   } finally {
     window.removeEventListener("codeshell:files-changed", changed);
   }
+});
+
+test("a turn-end files-changed event rechecks missing links but keeps confirmed ones", async () => {
+  const present = new Set(["/turn-end/exists.ts"]);
+  const checked: string[] = [];
+  Object.assign(window, {
+    codeshell: {
+      localFileExists: async (path: string) => {
+        checked.push(path);
+        return present.has(path);
+      },
+    },
+  });
+  await renderMarkdown(<Markdown text="[a](/turn-end/exists.ts) [b](/turn-end/later.ts)" />);
+  expect(checked.sort()).toEqual(["/turn-end/exists.ts", "/turn-end/later.ts"]);
+  checked.length = 0;
+  present.add("/turn-end/later.ts");
+  await act(async () => {
+    // The module listens for codeshell:files-changed with this function.
+    recheckUnresolvedFileLinks();
+    await flushMicrotasks();
+  });
+  expect(checked).toEqual(["/turn-end/later.ts"]);
+  const links: MiniElementNode[] = [];
+  const collect = (node: MiniElementNode) => {
+    if (node.tagName === "A" && node.getAttribute?.("data-path-link") === "true") links.push(node);
+    for (const child of node.childNodes ?? []) collect(child);
+  };
+  collect(container!);
+  expect(links).toHaveLength(2);
+});
+
+test("a session scope change re-renders links in place instead of remounting them", async () => {
+  Object.assign(window, { codeshell: { localFileExists: async () => true } });
+  const find = (node: MiniElementNode): MiniElementNode | null => {
+    if (node.tagName === "A" && node.getAttribute?.("href") === "https://example.test/doc")
+      return node;
+    for (const child of node.childNodes ?? []) {
+      const found = find(child);
+      if (found) return found;
+    }
+    return null;
+  };
+  const text = "see [doc](https://example.test/doc) and `code`";
+  await renderMarkdown(<Markdown text={text} sessionId="scope-a" rootStatus="loading" />);
+  const before = find(container!);
+  expect(before).not.toBeNull();
+  await renderMarkdown(<Markdown text={text} sessionId="scope-a" rootStatus="ok" />);
+  expect(find(container!)).toBe(before);
 });

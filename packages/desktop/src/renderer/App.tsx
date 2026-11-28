@@ -199,6 +199,9 @@ function PageLoading({ label }: { label: string }) {
   );
 }
 
+/** Per-message search match counts for the current query (see matchCount). */
+const searchMatchCounts = new WeakMap<object, { query: string; count: number }>();
+
 function App() {
   useThemeAudio();
   const toast = useToast();
@@ -1774,6 +1777,10 @@ function App() {
           ? m.text
           : "";
       if (!text) return n;
+      // Messages are immutable snapshots: while a query is open only the
+      // streaming tail is recounted on each batch, not the whole transcript.
+      const cached = searchMatchCounts.get(m);
+      if (cached?.query === q) return n + cached.count;
       let count = 0;
       const lower = text.toLowerCase();
       let idx = lower.indexOf(q);
@@ -1781,6 +1788,7 @@ function App() {
         count++;
         idx = lower.indexOf(q, idx + q.length);
       }
+      searchMatchCounts.set(m, { query: q, count });
       return n + count;
     }, 0);
   }, [searchMessages, searchQuery]);

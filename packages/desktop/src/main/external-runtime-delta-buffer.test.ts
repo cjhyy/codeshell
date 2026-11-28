@@ -75,7 +75,7 @@ test("idle timer and explicit close fence flush pending text without a following
   const f = fixture();
   f.buffer.push({ type: "thinking_delta", text: "reason" });
   expect(f.published).toHaveLength(0);
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await new Promise((resolve) => setTimeout(resolve, 60));
   expect(f.published).toHaveLength(1);
   f.buffer.push({ type: "text_delta", text: "accepted before stop" });
   f.buffer.flush();
@@ -95,7 +95,7 @@ test("a rejected batch publishes none of its uncommitted events", async () => {
   });
   cleanups.push(() => append.mockRestore());
   f.buffer.push({ type: "text_delta", text: "uncommitted" });
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await new Promise((resolve) => setTimeout(resolve, 60));
   expect(f.published).toEqual([]);
   expect(f.failures).toHaveLength(1);
 });

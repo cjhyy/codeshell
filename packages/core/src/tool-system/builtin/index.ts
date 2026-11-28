@@ -131,7 +131,8 @@ import {
   injectCredentialTool,
   isInjectCredentialAvailable,
 } from "../../credentials/inject-credential-tool.js";
-import { credentialAccessScope, getCredentialAccess } from "../../credentials/access.js";
+import { credentialAccessScope } from "../../credentials/access.js";
+import { listCredentialEntries } from "../../credentials/listing-memo.js";
 import { linkActionToolDef, linkActionTool } from "../../links/link-action-tool.js";
 
 /**
@@ -1439,7 +1440,7 @@ export function isUseCredentialAvailable(
   settingsScope?: import("../../settings/manager.js").SettingsScope,
 ): boolean {
   try {
-    return getCredentialAccess().listMasked(cwd, credentialAccessScope(settingsScope)).length > 0;
+    return listCredentialEntries(cwd, credentialAccessScope(settingsScope)).length > 0;
   } catch {
     return false;
   }

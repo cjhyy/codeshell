@@ -7,6 +7,25 @@ export async function waitForAbort(signal: AbortSignal): Promise<void> {
   );
 }
 
+/**
+ * Settle with `promise`, or early when `signal` aborts. Unlike racing against
+ * waitForAbort, the abort listener is removed afterwards, so retry loops on a
+ * long-lived gateway signal do not accumulate one listener per attempt.
+ */
+export async function raceAbort(promise: Promise<unknown>, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return;
+  let onAbort: (() => void) | undefined;
+  const aborted = new Promise<void>((resolve) => {
+    onAbort = resolve;
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+  try {
+    await Promise.race([promise, aborted]);
+  } finally {
+    if (onAbort) signal.removeEventListener("abort", onAbort);
+  }
+}
+
 export function formatOutgoingMarkdown(
   text: string,
   button?: { text: string; url: string },

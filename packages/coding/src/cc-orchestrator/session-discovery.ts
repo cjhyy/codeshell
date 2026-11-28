@@ -14,6 +14,7 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
 import { encodeCwd } from "./claude-session-paths.js";
 import { parseRecentHistory } from "./session-history.js";
+import { cachedSessionTitle } from "./session-title-cache.js";
 
 export { encodeCwd } from "./claude-session-paths.js";
 
@@ -205,8 +206,10 @@ function isCollidingClaudeCwd(recordedCwd: string | undefined, cwd: string): boo
 }
 
 /** Cheap (sessionId, mtime) pairs for every session file — stat only, no read. */
-function listSessionStats(dir: string): { sessionId: string; file: string; mtimeMs: number }[] {
-  const stats: { sessionId: string; file: string; mtimeMs: number }[] = [];
+function listSessionStats(
+  dir: string,
+): { sessionId: string; file: string; mtimeMs: number; ino: number }[] {
+  const stats: { sessionId: string; file: string; mtimeMs: number; ino: number }[] = [];
   for (const name of readdirSync(dir)) {
     if (!name.endsWith(".jsonl")) continue;
     const file = join(dir, name);
@@ -217,7 +220,12 @@ function listSessionStats(dir: string): { sessionId: string; file: string; mtime
       continue;
     }
     if (!st.isFile()) continue;
-    stats.push({ sessionId: name.replace(/\.jsonl$/, ""), file, mtimeMs: st.mtimeMs });
+    stats.push({
+      sessionId: name.replace(/\.jsonl$/, ""),
+      file,
+      mtimeMs: st.mtimeMs,
+      ino: st.ino,
+    });
   }
   return stats;
 }
@@ -384,7 +392,7 @@ export function discoverRecentClaudeSessions(
 ): RecentExternalSession[] {
   const projects = claudeProjectsDir(claudeHome);
   if (!existsSync(projects)) return [];
-  const stats: { file: string; sessionId: string; mtimeMs: number }[] = [];
+  const stats: { file: string; sessionId: string; mtimeMs: number; ino: number }[] = [];
   for (const projectDir of readdirSync(projects)) {
     // Skip directories that cannot contain an enabled root. Ambiguous lossy
     // names proceed only to the small per-file identity read below.
@@ -398,7 +406,7 @@ export function discoverRecentClaudeSessions(
     }
     if (!dirStat.isDirectory()) continue;
     for (const entry of listSessionStats(dir)) {
-      stats.push({ file: entry.file, sessionId: entry.sessionId, mtimeMs: entry.mtimeMs });
+      stats.push(entry);
     }
   }
   const windowed = selectRecentStats(stats, { sinceMs: opts.sinceMs, now: opts.now });
@@ -415,8 +423,10 @@ export function discoverRecentClaudeSessions(
     if (!cwd || !externalSessionCwdEnabled(cwd, scope)) continue;
     let firstMessage = "";
     try {
-      diagnostics?.onContentRead?.(s.file);
-      firstMessage = firstUserMessage(readBoundedPrefix(s.file, 1 << 20).split("\n"));
+      firstMessage = cachedSessionTitle(s.file, s.ino, () => {
+        diagnostics?.onContentRead?.(s.file);
+        return firstUserMessage(readBoundedPrefix(s.file, 1 << 20).split("\n"));
+      });
     } catch {
       continue;
     }

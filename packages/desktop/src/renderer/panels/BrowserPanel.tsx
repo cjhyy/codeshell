@@ -256,7 +256,7 @@ export function BrowserPanel({
     unavailable: handoffUnavailable,
     select: selectRuntimeTarget,
     revoke: revokeRuntimeTarget,
-  } = useBrowserSessionTarget(engineSessionId, bucket, partition);
+  } = useBrowserSessionTarget(engineSessionId, bucket, partition, visible);
   const [readyGuests, setReadyGuests] = useState<Record<string, number>>({});
   const chromeScope = useMemo(
     () => ({ engineSessionId, bucket, partition }),
@@ -336,13 +336,15 @@ export function BrowserPanel({
         });
     };
     refresh();
-    const timer = setInterval(refresh, 2_000);
+    // Hidden panels stay mounted per Session; only the visible one needs a
+    // live connection pill.
+    const timer = setInterval(refresh, visible ? 2_000 : 15_000);
     return () => {
       cancelled = true;
       if (currentChromeScope.current === chromeScope) currentChromeScope.current = null;
       clearInterval(timer);
     };
-  }, [engineSessionId, chromeScope]);
+  }, [engineSessionId, chromeScope, visible]);
 
   const toggleChromeRuntime = useCallback(async (): Promise<void> => {
     if (!engineSessionId || chromeBusy) return;

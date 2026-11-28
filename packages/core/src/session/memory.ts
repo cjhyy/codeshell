@@ -333,6 +333,12 @@ export class MemoryManager {
   }
 
   findById(id: string): MemoryEntry | undefined {
+    // Entries are saved as `<id>.md`, so try that file before parsing every
+    // memory in the directory.
+    if (/^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/.test(id)) {
+      const direct = this.loadFile(`${id}.md`);
+      if (direct?.id === id) return direct;
+    }
     return this.loadAll().find((e) => e.id === id);
   }
 
@@ -549,10 +555,14 @@ export class MemoryManager {
    * the signal that drives recall-based TTL — a memory that keeps getting read
    * never ages out. Idempotent-safe: missing entry → false, no throw.
    */
-  recordRecall(nameOrFile: string, now: Date = new Date()): boolean {
-    const entry = this.loadAll().find(
-      (e) => e.id === nameOrFile || e.name === nameOrFile || e.fileName === nameOrFile,
-    );
+  recordRecall(nameOrFile: string | MemoryEntry, now: Date = new Date()): boolean {
+    // A caller that already loaded the entry passes it to skip another scan.
+    const entry =
+      typeof nameOrFile === "string"
+        ? this.loadAll().find(
+            (e) => e.id === nameOrFile || e.name === nameOrFile || e.fileName === nameOrFile,
+          )
+        : nameOrFile;
     if (!entry) return false;
     try {
       this.save(

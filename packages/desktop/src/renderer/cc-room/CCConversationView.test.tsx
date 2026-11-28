@@ -893,6 +893,30 @@ describe("CCConversationView asynchronous recovery", () => {
 
   const enter = { key: "Enter", shiftKey: false, preventDefault() {} };
 
+  test("typing in the composer does not re-measure the history scroll", async () => {
+    installRoomApi({
+      roomHistoryPage: async () => ({
+        snapshotId: "snapshot",
+        throughSeq: 1,
+        messages: [{ seq: 1, from: "user", type: "text", text: "scroll-backlog" }],
+        complete: true,
+      }),
+    });
+    const container = await mount({ sessionId: "" });
+    const history = findElementByProp(container, "data-cc-room-history") as Record<string, unknown>;
+    let layoutReads = 0;
+    Object.defineProperty(history, "scrollHeight", {
+      configurable: true,
+      get: () => {
+        layoutReads++;
+        return 0;
+      },
+    });
+    await editDraft(container, "a");
+    await editDraft(container, "ab");
+    expect(layoutReads).toBe(0);
+  });
+
   test("re-entering a plain room replaces its full history instead of duplicating messages", async () => {
     installRoomApi({
       roomHistoryPage: async () => ({

@@ -192,6 +192,8 @@ export function requestBoundaryFetch(
         typeof body !== "object" ||
         body.model !== call.binding.model ||
         !Array.isArray(body.messages) ||
+        // The wire prehash below is this same digest; the projection already
+        // holds it, so the body is canonicalized once here.
         canonicalDigest(body) !== projection.expectedDigest
       )
         return fail("projection");
@@ -215,7 +217,7 @@ export function requestBoundaryFetch(
         prehashes: {
           system: canonicalDigest(system),
           messages: canonicalDigest(conversation),
-          wire: canonicalDigest(body),
+          wire: projection.expectedDigest,
           "source-context": call.sourceContextPrehash,
         },
       });

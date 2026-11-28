@@ -168,7 +168,7 @@ function isHttpAuthProbeError(s: McpServer, probe: McpProbeResult | undefined): 
 }
 
 /**
- * Tell other components that read mcpServers (e.g. McpView in the sidebar)
+ * Tell other components that read mcpServers
  * to re-read settings. Same channel ModelSection / PermissionSection use.
  */
 function broadcastSettingsChanged(): void {
