@@ -84,6 +84,7 @@ import {
 } from "./perf-probes.js";
 import {
   ModeIndicator,
+  applyPendingToolArgs,
   canExecuteCommandWhileRunning,
   classifyError,
   dispatchSlashCommandSafely,
@@ -536,6 +537,9 @@ export function App({
 
   // ─── Text delta buffering ──────────────────────────────────────
   const textBufferRef = useRef<Map<string | undefined, string>>(new Map());
+  // Latest tool_use_args_delta args per toolCallId, flushed with the text
+  // buffer — large Write/Edit calls stream args at up to ~125 events/s.
+  const toolArgsBufferRef = useRef<Map<string, Record<string, unknown>>>(new Map());
   const streamAttemptRef = useRef(new StreamAttempt());
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Throttle ref for "we dropped a sub-agent text_delta" log so it doesn't
@@ -587,13 +591,16 @@ export function App({
     const flushEnter = Date.now();
     flushTimerRef.current = null;
     const buf = textBufferRef.current;
-    if (buf.size === 0) {
+    const argsBuf = toolArgsBufferRef.current;
+    if (buf.size === 0 && argsBuf.size === 0) {
       flushScheduledAtRef.current = 0;
       return;
     }
 
     const pending = new Map(buf);
     buf.clear();
+    const pendingArgs = new Map(argsBuf);
+    argsBuf.clear();
 
     const gap =
       STREAM_DIAG_ON && lastFlushAtRef.current !== 0 ? flushEnter - lastFlushAtRef.current : 0;
@@ -629,7 +636,7 @@ export function App({
           ];
         }
       }
-      return next;
+      return pendingArgs.size > 0 ? applyPendingToolArgs(next, pendingArgs) : next;
     });
     flushUpdateMsRef.current = STREAM_DIAG_ON ? performance.now() - updateStart : 0;
 
@@ -761,6 +768,7 @@ export function App({
           );
           if (!remaining) break;
           textBufferRef.current.delete(undefined);
+          toolArgsBufferRef.current.clear();
           if (flushTimerRef.current) {
             clearTimeout(flushTimerRef.current);
             flushTimerRef.current = null;
@@ -865,20 +873,13 @@ export function App({
 
         case "tool_use_args_delta": {
           if (agentId !== undefined) break;
-          const { toolCallId, args } = event;
-          chatStore.update((prev) => {
-            const idx = prev.findIndex(
-              (e) => e.type === "tool_start" && e.toolCallId === toolCallId,
-            );
-            // No matching tool_start yet (out-of-order event) — drop.
-            if (idx < 0) return prev;
-            // Mirror flushTextBuffer's pattern: clone the array and reseat
-            // ONLY the targeted entry. Sibling references stay stable so
-            // MessageRow.memo (Task 3) can bail for them.
-            const next = [...prev];
-            next[idx] = { ...prev[idx], args } as ChatEntry;
-            return next;
-          });
+          // Each delta carries the full args so far: keep only the latest per
+          // call and let the 50 ms text flush apply it (applyPendingToolArgs).
+          toolArgsBufferRef.current.set(event.toolCallId, event.args);
+          if (!flushTimerRef.current) {
+            flushScheduledAtRef.current = Date.now();
+            flushTimerRef.current = setTimeout(flushTextBuffer, 50);
+          }
           break;
         }
 

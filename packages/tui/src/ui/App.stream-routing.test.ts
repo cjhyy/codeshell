@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { AsyncAgentEntry } from "@cjhyy/code-shell-core/internal";
 import { shouldAppendThinkingDeltaToMainFeed } from "./App.js";
+import { applyPendingToolArgs } from "./app-helpers.js";
+import type { ChatEntry } from "./store.js";
 import {
   agentRowSignature,
   subscribeAgentRegistryGated,
@@ -11,6 +13,39 @@ describe("stream event routing", () => {
   test("routes only main-agent thinking deltas into the main feed", () => {
     expect(shouldAppendThinkingDeltaToMainFeed(undefined)).toBe(true);
     expect(shouldAppendThinkingDeltaToMainFeed("agent-1")).toBe(false);
+  });
+});
+
+describe("buffered tool_use_args_delta", () => {
+  const row = (id: string, toolCallId: string, args: Record<string, unknown> = {}): ChatEntry =>
+    ({ id, type: "tool_start", toolName: "Write", toolCallId, args }) as ChatEntry;
+
+  test("applies the latest args per call and keeps untouched rows by identity", () => {
+    const entries = [row("1", "call-a"), row("2", "call-b"), row("3", "call-c")];
+    const next = applyPendingToolArgs(
+      entries,
+      new Map([
+        ["call-b", { content: "x".repeat(4) }],
+        ["call-c", { content: "y" }],
+      ]),
+    );
+    expect(next).not.toBe(entries);
+    expect(next[0]).toBe(entries[0]);
+    expect((next[1] as { args: unknown }).args).toEqual({ content: "xxxx" });
+    expect((next[2] as { args: unknown }).args).toEqual({ content: "y" });
+    expect((entries[1] as { args: unknown }).args).toEqual({});
+  });
+
+  test("returns the same array when no tool_start row matches", () => {
+    const entries = [row("1", "call-a")];
+    expect(applyPendingToolArgs(entries, new Map([["missing", { a: 1 }]]))).toBe(entries);
+  });
+
+  test("targets the most recent row when a toolCallId repeats", () => {
+    const entries = [row("1", "dup"), row("2", "dup")];
+    const next = applyPendingToolArgs(entries, new Map([["dup", { a: 1 }]]));
+    expect(next[0]).toBe(entries[0]);
+    expect((next[1] as { args: unknown }).args).toEqual({ a: 1 });
   });
 });
 

@@ -234,4 +234,41 @@ describe("App sub-agent TodoWrite snapshots", () => {
       await settle(() => h.unmount());
     }
   });
+
+  test("coalesces streamed tool args into the text flush instead of one update each", async () => {
+    const client = new FakeAgentClient();
+    const h = await mountApp(client);
+    let updates = 0;
+    const off = chatStore.subscribe(() => updates++);
+    try {
+      await settle(() => {
+        client.emit({
+          type: "tool_use_start",
+          toolCall: { id: "call-1", toolName: "Write", args: {} },
+        });
+      });
+      updates = 0;
+      await settle(() => {
+        for (let i = 1; i <= 100; i++) {
+          client.emit({
+            type: "tool_use_args_delta",
+            toolCallId: "call-1",
+            args: { file_path: "/tmp/a.txt", content: "x".repeat(i) },
+          });
+        }
+      });
+      expect(updates).toBe(0);
+      await settle(() => new Promise((resolve) => setTimeout(resolve, 80)));
+      expect(updates).toBe(1);
+      const row = chatStore
+        .getEntries()
+        .find((e) => e.type === "tool_start" && e.toolCallId === "call-1") as
+        | { args: { content: string } }
+        | undefined;
+      expect(row?.args.content).toHaveLength(100);
+    } finally {
+      off();
+      await settle(() => h.unmount());
+    }
+  });
 });

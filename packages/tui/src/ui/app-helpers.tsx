@@ -137,6 +137,27 @@ export function findLastIndex<T>(arr: T[], predicate: (item: T) => boolean): num
   return -1;
 }
 
+/**
+ * Apply buffered `tool_use_args_delta` snapshots (latest args per toolCallId)
+ * to their tool_start rows. Searches from the end — the streaming call is
+ * near the tail — and copies the array at most once; untouched rows keep
+ * their identity so MessageRow.memo can bail. Calls without a tool_start row
+ * (out of order or revoked) are dropped.
+ */
+export function applyPendingToolArgs(
+  entries: ChatEntry[],
+  pending: ReadonlyMap<string, Record<string, unknown>>,
+): ChatEntry[] {
+  let next = entries;
+  for (const [toolCallId, args] of pending) {
+    const idx = findLastIndex(next, (e) => e.type === "tool_start" && e.toolCallId === toolCallId);
+    if (idx < 0) continue;
+    if (next === entries) next = [...entries];
+    next[idx] = { ...next[idx], args } as ChatEntry;
+  }
+  return next;
+}
+
 export function friendlyReason(reason: string): string {
   switch (reason) {
     case "aborted_streaming":
