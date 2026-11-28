@@ -27,6 +27,9 @@ import {
   type PetSessionProjection,
 } from "./types.js";
 
+/** Minimum spacing of lastActivityAt-only updates from streamed deltas. */
+const PET_DELTA_PUBLISH_INTERVAL_MS = 1_000;
+
 /** Session kinds owned by the pet domain — hidden from generic session lists. */
 export const PET_HIDDEN_SESSION_KINDS: readonly string[] = ["pet"];
 
@@ -162,9 +165,23 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
     };
   };
 
+  // Streamed deltas only advance lastActivityAt, yet each projection reads the
+  // live snapshot (every live Session's state.json) and rebuilds the catalog.
+  // Publish them at most once a second per Session; every other event still
+  // publishes immediately.
+  const lastDeltaPublishedAt = new Map<string, number>();
   const recordPetStreamEvent = (sessionId: string, event: StreamEvent): void => {
     if (isQuickChatSessionId(sessionId)) return;
     const observedAt = Date.now();
+    if (
+      event.type === "text_delta" ||
+      event.type === "thinking_delta" ||
+      event.type === "tool_use_args_delta"
+    ) {
+      if (observedAt - (lastDeltaPublishedAt.get(sessionId) ?? 0) < PET_DELTA_PUBLISH_INTERVAL_MS)
+        return;
+      lastDeltaPublishedAt.set(sessionId, observedAt);
+    } else lastDeltaPublishedAt.delete(sessionId);
     const live = host.getLiveSessionSnapshot().find((session) => session.sessionId === sessionId);
     if (live?.kind === "pet") {
       discardHiddenSession(sessionId, observedAt);
