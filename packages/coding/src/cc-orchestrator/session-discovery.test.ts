@@ -369,6 +369,21 @@ describe("discoverRecentClaudeSessions", () => {
     expect(contentReads).not.toContain(disabledFile);
   });
 
+  it("reuses a found title on rescans instead of re-reading the session prefix", () => {
+    const home = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const file = writeClaudeSession(home, "/work/titled", "sess-titled", [
+      { type: "user", cwd: "/work/titled", message: { content: "first prompt" } },
+    ]);
+    const contentReads: string[] = [];
+    const scan = () =>
+      discoverRecentClaudeSessions({}, home, undefined, {
+        onContentRead: (path) => contentReads.push(path),
+      });
+    expect(scan()[0]?.firstMessage).toBe("first prompt");
+    expect(scan()[0]?.firstMessage).toBe("first prompt");
+    expect(contentReads).toEqual([file]);
+  });
+
   it("uses real cwd identity for exact encodeCwd collisions before reading content", () => {
     const home = mkdtempSync(join(tmpdir(), "claude-home-"));
     const disabledFile = writeClaudeSession(home, "/foo-bar", "sess-disabled", [
