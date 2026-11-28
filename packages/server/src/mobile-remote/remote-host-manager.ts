@@ -827,7 +827,17 @@ export class RemoteHostManager extends EventEmitter {
 
   /** Broadcast a server event to every connected, authenticated mobile socket. */
   broadcast(event: MobileServerEvent): void {
+    // Desktop mirrors every worker stream event here; skip serializing it
+    // when no phone could receive it.
+    if (!this.hasAuthenticatedOpenClient()) return;
     this.broadcastRaw(JSON.stringify(event));
+  }
+
+  private hasAuthenticatedOpenClient(): boolean {
+    for (const client of this.wss?.clients ?? []) {
+      if (client.readyState === client.OPEN && this.authed.has(client)) return true;
+    }
+    return false;
   }
 
   /** Send a server event to ONLY the sockets belonging to one device. Used for
@@ -890,6 +900,7 @@ export class RemoteHostManager extends EventEmitter {
    *  every authenticated mobile socket. Unauthenticated sockets are skipped so
    *  a half-paired client never sees session output. */
   broadcastRaw(payload: string): void {
+    if (!this.hasAuthenticatedOpenClient()) return;
     payload = stampApprovalClock(payload);
     for (const client of this.wss?.clients ?? []) {
       if (client.readyState === client.OPEN && this.authed.has(client)) {
