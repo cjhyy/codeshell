@@ -537,17 +537,24 @@ async function checkExists(
 }
 
 // A bump source so PathLink re-checks existence after an AI turn writes files.
-// files-changed carries no payload, so we clear the whole cache and nudge every
-// mounted PathLink to re-run its check via useSyncExternalStore.
+// files-changed fires at every turn end and carries no payload. It only needs
+// to revive links whose earlier check raced a write (negatives are never
+// cached), so it keeps the cached positives: otherwise every visible path link
+// in the transcript would send its own fs:exists IPC after each turn.
+// A preview that finds a file missing calls invalidateFileExistsCache, which
+// drops the positives too.
 let filesChangedNonce = 0;
 const filesChangedListeners = new Set<() => void>();
-export function invalidateFileExistsCache(): void {
-  existsCache.clear();
+function bumpFilesChanged(): void {
   filesChangedNonce++;
   for (const listener of filesChangedListeners) listener();
 }
+export function invalidateFileExistsCache(): void {
+  existsCache.clear();
+  bumpFilesChanged();
+}
 if (typeof window !== "undefined") {
-  window.addEventListener("codeshell:files-changed", invalidateFileExistsCache);
+  window.addEventListener("codeshell:files-changed", bumpFilesChanged);
 }
 function subscribeFilesChanged(cb: () => void): () => void {
   filesChangedListeners.add(cb);

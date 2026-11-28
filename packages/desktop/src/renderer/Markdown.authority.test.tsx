@@ -369,3 +369,32 @@ test("invalidates positive file-exists cache without broadcasting a live file re
     window.removeEventListener("codeshell:files-changed", changed);
   }
 });
+
+test("a turn-end files-changed event rechecks missing links but keeps confirmed ones", async () => {
+  const present = new Set(["/turn-end/exists.ts"]);
+  const checked: string[] = [];
+  Object.assign(window, {
+    codeshell: {
+      localFileExists: async (path: string) => {
+        checked.push(path);
+        return present.has(path);
+      },
+    },
+  });
+  await renderMarkdown(<Markdown text="[a](/turn-end/exists.ts) [b](/turn-end/later.ts)" />);
+  expect(checked.sort()).toEqual(["/turn-end/exists.ts", "/turn-end/later.ts"]);
+  checked.length = 0;
+  present.add("/turn-end/later.ts");
+  await act(async () => {
+    window.dispatchEvent(new Event("codeshell:files-changed"));
+    await flushMicrotasks();
+  });
+  expect(checked).toEqual(["/turn-end/later.ts"]);
+  const links: MiniElementNode[] = [];
+  const collect = (node: MiniElementNode) => {
+    if (node.tagName === "A" && node.getAttribute?.("data-path-link") === "true") links.push(node);
+    for (const child of node.childNodes ?? []) collect(child);
+  };
+  collect(container!);
+  expect(links).toHaveLength(2);
+});
