@@ -242,16 +242,16 @@ export async function getGitBranchBase(cwd: string): Promise<string> {
   }
 }
 
-export async function getGitBranches(cwd: string): Promise<GitBranches> {
+export async function getGitHead(cwd: string): Promise<Pick<GitBranches, "isRepo" | "current">> {
   // Distinguish "not a repo" from "fresh repo with no commits". The
   // abbrev-ref query fails on the latter too, so check is-inside-work-tree
   // first — that way a freshly init'd repo doesn't falsely report
   // isRepo: false.
   try {
     const inside = (await gitRun(cwd, ["rev-parse", "--is-inside-work-tree"])).trim();
-    if (inside !== "true") return { isRepo: false, current: null, branches: [] };
+    if (inside !== "true") return { isRepo: false, current: null };
   } catch {
-    return { isRepo: false, current: null, branches: [] };
+    return { isRepo: false, current: null };
   }
 
   let current: string | null;
@@ -261,6 +261,13 @@ export async function getGitBranches(cwd: string): Promise<GitBranches> {
     // No commits yet — keep isRepo: true with null current.
     current = null;
   }
+
+  return { isRepo: true, current };
+}
+
+export async function getGitBranches(cwd: string): Promise<GitBranches> {
+  const head = await getGitHead(cwd);
+  if (!head.isRepo) return { ...head, branches: [] };
 
   let raw: string;
   try {
@@ -274,7 +281,7 @@ export async function getGitBranches(cwd: string): Promise<GitBranches> {
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
 
-  return { isRepo: true, current, branches };
+  return { ...head, branches };
 }
 
 export async function switchGitBranch(cwd: string, branch: string, beforeChange?: () => Promise<void>): Promise<GitBranches> {

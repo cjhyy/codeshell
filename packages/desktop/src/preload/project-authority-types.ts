@@ -8,6 +8,7 @@ import type {
   ReviewGitDiffRequest,
   ReviewGitDiffResult,
   ReviewGitStatusResult,
+  ReviewAvailability,
 } from "../shared/review";
 import type {
   GitBranches,
@@ -98,7 +99,9 @@ export interface ProjectAuthorityApi {
   getSessionWorkspace(sessionId: string, cwd: string): Promise<SessionWorkspace>;
   getSessionWorkspaceAuthority(sessionId: string): Promise<SessionWorkspaceAuthority>;
   getSessionGitStatus(sessionId: string): Promise<GitStatus>;
+  getSessionGitHead(sessionId: string): Promise<Pick<GitBranches, "isRepo" | "current">>;
   getSessionGitBranches(sessionId: string): Promise<GitBranches>;
+  getReviewAvailability(sessionId: string): Promise<ReviewAvailability>;
   getReviewStatus(sessionId: string): Promise<ReviewGitStatusResult>;
   getReviewDiff(sessionId: string, request: ReviewGitDiffRequest): Promise<ReviewGitDiffResult>;
   prepareReviewPrompt(

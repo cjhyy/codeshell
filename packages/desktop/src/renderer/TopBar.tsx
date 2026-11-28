@@ -25,6 +25,7 @@ interface Props {
   sessionId?: string | null;
   sessionTitle: string | null;
   workspaceProfile?: string | null;
+  workspaceActiveProfileLabel?: string | null;
   workspaceProfiles?: ReadonlyArray<SessionDigitalHumanProfile>;
   workspaceProfileSwitchDisabled?: boolean;
   onWorkspaceProfileChange?: (profileName: string) => void;
@@ -87,6 +88,7 @@ function TopBarImpl({
   sessionTitle,
   workspaceProfile,
   workspaceProfiles = [],
+  workspaceActiveProfileLabel,
   workspaceProfileSwitchDisabled = false,
   onWorkspaceProfileChange,
   busy,
@@ -188,6 +190,7 @@ function TopBarImpl({
                   sessionId={sessionId}
                   projectPath={projectPath}
                   projectName={projectName}
+                  sharedProfileLabel={workspaceActiveProfileLabel}
                   sessionBusy={busy}
                   includeProjectNameInLabel={false}
                   iconOnly
@@ -454,6 +457,7 @@ function topBarPropsEqual(a: Props, b: Props): boolean {
     a.sessionTitle === b.sessionTitle &&
     a.workspaceProfile === b.workspaceProfile &&
     a.workspaceProfiles === b.workspaceProfiles &&
+    a.workspaceActiveProfileLabel === b.workspaceActiveProfileLabel &&
     a.workspaceProfileSwitchDisabled === b.workspaceProfileSwitchDisabled &&
     a.onWorkspaceProfileChange === b.onWorkspaceProfileChange &&
     a.busy === b.busy &&
