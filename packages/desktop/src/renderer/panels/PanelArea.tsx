@@ -135,6 +135,12 @@ interface Props {
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
   /** Trusted built-in Panel App services. Installed apps use their scoped bridge. */
   builtinPanelAppHost?: DesktopBuiltinPanelAppHost;
+  /**
+   * Built-in app content reads Session state through builtinPanelAppHost, whose
+   * identity stays stable. The dock changes this token when that content must
+   * re-render even though no other prop changed.
+   */
+  builtinContentToken?: unknown;
 }
 
 /**
@@ -146,7 +152,7 @@ interface Props {
  * All tabs stay MOUNTED (shown/hidden via CSS) so switching never tears down a
  * terminal's xterm or reloads a browser's <webview>.
  */
-export function PanelArea(props: Props) {
+export const PanelArea = React.memo(function PanelArea(props: Props) {
   return (
     <PanelWorkspaceRootConsumer
       engineSessionId={props.engineSessionId ?? null}
@@ -155,7 +161,7 @@ export function PanelArea(props: Props) {
       {(workspace) => <ResolvedPanelArea {...props} workspace={workspace} />}
     </PanelWorkspaceRootConsumer>
   );
-}
+});
 
 function ResolvedPanelArea({
   projectPath,

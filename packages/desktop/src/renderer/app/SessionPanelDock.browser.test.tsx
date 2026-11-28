@@ -33,6 +33,17 @@ const openListeners = new Set<(input: { url: string; bucket: string }) => void>(
 const workspaceListeners = new Set<(input: { sessionId: string }) => void>();
 let requests: number;
 const grants = new Map<string, any>();
+// App keeps the tracked project list in state, so it is stable across renders.
+let projectListCache: { key: string; list: any[] } | undefined;
+function projectList(): any[] {
+  const key = `${projectPresent}:${projectPath}`;
+  if (projectListCache?.key !== key)
+    projectListCache = {
+      key,
+      list: projectPresent ? [{ id: "project", name: "Project", path: projectPath }] : [],
+    };
+  return projectListCache.list;
+}
 async function render() {
   const noop = () => {};
   await act(async () => {
@@ -44,9 +55,7 @@ async function render() {
           activeBucket={activeBucket}
           isChatView
           localPanelsReady={localPanelsReady}
-          projects={
-            projectPresent ? [{ id: "project", name: "Project", path: projectPath } as any] : []
-          }
+          projects={projectList()}
           updatePanelBucket={(bucket, next) => {
             panelByBucket = { ...panelByBucket, [bucket]: next(panelByBucket[bucket]!) };
           }}
@@ -301,4 +310,17 @@ test("replaces an existing guest when its engine or project identity changes whi
   projectPath = "/repo-replacement";
   await render();
   expect(elements(container, "WEBVIEW")[0]).not.toBe(replacement);
+});
+
+test("an App re-render with unrelated state changes does not re-render mounted panels", async () => {
+  await render();
+  const tabStripButton = elements(container, "BUTTON")[0];
+  const before = props(tabStripButton);
+  // render() passes fresh callbacks, a new busy set and a new transcripts map,
+  // as App does on every stream batch and composer keystroke.
+  await render();
+  expect(props(elements(container, "BUTTON")[0])).toBe(before);
+  panelByBucket = { [a]: { ...panelByBucket[a]!, requestNonce: 7 } };
+  await render();
+  expect(props(elements(container, "BUTTON")[0])).not.toBe(before);
 });

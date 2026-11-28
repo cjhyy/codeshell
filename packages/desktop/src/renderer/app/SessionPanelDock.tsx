@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from "react";
+import React, { useLayoutEffect, useMemo, useRef } from "react";
 
 import { PanelArea } from "../panels/PanelArea";
 import { QuickChatPanelHost } from "../panels/QuickChatPanelHost";
@@ -89,10 +89,29 @@ interface SessionPanelDockProps {
   ) => void;
 }
 
-/** Keeps every session-owned panel body mounted while only one dock is visible. */
+interface BucketCallbacks {
+  onClose: () => void;
+  onRevealConsumed: (nonce: number) => void;
+  onOpenCliSessionConsumed: (nonce: number) => void;
+  setTabs: React.ComponentProps<typeof PanelArea>["setTabs"];
+  setActiveId: React.ComponentProps<typeof PanelArea>["setActiveId"];
+}
+
+/**
+ * Keeps every session-owned panel body mounted while only one dock is visible.
+ *
+ * App re-renders on every stream batch and composer keystroke. PanelArea is
+ * memoized, so everything handed to it must keep its identity unless its value
+ * changed: callbacks are stable wrappers that call the latest props.
+ */
 export function SessionPanelDock(props: SessionPanelDockProps) {
+  // Assigned during render: the built-in app host renders Quick Chat content
+  // from these props inside the same render pass.
+  const latest = useRef(props);
+  latest.current = props;
   const localPanelsReady = props.localPanelsReady ?? true;
   const admitted = useRef(new Map<string, string>());
+  const bucketCallbacks = useRef(new Map<string, BucketCallbacks>());
   const targets = props.panelBuckets.flatMap((bucket) => {
     const { projectId } = parsePanelBucket(bucket);
     const project = projectId
@@ -109,79 +128,142 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
   // new bucket that a later pending/cloud render would otherwise mount.
   useLayoutEffect(() => {
     admitted.current = new Map(targets.map(({ bucket, identity }) => [bucket, identity]));
+    for (const bucket of bucketCallbacks.current.keys())
+      if (!admitted.current.has(bucket)) bucketCallbacks.current.delete(bucket);
   });
 
-  const builtinPanelAppHost: DesktopBuiltinPanelAppHost = {
-    getService(appId) {
-      if (appId !== QUICK_CHAT_PANEL_APP_ID) return undefined;
-      const service: QuickChatPanelAppService = {
-        ensure: ({ bucket: ownerBucket, tabId, cwd }) => {
-          props.ensureQuickChatSession(ownerBucket, tabId, cwd);
-        },
-        release: ({ bucket: ownerBucket, tabId }) => {
-          const session = props.quickChatSessions[quickChatTabKey(ownerBucket, tabId)];
-          if (session) props.cleanupQuickChatPanelSession(session);
-        },
-        render: (context) => {
-          const ownerBucket = context.bucket;
-          const { tabId, cwd } = context;
-          const key = quickChatTabKey(ownerBucket, tabId);
-          const session = props.quickChatSessions[key];
-          const state = session
-            ? (props.transcripts[session.bucket] ?? INITIAL_STATE)
-            : INITIAL_STATE;
-          const busy = session ? props.busyKeys.has(session.bucket) : false;
-          const approval = session ? props.approvalForBucket(session.bucket) : null;
-          const quickCwd = cwd ?? props.noRepoCwd;
-          const permissionMode = session
-            ? (props.permissionOverrides[session.bucket] ??
-              props.permissionOverrides[session.ownerBucket] ??
-              props.defaultPermissionMode ??
-              "default")
-            : (props.defaultPermissionMode ?? "default");
-          const activeModelKey = session
-            ? (props.modelOverrides[session.bucket] ?? props.defaultActiveModelKey)
-            : props.defaultActiveModelKey;
-          return (
-            <QuickChatPanelHost
-              cwd={quickCwd}
-              session={session}
-              state={state}
-              busy={busy}
-              draft={session ? (props.quickChatDrafts[session.bucket] ?? "") : ""}
-              attachments={
-                session
-                  ? (props.quickChatAttachments[session.bucket] ?? EMPTY_ATTACHMENTS)
-                  : EMPTY_ATTACHMENTS
-              }
-              imageComposer={session ? props.quickChatImageComposer(session) : undefined}
-              permissionMode={permissionMode}
-              modelOptions={props.modelOptions}
-              activeModelKey={activeModelKey}
-              imageDetail={props.imageDetail}
-              onPermissionChange={props.setQuickChatPermission}
-              onModelChange={props.setQuickChatModel}
-              onRetry={(item) => props.restartQuickChatSession(item, "full")}
-              onUseBlank={(item) => props.restartQuickChatSession(item, "blank")}
-              onDraftChange={props.setQuickChatDraft}
-              onAttachmentsChange={props.setQuickChatAttachmentState}
-              onSend={props.sendQuickChat}
-              onStop={props.stop}
-              onAskUserAnswer={props.handleAskUserAnswer}
-              pendingApproval={approval}
-              onApprovalDecide={
-                approval
-                  ? (decision, reason, scope, pathScope) =>
-                      props.decideEnvelope(approval, decision, reason, scope, pathScope)
-                  : undefined
-              }
-            />
-          );
-        },
+  const callbacksFor = (bucket: string): BucketCallbacks => {
+    let callbacks = bucketCallbacks.current.get(bucket);
+    if (!callbacks) {
+      callbacks = {
+        onClose: () =>
+          latest.current.updatePanelBucket(bucket, (state) => ({
+            ...state,
+            open: false,
+            requestNonce: state.requestNonce + 1,
+            requestKind: null,
+            openUrl: undefined,
+            openCliSession: undefined,
+          })),
+        onRevealConsumed: (nonce) => latest.current.onRevealConsumed(bucket, nonce),
+        onOpenCliSessionConsumed: (nonce) => latest.current.onOpenCliSessionConsumed(bucket, nonce),
+        setTabs: (next) =>
+          latest.current.updatePanelBucket(bucket, (state) => {
+            const tabs = typeof next === "function" ? next(state.tabs) : next;
+            const activeId =
+              state.activeId && tabs.some((tab) => tab.id === state.activeId)
+                ? state.activeId
+                : (tabs[0]?.id ?? null);
+            return { ...state, tabs, activeId };
+          }),
+        setActiveId: (next) =>
+          latest.current.updatePanelBucket(bucket, (state) => ({
+            ...state,
+            activeId: typeof next === "function" ? next(state.activeId) : next,
+          })),
       };
-      return service;
-    },
+      bucketCallbacks.current.set(bucket, callbacks);
+    }
+    return callbacks;
   };
+
+  const shared = useMemo(
+    () => ({
+      onRestoreFocus: () => latest.current.onRestorePanelFocus?.(),
+      onResizeStart: (startX: number, startWidth: number, target: HTMLElement) =>
+        latest.current.beginPanelResize(startX, startWidth, target),
+      onAttachImage: (path: string) => latest.current.onAttachImage(path),
+      removeAnchor: (id: string) => latest.current.removeAnchor(id),
+      updateAnchorComment: (id: string, comment: string) =>
+        latest.current.updateAnchorComment(id, comment),
+    }),
+    [],
+  );
+
+  const builtinPanelAppHost = useMemo<DesktopBuiltinPanelAppHost>(
+    () => ({
+      getService(appId) {
+        if (appId !== QUICK_CHAT_PANEL_APP_ID) return undefined;
+        const service: QuickChatPanelAppService = {
+          ensure: ({ bucket: ownerBucket, tabId, cwd }) => {
+            latest.current.ensureQuickChatSession(ownerBucket, tabId, cwd);
+          },
+          release: ({ bucket: ownerBucket, tabId }) => {
+            const props = latest.current;
+            const session = props.quickChatSessions[quickChatTabKey(ownerBucket, tabId)];
+            if (session) props.cleanupQuickChatPanelSession(session);
+          },
+          render: (context) => {
+            const props = latest.current;
+            const ownerBucket = context.bucket;
+            const { tabId, cwd } = context;
+            const key = quickChatTabKey(ownerBucket, tabId);
+            const session = props.quickChatSessions[key];
+            const state = session
+              ? (props.transcripts[session.bucket] ?? INITIAL_STATE)
+              : INITIAL_STATE;
+            const busy = session ? props.busyKeys.has(session.bucket) : false;
+            const approval = session ? props.approvalForBucket(session.bucket) : null;
+            const quickCwd = cwd ?? props.noRepoCwd;
+            const permissionMode = session
+              ? (props.permissionOverrides[session.bucket] ??
+                props.permissionOverrides[session.ownerBucket] ??
+                props.defaultPermissionMode ??
+                "default")
+              : (props.defaultPermissionMode ?? "default");
+            const activeModelKey = session
+              ? (props.modelOverrides[session.bucket] ?? props.defaultActiveModelKey)
+              : props.defaultActiveModelKey;
+            return (
+              <QuickChatPanelHost
+                cwd={quickCwd}
+                session={session}
+                state={state}
+                busy={busy}
+                draft={session ? (props.quickChatDrafts[session.bucket] ?? "") : ""}
+                attachments={
+                  session
+                    ? (props.quickChatAttachments[session.bucket] ?? EMPTY_ATTACHMENTS)
+                    : EMPTY_ATTACHMENTS
+                }
+                imageComposer={session ? props.quickChatImageComposer(session) : undefined}
+                permissionMode={permissionMode}
+                modelOptions={props.modelOptions}
+                activeModelKey={activeModelKey}
+                imageDetail={props.imageDetail}
+                onPermissionChange={props.setQuickChatPermission}
+                onModelChange={props.setQuickChatModel}
+                onRetry={(item) => props.restartQuickChatSession(item, "full")}
+                onUseBlank={(item) => props.restartQuickChatSession(item, "blank")}
+                onDraftChange={props.setQuickChatDraft}
+                onAttachmentsChange={props.setQuickChatAttachmentState}
+                onSend={props.sendQuickChat}
+                onStop={props.stop}
+                onAskUserAnswer={props.handleAskUserAnswer}
+                pendingApproval={approval}
+                onApprovalDecide={
+                  approval
+                    ? (decision, reason, scope, pathScope) =>
+                        props.decideEnvelope(approval, decision, reason, scope, pathScope)
+                    : undefined
+                }
+              />
+            );
+          },
+        };
+        return service;
+      },
+    }),
+    [],
+  );
+
+  // Quick Chat content depends on App state the host reads from `latest`.
+  // A bucket that owns a Quick Chat session re-renders with every dock render,
+  // as before; every other bucket re-renders only when its own props change.
+  const quickChatOwners = new Set(
+    Object.values(props.quickChatSessions).map((session) => session.ownerBucket),
+  );
+  const renderToken = {};
 
   return targets.map((target) => {
     const {
@@ -203,41 +285,33 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
     // differently would restart the live Codex/Claude thread.
     const panelPermission = toExternalRuntimePermission(toCorePermissionMode(uiPermissionMode));
     const panelHasGoal = Boolean(props.transcripts[panelBucket]?.activeGoal);
+    const callbacks = callbacksFor(panelBucket);
 
     return (
       <PanelArea
         key={JSON.stringify([panelBucket, identity])}
         hidden={hidden}
         keepActiveBodyLive={keepActiveBodyLive}
-        onRestoreFocus={props.onRestorePanelFocus}
+        onRestoreFocus={props.onRestorePanelFocus ? shared.onRestoreFocus : undefined}
         projectPath={panelProject?.path ?? null}
         project={panelProject}
-        onClose={() =>
-          props.updatePanelBucket(panelBucket, (state) => ({
-            ...state,
-            open: false,
-            requestNonce: state.requestNonce + 1,
-            requestKind: null,
-            openUrl: undefined,
-            openCliSession: undefined,
-          }))
-        }
+        onClose={callbacks.onClose}
         requestNonce={panelState.requestNonce}
         requestKind={panelState.requestKind}
         reviewFiles={panelState.reviewFiles}
         reviewDiff={panelState.reviewDiff}
         revealFile={panelState.revealFile}
-        onRevealConsumed={(nonce) => props.onRevealConsumed(panelBucket, nonce)}
+        onRevealConsumed={callbacks.onRevealConsumed}
         openUrl={panelState.openUrl}
         openCliSession={panelState.openCliSession}
         subagentSelection={panelState.subagentSelection}
-        onOpenCliSessionConsumed={(nonce) => props.onOpenCliSessionConsumed(panelBucket, nonce)}
+        onOpenCliSessionConsumed={callbacks.onOpenCliSessionConsumed}
         width={props.panelWidth}
-        onResizeStart={props.beginPanelResize}
-        onAttachImage={props.onAttachImage}
+        onResizeStart={shared.onResizeStart}
+        onAttachImage={shared.onAttachImage}
         browserAnchors={anchorsIn(props.anchorsByBucket, panelBucket)}
-        onRemoveBrowserAnchor={isActivePanelBucket ? props.removeAnchor : undefined}
-        onUpdateBrowserAnchor={isActivePanelBucket ? props.updateAnchorComment : undefined}
+        onRemoveBrowserAnchor={isActivePanelBucket ? shared.removeAnchor : undefined}
+        onUpdateBrowserAnchor={isActivePanelBucket ? shared.updateAnchorComment : undefined}
         engineSessionId={panelEngineSessionId}
         busy={props.busyKeys.has(panelBucket)}
         modelKey={props.modelOverrides[panelBucket] ?? props.defaultSessionModelKey}
@@ -245,24 +319,11 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
         planMode={panelPermission.planMode}
         hasGoal={panelHasGoal}
         tabs={panelState.tabs}
-        setTabs={(next) =>
-          props.updatePanelBucket(panelBucket, (state) => {
-            const tabs = typeof next === "function" ? next(state.tabs) : next;
-            const activeId =
-              state.activeId && tabs.some((tab) => tab.id === state.activeId)
-                ? state.activeId
-                : (tabs[0]?.id ?? null);
-            return { ...state, tabs, activeId };
-          })
-        }
+        setTabs={callbacks.setTabs}
         activeId={panelState.activeId}
-        setActiveId={(next) =>
-          props.updatePanelBucket(panelBucket, (state) => ({
-            ...state,
-            activeId: typeof next === "function" ? next(state.activeId) : next,
-          }))
-        }
+        setActiveId={callbacks.setActiveId}
         builtinPanelAppHost={builtinPanelAppHost}
+        builtinContentToken={quickChatOwners.has(panelBucket) ? renderToken : undefined}
         bucket={panelBucket}
       />
     );
