@@ -33,6 +33,15 @@ export interface ReviewGitStatusResult {
   errors: ReviewRepositoryError[];
 }
 
+export type ReviewAvailability = "available" | "unavailable" | "error";
+
+/** Older Hosts expose repository discovery as part of their full status response. */
+export function reviewAvailabilityFromStatus(result: ReviewGitStatusResult): ReviewAvailability {
+  if (result.repositories.length || result.errors.some((error) => !!error.repoRoot))
+    return "available";
+  return result.errors.length ? "error" : "unavailable";
+}
+
 export type ReviewGitDiffRequest =
   | { kind: "working"; mode: "unstaged" | "staged" | "all" }
   | { kind: "branch" }

@@ -540,7 +540,9 @@ ipcRenderer.on("externalRuntime:approvalResolved", (_e, payload: { requestId?: u
 
 const desktopHost =
   process.isMainFrame && process.argv.includes("--codeshell-desktop-host")
-    ? new DesktopHostClient()
+    ? new DesktopHostClient(undefined, (data) =>
+        ipcRenderer.send("desktop:log", { msg: "desktop_host.read_queue", data }),
+      )
     : undefined;
 
 const configurationHost = desktopHostRoutes.configuration === "host" ? desktopHost : undefined;

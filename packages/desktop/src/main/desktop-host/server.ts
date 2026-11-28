@@ -1,8 +1,10 @@
+import { dlog } from "../desktop-logger.js";
 import { isDesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
 import { rendererDiskSessionQuery, type ListSessions } from "../../shared/disk-session-query.js";
 import { isTerminalCommand } from "../../shared/pty.js";
 import { CONTRACTS } from "@cjhyy/code-shell-core/contracts";
 import {
+  DESKTOP_HOST_REQUEST_LIMIT_MESSAGE,
   DesktopHostErrors,
   isRpcRequest,
   type DesktopHostIdentity,
@@ -37,13 +39,59 @@ export interface DesktopHostMethod {
   run(context: HostRequestContext, params: RpcRequest["params"]): unknown;
 }
 
+const MAX_PENDING_REQUESTS = 128;
+const PRESSURE_LOG_INTERVAL_MS = 5_000;
+
+interface PendingRequest {
+  method: string;
+  startedAt: number;
+}
+
 interface Connection {
   port: HostPort;
   authority: HostPortAuthority;
   initialized: boolean;
   commits: Set<Int32Array>;
-  pending: Map<RpcRequest["id"], HostRequestContext>;
-  compatibilityReads: number;
+  pending: Map<RpcRequest["id"], PendingRequest & { guard: HostRequestContext }>;
+  compatibilityReads: Set<PendingRequest>;
+  nextPressureLogAt: number;
+}
+
+function atRequestLimit(
+  connection: Connection,
+  rejectedMethod: string,
+  route: "port" | "workbench",
+) {
+  const portRequests = connection.pending.size;
+  const workbenchRequests = connection.compatibilityReads.size;
+  if (portRequests + workbenchRequests < MAX_PENDING_REQUESTS) return false;
+
+  const now = performance.now();
+  if (now >= connection.nextPressureLogAt) {
+    connection.nextPressureLogAt = now + PRESSURE_LOG_INTERVAL_MS;
+    const byMethod = new Map<string, { method: string; count: number; oldestMs: number }>();
+    for (const { method, startedAt } of [
+      ...connection.pending.values(),
+      ...connection.compatibilityReads,
+    ]) {
+      const row = byMethod.get(method) ?? { method, count: 0, oldestMs: 0 };
+      row.count++;
+      row.oldestMs = Math.max(row.oldestMs, Math.round(now - startedAt));
+      byMethod.set(method, row);
+    }
+    const { webContentsId, frameGeneration } = connection.authority.identity;
+    dlog("desktop-host", "desktop_host.request_limit", {
+      webContentsId,
+      frameGeneration,
+      rejectedMethod,
+      route,
+      limit: MAX_PENDING_REQUESTS,
+      portRequests,
+      workbenchRequests,
+      byMethod: [...byMethod.values()].sort((a, b) => b.count - a.count || b.oldestMs - a.oldestMs),
+    });
+  }
+  return true;
 }
 
 export class InvalidParams extends Error {}
@@ -120,7 +168,8 @@ export class DesktopHostServer {
       initialized: false,
       commits: new Set(),
       pending: new Map(),
-      compatibilityReads: 0,
+      compatibilityReads: new Set(),
+      nextPressureLogAt: 0,
     };
     this.windows.set(identity.webContentsId, connection);
     port.on("close", () => this.detach(connection));
@@ -245,15 +294,16 @@ export class DesktopHostServer {
       throw new HostRevokedError();
     const sessionId = handler.sessionId?.(params);
     if (!sessionId && !handler.admission && !isTerminalCommand(method)) throw new InvalidParams();
-    if (connection.pending.size + connection.compatibilityReads >= 128)
-      throw new Error("Too many pending Desktop Host requests");
+    if (atRequestLimit(connection, method, "workbench"))
+      throw new Error(DESKTOP_HOST_REQUEST_LIMIT_MESSAGE);
     const guard = sessionId
       ? connection.authority.captureHistoryRead(
           sessionId,
           handler.admission ? "admission" : handler.historyRead,
         )
       : connection.authority.capture();
-    connection.compatibilityReads++;
+    const request = { method, startedAt: performance.now() };
+    connection.compatibilityReads.add(request);
     try {
       const context = signal
         ? {
@@ -270,7 +320,7 @@ export class DesktopHostServer {
       return result;
     } finally {
       guard.release?.();
-      connection.compatibilityReads--;
+      connection.compatibilityReads.delete(request);
     }
   }
 
@@ -334,7 +384,7 @@ export class DesktopHostServer {
     } catch {
       // The peer may already have closed this port.
     } finally {
-      for (const guard of connection.pending.values()) guard.release?.();
+      for (const { guard } of connection.pending.values()) guard.release?.();
       connection.pending.clear();
       connection.port.close();
     }
@@ -343,7 +393,7 @@ export class DesktopHostServer {
   private rejectRevoked(): void {
     this.changed?.();
     for (const connection of this.windows.values()) {
-      for (const [id, guard] of connection.pending) {
+      for (const [id, { guard }] of connection.pending) {
         try {
           guard.assertCurrent();
         } catch {
@@ -410,8 +460,8 @@ export class DesktopHostServer {
       sendError(port, id, -32601, "Method not found");
       return;
     }
-    if (pending.size + connection.compatibilityReads >= 128) {
-      sendError(port, id, -32001, "Too many pending Desktop Host requests");
+    if (atRequestLimit(connection, method, "port")) {
+      sendError(port, id, DesktopHostErrors.requestLimit, DESKTOP_HOST_REQUEST_LIMIT_MESSAGE);
       return;
     }
     let guard: HostRequestContext | undefined;
@@ -430,14 +480,14 @@ export class DesktopHostServer {
               handler.admission ? "admission" : handler.historyRead,
             )
           : authority.capture(sessionId);
-      pending.set(id, guard);
+      pending.set(id, { guard, method, startedAt: performance.now() });
       const result = await handler.run(guard, params);
       guard.assertCurrent();
       port.postMessage({ jsonrpc: "2.0", id, result });
     } catch (error) {
       // Revocation already delivered the error, and the peer may have reused
       // this id for a new request while the old handler finished its awaits.
-      if (guard && pending.get(id) !== guard) return;
+      if (guard && pending.get(id)?.guard !== guard) return;
       if (error instanceof HostRevokedError)
         sendError(port, id, DesktopHostErrors.revoked, error.message);
       else if (error instanceof WorkerCommandError)
@@ -447,7 +497,7 @@ export class DesktopHostServer {
       else sendError(port, id, -32603, "Desktop Host request failed");
     } finally {
       guard?.release?.();
-      if (pending.get(id) === guard) pending.delete(id);
+      if (guard && pending.get(id)?.guard === guard) pending.delete(id);
     }
   }
 }

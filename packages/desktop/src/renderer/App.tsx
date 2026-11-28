@@ -130,6 +130,7 @@ import { useSessionNavigation } from "./app/useSessionNavigation";
 import { useNewProjectDialog } from "./projects/NewProjectDialog";
 import { useNotificationSessionNavigation } from "./app/useNotificationSessionNavigation";
 import { useSessionHistorySync } from "./app/useSessionHistorySync";
+import { recentRead } from "./app/composerGlobalReads";
 import { useSessionWorkspaceProfiles } from "./app/useSessionWorkspaceProfiles";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
@@ -384,6 +385,18 @@ function App() {
     sessionUiAuthority.configurationAvailable,
     settingsRevision,
   );
+  // A sidebar click changes the transcript immediately. Give secondary toolbar
+  // and repository reads a chance to disappear if the user keeps navigating.
+  const [settledSession, setSettledSession] = useState(activeEngineSessionId);
+  useEffect(() => {
+    if (!activeEngineSessionId) {
+      setSettledSession(null);
+      return;
+    }
+    const timer = setTimeout(() => setSettledSession(activeEngineSessionId), 180);
+    return () => clearTimeout(timer);
+  }, [activeEngineSessionId]);
+  const sessionDetailsReady = !activeEngineSessionId || settledSession === activeEngineSessionId;
   const reviewAvailability = useReviewAvailability(
     activeEngineSessionId,
     sessionUiAuthority.rootStatus === "ok" && sessionUiAuthority.workspaceRoot
@@ -394,6 +407,7 @@ function App() {
           activeProject?.roots,
         ])
       : null,
+    sessionDetailsReady && !cloudSelected,
   );
   const modelOptions = useMemo<ModelOption[]>(() => {
     const options: ModelOption[] = [...configuredModelOptions, ...externalRuntimeModels];
@@ -593,7 +607,8 @@ function App() {
     () => null,
   );
   const sessionWorkspaceProfiles = useSessionWorkspaceProfiles({
-    configurationAvailable: sessionUiAuthority.configurationAvailable,
+    configurationAvailable:
+      sessionDetailsReady && !cloudSelected && sessionUiAuthority.configurationAvailable,
     configurationTarget: sessionUiAuthority.configurationTarget,
     refreshKey: view.viewMode,
   });
@@ -696,10 +711,10 @@ function App() {
     return absPath;
   }
 
-  const [activeGitMeta, setActiveGitMeta] = useState<{
-    branch: string | null;
-    clean: boolean | null;
-  }>({ branch: null, clean: null });
+  const [draftGitStatus, setDraftGitStatus] = useState<{
+    projectId: string;
+    clean: boolean;
+  } | null>(null);
 
   /**
    * Per-session sidebar status, keyed by the SAME bucketKey() the Sidebar
@@ -882,32 +897,35 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     const target = sessionUiAuthority.configurationTarget;
-    if (!sessionUiAuthority.configurationAvailable || "noRepo" in target) {
-      setActiveGitMeta({ branch: null, clean: null });
-      return () => {
-        cancelled = true;
-      };
+    if (
+      activeEngineSessionId ||
+      cloudSelected ||
+      view.viewMode !== "chat" ||
+      !sessionUiAuthority.configurationAvailable ||
+      !("projectId" in target)
+    ) {
+      setDraftGitStatus(null);
+      return;
     }
-    const status =
-      "sessionId" in target
-        ? window.codeshell.getSessionGitStatus(target.sessionId)
-        : window.codeshell.getProjectGitStatus(target.projectId);
-    void status
-      .then((status) => {
-        if (!cancelled) {
-          setActiveGitMeta({
-            branch: status.branch,
-            clean: status.clean,
-          });
-        }
+    void window.codeshell
+      .getProjectGitStatus(target.projectId)
+      .then(({ clean }) => {
+        if (!cancelled) setDraftGitStatus({ projectId: target.projectId, clean });
       })
       .catch(() => {
-        if (!cancelled) setActiveGitMeta({ branch: null, clean: null });
+        if (!cancelled) setDraftGitStatus(null);
       });
     return () => {
       cancelled = true;
     };
-  }, [busy, sessionUiAuthority.configurationAvailable, sessionUiAuthority.configurationTarget]);
+  }, [
+    activeEngineSessionId,
+    busy,
+    cloudSelected,
+    view.viewMode,
+    sessionUiAuthority.configurationAvailable,
+    sessionUiAuthority.configurationTarget,
+  ]);
 
   // No auto-create here: a null activeSessionId is the legitimate
   // "draft" state. A real session row only appears after the user
@@ -1503,6 +1521,19 @@ function App() {
     return off;
   }, [projects, toggleSidebar, toggleInspector, navigateFromSidebar]);
 
+  const [composerFocusRevision, setComposerFocusRevision] = useState(0);
+  useEffect(() => {
+    const refresh = () => setComposerFocusRevision((revision) => revision + 1);
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, []);
+  const composerGlobals = useMemo(
+    () => ({
+      settings: recentRead(() => window.codeshell.getSettings("user")),
+      catalog: recentRead(() => window.codeshell.getModelCatalog()),
+    }),
+    [settingsRevision, composerFocusRevision],
+  );
   // Refresh model list + active selection + permission from settings.
   useEffect(() => {
     let cancelled = false;
@@ -1523,14 +1554,18 @@ function App() {
           (await window.codeshell.getConfigurationSettings(
             sessionUiAuthority.configurationTarget,
           )) ?? {};
-        const userS = (await window.codeshell.getSettings("user")) ?? {};
+        if (cancelled) return;
+        const [settings, catalog] = await Promise.all([
+          composerGlobals.settings(),
+          composerGlobals.catalog().catch(() => []),
+        ]);
+        if (cancelled) return;
+        const userS = settings ?? {};
         const merged: Record<string, unknown> = { ...userS, ...projectS };
         // Unified catalog (统一模型接入方案 §6): the composer picker lists text
         // `modelConnections` resolved through the catalog — the same store the
         // engine pool keys by instance id. The explicit session preference can
         // also select an external runtime; defaults.text remains the native default.
-        const catalog = await window.codeshell.getModelCatalog().catch(() => []);
-        if (cancelled) return;
         const configuredDefault = defaultSessionModelKeyFromSettingsLayers(userS, projectS);
         setDefaultActiveModelKey(
           configuredDefault ? normalizeExternalRuntimeModelKey(configuredDefault) : null,
@@ -1592,7 +1627,7 @@ function App() {
     sessionUiAuthority.configurationAvailable,
     sessionUiAuthority.configurationTarget,
     view.viewMode,
-    settingsRevision,
+    composerGlobals,
   ]);
 
   useEffect(() => {
@@ -2204,7 +2239,9 @@ function App() {
           <TopBar
             projectName={sessionChromeVisible ? (activeProject?.name ?? null) : null}
             projectPath={
-              sessionChromeVisible && !cloudSelected ? sessionUiAuthority.mainRoot : null
+              sessionChromeVisible && !cloudSelected && sessionDetailsReady
+                ? sessionUiAuthority.mainRoot
+                : null
             }
             sessionId={sessionChromeVisible && !cloudSelected ? engineSessionIdForActive() : null}
             sessionTitle={
@@ -2221,6 +2258,11 @@ function App() {
             }
             workspaceProfiles={
               sessionChromeVisible && !cloudSelected ? sessionWorkspaceProfiles : []
+            }
+            workspaceActiveProfileLabel={
+              "sessionId" in sessionUiAuthority.configurationTarget
+                ? (sessionWorkspaceProfiles.find((profile) => profile.active)?.label ?? null)
+                : undefined
             }
             workspaceProfileSwitchDisabled={busy || profileSwitchBusy}
             onWorkspaceProfileChange={
@@ -2762,7 +2804,11 @@ function App() {
                     conversationRoot={sessionUiAuthority.workspaceRoot}
                     conversationRootId={sessionUiAuthority.mainRootId}
                     conversationRootStatus={sessionUiAuthority.rootStatus}
-                    repoClean={activeGitMeta.clean}
+                    repoClean={
+                      draftGitStatus && draftGitStatus.projectId === activeProjectId
+                        ? draftGitStatus.clean
+                        : null
+                    }
                     welcomeNode={
                       showWelcome ? (
                         <div className="cs-chat-welcome flex w-full min-w-0 max-w-xl flex-col items-center gap-3 text-center">

@@ -5,6 +5,7 @@ export interface SessionWorkspaceProfile {
   name: string;
   label: string;
   description?: string;
+  active?: boolean;
 }
 
 interface Options {
@@ -19,37 +20,46 @@ export function useSessionWorkspaceProfiles({
   configurationTarget,
   refreshKey,
 }: Options): SessionWorkspaceProfile[] {
-  const [profiles, setProfiles] = useState<SessionWorkspaceProfile[]>([]);
+  const [snapshot, setSnapshot] = useState<{
+    target: RendererConfigurationTarget;
+    profiles: SessionWorkspaceProfile[];
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     if (!configurationAvailable) {
-      setProfiles([]);
+      setSnapshot(null);
       return;
     }
     const listProfiles = window.codeshell.listProfiles;
     if (typeof listProfiles !== "function") {
-      setProfiles([]);
+      setSnapshot(null);
       return;
     }
     void listProfiles(configurationTarget)
       .then((entries) => {
         if (cancelled) return;
-        setProfiles(
-          entries.map((profile) => ({
+        setSnapshot({
+          target: configurationTarget,
+          profiles: entries.map((profile) => ({
             name: profile.name,
             label: profile.label,
             description: profile.description,
+            ...(profile.active ? { active: true } : {}),
           })),
-        );
+        });
       })
       .catch(() => {
-        if (!cancelled) setProfiles([]);
+        if (!cancelled) setSnapshot(null);
       });
     return () => {
       cancelled = true;
     };
   }, [configurationAvailable, configurationTarget, refreshKey]);
 
-  return profiles;
+  return configurationAvailable && snapshot?.target === configurationTarget
+    ? snapshot.profiles
+    : EMPTY_PROFILES;
 }
+
+const EMPTY_PROFILES: SessionWorkspaceProfile[] = [];

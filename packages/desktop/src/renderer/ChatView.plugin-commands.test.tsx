@@ -201,14 +201,18 @@ describe("ChatView plugin slash commands", () => {
   test("Enter expands a command into the draft without sending it", async () => {
     ensureMiniDom();
     const onSend = mock(() => undefined);
-    const listPluginCommands = mock(async () => [
-      {
-        name: "demo:review",
-        pluginName: "demo",
-        description: "Review a code change",
-        argumentHint: "<path> [FOCUS=value]",
-      },
-    ]);
+    const discovery = Promise.withResolvers<void>();
+    const listPluginCommands = mock(async () => {
+      await discovery.promise;
+      return [
+        {
+          name: "demo:review",
+          pluginName: "demo",
+          description: "Review a code change",
+          argumentHint: "<path> [FOCUS=value]",
+        },
+      ];
+    });
     const expandPluginCommand = mock(async () => ({
       prompt: "Review src/app.ts for security issues.",
     }));
@@ -271,6 +275,7 @@ describe("ChatView plugin slash commands", () => {
       await flushMicrotasks();
     });
 
+    expect(listPluginCommands).not.toHaveBeenCalled();
     let textarea = findComposer(container);
     await act(async () => {
       reactProps(textarea).onChange({
@@ -296,6 +301,12 @@ describe("ChatView plugin slash commands", () => {
       await flushMicrotasks();
     });
 
+    expect(expandPluginCommand).not.toHaveBeenCalled();
+    expect(onSend).not.toHaveBeenCalled();
+    await act(async () => {
+      discovery.resolve();
+      await flushMicrotasks();
+    });
     expect(expandPluginCommand).toHaveBeenCalledWith(
       { sessionId: "old-session" },
       "demo:review",

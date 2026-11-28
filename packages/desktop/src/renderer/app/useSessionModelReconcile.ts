@@ -1,4 +1,4 @@
-import { useEffect, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import {
   normalizeExternalRuntimeModelKey,
   parseExternalRuntimeModelKey,
@@ -66,27 +66,43 @@ export function useSessionModelReconcile(
   engineSessionId: string | null,
   setModelOverrides: Dispatch<SetStateAction<Record<string, string>>>,
 ): void {
+  // A session switch only needs the newest selection once an older disk read settles.
+  const inFlight = useRef(false);
+  const nextRead = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (!engineSessionId || typeof window.codeshell.listDiskSessions !== "function") return;
     let cancelled = false;
-    void Promise.resolve()
-      .then(() => window.codeshell.listDiskSessions({ limit: 1, sessionId: engineSessionId }))
-      .then(({ sessions }) => {
+    const read = async () => {
+      inFlight.current = true;
+      try {
+        const { sessions } = await window.codeshell.listDiskSessions({
+          limit: 1,
+          sessionId: engineSessionId,
+        });
+        if (cancelled) return;
         const persisted = sessions[0] ? persistedSessionModelKey(sessions[0]) : undefined;
-        if (cancelled || !persisted) return;
+        if (!persisted) return;
         // Disk has caught up with the choice (it was sent), so it no longer
         // needs protection from a later change made by another client.
         if (desktopModelChoices.get(bucket) === persisted) desktopModelChoices.delete(bucket);
         setModelOverrides((previous) => reconcileModelOverride(previous, bucket, persisted));
-      })
-      .catch((error) => {
+      } catch (error) {
         window.codeshell.log("session.model_reconcile_failed", {
           sessionId: engineSessionId,
           error: String(error),
         });
-      });
+      } finally {
+        inFlight.current = false;
+        const next = nextRead.current;
+        nextRead.current = null;
+        next?.();
+      }
+    };
+    if (inFlight.current) nextRead.current = read;
+    else void read();
     return () => {
       cancelled = true;
+      nextRead.current = null;
     };
   }, [bucket, engineSessionId, setModelOverrides]);
 }

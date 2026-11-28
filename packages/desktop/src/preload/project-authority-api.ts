@@ -3,7 +3,11 @@ import type { WorkspaceReadContracts } from "../shared/workspace-read-contracts.
 import type { ExternalGitBlobRef, SessionWorkspace } from "@cjhyy/code-shell-core";
 import type { LocalProject } from "./project-authority-types";
 import type { IpcRenderer, IpcRendererEvent } from "electron";
-import type { ReviewAiPromptRequest, ReviewGitDiffRequest } from "../shared/review";
+import {
+  reviewAvailabilityFromStatus,
+  type ReviewAiPromptRequest,
+  type ReviewGitDiffRequest,
+} from "../shared/review";
 
 type ProjectAuthorityIpcRenderer = Pick<IpcRenderer, "invoke" | "on" | "removeListener">;
 
@@ -16,8 +20,9 @@ export function createProjectAuthorityApi(
   function read<K extends keyof WorkspaceReadContracts>(
     name: K,
     params: WorkspaceReadContracts[K]["params"],
+    fallback?: () => Promise<WorkspaceReadContracts[K]["result"]>,
   ) {
-    if (host) return host.readBusiness(name, params);
+    if (host) return host.readBusiness(name, params, fallback);
     return Promise.reject(new Error("Workspace reads require the workbench Host"));
   }
   return {
@@ -34,7 +39,13 @@ export function createProjectAuthorityApi(
     getSessionWorkspaceAuthority: (sessionId: string) =>
       ipcRenderer.invoke("workspace:authority", sessionId),
     getSessionGitStatus: (sessionId: string) => read("workspace/gitStatus", { sessionId }),
+    getSessionGitHead: (sessionId: string) =>
+      read("workspace/gitHead", { sessionId }, () => read("workspace/gitBranches", { sessionId })),
     getSessionGitBranches: (sessionId: string) => read("workspace/gitBranches", { sessionId }),
+    getReviewAvailability: (sessionId: string) =>
+      read("review/availability", { sessionId }, async () =>
+        reviewAvailabilityFromStatus(await read("review/status", { sessionId })),
+      ),
     getReviewStatus: (sessionId: string) => read("review/status", { sessionId }),
     getReviewDiff: (sessionId: string, request: ReviewGitDiffRequest) =>
       read("review/diff", { sessionId, request }),
