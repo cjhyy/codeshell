@@ -30,6 +30,7 @@ import {
   materializeCookieSecret,
   sweepStaleCredentialCookieFiles,
 } from "./access.js";
+import { listCredentialEntries } from "./listing-memo.js";
 
 const TOOL_NAME = "UseCredential";
 
@@ -82,7 +83,7 @@ export const useCredentialToolDef: ToolDefinition = {
  */
 export function useCredentialToolDefFor(cwd: string): ToolDefinition {
   try {
-    const list = getCredentialAccess().listMasked(cwd, "full").filter(isAgentExposableCredential);
+    const list = listCredentialEntries(cwd, "full").filter(isAgentExposableCredential);
     if (list.length === 0) return useCredentialToolDef;
     const names = list.map((c) => `${c.id} (${c.type})`).join(", ");
     return {

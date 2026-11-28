@@ -22,6 +22,7 @@ import { validateSettings, type ValidatedSettings } from "./schema.js";
 import { migrateModels } from "../migrate-models.js";
 import { migrateConfig, CONFIG_VERSION_KEY } from "./migrate-config.js";
 import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
+import { StampedMemo, type StampInput } from "../utils/file-stamp-memo.js";
 import {
   readSettingsHookSnapshot,
   settingsHookDefinitionSha256,
@@ -208,6 +209,8 @@ export class SettingsManager {
   /** Present but unproven layers cannot activate lower-layer resource authority. */
   private unavailableHookPriority = -1;
   private hookOrigins: readonly (SettingsHookOrigin | undefined)[] = Object.freeze([]);
+  /** Validated getForScope views; the run tool surface re-reads them before every tool call. */
+  private readonly scopeViews = new StampedMemo<Partial<ValidatedSettings>>(8);
   private mergedHookSources: readonly (
     | { source: SettingsSource; sourceLayerIndex: number }
     | undefined
@@ -441,6 +444,7 @@ export class SettingsManager {
   invalidate(): void {
     this.clearHookOrigins();
     this.merged = null;
+    this.scopeViews.clear();
   }
 
   /**
@@ -692,14 +696,23 @@ export class SettingsManager {
    * file are returned (defaults are not synthesized), so an absent file → {}.
    */
   getForScope(scope: "user" | "project" | "local", cwd?: string): Partial<ValidatedSettings> {
-    const raw = this.getRawForScope(scope, cwd);
-    // validateSettings applies defaults; for a scope view we want only the
-    // file's own keys, so validate then project back the present keys.
-    const normalized = merge({}, raw);
-    const validated = validateSettings(normalized) as Record<string, unknown>;
-    const out: Record<string, unknown> = {};
-    for (const k of Object.keys(normalized)) out[k] = validated[k];
-    return out as Partial<ValidatedSettings>;
+    const path = this.scopeSettingsPath(scope, cwd ?? this.cwd);
+    if (!path) return {};
+    // Tool eligibility reads these layers before every tool call. Parsing and
+    // schema validation dominate that cost, so reuse the view while every file
+    // resolveConfigPath could pick keeps its stamp; any edit is a miss.
+    const view = this.scopeViews.get(`${scope}\0${path}`, settingsCandidatePaths(path), () => {
+      const raw = this.getRawForScope(scope, cwd);
+      // validateSettings applies defaults; for a scope view we want only the
+      // file's own keys, so validate then project back the present keys.
+      const normalized = merge({}, raw);
+      const validated = validateSettings(normalized) as Record<string, unknown>;
+      const out: Record<string, unknown> = {};
+      for (const k of Object.keys(normalized)) out[k] = validated[k];
+      return out as Partial<ValidatedSettings>;
+    });
+    // Callers own their result; the cached view must stay pristine.
+    return structuredClone(view);
   }
 
   /**
@@ -716,12 +729,7 @@ export class SettingsManager {
     cwd?: string,
     options: { strict?: boolean } = {},
   ): Record<string, unknown> {
-    const path =
-      scope === "user"
-        ? join(this.userConfigDir(), "settings.json")
-        : scope === "local"
-          ? this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.local.json", options.strict)
-          : this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.json", options.strict);
+    const path = this.scopeSettingsPath(scope, cwd ?? this.cwd, options.strict);
     if (!path) return {};
     const raw = options.strict ? this.readJsonObjectForMutation(path) : this.readJsonObject(path);
     // Same workspace-trust gate as load(): project/local scope reads bypass the
@@ -731,6 +739,19 @@ export class SettingsManager {
       for (const field of DANGEROUS_PROJECT_FIELDS) delete raw[field];
     }
     return raw;
+  }
+
+  private scopeSettingsPath(
+    scope: "user" | "project" | "local",
+    cwd: string,
+    strict?: boolean,
+  ): string | null {
+    if (scope === "user") return join(this.userConfigDir(), "settings.json");
+    return this.tryProjectSettingsPath(
+      cwd,
+      scope === "local" ? "settings.local.json" : "settings.json",
+      strict,
+    );
   }
 
   private projectSettingsPath(cwd: string): string {
@@ -1027,6 +1048,26 @@ function readConfigFileForMutation(path: string): Record<string, unknown> | unde
 function settingsCandidatePaths(jsonPath: string): string[] {
   const base = jsonPath.replace(/\.json$/, "");
   return [jsonPath, `${base}.yaml`, `${base}.yml`];
+}
+
+/**
+ * Every disk input of `new SettingsManager(cwd, "full").get()`, for caches of
+ * values derived from it (see StampedMemo). The state directories are listed
+ * by identity so swapping one for a link is also a miss.
+ */
+export function fullSettingsInputs(cwd: string): StampInput[] {
+  const userDir = join(userHome(), ".code-shell");
+  const projectDir = join(cwd, ".code-shell");
+  return [
+    { directory: userDir },
+    { directory: projectDir },
+    ...[
+      join(userDir, "settings.managed.json"),
+      join(userDir, "settings.json"),
+      join(projectDir, "settings.json"),
+      join(projectDir, "settings.local.json"),
+    ].flatMap(settingsCandidatePaths),
+  ];
 }
 
 /** Read through a no-follow descriptor so a settings-file symlink cannot escape its layer. */

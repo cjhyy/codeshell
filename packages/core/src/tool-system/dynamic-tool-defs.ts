@@ -4,6 +4,22 @@ import { agentToolDefWithTypes } from "./builtin/agent.js";
 import { generateImageToolDefFor } from "./builtin/generate-image.js";
 import { generateVideoToolDefFor } from "./builtin/generate-video.js";
 import { useCredentialToolDefFor } from "../credentials/use-credential-tool.js";
+import { fullSettingsInputs } from "../settings/manager.js";
+import { userCatalogPath } from "../model-catalog/index.js";
+import { StampedMemo } from "../utils/file-stamp-memo.js";
+
+// Provider descriptions re-run a full settings load plus the user model catalog
+// read. Eligibility is refreshed before every tool call, so reuse the text while
+// none of those files changed.
+const generationDescriptions = new StampedMemo<string>(16);
+
+function generationDescription(name: string, cwd: string, build: () => string): string {
+  return generationDescriptions.get(
+    `${name}\0${cwd}`,
+    [...fullSettingsInputs(cwd), userCatalogPath()],
+    build,
+  );
+}
 
 /**
  * Rewrite a single tool definition with the live, per-engine dynamic bits the
@@ -35,10 +51,20 @@ export function applyDynamicToolDef(
     return { ...t, description: def.description, inputSchema: def.inputSchema };
   }
   if (t.name === "GenerateImage") {
-    return { ...t, description: generateImageToolDefFor(guardCwd).description };
+    const description = generationDescription(
+      t.name,
+      guardCwd,
+      () => generateImageToolDefFor(guardCwd).description,
+    );
+    return { ...t, description };
   }
   if (t.name === "GenerateVideo") {
-    return { ...t, description: generateVideoToolDefFor(guardCwd).description };
+    const description = generationDescription(
+      t.name,
+      guardCwd,
+      () => generateVideoToolDefFor(guardCwd).description,
+    );
+    return { ...t, description };
   }
   if (t.name === "UseCredential") {
     return { ...t, description: useCredentialToolDefFor(guardCwd).description };
