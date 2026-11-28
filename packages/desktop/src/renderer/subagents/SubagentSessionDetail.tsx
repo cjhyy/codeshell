@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { MessageStream } from "../MessageStream";
-import { foldTranscript } from "../automation/foldTranscript";
+import {
+  foldTranscriptIncremental,
+  type IncrementalTranscriptFold,
+} from "../automation/foldTranscript";
 import { useT } from "../i18n/I18nProvider";
 import type { MessagesReducerState } from "../types";
 import type { SubagentSelection } from "./SubagentNavigation";
@@ -14,6 +17,19 @@ type ChildSession = Awaited<
 // Nested child details share the dock's visibility even when MessageStream owns
 // their local navigation state.
 const SubagentDetailActiveContext = React.createContext(true);
+
+/** useState whose setter skips identical values, so background polls that find
+ *  nothing new do not schedule renders. */
+function useTrackedState<T>(initial: T): [T, (next: T) => void] {
+  const [value, setValue] = useState(initial);
+  const ref = useRef(value);
+  const set = useCallback((next: T) => {
+    if (Object.is(ref.current, next)) return;
+    ref.current = next;
+    setValue(next);
+  }, []);
+  return [value, set];
+}
 
 /** Read the existing child transcript without registering it in the main session
  * index. One detail surface can navigate nested children through MessageStream. */
@@ -38,16 +54,22 @@ export function SubagentSessionDetail({
   const selectedId = navigation.key === selectionKey ? navigation.selectedId : agentId;
   const listOpen = Boolean(agentId && parentSessionId && !selectedId);
   const [catalog, setCatalog] = useState<{ key: string; rows: ChildSession[] } | null>(null);
+  const catalogRef = useRef<{ key: string; rows: string } | null>(null);
   const children = catalog?.key === selectionKey ? catalog.rows : [];
   const [state, setState] = useState<{
     key: string;
     sessionId: string;
     value: MessagesReducerState;
   } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingChildren, setLoadingChildren] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [catalogError, setCatalogError] = useState<{ key: string; message: string } | null>(null);
+  // The last fold of the shown transcript; polls extend it instead of rebuilding.
+  const foldRef = useRef<{ key: string; fold: IncrementalTranscriptFold } | null>(null);
+  const [loading, setLoading] = useTrackedState(false);
+  const [loadingChildren, setLoadingChildren] = useTrackedState(false);
+  const [error, setError] = useTrackedState<string | null>(null);
+  const [catalogError, setCatalogError] = useTrackedState<{
+    key: string;
+    message: string;
+  } | null>(null);
   const generation = useRef(0);
   const catalogGeneration = useRef(0);
   const sectionRef = useRef<HTMLElement>(null);
@@ -62,42 +84,51 @@ export function SubagentSessionDetail({
     navigationFocus.current = null;
   }, [detailActive, listOpen, selectedId]);
 
-  const loadChildren = useCallback(async () => {
-    if (!activeRef.current || !agentId || !parentSessionId) return;
-    const request = ++catalogGeneration.current;
-    setLoadingChildren(true);
-    try {
-      const rows: ChildSession[] = [];
-      let cursor: string | undefined;
-      do {
-        const page = await window.codeshell.listDiskSessions({
-          parentSessionId,
-          cursor,
-          limit: 100,
-        });
-        if (!activeRef.current || request !== catalogGeneration.current) return;
-        rows.push(
-          ...page.sessions.filter(
-            (child) => !child.parentSessionId || child.parentSessionId === parentSessionId,
-          ),
-        );
-        cursor = page.nextCursor ?? undefined;
-      } while (cursor);
-      setCatalog({ key: selectionKey, rows });
-      setCatalogError(null);
-    } catch (cause) {
-      // Catalog metadata is optional; the explicitly selected transcript can
-      // still load when its parent catalog is unavailable.
-      if (activeRef.current && request === catalogGeneration.current) {
-        setCatalogError({
-          key: selectionKey,
-          message: cause instanceof Error ? cause.message : String(cause),
-        });
+  // Background reads (polls, file changes) only show the spinner until the
+  // first catalog for this selection has loaded.
+  const loadChildren = useCallback(
+    async (manual = false) => {
+      if (!activeRef.current || !agentId || !parentSessionId) return;
+      const request = ++catalogGeneration.current;
+      if (manual || catalogRef.current?.key !== selectionKey) setLoadingChildren(true);
+      try {
+        const rows: ChildSession[] = [];
+        let cursor: string | undefined;
+        do {
+          const page = await window.codeshell.listDiskSessions({
+            parentSessionId,
+            cursor,
+            limit: 100,
+          });
+          if (!activeRef.current || request !== catalogGeneration.current) return;
+          rows.push(
+            ...page.sessions.filter(
+              (child) => !child.parentSessionId || child.parentSessionId === parentSessionId,
+            ),
+          );
+          cursor = page.nextCursor ?? undefined;
+        } while (cursor);
+        const serialized = JSON.stringify(rows);
+        if (catalogRef.current?.key !== selectionKey || catalogRef.current.rows !== serialized) {
+          catalogRef.current = { key: selectionKey, rows: serialized };
+          setCatalog({ key: selectionKey, rows });
+        }
+        setCatalogError(null);
+      } catch (cause) {
+        // Catalog metadata is optional; the explicitly selected transcript can
+        // still load when its parent catalog is unavailable.
+        if (activeRef.current && request === catalogGeneration.current) {
+          setCatalogError({
+            key: selectionKey,
+            message: cause instanceof Error ? cause.message : String(cause),
+          });
+        }
+      } finally {
+        if (activeRef.current && request === catalogGeneration.current) setLoadingChildren(false);
       }
-    } finally {
-      if (activeRef.current && request === catalogGeneration.current) setLoadingChildren(false);
-    }
-  }, [agentId, parentSessionId, selectionKey]);
+    },
+    [agentId, parentSessionId, selectionKey, setCatalogError, setLoadingChildren],
+  );
 
   useEffect(() => {
     setNavigation({ key: selectionKey, selectedId: agentId });
@@ -145,7 +176,7 @@ export function SubagentSessionDetail({
     return () => {
       catalogGeneration.current += 1;
     };
-  }, [detailActive, loadChildren]);
+  }, [detailActive, loadChildren, setLoadingChildren]);
 
   const selectedStatus = children.find((child) => child.engineSessionId === selectedId)?.status;
   const selectedRunning =
@@ -155,35 +186,43 @@ export function SubagentSessionDetail({
       : listItems.find((child) => child.id === selectedId)?.status === "active" ||
         (selectedId === agentId && running));
 
-  const refresh = useCallback(async () => {
-    if (!activeRef.current) return;
-    const request = ++generation.current;
-    if (!selectedId) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const items = await window.codeshell.getSessionTranscript(selectedId);
-      if (!activeRef.current || generation.current !== request) return;
-      setState({
-        key: selectionKey,
-        sessionId: selectedId,
-        value: foldTranscript(items, { live: selectedRunning }),
-      });
-      setError(null);
-    } catch (cause) {
-      if (!activeRef.current || generation.current !== request) return;
-      setError(String(cause instanceof Error ? cause.message : cause));
-    } finally {
-      if (activeRef.current && generation.current === request) setLoading(false);
-    }
-  }, [selectedId, selectedRunning, selectionKey]);
+  // A poll whose transcript is unchanged leaves every piece of state alone; one
+  // that only grew folds the appended items onto the previous messages.
+  const refresh = useCallback(
+    async (manual = false) => {
+      if (!activeRef.current) return;
+      const request = ++generation.current;
+      if (!selectedId) {
+        setLoading(false);
+        return;
+      }
+      const foldKey = JSON.stringify([selectionKey, selectedId]);
+      const previous = foldRef.current?.key === foldKey ? foldRef.current.fold : null;
+      if (manual || !previous) setLoading(true);
+      try {
+        const items = await window.codeshell.getSessionTranscript(selectedId);
+        if (!activeRef.current || generation.current !== request) return;
+        const fold = foldTranscriptIncremental(previous, items, { live: selectedRunning });
+        if (fold !== previous) {
+          foldRef.current = { key: foldKey, fold };
+          setState({ key: selectionKey, sessionId: selectedId, value: fold.value });
+        }
+        setError(null);
+      } catch (cause) {
+        if (!activeRef.current || generation.current !== request) return;
+        setError(String(cause instanceof Error ? cause.message : cause));
+      } finally {
+        if (activeRef.current && generation.current === request) setLoading(false);
+      }
+    },
+    [selectedId, selectedRunning, selectionKey, setError, setLoading],
+  );
 
   useEffect(() => {
+    foldRef.current = null;
     setState(null);
     setError(null);
-  }, [selectedId, selectionKey]);
+  }, [selectedId, selectionKey, setError]);
 
   useEffect(() => {
     if (!detailActive) {
@@ -194,18 +233,21 @@ export function SubagentSessionDetail({
     return () => {
       generation.current += 1;
     };
-  }, [detailActive, refresh]);
+  }, [detailActive, refresh, setLoading]);
 
-  const refreshAll = useCallback(() => {
-    void loadChildren();
-    if (selectedId) void refresh();
-  }, [loadChildren, refresh, selectedId]);
+  const refreshAll = useCallback(
+    (manual = false) => {
+      void loadChildren(manual);
+      if (selectedId) void refresh(manual);
+    },
+    [loadChildren, refresh, selectedId],
+  );
 
   const poll = listOpen ? listItems.some((child) => child.status === "active") : selectedRunning;
 
   useEffect(() => {
     if (!detailActive) return;
-    const onChanged = refreshAll;
+    const onChanged = () => refreshAll();
     window.addEventListener("codeshell:files-changed", onChanged);
     const timer = poll
       ? setInterval(() => {
@@ -269,7 +311,7 @@ export function SubagentSessionDetail({
         </div>
         <button
           type="button"
-          onClick={refreshAll}
+          onClick={() => refreshAll(true)}
           disabled={!detailActive || loading || loadingChildren || (!selectedId && !listOpen)}
           aria-label={t("msg.agent.refresh")}
           className="rounded p-1 text-muted-foreground hover:bg-accent disabled:opacity-50"
@@ -304,6 +346,7 @@ export function SubagentSessionDetail({
             key={selectedId}
             messages={transcript.messages}
             engineSessionId={selectedId}
+            pageHistory
             readOnly
           />
         </SubagentDetailActiveContext.Provider>

@@ -7,6 +7,7 @@ import { MessageStream } from "../MessageStream";
 import { BackgroundShellPanel } from "../panels/BackgroundShellPanel";
 import { MessageRow } from "../cc-room/CCConversationView";
 import { SubagentSessionDetail } from "./SubagentSessionDetail";
+import { foldTranscript, foldTranscriptIncremental } from "../automation/foldTranscript";
 import { subagentIdForTool, type SubagentSelection } from "./SubagentNavigation";
 import type { AgentMessage, Message, ToolMessage } from "../types";
 
@@ -658,6 +659,70 @@ describe("subagent full transcript navigation", () => {
     );
     expect(text(container)).toContain("Recovered transcript");
     expect(text(container)).not.toContain("Disk unavailable");
+  });
+
+  test("background refreshes of an unchanged child transcript do not re-render", async () => {
+    let items = transcript("Polled child request");
+    let reads = 0;
+    let catalogReads = 0;
+    api({
+      listDiskSessions: async () => {
+        catalogReads += 1;
+        return { sessions: [], nextCursor: null };
+      },
+      getSessionTranscript: async () => {
+        reads += 1;
+        return items;
+      },
+    });
+    let commits = 0;
+    const container = await mount(
+      <React.Profiler id="detail" onRender={() => (commits += 1)}>
+        <SubagentSessionDetail agentId="child" parentSessionId="parent" />
+      </React.Profiler>,
+    );
+    expect(text(container)).toContain("Polled child request");
+    const readsBefore = reads;
+    const catalogsBefore = catalogReads;
+    commits = 0;
+    await filesChanged();
+    await filesChanged();
+    expect(reads).toBe(readsBefore + 2);
+    expect(catalogReads).toBe(catalogsBefore + 2);
+    expect(commits).toBe(0);
+
+    // A grown transcript renders the appended message.
+    items = [...items, { kind: "user", text: "Follow-up request" }];
+    await filesChanged();
+    expect(commits).toBeGreaterThan(0);
+    expect(text(container)).toContain("Polled child request");
+    expect(text(container)).toContain("Follow-up request");
+  });
+
+  test("incremental folds reuse the previous fold and its unchanged messages", () => {
+    const items = transcript("First request");
+    const first = foldTranscriptIncremental(null, items);
+    // Fold ids embed a clock, so compare everything else.
+    const withoutIds = (messages: Message[]) => messages.map(({ id: _id, ...rest }) => rest);
+    expect(withoutIds(first.value.messages)).toEqual(withoutIds(foldTranscript(items).messages));
+    // Unchanged input: the very same fold, so callers can skip their update.
+    expect(foldTranscriptIncremental(first, [...items])).toBe(first);
+
+    const grown: FoldItem[] = [...items, { kind: "user", text: "Second request" }];
+    const second = foldTranscriptIncremental(first, grown);
+    expect(second.count).toBe(grown.length);
+    expect(withoutIds(second.value.messages)).toEqual(withoutIds(foldTranscript(grown).messages));
+    expect(second.value.messages.at(-1)).toMatchObject({ kind: "user", text: "Second request" });
+    // Earlier messages keep their object identity (and ids) across the poll.
+    first.value.messages.forEach((message, index) => {
+      expect(second.value.messages[index]).toBe(message);
+    });
+
+    // A rewritten prefix is folded from scratch.
+    const rewritten: FoldItem[] = [{ kind: "user", text: "Other request" }, ...grown.slice(1)];
+    const third = foldTranscriptIncremental(second, rewritten);
+    expect(third.value.messages[0]).not.toBe(second.value.messages[0]);
+    expect(third.value.messages[0]).toMatchObject({ kind: "user", text: "Other request" });
   });
 
   test("CC subagent pills are keyboard-accessible buttons carrying the selected agent", async () => {
