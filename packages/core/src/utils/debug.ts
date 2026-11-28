@@ -16,44 +16,6 @@ import { logger, type LogLevel } from "../logging/logger.js";
 
 export type DebugLogLevel = "verbose" | LogLevel;
 
-// ─── Session tag ───────────────────────────────────────────────────
-//
-// Session id lives on the logger (process-wide). The logger seeds itself
-// with a random tag at module load; the Engine overwrites it with the
-// authoritative id once a run resolves it (see engine.run → logger.setSid).
-
-export function setDebugSessionId(id: string): void {
-  logger.setSid(id);
-}
-
-// ─── Mode introspection ────────────────────────────────────────────
-
-export function isDebugMode(): boolean {
-  return logger.getMinLevel() === "debug";
-}
-
-export function enableDebugLogging(): boolean {
-  // Level is fixed at logger construction; flip env so future child loggers
-  // (and a fresh process) pick up debug. The current logger keeps its level.
-  const wasActive = isDebugMode();
-  process.env.CODE_SHELL_LOG_LEVEL = "debug";
-  return wasActive;
-}
-
-export function isDebugToStdErr(): boolean {
-  return (
-    process.env.CODE_SHELL_DEBUG === "1" ||
-    process.argv.includes("--debug-to-stderr") ||
-    process.argv.includes("-d2e")
-  );
-}
-
-export function getMinDebugLogLevel(): DebugLogLevel {
-  const raw = process.env.CODE_SHELL_DEBUG_LOG_LEVEL?.toLowerCase().trim();
-  if (raw === "verbose") return "verbose";
-  return logger.getMinLevel();
-}
-
 // ─── Core API ──────────────────────────────────────────────────────
 
 /**
@@ -85,40 +47,3 @@ export function logForDebugging(
     default:      logger.debug(cleanMsg, data); break;
   }
 }
-
-/**
- * Category-scoped debug logger.
- * Usage: const log = debugCategory("mcp"); log("connecting...");
- */
-export function debugCategory(category: string): (msg: string) => void {
-  const child = logger.child({ cat: category.toLowerCase() });
-  return (msg: string) => child.debug(msg);
-}
-
-/**
- * Time a function and log the duration at debug level.
- */
-export async function debugTiming<T>(label: string, fn: () => T | Promise<T>): Promise<T> {
-  if (!isDebugMode()) return fn();
-  const start = performance.now();
-  try {
-    const result = await fn();
-    logger.debug(`${label}: ${(performance.now() - start).toFixed(1)}ms`);
-    return result;
-  } catch (err) {
-    const ms = (performance.now() - start).toFixed(1);
-    logger.error(`${label}: FAILED after ${ms}ms — ${(err as Error).message}`);
-    throw err;
-  }
-}
-
-// ─── CC compatibility shims ────────────────────────────────────────
-
-export function logAntError(msg: string, _err?: unknown): void {
-  logger.error(msg);
-}
-
-export function getDebugFilePath(): string | null { return null; }
-export function setHasFormattedOutput(_v: boolean): void { /* no-op */ }
-export function getHasFormattedOutput(): boolean { return false; }
-export async function flushDebugLogs(): Promise<void> { /* sync writes */ }
