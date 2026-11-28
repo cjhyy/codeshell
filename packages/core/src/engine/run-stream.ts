@@ -100,7 +100,8 @@ export function buildWrappedOnStream(args: {
   // minutes while a child Agent streamed into a long-lived Session.
   const deltaBatch = (commit: (events: StreamEvent[]) => string[]) => {
     let pending: StreamEvent[] = [],
-      pendingBytes = 0;
+      pendingBytes = 0,
+      lastBytes = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const flush = () => {
       if (timer) clearTimeout(timer);
@@ -115,6 +116,20 @@ export function buildWrappedOnStream(args: {
     };
     const push = (event: StreamEvent) => {
       const bytes = Buffer.byteLength(JSON.stringify(event));
+      // Each tool_use_args_delta carries the complete arguments so far, so a
+      // newer snapshot for the same call replaces a queued one. Only the last
+      // queued event is replaced, which keeps the arrival order intact.
+      const last = pending[pending.length - 1];
+      if (
+        event.type === "tool_use_args_delta" &&
+        last?.type === "tool_use_args_delta" &&
+        last.toolCallId === event.toolCallId &&
+        last.agentId === event.agentId
+      ) {
+        pendingBytes -= lastBytes;
+        pending.pop();
+      }
+      lastBytes = bytes;
       if (pending.length && (pending.length >= 64 || pendingBytes + bytes > 256 * 1024)) flush();
       pending.push({ ...event });
       pendingBytes += bytes;
@@ -155,8 +170,12 @@ export function buildWrappedOnStream(args: {
     childOutput.flush();
     parentOutput.flush();
   };
+  // Streamed tool arguments arrive per provider chunk; batching them matters
+  // as much as text, since a large Write/Edit streams hundreds of snapshots.
   const isDelta = (event: StreamEvent) =>
-    event.type === "text_delta" || event.type === "thinking_delta";
+    event.type === "text_delta" ||
+    event.type === "thinking_delta" ||
+    event.type === "tool_use_args_delta";
   const onStream: StreamCallback = (event) => {
     event = stampStreamEvent(args.prepareEvent?.(event) ?? event);
     if (!("agentId" in event && event.agentId) && args.outputJournal?.allowLateMetadata?.(event))

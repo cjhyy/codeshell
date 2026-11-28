@@ -315,4 +315,29 @@ describe("run stream background output boundaries", () => {
       expect(readOutputJournal(f.root, f.id).status).toBe("ok");
     }
   });
+  test("streamed tool argument snapshots are batched and only the newest is journaled", () => {
+    const f = fixture();
+    f.wrapped({
+      type: "tool_use_start",
+      toolCall: { id: "call-1", toolName: "Write", args: {} },
+    });
+    for (let index = 1; index <= 40; index++)
+      f.wrapped({
+        type: "tool_use_args_delta",
+        toolCallId: "call-1",
+        args: { content: "x".repeat(index) },
+      });
+    // Still queued: nothing reached the consumer before the batch flushes.
+    expect(f.events.filter((event) => event.type === "tool_use_args_delta")).toHaveLength(0);
+    f.wrapped({ type: "text_delta", text: "after" });
+    f.wrapped.finish();
+    const page = readOutputJournal(f.root, f.id);
+    expect(page.status).toBe("ok");
+    const frames = page.frames.filter((frame) => frame.event?.type === "tool_use_args_delta");
+    expect(frames).toHaveLength(1);
+    expect(frames[0].event).toMatchObject({ args: { content: "x".repeat(40) } });
+    const forwarded = f.events.filter((event) => event.type === "tool_use_args_delta");
+    expect(forwarded).toHaveLength(1);
+    expect(forwarded[0].outputCursor).toEqual(expect.any(String));
+  });
 });
